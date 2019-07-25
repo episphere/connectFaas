@@ -30,7 +30,7 @@ const authorizeToken = async(token) => {
             }
         }
         else{
-            return new Error('Record not found!');
+            return false;
         }
     }
     catch(error){

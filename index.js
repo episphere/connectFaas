@@ -32,8 +32,11 @@ exports.validateToken = async (req, res) => {
         if(authorize instanceof Error){
             res.status(500).json(getResponseJSON(authorize.message, 500));
         }
-        else{
+        if(authorize){
             res.status(200).json({apiKey: authorize, code: 200});
+        }
+        else{
+            res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
         res.status(200).json(getResponseJSON('Success!', 200));
     }else{
