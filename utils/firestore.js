@@ -20,6 +20,25 @@ const validateKey = async (apiKey) => {
     } 
 }
 
+const authorizeToken = async(token) => {
+    try{
+        const siteDetailsRef = db.collection('siteDetails').where('tokens', 'array-contains', token);
+        const response = await siteDetailsRef.get();
+        if(response.size !== 0) {
+            for(let doc of response.docs){
+                return doc.data().apiKey;
+            }
+        }
+        else{
+            return new Error('Record not found!');
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
-    validateKey
+    validateKey,
+    authorizeToken
 }
