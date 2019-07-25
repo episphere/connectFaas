@@ -38,7 +38,6 @@ exports.validateToken = async (req, res) => {
         else{
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
-        res.status(200).json(getResponseJSON('Success!', 200));
     }else{
         res.status(406).json(getResponseJSON('Token missing!', 406));
     }
