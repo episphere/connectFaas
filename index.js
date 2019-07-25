@@ -47,22 +47,21 @@ exports.storeQuestionnaireResponse = async (req, res) => {
     if (req.method !== 'POST') {
         res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
-    else{
-        let data = JSON.parse(req.body);
-        if(!data.token){
-            const uuid = require('uuid');
-            data.token = uuid();
-            data.tokenVerified = "no";
-        }
-        const { storeResponse } = require('./utils/firestore');
-        const response = await storeResponse(data);
-        if(response instanceof Error){
-            res.status(500).json(getResponseJSON(response.message, 500));
-        }
-        else {
-            res.status(200).json(getResponseJSON('Document added!', 200));
-        }
+    let data = JSON.parse(req.body);
+    if(!data.token){
+        const uuid = require('uuid');
+        data.token = uuid();
+        data.tokenVerified = "no";
     }
+    const { storeResponse } = require('./utils/firestore');
+    const response = await storeResponse(data);
+    if(response instanceof Error){
+        res.status(500).json(getResponseJSON(response.message, 500));
+    }
+    else {
+        res.status(200).json(getResponseJSON('Document added!', 200));
+    }
+    
 }
 
 const getResponseJSON = (message, code) => {
