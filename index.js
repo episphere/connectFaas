@@ -53,11 +53,6 @@ exports.storeQuestionnaireResponse = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
     if (req.method === 'POST') {
         let data = JSON.parse(req.body);
-        if(!data.token){
-            const uuid = require('uuid');
-            data.token = uuid();
-            data.tokenVerified = "no";
-        }
         const { storeResponse } = require('./utils/firestore');
         const response = await storeResponse(data);
         if(response instanceof Error){
