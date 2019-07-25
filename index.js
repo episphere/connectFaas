@@ -52,6 +52,7 @@ exports.storeQuestionnaireResponse = async (req, res) => {
         if(!data.token){
             const uuid = require('uuid');
             data.token = uuid();
+            data.tokenVerified = "no";
         }
         const { storeResponse } = require('./utils/firestore');
         const response = await storeResponse(data);
