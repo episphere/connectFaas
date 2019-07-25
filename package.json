@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/episphere/connectFaas#readme",
   "dependencies": {
-    "@google-cloud/firestore": "^2.2.4"
+    "@google-cloud/firestore": "^2.2.4",
+    "uuid": "^3.3.2"
   }
 }

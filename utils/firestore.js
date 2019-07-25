@@ -38,7 +38,19 @@ const authorizeToken = async(token) => {
     }
 }
 
+const storeResponse = async (data) => {
+    try{
+        const questionnaireResponseRef = db.collection('questionnaireResponse');
+        await questionnaireResponseRef.add(data);
+        return true;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
-    authorizeToken
+    authorizeToken,
+    storeResponse
 }
