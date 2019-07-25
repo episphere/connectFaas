@@ -1,4 +1,5 @@
 exports.validate = async (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
     if (req.method === 'GET') {
         if(!req.headers.authorization || req.headers.authorization.trim() === ""){
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
@@ -24,6 +25,7 @@ exports.validate = async (req, res) => {
 };
  
 exports.validateToken = async (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
     if (req.method === 'GET') {
         if(req.query.token && req.query.token.trim() !== ""){
             const token = req.query.token;
@@ -48,6 +50,7 @@ exports.validateToken = async (req, res) => {
 }
 
 exports.storeQuestionnaireResponse = async (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
     if (req.method === 'POST') {
         let data = JSON.parse(req.body);
         if(!data.token){
@@ -66,6 +69,25 @@ exports.storeQuestionnaireResponse = async (req, res) => {
     }
     else {
         res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+}
+
+exports.createToken = async (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    if(req.method === 'GET'){
+        const { getAPIKeyAndAddToken } = require('./utils/firestore');
+        const uuid = require('uuid');
+        const tempToken = uuid();
+        const key = await getAPIKeyAndAddToken(tempToken);
+        if(key instanceof Error){
+            res.status(500).json(getResponseJSON(key.message, 500));
+        }
+        if(key){
+            res.status(200).json({apiKey: key, token: tempToken, code: 200})
+        }
+    }
+    else{
+        res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 }
 

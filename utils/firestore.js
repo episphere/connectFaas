@@ -49,8 +49,31 @@ const storeResponse = async (data) => {
     }
 }
 
+const getAPIKeyAndAddToken = async (tempToken) => {
+    try{
+        const siteDetailsRef = db.collection('siteDetails');
+        const response = await siteDetailsRef.get();
+        if(response.size === 1) {
+            for(let doc of response.docs){
+                const apiKey = doc.data().apiKey;
+                let tokens = doc.data().tokens;
+                tokens.push(tempToken)
+                await db.collection("siteDetails").doc(doc.id).update({tokens});
+                return apiKey;
+            }
+        }
+        else{
+            return false;
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
-    storeResponse
+    storeResponse,
+    getAPIKeyAndAddToken
 }
