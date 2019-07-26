@@ -56,9 +56,7 @@ const getAPIKeyAndAddToken = async (tempToken) => {
         if(response.size === 1) {
             for(let doc of response.docs){
                 const apiKey = doc.data().apiKey;
-                let tokens = doc.data().tokens;
-                tokens.push(tempToken)
-                await db.collection("siteDetails").doc(doc.id).update({tokens});
+                await db.collection("unVerifiedParticipants").add({token: tempToken, verified: false});
                 return apiKey;
             }
         }
