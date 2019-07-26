@@ -22,11 +22,17 @@ const validateKey = async (apiKey) => {
 
 const authorizeToken = async(token) => {
     try{
-        const siteDetailsRef = db.collection('siteDetails').where('tokens', 'array-contains', token);
+        const siteDetailsRef = db.collection('participants').where('token', '==', token);
         const response = await siteDetailsRef.get();
         if(response.size !== 0) {
             for(let doc of response.docs){
-                return doc.data().apiKey;
+                const affiliatedSite = doc.data().affiliatedSite;
+                const site = await db.collection('siteDetails').where('siteName', '==', affiliatedSite).get();
+                if(site.size === 1){
+                    for(let siteDoc of site.docs){
+                        return siteDoc.data().apiKey;
+                    }
+                }
             }
         }
         else{
@@ -51,13 +57,12 @@ const storeResponse = async (data) => {
 
 const getAPIKeyAndAddToken = async (tempToken) => {
     try{
-        const siteDetailsRef = db.collection('siteDetails');
+        await db.collection("participants").add({token: tempToken, verified: false, affiliatedSite: 'unknown'});
+        const siteDetailsRef = db.collection('siteDetails').where('siteName', '==', 'unknown');
         const response = await siteDetailsRef.get();
         if(response.size === 1) {
             for(let doc of response.docs){
-                const apiKey = doc.data().apiKey;
-                await db.collection("unVerifiedParticipants").add({token: tempToken, verified: false});
-                return apiKey;
+                return doc.data().apiKey;
             }
         }
         else{
