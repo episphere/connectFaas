@@ -1,7 +1,12 @@
-const firestore = require('@google-cloud/firestore');
-const db = new firestore({
-    keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
-});
+// const firestore = require('@google-cloud/firestore');
+// const db = new firestore({
+//     keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
+// });
+
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+admin.initializeApp(functions.config().firebase);
+const db = admin.firestore();
 
 const validateKey = async (apiKey) => {
     try{
