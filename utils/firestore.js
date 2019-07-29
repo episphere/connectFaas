@@ -30,7 +30,7 @@ const authorizeToken = async(token) => {
                 const site = await db.collection('siteDetails').where('siteName', '==', affiliatedSite).get();
                 if(site.size === 1){
                     for(let siteDoc of site.docs){
-                        return siteDoc.data().apiKey;
+                        return siteDoc.data();
                     }
                 }
             }
@@ -46,7 +46,7 @@ const authorizeToken = async(token) => {
 
 const storeResponse = async (data) => {
     try{
-        const questionnaireResponseRef = db.collection('questionnaireResponse');
+        const questionnaireResponseRef = db.collection('participants');
         await questionnaireResponseRef.add(data);
         return true;
     }
@@ -55,10 +55,29 @@ const storeResponse = async (data) => {
     }
 }
 
+const updateResponse = async (data) => {
+    try{
+        const questionnaireResponseRef = db.collection('participants').where('token', '==', data.token);
+        const response = await questionnaireResponseRef.get();
+        if(response.size === 1) {
+            for(let doc of response.docs){
+                await db.collection('participants').doc(doc.id).update(data);
+                return true;
+            }
+        }
+        else{
+            return false;
+        }
+    }
+    catch(error){
+        return new Error(error)
+    }
+}
+
 const getAPIKeyAndAddToken = async (tempToken) => {
     try{
         await db.collection("participants").add({token: tempToken, verified: false, affiliatedSite: 'unknown'});
-        const siteDetailsRef = db.collection('siteDetails').where('siteName', '==', 'unknown');
+        const siteDetailsRef = db.collection('siteDetails').where('siteName', '==', 88);
         const response = await siteDetailsRef.get();
         if(response.size === 1) {
             for(let doc of response.docs){
@@ -74,9 +93,29 @@ const getAPIKeyAndAddToken = async (tempToken) => {
     }
 }
 
+const retrieveAPIKey = async () => {
+    try{
+        const data = await db.collection('siteDetails').where('siteName', '==', 88).get();
+        if(data.size === 1){
+            for(let siteDoc of data.docs){
+                return siteDoc.data().apiKey;
+            }
+        }
+        else{
+            return new Error('Site not found!')
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+    
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
     storeResponse,
-    getAPIKeyAndAddToken
+    getAPIKeyAndAddToken,
+    retrieveAPIKey,
+    updateResponse
 }
