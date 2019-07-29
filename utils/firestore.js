@@ -76,7 +76,7 @@ const updateResponse = async (data) => {
 
 const getAPIKeyAndAddToken = async (tempToken) => {
     try{
-        await db.collection("participants").add({token: tempToken, verified: false, affiliatedSite: 88});
+        await db.collection("participants").add({token: tempToken, verified: 0, affiliatedSite: 88});
         const siteDetailsRef = db.collection('siteDetails').where('siteName', '==', 88);
         const response = await siteDetailsRef.get();
         if(response.size === 1) {
