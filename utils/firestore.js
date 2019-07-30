@@ -10,8 +10,7 @@ const db = admin.firestore();
 
 const validateKey = async (apiKey) => {
     try{
-        const siteDetailsRef = db.collection('siteDetails').where('apiKey', '==', apiKey);
-        const response = await siteDetailsRef.get();
+        const response = await db.collection('siteDetails').where('apiKey', '==', apiKey).get();
         
         if(response.size !== 0) {
             return true;
@@ -27,8 +26,7 @@ const validateKey = async (apiKey) => {
 
 const authorizeToken = async(token) => {
     try{
-        const siteDetailsRef = db.collection('participants').where('token', '==', token);
-        const response = await siteDetailsRef.get();
+        const response = await db.collection('participants').where('token', '==', token).get();
         if(response.size !== 0) {
             for(let doc of response.docs){
                 const affiliatedSite = doc.data().affiliatedSite;
@@ -51,8 +49,7 @@ const authorizeToken = async(token) => {
 
 const storeResponse = async (data) => {
     try{
-        const questionnaireResponseRef = db.collection('participants');
-        await questionnaireResponseRef.add(data);
+        await db.collection('participants').add(data);
         return true;
     }
     catch(error){
@@ -62,8 +59,7 @@ const storeResponse = async (data) => {
 
 const updateResponse = async (data) => {
     try{
-        const questionnaireResponseRef = db.collection('participants').where('token', '==', data.token);
-        const response = await questionnaireResponseRef.get();
+        const response = await db.collection('participants').where('token', '==', data.token).get();
         if(response.size === 1) {
             for(let doc of response.docs){
                 await db.collection('participants').doc(doc.id).update(data);
@@ -77,25 +73,6 @@ const updateResponse = async (data) => {
     }
     catch(error){
         return new Error(error)
-    }
-}
-
-const getAPIKeyAndAddToken = async (tempToken) => {
-    try{
-        await db.collection("participants").add({token: tempToken, state_verified: 0, affiliatedSite: 88});
-        const siteDetailsRef = db.collection('siteDetails').where('siteName', '==', 88);
-        const response = await siteDetailsRef.get();
-        if(response.size === 1) {
-            for(let doc of response.docs){
-                return doc.data().apiKey;
-            }
-        }
-        else{
-            return false;
-        }
-    }
-    catch(error){
-        return new Error(error);
     }
 }
 
@@ -121,7 +98,6 @@ module.exports = {
     validateKey,
     authorizeToken,
     storeResponse,
-    getAPIKeyAndAddToken,
     retrieveAPIKey,
     updateResponse
 }

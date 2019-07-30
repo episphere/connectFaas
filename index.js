@@ -83,7 +83,7 @@ exports.storeQuestionnaireResponse = async (req, res) => {
                 let data = req.body;
                 if(Object.keys(data).length > 0){
                     data.state = 1;
-                    data.state_verified = 0;
+                    data.state_matched = 0;
                     let response;
                     if(data.token){
                         const { updateResponse } = require('./utils/firestore');
@@ -118,25 +118,6 @@ exports.storeQuestionnaireResponse = async (req, res) => {
     }
     else {
         res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-    }
-}
-
-exports.createToken = async (req, res) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    if(req.method === 'GET'){
-        const { getAPIKeyAndAddToken } = require('./utils/firestore');
-        const uuid = require('uuid');
-        const tempToken = uuid();
-        const key = await getAPIKeyAndAddToken(tempToken);
-        if(key instanceof Error){
-            res.status(500).json(getResponseJSON(key.message, 500));
-        }
-        if(key){
-            res.status(200).json({apiKey: key, token: tempToken, code: 200})
-        }
-    }
-    else{
-        res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 }
 
