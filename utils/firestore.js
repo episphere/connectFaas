@@ -48,13 +48,8 @@ const authorizeToken = async(token) => {
                         apiKey: uuid(),
                         expires: new Date(Date.now() + 3600000)
                     }
-                    const documents = await db.collection(apiKeys).where('token', '==', token).get();
-                    if(documents.size > 0){
-                        for(let doc of documents.docs){
-                            await db.collection('apiKeys').doc(doc.id).update(data);
-                            return data.apiKey;
-                        }
-                    }
+                    await db.collection('apiKeys').doc(doc.id).update(data);
+                    return data.apiKey;
                 }
             }
         }
