@@ -10,10 +10,17 @@ const db = admin.firestore();
 
 const validateKey = async (apiKey) => {
     try{
-        const response = await db.collection('siteDetails').where('apiKey', '==', apiKey).get();
+        const response = await db.collection('apiKeys').where('apiKey', '==', apiKey).get();
         
         if(response.size !== 0) {
-            return true;
+            const expiry = response.docs[0].data().expires.toDate().getTime();
+            const currentTime = new Date().getTime();
+            if(expiry > currentTime){
+                return true;
+            }
+            else{
+                return false;
+            }
         }
         else{
             return false;
@@ -26,14 +33,27 @@ const validateKey = async (apiKey) => {
 
 const authorizeToken = async(token) => {
     try{
-        const response = await db.collection('participants').where('token', '==', token).get();
-        if(response.size !== 0) {
+        const response = await db.collection('apiKeys').where('token', '==', token).get();
+        if(response.size > 0) {
             for(let doc of response.docs){
-                const affiliatedSite = doc.data().affiliatedSite;
-                const site = await db.collection('siteDetails').where('siteName', '==', affiliatedSite).get();
-                if(site.size === 1){
-                    for(let siteDoc of site.docs){
-                        return siteDoc.data();
+                const expiry = doc.data().expires.toDate().getTime();
+                const currentTime = new Date().getTime();
+                
+                if(expiry > currentTime){
+                    return doc.data().apiKey
+                }
+                else{
+                    const uuid = require('uuid');
+                    const data = {
+                        apiKey: uuid(),
+                        expires: new Date(Date.now() + 3600000)
+                    }
+                    const documents = await db.collection(apiKeys).where('token', '==', token).get();
+                    if(documents.size > 0){
+                        for(let doc of documents.docs){
+                            await db.collection('apiKeys').doc(doc.id).update(data);
+                            return data.apiKey;
+                        }
                     }
                 }
             }
@@ -49,8 +69,18 @@ const authorizeToken = async(token) => {
 
 const storeResponse = async (data) => {
     try{
-        await db.collection('participants').add(data);
-        return true;
+        const response = await db.collection('participants').where('token', '==', data.token).get();
+        if(response.size > 0) {
+            const latestVersion = response.docs.reduce((max, record) => record.data().version > max ? record.data().version : max, 0);
+            data.version = latestVersion + 1;
+            await db.collection('participants').add(data);
+            return true;
+        }
+        else{
+            data.version = 1;
+            await db.collection('participants').add(data);
+            return true;
+        }
     }
     catch(error){
         return new Error(error);
@@ -76,17 +106,11 @@ const updateResponse = async (data) => {
     }
 }
 
-const retrieveAPIKey = async () => {
+const storeAPIKeyandToken = async (data) => {
     try{
-        const data = await db.collection('siteDetails').where('siteName', '==', 88).get();
-        if(data.size === 1){
-            for(let siteDoc of data.docs){
-                return siteDoc.data().apiKey;
-            }
-        }
-        else{
-            return new Error('Data not found!')
-        }
+        await db.collection('apiKeys').add(data);
+        return true;
+        
     }
     catch(error){
         return new Error(error);
@@ -94,10 +118,25 @@ const retrieveAPIKey = async () => {
     
 }
 
+const retrieveQuestionnaire = async (source) => {
+    try{
+        const data = await db.collection('questionnaire').where('source', '==', source).orderBy('sequence').get();
+        if(data.size !== 0){
+            return data.docs.map(document => document.data());
+        }
+        else{
+            return new Error(`No questions found for source ${source}`);
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
     storeResponse,
-    retrieveAPIKey,
-    updateResponse
+    storeAPIKeyandToken,
+    retrieveQuestionnaire
 }
