@@ -30,7 +30,7 @@ exports.validateToken = async (req, res) => {
         if(req.query.token && req.query.token.trim() !== ""){
             const token = req.query.token;
             const { authorizeToken } = require('./utils/firestore');
-            const authorize = await authorizeToken(token);
+            const authorize = await authorizeToken(token, res);
             if(authorize instanceof Error){
                 res.status(500).json(getResponseJSON(authorize.message, 500));
             }
@@ -54,6 +54,7 @@ exports.getKey = async (req, res) => {
     
     if (req.method === 'GET') {
         const expires = new Date(Date.now() + 3600000);
+        res.header('expires', expires);
         const uuid = require('uuid');
         const data = {
             apiKey: uuid(),
