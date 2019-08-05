@@ -1,5 +1,9 @@
 exports.validate = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
+    if(req.method === 'OPTIONS'){
+        res.status(200).json({code: 200});
+    }
     if (req.method === 'GET') {
         if(!req.headers.authorization || req.headers.authorization.trim() === ""){
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
@@ -26,6 +30,10 @@ exports.validate = async (req, res) => {
  
 exports.validateToken = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
+    if(req.method === 'OPTIONS'){
+        res.status(200).json({code: 200});
+    }
     if (req.method === 'GET') {
         if(req.query.token && req.query.token.trim() !== ""){
             const token = req.query.token;
@@ -51,7 +59,10 @@ exports.validateToken = async (req, res) => {
 
 exports.getKey = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
-    
+    res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
+    if(req.method === 'OPTIONS'){
+        res.status(200).json({code: 200});
+    }
     if (req.method === 'GET') {
         const expires = new Date(Date.now() + 3600000);
         res.header('expires', expires);
@@ -78,6 +89,10 @@ exports.getKey = async (req, res) => {
 
 exports.submit = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
+    if(req.method === 'OPTIONS'){
+        res.status(200).json({code: 200});
+    }
     if (req.method === 'POST') {
         if(!req.headers.authorization || req.headers.authorization.trim() === ""){
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
@@ -127,6 +142,10 @@ exports.submit = async (req, res) => {
 
 exports.getQuestionnaire = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
+    if(req.method === 'OPTIONS'){
+        res.status(200).json({code: 200});
+    }
     if (req.method === 'GET') {
         if(!req.headers.authorization || req.headers.authorization.trim() === ""){
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
