@@ -3,8 +3,9 @@ exports.validate = async (req, res) => {
     res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
     if(req.method === 'OPTIONS'){
         res.status(200).json({code: 200});
+        return;
     }
-    if (req.method === 'GET') {
+    if(req.method === 'GET') {
         if(!req.headers.authorization || req.headers.authorization.trim() === ""){
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
@@ -33,8 +34,9 @@ exports.validateToken = async (req, res) => {
     res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
     if(req.method === 'OPTIONS'){
         res.status(200).json({code: 200});
+        return;
     }
-    if (req.method === 'GET') {
+    if(req.method === 'GET') {
         if(req.query.token && req.query.token.trim() !== ""){
             const token = req.query.token;
             const { authorizeToken } = require('./utils/firestore');
@@ -55,15 +57,16 @@ exports.validateToken = async (req, res) => {
     else {
         res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
-}
+};
 
 exports.getKey = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
     if(req.method === 'OPTIONS'){
         res.status(200).json({code: 200});
+        return;
     }
-    if (req.method === 'GET') {
+    if(req.method === 'GET') {
         const expires = new Date(Date.now() + 3600000);
         res.header('expires', expires);
         const uuid = require('uuid');
@@ -85,15 +88,16 @@ exports.getKey = async (req, res) => {
     else {
         res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
-}
+};
 
 exports.submit = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
     if(req.method === 'OPTIONS'){
         res.status(200).json({code: 200});
+        return;
     }
-    if (req.method === 'POST') {
+    if(req.method === 'POST') {
         if(!req.headers.authorization || req.headers.authorization.trim() === ""){
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
@@ -138,15 +142,16 @@ exports.submit = async (req, res) => {
     else {
         res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
-}
+};
 
 exports.getQuestionnaire = async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
     if(req.method === 'OPTIONS'){
         res.status(200).json({code: 200});
+        return;
     }
-    if (req.method === 'GET') {
+    if(req.method === 'GET') {
         if(!req.headers.authorization || req.headers.authorization.trim() === ""){
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
@@ -159,7 +164,11 @@ exports.getQuestionnaire = async (req, res) => {
             }
             if(authorize){
                 const { retrieveQuestionnaire } = require('./utils/firestore');
-                const source = req.query.source || 'eligibility_screener';
+                if(!req.query.source) {
+                    res.status(400).json(getResponseJSON('Please include source as a query parameter!', 400));
+                    return;
+                }
+                const source = req.query.source;
                 const response = await retrieveQuestionnaire(source);
                 if(response instanceof Error){
                     res.status(500).json(getResponseJSON(response.message, 500));
@@ -176,8 +185,8 @@ exports.getQuestionnaire = async (req, res) => {
     else {
         res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
-}
+};
 
 const getResponseJSON = (message, code) => {
     return { message, code };
-}
+};
