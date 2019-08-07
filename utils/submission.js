@@ -82,56 +82,42 @@ const getParticipants = async (req, res) => {
     if(!authorize){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
-
-    if(req.url.indexOf('/verified') !== -1){
-        const { retrieveParticipants } = require(`./firestore`);
-        const data = await retrieveParticipants(siteKey, 'verified');
-
-        if(data instanceof Error){
-            return res.status(500).json(getResponseJSON(data.message, 500));
-        }
     
-        if(!data){
-            return res.status(401).json(getResponseJSON('No records found!', 500));
-        }
-
-        return res.status(200).json({data, code:200})
+    let decider = "";
+    if(req.url.indexOf('/verified') !== -1){
+        decider = "verified";
     }
     else if(req.url.indexOf('/unverified') !== -1){
-        const { retrieveParticipants } = require(`./firestore`);
-        const data = await retrieveParticipants(siteKey, 'unverified');
-
-        if(data instanceof Error){
-            return res.status(500).json(getResponseJSON(data.message, 500));
-        }
-    
-        if(!data){
-            return res.status(401).json(getResponseJSON('No records found!', 500));
-        }
-
-        return res.status(200).json({data, code:200})
+        decider = "unverified";
     }
     else if (req.url.indexOf('/all') !== -1){
-        const { retrieveParticipants } = require(`./firestore`);
-        const data = await retrieveParticipants(siteKey, 'all');
-
-        if(data instanceof Error){
-            return res.status(500).json(getResponseJSON(data.message, 500));
-        }
-    
-        if(!data){
-            return res.status(401).json(getResponseJSON('No records found!', 500));
-        }
-
-        return res.status(200).json({data, code:200})
+        decider = "all";
     }
     else{
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
+
+    const { retrieveParticipants } = require(`./firestore`);
+    const data = await retrieveParticipants(siteKey, decider);
+
+    if(data instanceof Error){
+        return res.status(500).json(getResponseJSON(data.message, 500));
+    }
+
+    if(!data){
+        return res.status(401).json(getResponseJSON('No records found!', 500));
+    }
+
+    return res.status(200).json({data, code:200})
+}
+
+const verifyParticipants = async (req, res) => {
+
 }
 
 module.exports = {
     submit,
     recruitSubmit,
-    getParticipants
+    getParticipants,
+    verifyParticipants
 }
