@@ -1,17 +1,12 @@
 const { getResponseJSON, setHeaders } = require('./shared');
 
 const submit = async (res, data) => {
-    let sourceExists = false;
-    if(data.source && data.source === 'eligibility_screener'){
-        delete data.source;
-        sourceExists = true;
-        data.state_workflow = 1;
-        data.state_matched = 0;
-        data.RcrtES_Eligible_v1r0 = data.RcrtES_AgeQualify_v1r0 == 1 && data.RcrtES_CancerHist_v1r0 == 0 && data.RcrtES_Site_v1r0 != 88 ? 1 : 0;
-    }
+
+    const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
+    hotProperties.forEach(key => delete data[key]);
     
-    const { storeResponse } = require('./firestore');
-    const response = await storeResponse(data);
+    const { updateResponse } = require('./firestore');
+    const response = await updateResponse(data);
     
     if(response instanceof Error){
         return res.status(500).json(getResponseJSON(response.message, 500));
@@ -19,18 +14,7 @@ const submit = async (res, data) => {
     if(!response) {
         return res.status(500).json(getResponseJSON("Can't add/update data!", 500));
     }
-
-    if(sourceExists){
-        return res.status(200).json({
-            message: 'Data stored successfully!',
-            eligibility: data.RcrtES_Eligible_v1r0 === 1 ? true : false,
-            code: 200
-        });
-    }
-    else {
-        return res.status(200).json(getResponseJSON('Data stored successfully!', 200));
-    }
-    
+    return res.status(200).json(getResponseJSON('Data stored successfully!', 200));    
 };
 
 const recruitSubmit = async (req, res) => {

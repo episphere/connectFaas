@@ -65,7 +65,7 @@ const authorizeToken = async(token, res) => {
 
 const storeResponse = async (data) => {
     try{
-        const response = await db.collection('participants').where('token', '==', data.token).get();
+        const response = await db.collection('participants').where('state.token', '==', data.token).get();
         if(response.size > 0) {
             const latestVersion = response.docs.reduce((max, record) => record.data().version > max ? record.data().version : max, 0);
             data.version = latestVersion + 1;
@@ -85,16 +85,13 @@ const storeResponse = async (data) => {
 
 const updateResponse = async (data) => {
     try{
-        const response = await db.collection('participants').where('token', '==', data.token).get();
+        const response = await db.collection('participants').where('state.token', '==', data.token).get();
         if(response.size === 1) {
             for(let doc of response.docs){
+                delete data.token;
                 await db.collection('participants').doc(doc.id).update(data);
                 return true;
             }
-        }
-        else{
-            const storeData = await storeResponse(data);
-            return storeData;
         }
     }
     catch(error){
@@ -133,7 +130,7 @@ const retrieveQuestionnaire = async (source) => {
 module.exports = {
     validateKey,
     authorizeToken,
-    storeResponse,
     storeAPIKeyandToken,
-    retrieveQuestionnaire
+    retrieveQuestionnaire,
+    updateResponse
 }
