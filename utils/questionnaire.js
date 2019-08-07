@@ -10,9 +10,9 @@ const getQuestionnaire = async (req, res) => {
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
         else{
-            const apiKey = req.headers.authorization.replace('Bearer','').trim();
+            const acces_token = req.headers.authorization.replace('Bearer','').trim();
             const { validateKey } = require(`./firestore`);
-            const authorize = await validateKey(apiKey);
+            const authorize = await validateKey(acces_token);
             if(authorize instanceof Error){
                 res.status(500).json(getResponseJSON(authorize.message, 500));
             }

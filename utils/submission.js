@@ -46,9 +46,9 @@ const recruitSubmit = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    const apiKey = req.headers.authorization.replace('Bearer','').trim();
+    const access_token = req.headers.authorization.replace('Bearer','').trim();
     const { validateKey } = require(`./firestore`);
-    const authorize = await validateKey(apiKey);
+    const authorize = await validateKey(access_token);
 
     if(authorize instanceof Error){
         return res.status(500).json(getResponseJSON(authorize.message, 500));

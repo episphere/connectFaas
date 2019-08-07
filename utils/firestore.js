@@ -8,9 +8,9 @@ const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 
-const validateKey = async (apiKey) => {
+const validateKey = async (access_token) => {
     try{
-        const response = await db.collection('apiKeys').where('apiKey', '==', apiKey).get();
+        const response = await db.collection('apiKeys').where('access_token', '==', access_token).get();
         
         if(response.size !== 0) {
             const expiry = response.docs[0].data().expires.toDate().getTime();
@@ -40,17 +40,17 @@ const authorizeToken = async(token, res) => {
                 const currentTime = new Date().getTime();
                 
                 if(expiry > currentTime){
-                    return doc.data().apiKey
+                    return doc.data().access_token
                 }
                 else{
                     const uuid = require('uuid');
                     const data = {
-                        apiKey: uuid(),
+                        access_token: uuid(),
                         expires: new Date(Date.now() + 3600000)
                     }
                     res.header('expires', data.expires);
                     await db.collection('apiKeys').doc(doc.id).update(data);
-                    return data.apiKey;
+                    return data.access_token;
                 }
             }
         }
@@ -105,6 +105,7 @@ const updateResponse = async (data) => {
 const storeAPIKeyandToken = async (data) => {
     try{
         await db.collection('apiKeys').add(data);
+        await db.collection('participants').add({state: {token: data.token, verified: false}});
         return true;
         
     }

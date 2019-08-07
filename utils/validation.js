@@ -10,9 +10,9 @@ const validate = async (req, res) => {
             res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
         else{
-            let apiKey = req.headers.authorization.replace('Bearer','').trim();
+            let access_token = req.headers.authorization.replace('Bearer','').trim();
             const { validateKey } = require(`./firestore`);
-            const authorize = await validateKey(apiKey);
+            const authorize = await validateKey(access_token);
             if(authorize instanceof Error){
                 res.status(500).json(getResponseJSON(authorize.message, 500));
             }
@@ -43,7 +43,7 @@ const validateToken = async (req, res) => {
                 res.status(500).json(getResponseJSON(authorize.message, 500));
             }
             if(authorize){
-                res.status(200).json({apiKey: authorize, code: 200});
+                res.status(200).json({access_token: authorize, code: 200});
             }
             else{
                 res.status(401).json(getResponseJSON('Authorization failed!', 401));
@@ -67,7 +67,7 @@ const getKey = async (req, res) => {
         res.header('expires', expires);
         const uuid = require('uuid');
         const data = {
-            apiKey: uuid(),
+            access_token: uuid(),
             token: uuid(),
             expires: expires
         }
@@ -78,7 +78,7 @@ const getKey = async (req, res) => {
             res.status(500).json(getResponseJSON(response.message, 500));
         }
         if(response){
-            res.status(200).json({apiKey: data.apiKey, token: data.token, code: 200});
+            res.status(200).json({access_token: data.access_token, token: data.token, code: 200});
         }
     }
     else {
