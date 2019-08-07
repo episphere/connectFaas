@@ -127,10 +127,51 @@ const retrieveQuestionnaire = async (source) => {
     }
 }
 
+const validateSiteUser = async (siteKey, userId) => {
+    try{
+        const snapShot = await db.collection('siteUsers').where('state.siteKey', '==', siteKey).where('state.userId', '==', userId).get();
+        if(snapShot.size !== 0) {
+            return true;
+        }
+        else{
+            return false;
+        };
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const retrieveParticipants = async (siteKey, decider) => {
+    try{
+        const snapShot = await db.collection('siteDetails').where('siteKey', '==', siteKey).get();
+        if(snapShot.size > 0) {
+            const siteCode = snapShot.docs[0].data().siteCode;
+            let participants = {};
+            if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', true).get();
+            if(decider === 'unverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', false).get();
+            if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).get();
+            return participants.docs.map(document => {
+                let data = document.data();
+                delete data.state;
+                return data;
+            });
+        }
+        else{
+            return false;
+        };
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
     storeAPIKeyandToken,
     retrieveQuestionnaire,
-    updateResponse
+    updateResponse,
+    validateSiteUser,
+    retrieveParticipants
 }
