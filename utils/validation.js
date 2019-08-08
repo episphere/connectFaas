@@ -86,8 +86,42 @@ const getKey = async (req, res) => {
     }
 };
 
+const validateSiteUsers = async (req, res) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    if(!req.query.userId || req.query.userId.trim() === ""){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    const siteKey = req.headers.authorization.replace('Bearer','').trim();
+    const userId = req.query.userId;
+    const { validateSiteUser } = require(`./firestore`);
+    const authorize = await validateSiteUser(siteKey, userId);
+
+    if(authorize instanceof Error){
+        return res.status(500).json(getResponseJSON(authorize.message, 500));
+    }
+
+    if(!authorize){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    return res.status(200).json(getResponseJSON('Ok', 200));
+}
+
 module.exports = {
     validate,
     validateToken,
-    getKey
+    getKey,
+    validateSiteUsers
 }

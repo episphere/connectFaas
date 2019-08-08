@@ -102,14 +102,12 @@ const updateResponse = async (data) => {
 const storeAPIKeyandToken = async (data) => {
     try{
         await db.collection('apiKeys').add(data);
-        await db.collection('participants').add({state: {token: data.token, verified: false}});
+        await db.collection('participants').add({state: {token: data.token, verified: false, identityDeniedBySite: false}});
         return true;
-        
     }
     catch(error){
         return new Error(error);
     }
-    
 }
 
 const retrieveQuestionnaire = async (source) => {
@@ -148,11 +146,12 @@ const retrieveParticipants = async (siteKey, decider) => {
         if(snapShot.size > 0) {
             const siteCode = snapShot.docs[0].data().siteCode;
             let participants = {};
-            if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', true).get();
-            if(decider === 'unverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', false).get();
-            if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).get();
+            if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', true).where('state.identityDeniedBySite', '==', false).get();
+            if(decider === 'notverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', false).where('state.identityDeniedBySite', '==', false).get();
+            if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.identityDeniedBySite', '==', false).get();
             return participants.docs.map(document => {
                 let data = document.data();
+                data.token = data.state.token;
                 delete data.state;
                 return data;
             });
@@ -166,6 +165,32 @@ const retrieveParticipants = async (siteKey, decider) => {
     }
 }
 
+const verifyIdentity = async (type, token) => {
+    try{
+        const snapShot = await db.collection('participants').where('state.token', '==', token).get();
+        if(snapShot.size > 0){
+            const docId = snapShot.docs[0].id;
+            let data = {};
+            if(type){
+                data['state.verified'] = true;
+                data['state.identityDeniedBySite'] = false;
+            }
+            else{
+                data['state.verified'] = false;
+                data['state.identityDeniedBySite'] = true;
+            }
+            await db.collection('participants').doc(docId).update(data);
+            return true;
+        }
+        else {
+            return new Error('Record corresponding to token not found!!');
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -173,5 +198,6 @@ module.exports = {
     retrieveQuestionnaire,
     updateResponse,
     validateSiteUser,
-    retrieveParticipants
+    retrieveParticipants,
+    verifyIdentity
 }
