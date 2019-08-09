@@ -102,7 +102,7 @@ const updateResponse = async (data) => {
 const storeAPIKeyandToken = async (data) => {
     try{
         await db.collection('apiKeys').add(data);
-        await db.collection('participants').add({state: {token: data.token, verified: false, identityDeniedBySite: false}});
+        await db.collection('participants').add({state: {token: data.token, verified: false, identityClaimDeniedBySite: false}});
         return true;
     }
     catch(error){
@@ -146,9 +146,9 @@ const retrieveParticipants = async (siteKey, decider) => {
         if(snapShot.size > 0) {
             const siteCode = snapShot.docs[0].data().siteCode;
             let participants = {};
-            if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', true).where('state.identityDeniedBySite', '==', false).get();
-            if(decider === 'notverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', false).where('state.identityDeniedBySite', '==', false).get();
-            if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.identityDeniedBySite', '==', false).get();
+            if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', true).where('state.identityClaimDeniedBySite', '==', false).get();
+            if(decider === 'notverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.verified', '==', false).where('state.identityClaimDeniedBySite', '==', false).get();
+            if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.identityClaimDeniedBySite', '==', false).get();
             return participants.docs.map(document => {
                 let data = document.data();
                 data.token = data.state.token;
@@ -173,11 +173,11 @@ const verifyIdentity = async (type, token) => {
             let data = {};
             if(type){
                 data['state.verified'] = true;
-                data['state.identityDeniedBySite'] = false;
+                data['state.identityClaimDeniedBySite'] = false;
             }
             else{
                 data['state.verified'] = false;
-                data['state.identityDeniedBySite'] = true;
+                data['state.identityClaimDeniedBySite'] = true;
             }
             await db.collection('participants').doc(docId).update(data);
             return true;
