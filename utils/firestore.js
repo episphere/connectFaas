@@ -191,6 +191,26 @@ const verifyIdentity = async (type, token) => {
     }
 }
 
+const retrieveSiteDetails = async () => {
+    try{
+        const snapShot = await db.collection('siteDetails').orderBy('siteCode').get();
+        if(snapShot.size > 0){
+            return snapShot.docs.map(document => {
+                return {
+                    siteName: document.data().siteName,
+                    siteCode: document.data().siteCode
+                }
+            });
+        }
+        else{
+            return new Error('No site details found!')
+        }
+    }
+    catch(error){
+        return new Error(error)
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -199,5 +219,6 @@ module.exports = {
     updateResponse,
     validateSiteUser,
     retrieveParticipants,
-    verifyIdentity
+    verifyIdentity,
+    retrieveSiteDetails
 }
