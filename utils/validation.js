@@ -43,6 +43,7 @@ const validateToken = async (req, res) => {
                 res.status(500).json(getResponseJSON(authorize.message, 500));
             }
             if(authorize){
+                res.header('Set-Cookie', `access_token=${data.access_token}; Expires=${expires};`)
                 res.status(200).json({access_token: authorize, code: 200});
             }
             else{
@@ -78,6 +79,7 @@ const getKey = async (req, res) => {
             res.status(500).json(getResponseJSON(response.message, 500));
         }
         if(response){
+            res.header('Set-Cookie', `access_token=${data.access_token}; Expires=${expires};`)
             res.status(200).json({access_token: data.access_token, token: data.token, code: 200});
         }
     }
