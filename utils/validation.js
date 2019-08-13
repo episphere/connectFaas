@@ -36,6 +36,8 @@ const validateToken = async (req, res) => {
 
     if(req.method === 'GET') {
         if(req.query.token && req.query.token.trim() !== ""){
+            const expires = new Date(Date.now() + 3600000);
+            res.header('expires', expires);
             const token = req.query.token;
             const { authorizeToken } = require('./firestore');
             const authorize = await authorizeToken(token, res);
