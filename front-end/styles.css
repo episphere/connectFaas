@@ -1,0 +1,95 @@
+body {
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif; 
+}
+
+#pageHeader {
+	display: inline-flex;
+}
+
+.logo {
+	background: #ffffff;
+	margin: 20 8 0 8;
+}
+
+#nciLogo {
+	width: auto;
+	height: 80px;
+	padding-top: 10px;
+}
+
+#join {
+	display: flex;
+}
+
+#joinButton, .button_submit {
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0.05, #33bdef), color-stop(1, #019ad2));
+	background-color: #33bdef;
+	border-radius: 6px;
+	border: 1px solid #014f83;
+	display: inline-block;
+	cursor: pointer;
+	color: #ffffff;
+	font-size: 15px;
+	font-weight: bold;
+	padding: 11px 24px;
+}
+
+#joinButton:hover {
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0.05, #019ad2), color-stop(1, #33bdef));
+	background-color: #019ad2;
+}
+
+#joinButton:active {
+	position: relative;
+	top: 1px;
+}
+
+#eligibility {
+  display: flex;
+  margin-left: 10%;
+  margin-right: 10%;
+  padding-left: 1%;
+  padding-top: 0.5%;
+  background-color: aliceblue;
+}
+
+#eligibilityForm {
+  width: 100%;
+}
+
+.formDiv_radio, .formDiv_text, .formDiv_select, .formDiv_multiSelect {
+  color: #666666;
+  font-size: 20px;
+  padding-top: 0.5%;
+}
+
+.formDiv_checkbox_input {
+  font-size: 18px;
+  padding-left: 10px;
+}
+
+.formDiv_submit {
+  text-align: center;
+}
+/* 
+.input_submit {
+  width: 20em;
+  height: 3em;
+} */
+
+.radioDiv {
+  padding: 5px;
+}
+
+select {
+  margin-top: 25px;
+  margin-bottom: 15px; 
+}
+
+label {
+  margin-left: 5px; 
+}
+
+hr {
+  line-height: 0.05em;
+}
