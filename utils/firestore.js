@@ -40,7 +40,7 @@ const authorizeToken = async(token) => {
                 const currentTime = new Date().getTime();
                 
                 if(expiry > currentTime){
-                    return {access_token: doc.data().access_token, expires: doc.data().expires}
+                    return {access_token: doc.data().access_token, expires: doc.data().expires.toDate()}
                 }
                 else{
                     const uuid = require('uuid');
