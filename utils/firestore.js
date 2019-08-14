@@ -31,7 +31,7 @@ const validateKey = async (access_token) => {
     } 
 }
 
-const authorizeToken = async(token, res) => {
+const authorizeToken = async(token) => {
     try{
         const response = await db.collection('apiKeys').where('token', '==', token).get();
         if(response.size > 0) {
@@ -48,9 +48,8 @@ const authorizeToken = async(token, res) => {
                         access_token: uuid(),
                         expires: new Date(Date.now() + 3600000)
                     }
-                    res.header('expires', data.expires);
                     await db.collection('apiKeys').doc(doc.id).update(data);
-                    return data.access_token;
+                    return data;
                 }
             }
         }

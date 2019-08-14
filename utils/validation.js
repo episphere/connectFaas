@@ -36,17 +36,16 @@ const validateToken = async (req, res) => {
 
     if(req.method === 'GET') {
         if(req.query.token && req.query.token.trim() !== ""){
-            const expires = new Date(Date.now() + 3600000);
-            res.header('expires', expires);
             const token = req.query.token;
             const { authorizeToken } = require('./firestore');
-            const authorize = await authorizeToken(token, res);
+            const authorize = await authorizeToken(token);
             if(authorize instanceof Error){
                 res.status(500).json(getResponseJSON(authorize.message, 500));
             }
             if(authorize){
-                res.header('Set-Cookie', `access_token=${authorize}; Expires=${expires}`)
-                res.status(200).json({access_token: authorize, code: 200});
+                res.header('expires', authorize.expires);
+                res.header('Set-Cookie', `access_token=${authorize.access_token}; Expires=${authorize.expires}`)
+                res.status(200).json({access_token: authorize.access_token, code: 200});
             }
             else{
                 res.status(401).json(getResponseJSON('Authorization failed!', 401));
