@@ -191,7 +191,7 @@ const getUserProfile = async (req, res) => {
     const response = await retrieveUserProfile(access_token);
 
     if(response instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
+        return res.status(500).json(getResponseJSON(response.message, 500));
     }
 
     if(!response){
