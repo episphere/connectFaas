@@ -172,9 +172,41 @@ const identifyParticipant = async (req, res) => {
     }
 }
 
+const getUserProfile = async (req, res) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    const access_token = req.headers.authorization.replace('Bearer','').trim();
+
+    const { retrieveUserProfile } = require('./firestore');
+    const response = await retrieveUserProfile(access_token);
+
+    if(response instanceof Error){
+        return res.status(500).json(getResponseJSON(authorize.message, 500));
+    }
+
+    if(!response){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    if(response){
+        return res.status(200).json({data: response[0], code:200});
+    }
+}
+
 module.exports = {
     submit,
     recruitSubmit,
     getParticipants,
-    identifyParticipant
+    identifyParticipant,
+    getUserProfile
 }

@@ -210,6 +210,40 @@ const retrieveSiteDetails = async () => {
     }
 }
 
+const retrieveUserProfile = async (access_token) => {
+    try{
+        const response = await db.collection('apiKeys').where('access_token', '==', access_token).get();
+        if(response.size > 0) {
+            const data = response.docs[0].data();
+            const expiry = data.expires.toDate().getTime();
+            const currentTime = new Date().getTime();
+            if(expiry > currentTime){
+                const token = data.token;
+                const snapShot = await db.collection('participants').where('state.token', '==', token).get();
+                if(snapShot.size > 0){
+                    return snapShot.docs.map(document => {
+                        let data = document.data();
+                        delete data.state;
+                        return data;
+                    });
+                }
+                else{
+                    return new Error('No record found!')    
+                }
+            }
+            else{
+                return false;
+            }
+        }
+        else{
+            return false;
+        }
+    }
+    catch(error){
+        return new Error(error)
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -219,5 +253,6 @@ module.exports = {
     validateSiteUser,
     retrieveParticipants,
     verifyIdentity,
-    retrieveSiteDetails
+    retrieveSiteDetails,
+    retrieveUserProfile
 }
