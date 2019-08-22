@@ -254,6 +254,80 @@ const retrieveToken = async (access_token) => {
     }
 }
 
+const storeCredentials = async (access_token, email, hash) => {
+    try{
+        const token = await retrieveToken(access_token);
+        if(!token) return false;
+
+        const accountExists = await db.collection('participants').where('state.email', '==', email).get();
+        if(accountExists.size > 0) return new Error(`Account with email ${email} already exists!`)
+
+        const snapShot = await db.collection('participants').where('state.token', '==', token).get();
+        if(snapShot.size > 0){
+            const id = snapShot.docs[0].id;
+            const document = snapShot.docs[0].data();
+            if(document.state.email){
+                return new Error('Account already exists for this user');
+            }
+
+            const data = {
+                'state.email': email,
+                'state.password': hash
+            }
+            await db.collection('participants').doc(id).update(data);
+
+            const uuid = require('uuid');
+            const tokens = {
+                access_token: uuid(),
+                expires: new Date(Date.now() + 3600000),
+                email: email
+            }
+            await db.collection('apiKeys').add(tokens);
+
+            return true;
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const retrieveAccount = async (email, password) => {
+    try {
+        const snapshot = await db.collection('participants').where('state.email', '==', email).get();
+        if(snapshot.size > 0 ){
+            const hash = snapshot.docs[0].data().state.password;
+            const bcrypt = require('bcrypt');
+            const response = await bcrypt.compare(password, hash);
+            if(!response) return new Error('Invalid password!');
+            
+            const authorize = await db.collection('apiKeys').where('email', '==', email).get();
+            const id = authorize.docs[0].id;
+            const data = authorize.docs[0].data();
+            const expiry = data.expires.toDate().getTime();
+            const currentTime = new Date().getTime();
+            if(expiry > currentTime){
+                return { access_token: data.access_token, expires: data.expires.toDate() };
+            }
+            else{
+                const uuid = require('uuid');
+                const data = {
+                    access_token: uuid(),
+                    expires: new Date(Date.now() + 3600000)
+                }
+                await db.collection('apiKeys').doc(id).update(data);
+                return data;
+            }
+        }
+        else{
+            return new Error('Invalid Email!')
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -264,5 +338,7 @@ module.exports = {
     retrieveParticipants,
     verifyIdentity,
     retrieveSiteDetails,
-    retrieveUserProfile
+    retrieveUserProfile,
+    storeCredentials,
+    retrieveAccount
 }

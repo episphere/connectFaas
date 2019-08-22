@@ -42,7 +42,7 @@ const recruitSubmit = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
     if(req.url.indexOf('/submit/') !== -1){
-        let data = req.body;
+        const data = req.body;
         if(Object.keys(data).length <= 0){
             return res.status(400).json(getResponseJSON('Bad request!', 400));
         }
@@ -203,10 +203,88 @@ const getUserProfile = async (req, res) => {
     }
 }
 
+const createAccount = async (req, res) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+
+    const data = req.body;
+    if(Object.keys(data).length <= 0){
+        return res.status(400).json(getResponseJSON('Bad request!', 400));
+    }
+
+    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    const access_token = req.headers.authorization.replace('Bearer','').trim();
+
+    const email = data.email;
+    const password = data.password;
+
+    const bcrypt = require('bcrypt');
+    const saltRounds = 13;
+
+    const salt = await bcrypt.genSalt(saltRounds);
+    const hash = await bcrypt.hash(password, salt);
+    
+    const { storeCredentials } = require('./firestore');
+    const response = await storeCredentials(access_token, email, hash);
+
+    if(response instanceof Error){
+        if(response.message === 'Account already exists for this user' || response.message === `Account with email ${email} already exists!`) return res.status(409).json(getResponseJSON(response.message, 409));
+        return res.status(500).json(getResponseJSON(response.message, 500));
+    }
+
+    if(!response){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    return res.status(200).json(getResponseJSON('Success!!', 200));
+}
+
+const login = async (req, res) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+
+    const data = req.body;
+    if(Object.keys(data).length <= 0){
+        return res.status(400).json(getResponseJSON('Bad request!', 400));
+    }
+
+    const email = data.email;
+    const password = data.password;
+
+    const { retrieveAccount } = require('./firestore');
+    const response = await retrieveAccount(email, password);
+
+    if(response instanceof Error){
+        if(response.message === 'Invalid password!' || response.message === 'Invalid Email!') return res.status(401).json(getResponseJSON(response.message, 401));
+        return res.status(500).json(getResponseJSON(response.message, 500));
+    }
+
+    if(response){
+        res.header('expires', response.expires);
+        res.header('Set-Cookie', `access_token=${response.access_token}; Expires=${response.expires}`)
+        res.status(200).json({access_token: response.access_token, code: 200});
+    };
+}
+
 module.exports = {
     submit,
     recruitSubmit,
     getParticipants,
     identifyParticipant,
-    getUserProfile
+    getUserProfile,
+    createAccount,
+    login
 }
