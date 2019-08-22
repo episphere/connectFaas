@@ -212,7 +212,7 @@ const retrieveSiteDetails = async () => {
 
 const retrieveUserProfile = async (access_token) => {
     try{
-        const token = await retrieveToken(access_token);
+        const { token } = await retrieveToken(access_token);
         if(!token) return false;
         const snapShot = await db.collection('participants').where('state.token', '==', token).get();
         if(snapShot.size > 0){
@@ -239,7 +239,7 @@ const retrieveToken = async (access_token) => {
             const expiry = data.expires.toDate().getTime();
             const currentTime = new Date().getTime();
             if(expiry > currentTime){
-                return data.token;
+                return {token: data.token, docId: response.docs[0].id};
             }
             else{
                 return false;
@@ -256,7 +256,7 @@ const retrieveToken = async (access_token) => {
 
 const storeCredentials = async (access_token, email, hash) => {
     try{
-        const token = await retrieveToken(access_token);
+        const { token, docId } = await retrieveToken(access_token);
         if(!token) return false;
 
         const accountExists = await db.collection('participants').where('state.email', '==', email).get();
@@ -283,7 +283,7 @@ const storeCredentials = async (access_token, email, hash) => {
                 email: email
             }
             await db.collection('apiKeys').add(tokens);
-
+            await db.collection('apiKeys').doc(docId).delete();
             return true;
         }
     }
