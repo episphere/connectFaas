@@ -126,7 +126,7 @@ const retrieveQuestionnaire = async (source) => {
 
 const validateSiteUser = async (siteKey) => {
     try{
-        const snapShot = await db.collection('siteUsers').where('state.siteKey', '==', siteKey).get();
+        const snapShot = await db.collection('siteDetails').where('siteKey', '==', siteKey).get();
         if(snapShot.size !== 0) {
             return true;
         }

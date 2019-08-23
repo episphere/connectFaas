@@ -68,17 +68,6 @@ const getParticipants = async (req, res) => {
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
     
-    const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey);
-
-    if(authorize instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
-    }
-
-    if(!authorize){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    
     let decider = "";
     if(req.url.indexOf('/verified') !== -1){
         decider = "verified";
