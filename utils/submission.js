@@ -66,14 +66,10 @@ const getParticipants = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    if(!req.query.userId || req.query.userId.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    const userId = req.query.userId;
+    
     const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey, userId);
+    const authorize = await validateSiteUser(siteKey);
 
     if(authorize instanceof Error){
         return res.status(500).json(getResponseJSON(authorize.message, 500));
@@ -124,10 +120,6 @@ const identifyParticipant = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    if(!req.query.userId || req.query.userId.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
     if(!req.query.type || req.query.type.trim() === ""){
         return res.status(401).json(getResponseJSON('Type is missing!', 401));
     }
@@ -137,11 +129,11 @@ const identifyParticipant = async (req, res) => {
     }
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    const userId = req.query.userId;
     const type = req.query.type;
     const token = req.query.token;
+
     const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey, userId);
+    const authorize = await validateSiteUser(siteKey);
 
     if(authorize instanceof Error){
         return res.status(500).json(getResponseJSON(authorize.message, 500));

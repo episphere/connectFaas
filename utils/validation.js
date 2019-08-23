@@ -102,14 +102,10 @@ const validateSiteUsers = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    if(!req.query.userId || req.query.userId.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    const userId = req.query.userId;
+    
     const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey, userId);
+    const authorize = await validateSiteUser(siteKey);
 
     if(authorize instanceof Error){
         return res.status(500).json(getResponseJSON(authorize.message, 500));
