@@ -77,15 +77,15 @@ const getKey = async (req, res) => {
         const { storeAPIKeyandToken } = require('./firestore');
         const response = await storeAPIKeyandToken(data);
         if(response instanceof Error){
-            res.status(500).json(getResponseJSON(response.message, 500));
+            return res.status(500).json(getResponseJSON(response.message, 500));
         }
         if(response){
             res.header('Set-Cookie', `access_token=${data.access_token}; Expires=${expires}`)
-            res.status(200).json({access_token: data.access_token, token: data.token, code: 200});
+            return res.status(200).json({access_token: data.access_token, token: data.token, code: 200});
         }
     }
     else {
-        res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 };
 

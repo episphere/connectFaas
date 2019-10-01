@@ -328,6 +328,37 @@ const retrieveAccount = async (email, password) => {
     }
 }
 
+const storeFile = async (subission, filename, encoding, mimetype) => {
+    try{
+        const uuid = require('uuid');
+        const myBucket = gcs.bucket('connect-cohort-submisssions-dev');
+        const gcsname = Date.now() + `${uuid()}_${filename}`;
+        const file = myBucket.file(gcsname);
+        await file.save(subission);
+        // const stream = file.createWriteStream({
+        //     metadata: {
+        //         contentType: mimetype
+        //     },
+        //     resumable: false
+        // });
+
+        // stream.on('error', (err) => {
+        //     req.file.cloudStorageError = err;
+        //     next(err);
+        // });
+    
+        // stream.on('finish', () => {
+        //     req.file.cloudStorageObject = gcsname;
+        //     next();
+        // });
+    
+        // stream.end(subission);
+    }
+    catch(error){
+        return new Error(error)
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -340,5 +371,6 @@ module.exports = {
     retrieveSiteDetails,
     retrieveUserProfile,
     storeCredentials,
-    retrieveAccount
+    retrieveAccount,
+    storeFile
 }
