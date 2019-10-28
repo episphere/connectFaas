@@ -1,4 +1,4 @@
-const { validate, validateToken, getKey, validateSiteUsers } = require('./utils/validation');
+const { validate, validateToken, getKey, validateSiteUsers, validateUserSession, getToken } = require('./utils/validation');
 const { recruitSubmit, getParticipants, identifyParticipant, getUserProfile, createAccount, login } = require('./utils/submission');
 const { getQuestionnaire } = require('./utils/questionnaire');
 const { getSiteDetails } = require('./utils/sites');
@@ -6,6 +6,8 @@ const { getSiteDetails } = require('./utils/sites');
 exports.validate = validate;
  
 exports.validateToken = validateToken;
+
+exports.getToken = getToken;
 
 exports.getKey = getKey;
 
@@ -26,3 +28,5 @@ exports.getSiteDetails = getSiteDetails;
 exports.createAccount = createAccount;
 
 exports.login = login;
+
+exports.validateUserSession = validateUserSession;

@@ -109,6 +109,30 @@ const storeAPIKeyandToken = async (data) => {
     }
 }
 
+const createRecord = async (data) => {
+    try{
+        await db.collection('participants').add(data);
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const recordExists = async (studyId) => {
+    try{
+        const snapShot = await db.collection('participants').where('state.studyId', '==', studyId).get();
+        if(snapShot.size > 0){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 const retrieveQuestionnaire = async (source) => {
     try{
         const data = await db.collection('questionnaire').where('source', '==', source).orderBy('sequence').get();
@@ -127,8 +151,8 @@ const retrieveQuestionnaire = async (source) => {
 const validateSiteUser = async (siteKey) => {
     try{
         const snapShot = await db.collection('siteDetails').where('siteKey', '==', siteKey).get();
-        if(snapShot.size !== 0) {
-            return true;
+        if(snapShot.size === 1) {
+            return snapShot.docs[0].data();
         }
         else{
             return false;
@@ -372,5 +396,7 @@ module.exports = {
     retrieveUserProfile,
     storeCredentials,
     retrieveAccount,
-    storeFile
+    storeFile,
+    createRecord,
+    recordExists
 }
