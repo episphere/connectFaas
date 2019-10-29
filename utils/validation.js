@@ -167,11 +167,11 @@ const getToken = async (req, res) => {
         const data = req.body;
         
         for(let dt in data){
-            
             if(data[dt].studyId){
                 const studyId = data[dt].studyId
                 const { recordExists } = require('./firestore');
-                if(await recordExists(studyId) === false){
+                const response = await recordExists(studyId);
+                if(response === false){
                     const obj = {
                         state: {
                             studyId: studyId
@@ -182,6 +182,8 @@ const getToken = async (req, res) => {
                     const { createRecord } = require('./firestore');
                     createRecord(obj);
                     responseArray.push({studyId: studyId, token: obj.token});
+                }else{
+                    responseArray.push({studyId: studyId, token: response.token});
                 }
             }
        };
