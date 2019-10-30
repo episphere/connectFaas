@@ -136,7 +136,6 @@ const validateUserSession = (req, res) => {
 
 const getToken = async (req, res) => {
     setHeaders(res);
-
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
     if(req.method !== 'POST') {
@@ -161,10 +160,11 @@ const getToken = async (req, res) => {
     }
     
     const uuid = require('uuid');
-    if(Object.keys(req.body).length > 0){
+    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
+    if(Object.keys(req.body.data).length > 0){
         let responseArray = [];
-        if(Object.keys(req.body).length > 1000) return res.status(400).json(getResponseJSON('Bad request!', 400));
-        const data = req.body;
+        if(Object.keys(req.body.data).length > 1000) return res.status(400).json(getResponseJSON('Bad request!', 400));
+        const data = req.body.data;
         
         for(let dt in data){
             if(data[dt].studyId){
@@ -182,20 +182,17 @@ const getToken = async (req, res) => {
                     const { createRecord } = require('./firestore');
                     createRecord(obj);
                     responseArray.push({studyId: studyId, token: obj.token});
-                }else{
+                } else {
                     responseArray.push({studyId: studyId, token: response.token});
                 }
+            } else {
+                // Return error?
             }
-       };
-       return res.status(200).json({data: responseArray, code: 200});
+        };
+        return res.status(200).json({data: responseArray, code: 200});
     }
     else {
-        const data = {
-            token: uuid()
-        }
-        const { createRecord } = require('./firestore');
-        createRecord(data);
-        return res.status(200).json({data, code: 200});
+        return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
 }
 
