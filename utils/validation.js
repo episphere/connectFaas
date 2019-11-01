@@ -173,10 +173,8 @@ const getToken = async (req, res) => {
                 const response = await recordExists(studyId);
                 if(response === false){
                     const obj = {
-                        state: {
-                            studyId: studyId
-                        },
-                        siteCode: authorize.siteCode,
+                        state: {...data[dt]},
+                        RcrtES_Site_v1r0: authorize.siteCode,
                         token: uuid()
                     }
                     const { createRecord } = require('./firestore');
