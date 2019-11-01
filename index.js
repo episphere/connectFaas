@@ -7,7 +7,7 @@ exports.validate = validate;
  
 exports.validateToken = validateToken;
 
-exports.getToken = getToken;
+exports.getParticipantToken = getToken;
 
 exports.getKey = getKey;
 
