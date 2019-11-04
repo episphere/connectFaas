@@ -1,7 +1,8 @@
-// const firestore = require('@google-cloud/firestore');
-// const db = new firestore({
+// const admin = require('firebase-admin');
+// admin.initializeApp({
 //     keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
 // });
+// const db =admin.firestore();
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -62,6 +63,41 @@ const authorizeToken = async(token) => {
     }
 }
 
+const verifyToken = async (token) => {
+    try{
+        const response = await db.collection('participants').where('token', '==', token).get();
+        if(response.size === 1) {
+            return docs[0].id;
+        }
+        return false;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const validateIDToken = async (idToken) => {
+    try{
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        return decodedToken;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const linkParticipanttoFirebaseUID = async (docID, uID) => {
+    try{
+        let data = {};
+        data['state.uid'] = uID
+        await db.collection('participants').doc(docID).update();
+        return true;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 const storeResponse = async (data) => {
     try{
         const response = await db.collection('participants').where('state.token', '==', data.token).get();
@@ -112,6 +148,7 @@ const storeAPIKeyandToken = async (data) => {
 const createRecord = async (data) => {
     try{
         await db.collection('participants').add(data);
+        return true;
     }
     catch(error){
         return new Error(error);
@@ -398,5 +435,8 @@ module.exports = {
     retrieveAccount,
     storeFile,
     createRecord,
-    recordExists
+    recordExists,
+    validateIDToken,
+    verifyToken,
+    linkParticipanttoFirebaseUID
 }

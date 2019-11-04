@@ -34,29 +34,63 @@ const validateToken = async (req, res) => {
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
-    if(req.method === 'GET') {
-        if(req.query.token && req.query.token.trim() !== ""){
-            const token = req.query.token;
-            const { authorizeToken } = require('./firestore');
-            const authorize = await authorizeToken(token);
-            if(authorize instanceof Error){
-                res.status(500).json(getResponseJSON(authorize.message, 500));
-            }
-            if(authorize){
-                res.header('expires', authorize.expires);
-                res.header('Set-Cookie', `access_token=${authorize.access_token}; Expires=${authorize.expires}`)
-                res.status(200).json({access_token: authorize.access_token, code: 200});
-            }
-            else{
-                res.status(401).json(getResponseJSON('Authorization failed!', 401));
-            }
-        }else{
-            res.status(406).json(getResponseJSON('Token missing!', 406));
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+    
+    const idToken = req.headers.authorization.replace('Bearer','').trim();
+    const { validateIDToken } = require('./firestore');
+    const decodedToken = await validateIDToken(idToken);
+
+    if(decodedToken instanceof Error){
+        return res.status(500).json(getResponseJSON(decodedToken.message, 500));
+    }
+
+    if(!decodedToken){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    if(req.query.token && req.query.token.trim() !== "") {
+        const token = req.query.token.trim();
+
+        const { verifyToken } = require('./firestore');
+        const isValid = await verifyToken(token);
+
+        if(isValid instanceof Error){
+            return res.status(500).json(getResponseJSON(isValid.message, 500));
+        }
+
+        if(isValid){ // add uid to participant record
+            const { linkParticipanttoFirebaseUID } = require('./firestore');
+            linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
+        }
+        else{ // Invalid token - create new token and link with firebase uid
+            const obj = {
+                state: {
+                    uid: decodedToken.uid
+                },
+                token: uuid()
+            };
+            const { createRecord } = require('./firestore');
+            createRecord(obj);
         }
     }
-    else {
-        res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    else{
+        const obj = {
+            state: {
+                uid: decodedToken.uid
+            },
+            token: uuid()
+        };
+        const { createRecord } = require('./firestore');
+        createRecord(obj);
     }
+
+    return res.status(200).json(getResponseJSON('Ok', 200));
 };
 
 const getKey = async (req, res) => {
