@@ -30,17 +30,18 @@ const recruitSubmit = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    const access_token = req.headers.authorization.replace('Bearer','').trim();
-    const { validateKey } = require(`./firestore`);
-    const authorize = await validateKey(access_token);
+    const idToken = req.headers.authorization.replace('Bearer','').trim();
+    const { validateIDToken } = require('./firestore');
+    const decodedToken = await validateIDToken(idToken);
 
-    if(authorize instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
+    if(decodedToken instanceof Error){
+        return res.status(500).json(getResponseJSON(decodedToken.message, 500));
     }
 
-    if(!authorize){
+    if(!decodedToken){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
+    
     if(req.url.indexOf('/submit/') !== -1){
         const data = req.body;
         if(Object.keys(data).length <= 0){
