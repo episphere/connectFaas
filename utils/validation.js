@@ -78,7 +78,8 @@ const validateToken = async (req, res) => {
             const uuid = require('uuid');
             const obj = {
                 state: {
-                    uid: decodedToken.uid
+                    uid: decodedToken.uid,
+                    RcrtV_Verification_v1r0: 0
                 },
                 token: uuid()
             };
@@ -90,7 +91,8 @@ const validateToken = async (req, res) => {
         const uuid = require('uuid');
         const obj = {
             state: {
-                uid: decodedToken.uid
+                uid: decodedToken.uid,
+                RcrtV_Verification_v1r0: 0
             },
             token: uuid()
         };
@@ -215,7 +217,7 @@ const getToken = async (req, res) => {
                 const response = await recordExists(studyId);
                 if(response === false){
                     const obj = {
-                        state: {...data[dt]},
+                        state: {...data[dt], RcrtV_Verification_v1r0: 0},
                         RcrtES_Site_v1r0: authorize.siteCode,
                         token: uuid()
                     }
