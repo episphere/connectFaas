@@ -67,7 +67,11 @@ const verifyToken = async (token) => {
     try{
         const response = await db.collection('participants').where('token', '==', token).get();
         if(response.size === 1) {
-            return docs[0].id;
+            if(response.docs[0].data().state.uid === undefined){
+                return response.docs[0].id;
+            }else{
+                return false;
+            }
         }
         return false;
     }

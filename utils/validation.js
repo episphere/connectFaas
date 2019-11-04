@@ -69,6 +69,7 @@ const validateToken = async (req, res) => {
             linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
         }
         else{ // Invalid token - create new token and link with firebase uid
+            const uuid = require('uuid');
             const obj = {
                 state: {
                     uid: decodedToken.uid
@@ -80,6 +81,7 @@ const validateToken = async (req, res) => {
         }
     }
     else{
+        const uuid = require('uuid');
         const obj = {
             state: {
                 uid: decodedToken.uid
