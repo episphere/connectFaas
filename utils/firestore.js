@@ -102,6 +102,21 @@ const linkParticipanttoFirebaseUID = async (docID, uID) => {
     }
 }
 
+const participantExists = async (uid) => {
+    try{
+        const response = db.collection('participants').where('state.uid', '==', uid).get();
+        if(response.size === 0){
+            return false;
+        }
+        else{
+            return true;
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 const storeResponse = async (data) => {
     try{
         const response = await db.collection('participants').where('state.token', '==', data.token).get();
@@ -442,5 +457,6 @@ module.exports = {
     recordExists,
     validateIDToken,
     verifyToken,
-    linkParticipanttoFirebaseUID
+    linkParticipanttoFirebaseUID,
+    participantExists
 }
