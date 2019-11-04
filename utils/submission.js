@@ -1,12 +1,12 @@
 const { getResponseJSON, setHeaders } = require('./shared');
 
-const submit = async (res, data) => {
+const submit = async (res, data, uid) => {
     
     const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
     hotProperties.forEach(key => delete data[key]);
     
     const { updateResponse } = require('./firestore');
-    const response = await updateResponse(data);
+    const response = await updateResponse(data, uid);
     
     if(response instanceof Error){
         return res.status(500).json(getResponseJSON(response.message, 500));
@@ -41,13 +41,13 @@ const recruitSubmit = async (req, res) => {
     if(!decodedToken){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
-    
+
     if(req.url.indexOf('/submit/') !== -1){
         const data = req.body;
         if(Object.keys(data).length <= 0){
             return res.status(400).json(getResponseJSON('Bad request!', 400));
         }
-        return submit(res, data)
+        return submit(res, data, decodedToken.uid)
     }
     else{
         return res.status(400).json(getResponseJSON('Bad request!', 400));

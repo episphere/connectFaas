@@ -140,12 +140,11 @@ const storeResponse = async (data) => {
     }
 }
 
-const updateResponse = async (data) => {
+const updateResponse = async (data, uid) => {
     try{
-        const response = await db.collection('participants').where('state.token', '==', data.token).get();
+        const response = await db.collection('participants').where('state.uid', '==', uid).get();
         if(response.size === 1) {
             for(let doc of response.docs){
-                delete data.token;
                 await db.collection('participants').doc(doc.id).update(data);
                 return true;
             }
