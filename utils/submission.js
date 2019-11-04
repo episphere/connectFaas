@@ -42,7 +42,7 @@ const recruitSubmit = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    if(req.url.indexOf('/submit/') !== -1){
+    if(req.url.indexOf('/submit') !== -1){
         const data = req.body;
         if(Object.keys(data).length <= 0){
             return res.status(400).json(getResponseJSON('Bad request!', 400));
