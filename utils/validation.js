@@ -56,7 +56,7 @@ const validateToken = async (req, res) => {
     const { participantExists } = require('./firestore')
     const userAlreadyExists = await participantExists(decodedToken.uid);
 
-    if(!userAlreadyExists){
+    if(userAlreadyExists){
         return res.status(401).json(getResponseJSON('Account already exists', 401));
     }
 

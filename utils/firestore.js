@@ -2,7 +2,10 @@
 // admin.initializeApp({
 //     keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
 // });
-// const db =admin.firestore();
+// const firestore = require('@google-cloud/firestore');
+// const db = new firestore({
+//     keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
+// });
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -94,7 +97,7 @@ const linkParticipanttoFirebaseUID = async (docID, uID) => {
     try{
         let data = {};
         data['state.uid'] = uID
-        await db.collection('participants').doc(docID).update();
+        await db.collection('participants').doc(docID).update(data);
         return true;
     }
     catch(error){
@@ -104,7 +107,7 @@ const linkParticipanttoFirebaseUID = async (docID, uID) => {
 
 const participantExists = async (uid) => {
     try{
-        const response = db.collection('participants').where('state.uid', '==', uid).get();
+        const response = await db.collection('participants').where('state.uid', '==', uid).get();
         if(response.size === 0){
             return false;
         }
