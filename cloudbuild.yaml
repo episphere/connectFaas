@@ -3,5 +3,5 @@ steps:
   args: ['install']
   dir: 'functions/autodeploy'
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'function-1', '--trigger-http', '--runtime', 'nodejs8', '--entry-point', 'hellocloud4biobhaumik', '--source', 'https://source.cloud.google.com/nih-nci-dceg-episphere-dev/github_episphere_connectfaas/+/master:']
+  args: ['functions', 'deploy', 'function-1', '--trigger-http', '--runtime', 'nodejs8', '--entry-point', 'hellocloud4biobhaumik', '--source', 'nih-nci-dceg-episphere-dev/github_episphere_connectfaas/master//']
   dir: 'functions/autodeploy'
