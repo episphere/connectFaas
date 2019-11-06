@@ -30,3 +30,8 @@ exports.createAccount = createAccount;
 exports.login = login;
 
 exports.validateUserSession = validateUserSession;
+
+exports.hellocloud4biobhaumik = (req, res) => {
+    let message = req.query.message || req.body.message || 'Hello World!';
+    res.status(200).json({data: message});
+}
