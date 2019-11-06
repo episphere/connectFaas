@@ -32,6 +32,6 @@ exports.login = login;
 exports.validateUserSession = validateUserSession;
 
 exports.hellocloud4biobhaumik = (req, res) => {
-    let message = req.query.message || req.body.message || `Hello - ${Date()}`;
+    let message = req.query.message || req.body.message || `Hello DCEG - ${Date()}`;
     res.status(200).json({data: message});
 }
