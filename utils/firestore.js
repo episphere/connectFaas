@@ -96,7 +96,7 @@ const validateIDToken = async (idToken) => {
 const linkParticipanttoFirebaseUID = async (docID, uID) => {
     try{
         let data = {};
-        data.['state.RcrtSI_Account_v1r0'] = 1;
+        data['state.RcrtSI_Account_v1r0'] = 1;
         data['state.uid'] = uID
         await db.collection('participants').doc(docID).update(data);
         return true;
