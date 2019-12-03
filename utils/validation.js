@@ -80,7 +80,8 @@ const validateToken = async (req, res) => {
             const obj = {
                 state: {
                     uid: decodedToken.uid,
-                    RcrtV_Verification_v1r0: 0
+                    RcrtV_Verification_v1r0: 0,
+                    RcrtSI_Account_v1r0: 1
                 },
                 token: uuid()
             };
