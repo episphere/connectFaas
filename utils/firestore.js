@@ -246,7 +246,7 @@ const retrieveParticipants = async (siteKey, decider) => {
 
 const verifyIdentity = async (type, token) => {
     try{
-        const snapShot = await db.collection('participants').where('state.token', '==', token).get();
+        const snapShot = await db.collection('participants').where('token', '==', token).get();
         if(snapShot.size > 0){
             const docId = snapShot.docs[0].id;
             let data = {};
