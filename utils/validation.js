@@ -239,11 +239,45 @@ const getToken = async (req, res) => {
     }
 }
 
+const confluence = async (req, res) => {
+    setHeaders(res);
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    // if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+    //     return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    // }
+
+    // const jwt = req.headers.authorization.replace('Bearer','').trim();
+    
+    var BoxSDK = require('box-node-sdk');
+
+    var sdkConfig = require('../355526_yrxqfe8i_config.json');
+    var sdk = BoxSDK.getPreconfiguredInstance(sdkConfig);
+
+    // Get the service account client, used to create and manage app user accounts
+    // The enterprise ID is pre-populated by the JSON configuration,
+    // so you don't need to specify it here
+    // var serviceAccountClient = sdk.getAppAuthClient('enterprise');
+
+    // Get an app user client
+    var appUserClient = sdk.getAppAuthClient('user', '8277592800');
+    appUserClient.folders.get('0')
+        .then(dt => console.log(dt))
+        .catch(err => console.log(err));
+    console.log(appUserClient);
+    
+}
+
 module.exports = {
     validate,
     validateToken,
     getKey,
     validateSiteUsers,
     validateUserSession,
-    getToken
+    getToken,
+    confluence
 }
