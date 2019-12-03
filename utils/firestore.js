@@ -288,11 +288,9 @@ const retrieveSiteDetails = async () => {
     }
 }
 
-const retrieveUserProfile = async (access_token) => {
+const retrieveUserProfile = async (uid) => {
     try{
-        const { token } = await retrieveToken(access_token);
-        if(!token) return false;
-        const snapShot = await db.collection('participants').where('state.token', '==', token).get();
+        const snapShot = await db.collection('participants').where('state.uid', '==', uid).get();
         if(snapShot.size > 0){
             return snapShot.docs.map(document => {
                 let data = document.data();
