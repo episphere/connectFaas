@@ -18,8 +18,7 @@ const getSiteDetails = async (req, res) => {
 
     if(response){
         return res.status(200).json({data: response, code:200})
-    }
-    
+    }   
 }
 
 module.exports = {

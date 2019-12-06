@@ -1,10 +1,25 @@
 const { getResponseJSON, setHeaders } = require('./shared');
 
 const submit = async (res, data, uid) => {
-    
     const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
     hotProperties.forEach(key => delete data[key]);
-    
+    if(data.RcrtCS_Consented_v1r0 !== undefined && data.RcrtCS_Consented_v1r0 === 1) {
+        // generate Connect_ID
+        const { generateConnectID } = require('./shared');
+        const { sanityCheckConnectID } = require('./firestore');
+        let boo = false;
+        let Connect_ID;
+        while(boo === false){
+            const ID = generateConnectID();
+            const response = await sanityCheckConnectID(ID);
+            if(response === true) {
+                Connect_ID = ID;
+                boo = true;
+            }
+        }
+        data = {...data, Connect_ID}
+    }
+
     const { updateResponse } = require('./firestore');
     const response = await updateResponse(data, uid);
     

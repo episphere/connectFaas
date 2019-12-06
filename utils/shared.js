@@ -8,7 +8,12 @@ const setHeaders = (res) => {
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
 }
 
+const generateConnectID = () => {
+    return Math.floor(Math.random() * (9999999999 - 1000000000)) + 1000000000;
+}
+
 module.exports = {
     getResponseJSON,
-    setHeaders
+    setHeaders,
+    generateConnectID
 }

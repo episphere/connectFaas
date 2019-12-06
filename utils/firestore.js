@@ -436,6 +436,17 @@ const storeFile = async (subission, filename, encoding, mimetype) => {
     }
 }
 
+const sanityCheckConnectID = async (ID) => {
+    try{
+        const snapshot = await db.collection('participants').where('Connect_ID', '==', ID).get();
+        if(snapshot.size === 0) return true;
+        else return false;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -455,5 +466,6 @@ module.exports = {
     validateIDToken,
     verifyToken,
     linkParticipanttoFirebaseUID,
-    participantExists
+    participantExists,
+    sanityCheckConnectID
 }
