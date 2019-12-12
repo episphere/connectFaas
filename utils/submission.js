@@ -88,18 +88,21 @@ const getParticipants = async (req, res) => {
     const authorized = await validateSiteUser(siteKey);
     if(authorized === false) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
 
+    if(req.query.type === false) return res.status(404).json(getResponseJSON('Not Found', 404));
+
     let decider = "";
-    if(req.url.indexOf('/verified') !== -1){
+    
+    if(req.query.type === 'verified'){
         decider = "verified";
     }
-    else if(req.url.indexOf('/notverified') !== -1){
+    else if(req.query.type === 'notverified'){
         decider = "notverified";
     }
-    else if (req.url.indexOf('/all') !== -1){
+    else if (req.query.type ==='all'){
         decider = "all";
     }
     else{
-        return res.status(400).json(getResponseJSON('Bad request!', 400));
+        return res.status(404).json(getResponseJSON('Not Found', 404));
     }
 
     const { retrieveParticipants } = require(`./firestore`);
