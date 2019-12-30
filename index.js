@@ -13,7 +13,7 @@ exports.getKey = getKey;
 
 exports.getQuestionnaire = getQuestionnaire;
 
-exports.recruit = recruitSubmit;
+exports.submit = recruitSubmit;
 
 exports.getUserProfile = getUserProfile;
 
