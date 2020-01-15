@@ -79,7 +79,7 @@ const getParticipants = async (req, res) => {
     }
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(siteKey +" " +req.query );
+    console.log(siteKey +" " +JSON.stringify(req.query));
     const { validateSiteUser } = require('./firestore');
     const authorized = await validateSiteUser(siteKey);
     if(authorized === false) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
