@@ -149,7 +149,7 @@ const validateSiteUsers = async (req, res) => {
     }
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    
+    console.log(`validateSiteUser ${new Date()} ${siteKey}`);
     const { validateSiteUser } = require(`./firestore`);
     const authorize = await validateSiteUser(siteKey);
 
@@ -193,7 +193,7 @@ const getToken = async (req, res) => {
     }
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    
+    console.log(`getParticipantToken ${new Date()} ${siteKey}`)
     const { validateSiteUser } = require(`./firestore`);
     const authorize = await validateSiteUser(siteKey);
 
@@ -211,7 +211,7 @@ const getToken = async (req, res) => {
         let responseArray = [];
         if(Object.keys(req.body.data).length > 1000) return res.status(400).json(getResponseJSON('Bad request!', 400));
         const data = req.body.data;
-        
+        console.log(data);
         for(let dt in data){
             if(data[dt].studyId && data[dt].studyId.trim() !== ""){
                 const studyId = data[dt].studyId

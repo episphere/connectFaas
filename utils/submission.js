@@ -65,7 +65,6 @@ const recruitSubmit = async (req, res) => {
 }
 
 const getParticipants = async (req, res) => {
-    console.log(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -79,12 +78,12 @@ const getParticipants = async (req, res) => {
     }
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(siteKey +" " +JSON.stringify(req.query));
+    console.log(`getParticipants ${new Date()} ${siteKey} ${JSON.stringify(req.query)}`);
     const { validateSiteUser } = require('./firestore');
     const authorized = await validateSiteUser(siteKey);
     if(authorized === false) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
 
-    if(req.query.type === false) return res.status(404).json(getResponseJSON('Not Found', 404));
+    if(req.query.type === false) return res.status(404).json(getResponseJSON('Resource not found', 404));
 
     let decider = "";
     
@@ -98,7 +97,7 @@ const getParticipants = async (req, res) => {
         decider = "all";
     }
     else{
-        return res.status(404).json(getResponseJSON('Not Found', 404));
+        return res.status(404).json(getResponseJSON('Resource not found', 404));
     }
 
     const { retrieveParticipants } = require(`./firestore`);
@@ -139,7 +138,7 @@ const identifyParticipant = async (req, res) => {
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
     const type = req.query.type;
     const token = req.query.token;
-
+    console.log(`identifyParticipant ${new Date()} siteKey: -${siteKey}, type: - ${type} and participant token: - ${token}`);
     const { validateSiteUser } = require(`./firestore`);
     const authorize = await validateSiteUser(siteKey);
 
