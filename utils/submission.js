@@ -65,6 +65,7 @@ const recruitSubmit = async (req, res) => {
 }
 
 const getParticipants = async (req, res) => {
+    console.log(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -78,7 +79,7 @@ const getParticipants = async (req, res) => {
     }
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    
+    console.log(siteKey +" " +req.query );
     const { validateSiteUser } = require('./firestore');
     const authorized = await validateSiteUser(siteKey);
     if(authorized === false) return res.status(401).json(getResponseJSON('Authorization failed!', 401));

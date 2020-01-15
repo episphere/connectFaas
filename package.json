@@ -18,6 +18,7 @@
   "homepage": "https://github.com/episphere/connectFaas#readme",
   "dependencies": {
     "@google-cloud/firestore": "^2.2.4",
+    "@sendgrid/mail": "^6.4.0",
     "bcrypt": "^3.0.6",
     "box-node-sdk": "^1.29.1",
     "firebase-admin": "^8.3.0",
