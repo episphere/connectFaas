@@ -1,7 +1,7 @@
 const assert = require('assert');
 const Supertest = require('supertest');
-const supertest = Supertest('http://localhost:8010/nih-nci-dceg-episphere-dev/us-central1');
-const bearerToken = 'Bearer GFDS365Hjweuy5326qwkjgddghDASHDgh';
+const supertest = Supertest('https://us-central1-nih-nci-dceg-episphere-dev.cloudfunctions.net');
+const bearerToken = 'Bearer ';
 
 describe('getParticipantToken API: -', () => {
     const endPoint = '/getParticipantToken';
