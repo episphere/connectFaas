@@ -4,7 +4,7 @@
   "description": "Connect FAAS API for DCEG's Cohort Study",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --reporter spec"
+    "test": "mocha --reporter spec --timeout 5000"
   },
   "repository": {
     "type": "git",
