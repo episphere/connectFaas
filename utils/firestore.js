@@ -1,16 +1,16 @@
-// const admin = require('firebase-admin');
-// admin.initializeApp({
-//     keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
-// });
-// const firestore = require('@google-cloud/firestore');
-// const db = new firestore({
-//     keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
-// });
-
-const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-admin.initializeApp(functions.config().firebase);
-const db = admin.firestore();
+admin.initializeApp({
+    keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
+});
+const firestore = require('@google-cloud/firestore');
+const db = new firestore({
+    keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
+});
+
+// const functions = require('firebase-functions');
+// const admin = require('firebase-admin');
+// admin.initializeApp(functions.config().firebase);
+// const db = admin.firestore();
 
 const validateKey = async (access_token) => {
     try{
@@ -69,6 +69,23 @@ const authorizeToken = async(token) => {
 const verifyToken = async (token) => {
     try{
         const response = await db.collection('participants').where('token', '==', token).get();
+        if(response.size === 1) {
+            if(response.docs[0].data().state.uid === undefined){
+                return response.docs[0].id;
+            }else{
+                return false;
+            }
+        }
+        return false;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const verifyPin = async (pin) => {
+    try{
+        const response = await db.collection('participants').where('pin', '==', pin).get();
         if(response.size === 1) {
             if(response.docs[0].data().state.uid === undefined){
                 return response.docs[0].id;
@@ -192,6 +209,21 @@ const recordExists = async (studyId) => {
     }
 }
 
+const pinExists = async (pin) => {
+    try{
+        const snapShot = await db.collection('participants').where('pin', '==', pin).get();
+        if(snapShot.size === 1){
+            return snapShot.docs[0].data();
+        }
+        else {
+            return false;
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 const retrieveQuestionnaire = async (source) => {
     try{
         const data = await db.collection('questionnaire').where('source', '==', source).orderBy('sequence').get();
@@ -230,7 +262,7 @@ const retrieveParticipants = async (siteKey, decider) => {
             let participants = {};
             if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 1).get();
             if(decider === 'notverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 0).get();
-            if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).get();
+            if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).orderBy("state.RcrtV_Verification_v1r0", "asc").get();
             return participants.docs.map(document => {
                 let data = document.data();
                 return data;
@@ -463,8 +495,10 @@ module.exports = {
     storeFile,
     createRecord,
     recordExists,
+    pinExists,
     validateIDToken,
     verifyToken,
+    verifyPin,
     linkParticipanttoFirebaseUID,
     participantExists,
     sanityCheckConnectID

@@ -29,15 +29,61 @@ const validate = async (req, res) => {
     }
 };
 
-const validateToken = async (req, res) => {
+const generateToken = async (req, res) => {
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
+    console.log(req.method);
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
+    console.log(req.headers.authorization);
+    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    const idToken = req.headers.authorization.replace('Bearer','').trim();
+    const { validateIDToken } = require('./firestore');
+    const decodedToken = await validateIDToken(idToken);
+
+    if(decodedToken instanceof Error){
+        return res.status(500).json(getResponseJSON(decodedToken.message, 500));
+    }
+
+    if(!decodedToken){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    console.log(decodedToken.uid);
+    const { participantExists } = require('./firestore')
+    const userAlreadyExists = await participantExists(decodedToken.uid);
+
+    if(userAlreadyExists){
+        return res.status(401).json(getResponseJSON('Account already exists', 401));
+    }
+    const uuid = require('uuid');
+    const obj = {
+        state: { RcrtV_Verification_v1r0: 0, uid: decodedToken.uid},
+        token: uuid(),
+        RcrtSI_RecruitType_v1r0: 2
+    }
+    console.log(JSON.stringify(obj));
+    const { createRecord } = require('./firestore');
+    createRecord(obj);
+    return res.status(200).json(getResponseJSON('Ok', 200));
+}
+
+const validateToken = async (req, res) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+    console.log(req.method);
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    console.log(req.headers.authorization);
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
@@ -54,6 +100,7 @@ const validateToken = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
     
+    console.log(decodedToken.uid+' '+JSON.stringify(req.query));
     const { participantExists } = require('./firestore')
     const userAlreadyExists = await participantExists(decodedToken.uid);
 
@@ -74,35 +121,49 @@ const validateToken = async (req, res) => {
         if(isValid){ // add uid to participant record
             const { linkParticipanttoFirebaseUID } = require('./firestore');
             linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
+            return res.status(200).json(getResponseJSON('Ok', 200));
         }
-        else{ // Invalid token - create new token and link with firebase uid
-            const uuid = require('uuid');
+        else{ // Invalid token
+            return res.status(401).json(getResponseJSON('Invalid token', 401));
+        }
+    }
+    else if(req.query.pin && req.query.pin){ // check for PIN
+        const pin =  req.query.pin.trim();
+
+        const { verifyPin } = require('./firestore');
+        const isValid = await verifyPin(pin);
+
+        if(isValid instanceof Error){
+            return res.status(500).json(getResponseJSON(isValid.message, 500));
+        }
+
+        if(isValid){ // add uid to participant record
+            const { linkParticipanttoFirebaseUID } = require('./firestore');
+            linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
             const obj = {
-                state: {
-                    uid: decodedToken.uid,
-                    RcrtV_Verification_v1r0: 0,
-                    RcrtSI_Account_v1r0: 1
-                },
-                token: uuid()
-            };
+                RcrtES_PINmatch_v1r0: 1
+            }
             const { createRecord } = require('./firestore');
             createRecord(obj);
+            return res.status(200).json(getResponseJSON('Ok', 200));
+        }
+        else{ // Invalid pin
+            return res.status(401).json(getResponseJSON('Invalid pin', 401));
         }
     }
     else{
-        const uuid = require('uuid');
-        const obj = {
-            state: {
-                uid: decodedToken.uid,
-                RcrtV_Verification_v1r0: 0
-            },
-            token: uuid()
-        };
-        const { createRecord } = require('./firestore');
-        createRecord(obj);
+        return res.status(400).json(getResponseJSON('Bad request', 400));
+        // const uuid = require('uuid');
+        // const obj = {
+        //     state: {
+        //         uid: decodedToken.uid,
+        //         RcrtV_Verification_v1r0: 0
+        //     },
+        //     token: uuid()
+        // };
+        // const { createRecord } = require('./firestore');
+        // createRecord(obj);
     }
-
-    return res.status(200).json(getResponseJSON('Ok', 200));
 };
 
 const getKey = async (req, res) => {
@@ -205,9 +266,9 @@ const getToken = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
     
-    const uuid = require('uuid');
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
     if(Object.keys(req.body.data).length > 0){
+        const uuid = require('uuid');
         let responseArray = [];
         if(Object.keys(req.body.data).length > 1000) return res.status(400).json(getResponseJSON('Bad request!', 400));
         const data = req.body.data;
@@ -217,17 +278,49 @@ const getToken = async (req, res) => {
                 const studyId = data[dt].studyId
                 const { recordExists } = require('./firestore');
                 const response = await recordExists(studyId);
-                if(response === false){
-                    const obj = {
-                        state: {...data[dt], RcrtV_Verification_v1r0: 0},
-                        RcrtES_Site_v1r0: authorize.siteCode,
-                        token: uuid()
+
+                // check for duplicate pin
+                if(data[dt].pin && data[dt].pin.trim()){
+                    const pin = data[dt].pin.trim()
+                    const { pinExists } = require('./firestore');
+                    const duplicatePin = await pinExists(pin);
+                    if(response === false && duplicatePin === false){ // both studyId and pin are new to connect system
+                        const obj = {
+                            state: { studyId, RcrtV_Verification_v1r0: 0},
+                            RcrtES_PINmatch_v1r0: 0,
+                            RcrtSI_RecruitType_v1r0: 1,
+                            pin,
+                            RcrtES_Site_v1r0: authorize.siteCode,
+                            token: uuid()
+                        }
+                        const { createRecord } = require('./firestore');
+                        createRecord(obj);
+                        responseArray.push({studyId: studyId, pin, token: obj.token});
+                    } 
+                    else if(response !== false && duplicatePin === false) {
+                        responseArray.push({studyId: studyId, pin, token: response.token});
                     }
-                    const { createRecord } = require('./firestore');
-                    createRecord(obj);
-                    responseArray.push({studyId: studyId, token: obj.token});
-                } else {
-                    responseArray.push({studyId: studyId, token: response.token});
+                    else if(response === false && duplicatePin !== false) {
+                        responseArray.push({studyId: studyId, pin, token: duplicatePin.token});
+                    }
+                    else{
+                        responseArray.push({studyId: studyId, pin, token: duplicatePin.token});
+                    }
+                }// Only token exists
+                else {
+                    if(response === false){
+                        const obj = {
+                            state: { studyId, RcrtV_Verification_v1r0: 0},
+                            RcrtES_Site_v1r0: authorize.siteCode,
+                            RcrtSI_RecruitType_v1r0: 1,
+                            token: uuid()
+                        }
+                        const { createRecord } = require('./firestore');
+                        createRecord(obj);
+                        responseArray.push({studyId: studyId, token: obj.token});
+                    } else {
+                        responseArray.push({studyId: studyId, token: response.token});
+                    }
                 }
             } else {
                 // Return error?
@@ -275,6 +368,7 @@ const confluence = async (req, res) => {
 
 module.exports = {
     validate,
+    generateToken,
     validateToken,
     getKey,
     validateSiteUsers,
