@@ -139,12 +139,12 @@ const validateToken = async (req, res) => {
 
         if(isValid){ // add uid to participant record
             const { linkParticipanttoFirebaseUID } = require('./firestore');
-            linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
+            await linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
             const obj = {
                 RcrtES_PINmatch_v1r0: 1
             }
-            const { createRecord } = require('./firestore');
-            createRecord(obj);
+            const { updateResponse } = require('./firestore');
+            updateResponse(obj, decodedToken.uid);
             return res.status(200).json(getResponseJSON('Ok', 200));
         }
         else{ // Invalid pin
