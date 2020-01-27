@@ -64,6 +64,38 @@ const recruitSubmit = async (req, res) => {
     return submit(res, data, decodedToken.uid);
 }
 
+const participantData = async (req, res) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    const siteKey = req.headers.authorization.replace('Bearer','').trim();
+    console.log(`participantData ${new Date()} ${siteKey}`)
+    const { validateSiteUser } = require(`./firestore`);
+    const authorize = await validateSiteUser(siteKey);
+
+    if(authorize instanceof Error){
+        return res.status(500).json(getResponseJSON(authorize.message, 500));
+    }
+
+    if(!authorize){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+    
+    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
+
+    if(Object.keys(req.body.data).length > 0){
+        
+    }
+}
+
 const getParticipants = async (req, res) => {
     setHeaders(res);
 
@@ -321,5 +353,6 @@ module.exports = {
     getUserProfile,
     createAccount,
     login,
-    uploadFile
+    uploadFile,
+    participantData
 }
