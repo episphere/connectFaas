@@ -66,7 +66,8 @@ const generateToken = async (req, res) => {
     const obj = {
         state: { RcrtV_Verification_v1r0: 0, uid: decodedToken.uid},
         token: uuid(),
-        RcrtSI_RecruitType_v1r0: 2
+        RcrtSI_RecruitType_v1r0: 2,
+        RcrtSI_TypeTime_v1r0: (new Date()).toISOString()
     }
     console.log(JSON.stringify(obj));
     const { createRecord } = require('./firestore');
