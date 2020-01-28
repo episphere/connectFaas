@@ -262,6 +262,7 @@ const retrieveParticipants = async (siteKey, decider) => {
             let participants = {};
             if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 1).get();
             if(decider === 'notyetverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 0).get();
+            if(decider === 'cannotbeverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 2).get();
             if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).orderBy("state.RcrtV_Verification_v1r0", "asc").get();
             return participants.docs.map(document => {
                 let data = document.data();
