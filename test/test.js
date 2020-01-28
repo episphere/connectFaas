@@ -72,7 +72,7 @@ describe('getParticipants API: -', () => {
     });
     it(`${endPoint}: should return 200`, async () => {
         await supertest
-        .get(endPoint+'?type=notverified')
+        .get(endPoint+'?type=notyetverified')
         .set('Authorization', bearerToken)
         .set('Content-Type', 'application/json')
         .expect(200);

@@ -122,8 +122,8 @@ const getParticipants = async (req, res) => {
     if(req.query.type === 'verified'){
         decider = "verified";
     }
-    else if(req.query.type === 'notverified'){
-        decider = "notverified";
+    else if(req.query.type === 'notyetverified'){
+        decider = "notyetverified";
     }
     else if (req.query.type ==='all'){
         decider = "all";
@@ -185,7 +185,7 @@ const identifyParticipant = async (req, res) => {
     if(type === 'verified'){
         bool = true;
     }
-    else if(type === 'notverified'){
+    else if(type === 'cannotbeverified'){
         bool = false;
     }
     else{
