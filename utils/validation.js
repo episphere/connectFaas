@@ -286,9 +286,8 @@ const getToken = async (req, res) => {
                     const { pinExists } = require('./firestore');
                     const duplicatePin = await pinExists(pin);
                     if(response === false && duplicatePin === false){ // both studyId and pin are new to connect system
-                        delete data[dt].pin;
                         const obj = {
-                            state: { ...data[dt], RcrtV_Verification_v1r0: 0},
+                            state: { studyId, RcrtV_Verification_v1r0: 0},
                             RcrtES_PINmatch_v1r0: 0,
                             RcrtSI_RecruitType_v1r0: 1,
                             pin,
@@ -308,11 +307,11 @@ const getToken = async (req, res) => {
                     else{
                         responseArray.push({studyId: studyId, pin, token: duplicatePin.token});
                     }
-                } // Only token exists
+                } // Only study ID
                 else {
                     if(response === false){
                         const obj = {
-                            state: { ...data[dt], RcrtV_Verification_v1r0: 0},
+                            state: { studyId, RcrtV_Verification_v1r0: 0},
                             RcrtES_Site_v1r0: authorize.siteCode,
                             RcrtSI_RecruitType_v1r0: 1,
                             token: uuid()
