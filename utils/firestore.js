@@ -480,6 +480,17 @@ const sanityCheckConnectID = async (ID) => {
     }
 }
 
+const individualParticipant = async (token) => {
+    try {
+        const snapshot = await db.collection('participants').where('token', '==', token).get();
+        if(snapshot.size === 1) return snapshot.docs[0].data();
+        else return false;
+    }
+    catch(error) {
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -502,5 +513,6 @@ module.exports = {
     verifyPin,
     linkParticipanttoFirebaseUID,
     participantExists,
-    sanityCheckConnectID
+    sanityCheckConnectID,
+    individualParticipant
 }

@@ -131,6 +131,20 @@ const getParticipants = async (req, res) => {
     else if (req.query.type ==='all'){
         decider = "all";
     }
+    else if (req.query.type ==='individual'){
+        if (req.query.token) {
+            decider = "individual";
+            const { individualParticipant } = require(`./firestore`);
+            const response = await individualParticipant(req.query.token);
+            if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
+            if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+            if(response) return res.status(200).json({data: response, code: 200})
+        }
+        else{
+            return res.status(404).json(getResponseJSON('Bad request', 400));
+        }
+        
+    }
     else{
         return res.status(404).json(getResponseJSON('Resource not found', 404));
     }
