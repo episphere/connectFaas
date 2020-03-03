@@ -266,6 +266,7 @@ const getToken = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
     const siteAcronym = authorize.acronym;
+    const siteCode = authorize.siteCode;
 
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
     if(Object.keys(req.body.data).length > 0){
@@ -278,7 +279,7 @@ const getToken = async (req, res) => {
             if(data[dt].studyId && data[dt].studyId.trim() !== ""){
                 const studyId = data[dt].studyId
                 const { recordExists } = require('./firestore');
-                const response = await recordExists(studyId);
+                const response = await recordExists(studyId, siteCode);
 
                 if(response === false){
                     const { generatePIN } = require('./shared');

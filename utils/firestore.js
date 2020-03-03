@@ -194,9 +194,9 @@ const createRecord = async (data) => {
     }
 }
 
-const recordExists = async (studyId) => {
+const recordExists = async (studyId, siteCode) => {
     try{
-        const snapShot = await db.collection('participants').where('state.studyId', '==', studyId).get();
+        const snapShot = await db.collection('participants').where('state.studyId', '==', studyId).where('RcrtES_Site_v1r0', '==', siteCode).get();
         if(snapShot.size === 1){
             return snapShot.docs[0].data();
         }
