@@ -258,7 +258,6 @@ const getToken = async (req, res) => {
     console.log(`getParticipantToken ${new Date()} ${siteKey}`)
     const { validateSiteUser } = require(`./firestore`);
     const authorize = await validateSiteUser(siteKey);
-
     if(authorize instanceof Error){
         return res.status(500).json(getResponseJSON(authorize.message, 500));
     }
@@ -266,7 +265,8 @@ const getToken = async (req, res) => {
     if(!authorize){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
-    
+    const siteAcronym = authorize.acronym;
+
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
     if(Object.keys(req.body.data).length > 0){
         const uuid = require('uuid');
@@ -280,48 +280,33 @@ const getToken = async (req, res) => {
                 const { recordExists } = require('./firestore');
                 const response = await recordExists(studyId);
 
-                // check for duplicate pin
-                if(data[dt].pin && data[dt].pin.trim()){
-                    const pin = data[dt].pin.trim()
-                    const { pinExists } = require('./firestore');
-                    const duplicatePin = await pinExists(pin);
-                    if(response === false && duplicatePin === false){ // both studyId and pin are new to connect system
-                        const obj = {
-                            state: { studyId, RcrtV_Verification_v1r0: 0},
-                            RcrtES_PINmatch_v1r0: 0,
-                            RcrtSI_RecruitType_v1r0: 1,
-                            pin,
-                            RcrtES_Site_v1r0: authorize.siteCode,
-                            token: uuid()
+                if(response === false){
+                    const { generatePIN } = require('./shared');
+                    
+                    let boo = false;
+                    let PIN;
+                    while(boo === false){
+                        const tempPIN = `${siteAcronym}-${generatePIN()}`
+                        const { sanityCheckPIN } = require('./firestore');
+                        const response = await sanityCheckPIN(tempPIN);
+                        if(response === true) {
+                            PIN = tempPIN;
+                            boo = true;
                         }
-                        const { createRecord } = require('./firestore');
-                        createRecord(obj);
-                        responseArray.push({studyId: studyId, pin, token: obj.token});
-                    } 
-                    else if(response !== false && duplicatePin === false) {
-                        responseArray.push({studyId: studyId, pin, token: response.token});
                     }
-                    else if(response === false && duplicatePin !== false) {
-                        responseArray.push({studyId: studyId, pin, token: duplicatePin.token});
+
+                    const obj = {
+                        state: { studyId, RcrtV_Verification_v1r0: 0},
+                        RcrtES_Site_v1r0: authorize.siteCode,
+                        RcrtSI_RecruitType_v1r0: 1,
+                        pin: PIN,
+                        token: uuid()
                     }
-                    else{
-                        responseArray.push({studyId: studyId, pin, token: duplicatePin.token});
-                    }
-                } // Only study ID
-                else {
-                    if(response === false){
-                        const obj = {
-                            state: { studyId, RcrtV_Verification_v1r0: 0},
-                            RcrtES_Site_v1r0: authorize.siteCode,
-                            RcrtSI_RecruitType_v1r0: 1,
-                            token: uuid()
-                        }
-                        const { createRecord } = require('./firestore');
-                        createRecord(obj);
-                        responseArray.push({studyId: studyId, token: obj.token});
-                    } else {
-                        responseArray.push({studyId: studyId, token: response.token});
-                    }
+                    const { createRecord } = require('./firestore');
+                    createRecord(obj);
+                    responseArray.push({studyId: studyId, token: obj.token, pin: obj.pin});
+                } else {
+                    response.pin ? responseArray.push({studyId: studyId, token: response.token, pin: response.pin}) : responseArray.push({studyId: studyId, token: response.token});
                 }
             } else {
                 // Return error?
