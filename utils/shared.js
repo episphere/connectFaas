@@ -16,6 +16,11 @@ const generatePIN = () => {
     return Math.floor(Math.random() * (999999 - 100000)) + 100000;
 }
 
+const randomString = () => {
+    const length = 8;
+    return (Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1)).toUpperCase();
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,

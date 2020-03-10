@@ -254,20 +254,49 @@ const validateSiteUser = async (siteKey) => {
     }
 }
 
-const retrieveParticipants = async (siteKey, decider) => {
+const retrieveParticipants = async (siteCode, decider) => {
     try{
-        const snapShot = await db.collection('siteDetails').where('siteKey', '==', siteKey).get();
+        let participants = {};
+        if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 1).get();
+        if(decider === 'notyetverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 0).get();
+        if(decider === 'cannotbeverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 2).get();
+        if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).orderBy("state.RcrtV_Verification_v1r0", "asc").get();
+        return participants.docs.map(document => {
+            let data = document.data();
+            return data;
+        });
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const retrieveSitesParticipants = async (siteCodes, decider) => {
+    try{
+        let participants = {};
+        if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', 'in', siteCodes).where('state.RcrtV_Verification_v1r0', '==', 1).get();
+        if(decider === 'notyetverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', 'in', siteCodes).where('state.RcrtV_Verification_v1r0', '==', 0).get();
+        if(decider === 'cannotbeverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', 'in', siteCodes).where('state.RcrtV_Verification_v1r0', '==', 2).get();
+        if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', 'in', siteCodes).orderBy("state.RcrtV_Verification_v1r0", "asc").get();
+        return participants.docs.map(document => {
+            let data = document.data();
+            return data;
+        });
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const getChildrens = async (ID) => {
+    try{
+        const snapShot = await db.collection('siteDetails').where('state.parentID', '==', ID).get();
         if(snapShot.size > 0) {
-            const siteCode = snapShot.docs[0].data().siteCode;
-            let participants = {};
-            if(decider === 'verified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 1).get();
-            if(decider === 'notyetverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 0).get();
-            if(decider === 'cannotbeverified') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 2).get();
-            if(decider === 'all') participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).orderBy("state.RcrtV_Verification_v1r0", "asc").get();
-            return participants.docs.map(document => {
-                let data = document.data();
-                return data;
+            const siteCodes = [];
+            snapShot.docs.map(document => {
+                siteCodes.push(document.data().siteCode);
             });
+            return siteCodes;
         }
         else{
             return false;
@@ -526,5 +555,7 @@ module.exports = {
     participantExists,
     sanityCheckConnectID,
     sanityCheckPIN,
-    individualParticipant
+    individualParticipant,
+    getChildrens,
+    retrieveSitesParticipants
 }

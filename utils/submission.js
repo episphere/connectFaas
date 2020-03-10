@@ -117,6 +117,44 @@ const getParticipants = async (req, res) => {
 
     if(req.query.type === false) return res.status(404).json(getResponseJSON('Resource not found', 404));
 
+    // Get all data if it's a parent
+    const ID = authorized.id;
+    const { getChildrens } = require('./firestore');
+    const siteCodes = await getChildrens(ID);
+    if(siteCodes){
+        console.log('Site codes: - '+siteCodes);
+        let queryType = '';
+        if(req.query.type === 'verified') queryType = 'verified';
+        else if (req.query.type === 'notyetverified') queryType = 'notyetverified';
+        else if (req.query.type === 'cannotbeverified') queryType = 'cannotbeverified';
+        else if (req.query.type === 'all') queryType = 'all';
+        else if (req.query.type === 'individual'){
+            if (req.query.token) {
+                queryType = "individual";
+                const { individualParticipant } = require(`./firestore`);
+                const response = await individualParticipant(req.query.token);
+                if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
+                if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+                if(response) return res.status(200).json({data: response, code: 200})
+            }
+            else{
+                return res.status(404).json(getResponseJSON('Bad request', 400));
+            }
+        }
+        else{
+            return res.status(404).json(getResponseJSON('Resource not found', 404));
+        }
+        const { retrieveSitesParticipants } = require(`./firestore`);
+        const data = await retrieveSitesParticipants(siteCodes, queryType);
+
+        if(data instanceof Error){
+            return res.status(500).json(getResponseJSON(data.message, 500));
+        }
+
+        return res.status(200).json({data, code:200})
+    }
+    
+
     let decider = "";
     
     if (req.query.type === 'verified'){
@@ -143,21 +181,17 @@ const getParticipants = async (req, res) => {
         else{
             return res.status(404).json(getResponseJSON('Bad request', 400));
         }
-        
     }
     else{
         return res.status(404).json(getResponseJSON('Resource not found', 404));
     }
 
+    const siteCode = authorized.siteCode;
     const { retrieveParticipants } = require(`./firestore`);
-    const data = await retrieveParticipants(siteKey, decider);
+    const data = await retrieveParticipants(siteCode, decider);
 
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
-    }
-
-    if(!data){
-        return res.status(401).json(getResponseJSON('No records found!', 500));
     }
 
     return res.status(200).json({data, code:200})
