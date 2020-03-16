@@ -17,7 +17,7 @@ const generatePIN = () => {
 }
 
 const randomString = () => {
-    const length = 8;
+    const length = 6;
     return (Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1)).toUpperCase();
 }
 
@@ -25,5 +25,6 @@ module.exports = {
     getResponseJSON,
     setHeaders,
     generateConnectID,
-    generatePIN
+    generatePIN,
+    randomString
 }

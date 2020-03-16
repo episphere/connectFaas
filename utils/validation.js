@@ -282,12 +282,12 @@ const getToken = async (req, res) => {
                 const response = await recordExists(studyId, siteCode);
 
                 if(response === false){
-                    const { generatePIN } = require('./shared');
+                    const { randomString } = require('./shared');
                     
                     let boo = false;
                     let PIN;
                     while(boo === false){
-                        const tempPIN = `${siteAcronym}-${generatePIN()}`
+                        const tempPIN = `${randomString()}`
                         const { sanityCheckPIN } = require('./firestore');
                         const response = await sanityCheckPIN(tempPIN);
                         if(response === true) {
