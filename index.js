@@ -2,7 +2,7 @@ const { validate, validateToken, getKey, validateSiteUsers, validateUserSession,
 const { recruitSubmit, getParticipants, identifyParticipant, participantData, getUserProfile, createAccount, login } = require('./utils/submission');
 const { getQuestionnaire } = require('./utils/questionnaire');
 const { getSiteDetails } = require('./utils/sites');
-const { setHeaders } = require('./utils/shared');
+const { setHeaders, deleteDocuments } = require('./utils/shared');
 
 exports.validate = validate;
 
@@ -37,6 +37,8 @@ exports.login = login;
 exports.validateUserSession = validateUserSession;
 
 exports.confluence = confluence;
+
+exports.deleteDocuments = deleteDocuments;
 
 exports.sendEmailNotification = (req, res) => {
     setHeaders(res);

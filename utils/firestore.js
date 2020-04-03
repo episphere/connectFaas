@@ -531,6 +531,20 @@ const individualParticipant = async (token) => {
     }
 }
 
+const deleteFirestoreDocuments = async (siteCode) => {
+    try{
+        const data = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).get();
+        if(data.size !== 0){
+            data.docs.forEach(async dt =>{ 
+                await db.collection('participants').doc(dt.id).delete()
+            })
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -557,5 +571,6 @@ module.exports = {
     sanityCheckPIN,
     individualParticipant,
     getChildrens,
-    retrieveSitesParticipants
+    retrieveSitesParticipants,
+    deleteFirestoreDocuments
 }

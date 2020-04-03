@@ -21,10 +21,26 @@ const randomString = () => {
     return (Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1)).toUpperCase();
 }
 
+const deleteDocuments = (req, res) => {
+    setHeaders(res);
+    
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'GET') {
+        res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    const siteCode = 8;
+    const { deleteFirestoreDocuments } = require('./firestore')
+    deleteFirestoreDocuments(siteCode)
+    res.status(200).json(getResponseJSON('Success!', 200))
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
     generateConnectID,
     generatePIN,
-    randomString
+    randomString,
+    deleteDocuments
 }
