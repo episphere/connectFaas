@@ -1,25 +1,25 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'validateToken', '--trigger-http', '--runtime', 'nodejs8', '--source', 'https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'validateToken', '--trigger-http', '--runtime=nodejs8', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
   dir: 'functions/autodeploy'
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'getParticipantToken', '--trigger-http', '--runtime=nodejs8', '--timeout=120s', '--source', 'https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'getParticipantToken', '--trigger-http', '--runtime=nodejs8', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
   dir: 'functions/autodeploy'
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'submit', '--trigger-http', '--runtime', 'nodejs8', '--source', 'https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'submit', '--trigger-http', '--runtime=nodejs8', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
   dir: 'functions/autodeploy'
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'getUserProfile', '--trigger-http', '--runtime', 'nodejs8', '--source', 'https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'getUserProfile', '--trigger-http', '--runtime=nodejs8', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
   dir: 'functions/autodeploy'
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'getParticipants', '--trigger-http', '--runtime', 'nodejs8', '--source', 'https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'getParticipants', '--trigger-http', '--runtime=nodejs8', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
   dir: 'functions/autodeploy'
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'validateSiteUsers', '--trigger-http', '--runtime', 'nodejs8', '--source', 'https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'validateSiteUsers', '--trigger-http', '--runtime=nodejs8', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
   dir: 'functions/autodeploy'
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'identifyParticipant', '--trigger-http', '--runtime', 'nodejs8', '--source', 'https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'identifyParticipant', '--trigger-http', '--runtime=nodejs8', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
   dir: 'functions/autodeploy'
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'generateToken', '--trigger-http', '--runtime', 'nodejs8', '--source', 'https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'generateToken', '--trigger-http', '--runtime=nodejs8', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
   dir: 'functions/autodeploy'
