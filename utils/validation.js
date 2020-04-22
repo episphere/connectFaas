@@ -265,11 +265,10 @@ const getToken = async (req, res) => {
     if(!authorize){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
-    const siteAcronym = authorize.acronym;
     const siteCode = authorize.siteCode;
 
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
-    if(Object.keys(req.body.data).length > 0){
+    if(req.body.data.length > 0){
         const uuid = require('uuid');
         let responseArray = [];
         if(req.body.data.length > 1000) return res.status(400).json(getResponseJSON('Bad request!', 400));
