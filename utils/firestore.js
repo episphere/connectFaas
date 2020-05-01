@@ -241,7 +241,9 @@ const retrieveQuestionnaire = async (source) => {
 
 const validateSiteUser = async (siteKey) => {
     try{
-        const snapShot = await db.collection('siteDetails').where('siteKey', '==', siteKey).get();
+        const snapShot = await db.collection('siteDetails')
+                                .where('siteKey', '==', siteKey)
+                                .get();
         if(snapShot.size === 1) {
             return snapShot.docs[0].data();
         }
@@ -254,20 +256,59 @@ const validateSiteUser = async (siteKey) => {
     }
 }
 
+const storeParticipantData = async (token, siteCode) => {
+    try{
+        const snapShot = await db.collection('participants')
+                                .where('token', '==', token)
+                                .where('RcrtES_Site_v1r0', '==', siteCode)
+                                .get();
+        if(snapShot.size === 1) {
+            return {id: snapShot.docs[0].id, data: snapShot.docs[0].data()};
+        }
+        else{
+            return false;
+        };
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const updateParticipantData = async (id, data) => {
+    await db.collection('participants')
+            .doc(id)
+            .update(data);
+}
+
 const retrieveParticipants = async (siteCode, decider) => {
     try{
         let participants = {};
         if(decider === 'verified') {
-            participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 1).where('RcrtUP_Submitted_v1r0', '==', 1).get();
+            participants = await db.collection('participants')
+                                    .where('RcrtES_Site_v1r0', '==', siteCode)
+                                    .where('state.RcrtV_Verification_v1r0', '==', 1)
+                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .get();
         }
         if(decider === 'notyetverified') {
-            participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 0).where('RcrtUP_Submitted_v1r0', '==', 1).get();
+            participants = await db.collection('participants')
+                                    .where('RcrtES_Site_v1r0', '==', siteCode)
+                                    .where('state.RcrtV_Verification_v1r0', '==', 0)
+                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .get();
         }
         if(decider === 'cannotbeverified') {
-            participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).where('state.RcrtV_Verification_v1r0', '==', 2).where('RcrtUP_Submitted_v1r0', '==', 1).get();
+            participants = await db.collection('participants')
+                                    .where('RcrtES_Site_v1r0', '==', siteCode)
+                                    .where('state.RcrtV_Verification_v1r0', '==', 2)
+                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .get();
         }
         if(decider === 'all') {
-            participants = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).orderBy("state.RcrtV_Verification_v1r0", "asc").get();
+            participants = await db.collection('participants')
+                                    .where('RcrtES_Site_v1r0', '==', siteCode)
+                                    .orderBy("state.RcrtV_Verification_v1r0", "asc")
+                                    .get();
         }
         return participants.docs.map(document => {
             let data = document.data();
@@ -283,16 +324,31 @@ const retrieveSitesParticipants = async (siteCodes, decider) => {
     try{
         let participants = {};
         if(decider === 'verified') {
-            participants = await db.collection('participants').where('RcrtES_Site_v1r0', 'in', siteCodes).where('state.RcrtV_Verification_v1r0', '==', 1).where('RcrtUP_Submitted_v1r0', '==', 1).get();
+            participants = await db.collection('participants')
+                                    .where('RcrtES_Site_v1r0', 'in', siteCodes)
+                                    .where('state.RcrtV_Verification_v1r0', '==', 1)
+                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .get();
         }
         if(decider === 'notyetverified') {
-            participants = await db.collection('participants').where('RcrtES_Site_v1r0', 'in', siteCodes).where('state.RcrtV_Verification_v1r0', '==', 0).where('RcrtUP_Submitted_v1r0', '==', 1).get();
+            participants = await db.collection('participants')
+                                    .where('RcrtES_Site_v1r0', 'in', siteCodes)
+                                    .where('state.RcrtV_Verification_v1r0', '==', 0)
+                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .get();
         }
         if(decider === 'cannotbeverified') {
-            participants = await db.collection('participants').where('RcrtES_Site_v1r0', 'in', siteCodes).where('state.RcrtV_Verification_v1r0', '==', 2).where('RcrtUP_Submitted_v1r0', '==', 1).get();
+            participants = await db.collection('participants')
+                                    .where('RcrtES_Site_v1r0', 'in', siteCodes)
+                                    .where('state.RcrtV_Verification_v1r0', '==', 2)
+                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .get();
         }
         if(decider === 'all') {
-            participants = await db.collection('participants').where('RcrtES_Site_v1r0', 'in', siteCodes).orderBy("state.RcrtV_Verification_v1r0", "asc").get();
+            participants = await db.collection('participants')
+                                    .where('RcrtES_Site_v1r0', 'in', siteCodes)
+                                    .orderBy("state.RcrtV_Verification_v1r0", "asc")
+                                    .get();
         }
         return participants.docs.map(document => {
             let data = document.data();
@@ -306,7 +362,9 @@ const retrieveSitesParticipants = async (siteCodes, decider) => {
 
 const getChildrens = async (ID) => {
     try{
-        const snapShot = await db.collection('siteDetails').where('state.parentID', '==', ID).get();
+        const snapShot = await db.collection('siteDetails')
+                                .where('state.parentID', '==', ID)
+                                .get();
         if(snapShot.size > 0) {
             const siteCodes = [];
             snapShot.docs.map(document => {
@@ -325,7 +383,9 @@ const getChildrens = async (ID) => {
 
 const verifyIdentity = async (type, token) => {
     try{
-        const snapShot = await db.collection('participants').where('token', '==', token).get();
+        const snapShot = await db.collection('participants')
+                                .where('token', '==', token)
+                                .get();
         if(snapShot.size > 0){
             const docId = snapShot.docs[0].id;
             let data = {};
@@ -370,7 +430,9 @@ const retrieveSiteDetails = async () => {
 
 const retrieveUserProfile = async (uid) => {
     try{
-        const snapShot = await db.collection('participants').where('state.uid', '==', uid).get();
+        const snapShot = await db.collection('participants')
+                                .where('state.uid', '==', uid)
+                                .get();
         if(snapShot.size > 0){
             return snapShot.docs.map(document => {
                 let data = document.data();
@@ -389,7 +451,9 @@ const retrieveUserProfile = async (uid) => {
 
 const retrieveToken = async (access_token) => {
     try{
-        const response = await db.collection('apiKeys').where('access_token', '==', access_token).get();
+        const response = await db.collection('apiKeys')
+                                .where('access_token', '==', access_token)
+                                .get();
         if(response.size > 0) {
             const data = response.docs[0].data();
             const expiry = data.expires.toDate().getTime();
@@ -589,5 +653,7 @@ module.exports = {
     individualParticipant,
     getChildrens,
     retrieveSitesParticipants,
-    deleteFirestoreDocuments
+    deleteFirestoreDocuments,
+    storeParticipantData,
+    updateParticipantData
 }
