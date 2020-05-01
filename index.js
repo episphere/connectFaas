@@ -1,7 +1,7 @@
 const { validate, validateToken, getKey, validateSiteUsers, validateUserSession, getToken, confluence, generateToken } = require('./utils/validation');
 const { recruitSubmit, getParticipants, identifyParticipant, participantData, getUserProfile, createAccount, login } = require('./utils/submission');
 const { getQuestionnaire } = require('./utils/questionnaire');
-const { getSiteDetails, submitParticipantsData } = require('./utils/sites');
+const { getSiteDetails, submitParticipantsData, updateParticipantsData } = require('./utils/sites');
 const { setHeaders, deleteDocuments } = require('./utils/shared');
 
 exports.validate = validate;
@@ -28,7 +28,7 @@ exports.identifyParticipant = identifyParticipant;
 
 exports.submitParticipantsData = submitParticipantsData;
 
-// exports.updateData = updateData;
+// exports.updateParticipantsData = updateParticipantsData;
 
 exports.getSiteDetails = getSiteDetails;
 

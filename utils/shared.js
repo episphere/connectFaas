@@ -36,6 +36,10 @@ const deleteDocuments = (req, res) => {
     res.status(200).json(getResponseJSON('Success!', 200))
 }
 
+const lockedAttributes = () => { // Read only access after initialization
+    return ["RcrtV_Verification_v1r0", "RcrtSI_Account_v1r0", "RcrtUP_Submitted_v1r0", ""]
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,

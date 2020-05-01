@@ -93,7 +93,12 @@ const submitParticipantsData = async (req, res) => {
     return res.status(200).json(getResponseJSON('Success!!', 200));
 }
 
+const updateParticipantsData = async (req, res) => {
+
+}
+
 module.exports = {
     getSiteDetails,
-    submitParticipantsData
+    submitParticipantsData,
+    updateParticipantsData
 }

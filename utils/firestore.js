@@ -363,12 +363,14 @@ const retrieveSitesParticipants = async (siteCodes, decider) => {
 const getChildrens = async (ID) => {
     try{
         const snapShot = await db.collection('siteDetails')
-                                .where('state.parentID', '==', ID)
+                                .where('state.parentID', 'array-contains', ID)
                                 .get();
         if(snapShot.size > 0) {
             const siteCodes = [];
             snapShot.docs.map(document => {
-                siteCodes.push(document.data().siteCode);
+                if(document.data().siteCode){
+                    siteCodes.push(document.data().siteCode);
+                }
             });
             return siteCodes;
         }
@@ -390,7 +392,7 @@ const verifyIdentity = async (type, token) => {
             const docId = snapShot.docs[0].id;
             let data = {};
             if(type){
-                data['RcrtSI_RecruitType_v1r0'] = 1; // Active recruit
+                // data['RcrtSI_RecruitType_v1r0'] = 1; // Active recruit
                 data['state.RcrtV_Verification_v1r0'] = 1;
             }
             else{
