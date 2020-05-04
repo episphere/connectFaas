@@ -280,73 +280,34 @@ const updateParticipantData = async (id, data) => {
             .update(data);
 }
 
-const retrieveParticipants = async (siteCode, decider) => {
+const retrieveParticipants = async (siteCode, decider, isParent) => {
     try{
+        const operator = isParent ? 'in' : '==';
         let participants = {};
         if(decider === 'verified') {
             participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', '==', siteCode)
+                                    .where('RcrtES_Site_v1r0', operator, siteCode)
                                     .where('state.RcrtV_Verification_v1r0', '==', 1)
                                     .where('RcrtUP_Submitted_v1r0', '==', 1)
                                     .get();
         }
         if(decider === 'notyetverified') {
             participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', '==', siteCode)
+                                    .where('RcrtES_Site_v1r0', operator, siteCode)
                                     .where('state.RcrtV_Verification_v1r0', '==', 0)
                                     .where('RcrtUP_Submitted_v1r0', '==', 1)
                                     .get();
         }
         if(decider === 'cannotbeverified') {
             participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', '==', siteCode)
+                                    .where('RcrtES_Site_v1r0', operator, siteCode)
                                     .where('state.RcrtV_Verification_v1r0', '==', 2)
                                     .where('RcrtUP_Submitted_v1r0', '==', 1)
                                     .get();
         }
         if(decider === 'all') {
             participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', '==', siteCode)
-                                    .orderBy("state.RcrtV_Verification_v1r0", "asc")
-                                    .get();
-        }
-        return participants.docs.map(document => {
-            let data = document.data();
-            return data;
-        });
-    }
-    catch(error){
-        return new Error(error);
-    }
-}
-
-const retrieveSitesParticipants = async (siteCodes, decider) => {
-    try{
-        let participants = {};
-        if(decider === 'verified') {
-            participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', 'in', siteCodes)
-                                    .where('state.RcrtV_Verification_v1r0', '==', 1)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
-                                    .get();
-        }
-        if(decider === 'notyetverified') {
-            participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', 'in', siteCodes)
-                                    .where('state.RcrtV_Verification_v1r0', '==', 0)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
-                                    .get();
-        }
-        if(decider === 'cannotbeverified') {
-            participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', 'in', siteCodes)
-                                    .where('state.RcrtV_Verification_v1r0', '==', 2)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
-                                    .get();
-        }
-        if(decider === 'all') {
-            participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', 'in', siteCodes)
+                                    .where('RcrtES_Site_v1r0', operator, siteCode)
                                     .orderBy("state.RcrtV_Verification_v1r0", "asc")
                                     .get();
         }
@@ -659,7 +620,6 @@ module.exports = {
     sanityCheckPIN,
     individualParticipant,
     getChildrens,
-    retrieveSitesParticipants,
     deleteFirestoreDocuments,
     storeParticipantData,
     updateParticipantData

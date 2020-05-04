@@ -120,97 +120,47 @@ const getParticipants = async (req, res) => {
     // Get all data if it's a parent
     const ID = authorized.id;
     const { getChildrens } = require('./firestore');
-    const siteCodes = await getChildrens(ID);
-    if(siteCodes){
-        console.log('Site codes: - '+siteCodes);
-        let queryType = '';
-        if(req.query.type === 'verified') queryType = 'verified';
-        else if (req.query.type === 'notyetverified') queryType = 'notyetverified';
-        else if (req.query.type === 'cannotbeverified') queryType = 'cannotbeverified';
-        else if (req.query.type === 'all') queryType = 'all';
-        else if (req.query.type === 'individual'){
-            if (req.query.token && req.query.connectId === undefined) {
-                queryType = "individual";
-                const { individualParticipant } = require(`./firestore`);
-                const response = await individualParticipant('token', req.query.token);
-                if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
-                if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
-                if(response) return res.status(200).json({data: response, code: 200})
-            }
-            else if(req.query.connectId && req.query.token === undefined){
-                queryType = "individual";
-                const { individualParticipant } = require(`./firestore`);
-                const response = await individualParticipant('Connect_ID', parseInt(req.query.connectId));
-                if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
-                if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
-                if(response) return res.status(200).json({data: response, code: 200})
-            }
-            else{
-                return res.status(404).json(getResponseJSON('Bad request', 400));
-            }
+    let siteCodes = await getChildrens(ID);
+    let isParent = siteCodes ? true : false;
+    siteCodes = siteCodes ? siteCodes : authorized.siteCode;
+    console.log('Site codes: - '+siteCodes);
+    let queryType = '';
+    if(req.query.type === 'verified') queryType = 'verified';
+    else if (req.query.type === 'notyetverified') queryType = 'notyetverified';
+    else if (req.query.type === 'cannotbeverified') queryType = 'cannotbeverified';
+    else if (req.query.type === 'all') queryType = 'all';
+    else if (req.query.type === 'individual'){
+        if (req.query.token && req.query.connectId === undefined) {
+            queryType = "individual";
+            const { individualParticipant } = require(`./firestore`);
+            const response = await individualParticipant('token', req.query.token);
+            if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
+            if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+            if(response) return res.status(200).json({data: response, code: 200})
+        }
+        else if(req.query.connectId && req.query.token === undefined){
+            queryType = "individual";
+            const { individualParticipant } = require(`./firestore`);
+            const response = await individualParticipant('Connect_ID', parseInt(req.query.connectId));
+            if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
+            if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+            if(response) return res.status(200).json({data: response, code: 200})
         }
         else{
-            return res.status(404).json(getResponseJSON('Resource not found', 404));
+            return res.status(404).json(getResponseJSON('Bad request', 400));
         }
-        const { retrieveSitesParticipants } = require(`./firestore`);
-        const data = await retrieveSitesParticipants(siteCodes, queryType);
-
-        if(data instanceof Error){
-            return res.status(500).json(getResponseJSON(data.message, 500));
-        }
-
-        return res.status(200).json({data, code:200})
     }
-    else {
-        let decider = "";
-    
-        if (req.query.type === 'verified'){
-            decider = "verified";
-        }
-        else if (req.query.type === 'notyetverified'){
-            decider = "notyetverified";
-        }
-        else if (req.query.type === 'cannotbeverified'){
-            decider = "cannotbeverified";
-        }
-        else if (req.query.type ==='all'){
-            decider = "all";
-        }
-        else if (req.query.type ==='individual'){
-            if (req.query.token && req.query.connectId === undefined) {
-                queryType = "individual";
-                const { individualParticipant } = require(`./firestore`);
-                const response = await individualParticipant('token', req.query.token);
-                if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
-                if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
-                if(response) return res.status(200).json({data: response, code: 200})
-            }
-            else if(req.query.connectId && req.query.token === undefined){
-                queryType = "individual";
-                const { individualParticipant } = require(`./firestore`);
-                const response = await individualParticipant('Connect_ID', parseInt(req.query.connectId));
-                if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
-                if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
-                if(response) return res.status(200).json({data: response, code: 200})
-            }
-            else{
-                return res.status(404).json(getResponseJSON('Bad request', 400));
-            }
-        }
-        else{
-            return res.status(404).json(getResponseJSON('Resource not found', 404));
-        }
-    
-        const siteCode = authorized.siteCode;
-        const { retrieveParticipants } = require(`./firestore`);
-        const data = await retrieveParticipants(siteCode, decider);
-    
-        if(data instanceof Error){
-            return res.status(500).json(getResponseJSON(data.message, 500));
-        }
-    
-        return res.status(200).json({data, code:200})
+    else{
+        return res.status(404).json(getResponseJSON('Resource not found', 404));
     }
+    const { retrieveParticipants } = require(`./firestore`);
+    const data = await retrieveParticipants(siteCodes, queryType, isParent);
+
+    if(data instanceof Error){
+        return res.status(500).json(getResponseJSON(data.message, 500));
+    }
+
+    return res.status(200).json({data, code:200})
 }
 
 const identifyParticipant = async (req, res) => {
