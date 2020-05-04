@@ -603,10 +603,15 @@ const sanityCheckPIN = async (pin) => {
     }
 }
 
-const individualParticipant = async (token) => {
+const individualParticipant = async (key, value) => {
     try {
-        const snapshot = await db.collection('participants').where('token', '==', token).get();
-        if(snapshot.size === 1) return snapshot.docs[0].data();
+        const snapshot = await db.collection('participants').where(key, '==', value).get();
+        if(snapshot.size > 0) {
+            return snapshot.docs.map(document => {
+                let data = document.data();
+                return data;
+            });
+        }
         else return false;
     }
     catch(error) {

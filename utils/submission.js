@@ -129,10 +129,18 @@ const getParticipants = async (req, res) => {
         else if (req.query.type === 'cannotbeverified') queryType = 'cannotbeverified';
         else if (req.query.type === 'all') queryType = 'all';
         else if (req.query.type === 'individual'){
-            if (req.query.token) {
+            if (req.query.token && req.query.connectId === undefined) {
                 queryType = "individual";
                 const { individualParticipant } = require(`./firestore`);
-                const response = await individualParticipant(req.query.token);
+                const response = await individualParticipant('token', req.query.token);
+                if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
+                if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+                if(response) return res.status(200).json({data: response, code: 200})
+            }
+            else if(req.query.connectId && req.query.token === undefined){
+                queryType = "individual";
+                const { individualParticipant } = require(`./firestore`);
+                const response = await individualParticipant('Connect_ID', parseInt(req.query.connectId));
                 if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
                 if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
                 if(response) return res.status(200).json({data: response, code: 200})
@@ -153,48 +161,56 @@ const getParticipants = async (req, res) => {
 
         return res.status(200).json({data, code:200})
     }
+    else {
+        let decider = "";
     
-
-    let decider = "";
-    
-    if (req.query.type === 'verified'){
-        decider = "verified";
-    }
-    else if (req.query.type === 'notyetverified'){
-        decider = "notyetverified";
-    }
-    else if (req.query.type === 'cannotbeverified'){
-        decider = "cannotbeverified";
-    }
-    else if (req.query.type ==='all'){
-        decider = "all";
-    }
-    else if (req.query.type ==='individual'){
-        if (req.query.token) {
-            decider = "individual";
-            const { individualParticipant } = require(`./firestore`);
-            const response = await individualParticipant(req.query.token);
-            if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
-            if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
-            if(response) return res.status(200).json({data: response, code: 200})
+        if (req.query.type === 'verified'){
+            decider = "verified";
+        }
+        else if (req.query.type === 'notyetverified'){
+            decider = "notyetverified";
+        }
+        else if (req.query.type === 'cannotbeverified'){
+            decider = "cannotbeverified";
+        }
+        else if (req.query.type ==='all'){
+            decider = "all";
+        }
+        else if (req.query.type ==='individual'){
+            if (req.query.token && req.query.connectId === undefined) {
+                queryType = "individual";
+                const { individualParticipant } = require(`./firestore`);
+                const response = await individualParticipant('token', req.query.token);
+                if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
+                if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+                if(response) return res.status(200).json({data: response, code: 200})
+            }
+            else if(req.query.connectId && req.query.token === undefined){
+                queryType = "individual";
+                const { individualParticipant } = require(`./firestore`);
+                const response = await individualParticipant('Connect_ID', parseInt(req.query.connectId));
+                if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
+                if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+                if(response) return res.status(200).json({data: response, code: 200})
+            }
+            else{
+                return res.status(404).json(getResponseJSON('Bad request', 400));
+            }
         }
         else{
-            return res.status(404).json(getResponseJSON('Bad request', 400));
+            return res.status(404).json(getResponseJSON('Resource not found', 404));
         }
+    
+        const siteCode = authorized.siteCode;
+        const { retrieveParticipants } = require(`./firestore`);
+        const data = await retrieveParticipants(siteCode, decider);
+    
+        if(data instanceof Error){
+            return res.status(500).json(getResponseJSON(data.message, 500));
+        }
+    
+        return res.status(200).json({data, code:200})
     }
-    else{
-        return res.status(404).json(getResponseJSON('Resource not found', 404));
-    }
-
-    const siteCode = authorized.siteCode;
-    const { retrieveParticipants } = require(`./firestore`);
-    const data = await retrieveParticipants(siteCode, decider);
-
-    if(data instanceof Error){
-        return res.status(500).json(getResponseJSON(data.message, 500));
-    }
-
-    return res.status(200).json({data, code:200})
 }
 
 const identifyParticipant = async (req, res) => {
