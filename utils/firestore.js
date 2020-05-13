@@ -611,6 +611,22 @@ const notificationTokenExists = async (token) => {
     }
 }
 
+const retrieveUserNotifications = async (uid) => {
+    const snapShot = await db.collection('notifications')
+                            .where('uid', '==', uid)
+                            .orderBy('notification.time', 'desc')
+                            .get();
+    if(snapShot.size > 0){
+        return snapShot.docs.map(document => {
+            let data = document.data();
+            return data;
+        });
+    }
+    else {
+        return false;
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -641,5 +657,6 @@ module.exports = {
     storeParticipantData,
     updateParticipantData,
     storeNotificationTokens,
-    notificationTokenExists
+    notificationTokenExists,
+    retrieveUserNotifications
 }
