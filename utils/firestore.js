@@ -594,6 +594,23 @@ const deleteFirestoreDocuments = async (siteCode) => {
     }
 }
 
+const storeNotificationTokens = (data) => {
+    db.collection('notificationRegistration')
+        .add(data);
+}
+
+const notificationTokenExists = async (token) => {
+    const snapShot = await db.collection('notificationRegistration')
+                            .where('notificationToken', '==', token)
+                            .get();
+    if(snapShot.size === 1){
+        return snapShot.docs[0].data().uid;
+    }
+    else {
+        return false;
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -622,5 +639,7 @@ module.exports = {
     getChildrens,
     deleteFirestoreDocuments,
     storeParticipantData,
-    updateParticipantData
+    updateParticipantData,
+    storeNotificationTokens,
+    notificationTokenExists
 }

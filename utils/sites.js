@@ -90,7 +90,7 @@ const submitParticipantsData = async (req, res) => {
         }
         else console.log(`${siteKey} record doesn't contain any token ${JSON.stringify(obj)}`)
     }
-    return res.status(200).json(getResponseJSON('Success!!', 200));
+    return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
 const updateParticipantsData = async (req, res) => {

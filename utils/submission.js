@@ -224,7 +224,7 @@ const identifyParticipant = async (req, res) => {
     }
 
     if(identify){
-        return res.status(200).json(getResponseJSON('Success!!', 200));
+        return res.status(200).json(getResponseJSON('Success!', 200));
     }
 }
 
@@ -310,7 +310,7 @@ const createAccount = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    return res.status(200).json(getResponseJSON('Success!!', 200));
+    return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
 const login = async (req, res) => {

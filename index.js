@@ -3,6 +3,7 @@ const { recruitSubmit, getParticipants, identifyParticipant, participantData, ge
 const { getQuestionnaire } = require('./utils/questionnaire');
 const { getSiteDetails, submitParticipantsData, updateParticipantsData } = require('./utils/sites');
 const { setHeaders, deleteDocuments } = require('./utils/shared');
+const { subscribeToNotification } = require('./utils/notifications');
 
 exports.validate = validate;
 
@@ -27,6 +28,8 @@ exports.validateSiteUsers = validateSiteUsers;
 exports.identifyParticipant = identifyParticipant;
 
 exports.submitParticipantsData = submitParticipantsData;
+
+exports.subscribeToNotification = subscribeToNotification;
 
 // exports.updateParticipantsData = updateParticipantsData;
 
