@@ -6,6 +6,10 @@
 // const db = new firestore({
 //     keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
 // });
+// const { Storage } = require('@google-cloud/storage');
+// const storage = new Storage({
+//     keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
+// });
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -627,6 +631,16 @@ const retrieveUserNotifications = async (uid) => {
     }
 }
 
+const getGCSbucket = () => {
+    const storage = admin.storage();
+    const bucket = storage.bucket('connect4cancer');
+    return bucket;
+}
+
+const storeUploadedFileDetails = async (obj) => {
+    await db.collection('fileuploads').add(obj);
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -658,5 +672,7 @@ module.exports = {
     updateParticipantData,
     storeNotificationTokens,
     notificationTokenExists,
-    retrieveUserNotifications
+    retrieveUserNotifications,
+    getGCSbucket,
+    storeUploadedFileDetails
 }
