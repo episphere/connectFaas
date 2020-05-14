@@ -4,6 +4,7 @@ const { getQuestionnaire } = require('./utils/questionnaire');
 const { getSiteDetails, submitParticipantsData, updateParticipantsData } = require('./utils/sites');
 const { setHeaders, deleteDocuments } = require('./utils/shared');
 const { subscribeToNotification, retrieveNotifications } = require('./utils/notifications');
+const { uploadHealthRecords } = require('./utils/upload')
 
 exports.validate = validate;
 
@@ -34,6 +35,8 @@ exports.subscribeToNotification = subscribeToNotification;
 exports.retrieveNotifications = retrieveNotifications;
 
 // exports.updateParticipantsData = updateParticipantsData;
+
+exports.uploadHealthRecords = uploadHealthRecords;
 
 exports.getSiteDetails = getSiteDetails;
 
