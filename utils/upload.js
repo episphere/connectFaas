@@ -30,12 +30,12 @@ const uploadHealthRecords = async (req, res) => {
         const { getGCSbucket, storeUploadedFileDetails } = require('./firestore');
         const uuid = require('uuid');
         const newFileName = `${uuid()}${fileExtension}`;
-        const obj = {siteId, originalFileName: filename, newFileName};
+        const obj = {siteId, originalFileName: filename, newFileName, folder: authorize.acronym};
         storeUploadedFileDetails(obj);
-        const blob = getGCSbucket().file(newFileName);
+        const blob = getGCSbucket().file(`${authorize.acronym}/${newFileName}`);
         const writeStream = blob.createWriteStream();
         file.pipe(writeStream)
-            .on('data', function(data) {})
+            .on('data', () => {})
             .on('error', (err) => console.log(err))
             .on('end', () => {
                 writeStream.end();
