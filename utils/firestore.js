@@ -15,6 +15,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
+const storage = admin.storage();
 
 const validateKey = async (access_token) => {
     try{
@@ -632,7 +633,6 @@ const retrieveUserNotifications = async (uid) => {
 }
 
 const getGCSbucket = () => {
-    const storage = admin.storage();
     const bucket = storage.bucket('connect4cancer');
     return bucket;
 }

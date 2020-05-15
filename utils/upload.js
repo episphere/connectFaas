@@ -11,7 +11,7 @@ const uploadHealthRecords = async (req, res) => {
     }
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(`validateSiteUser ${new Date()} ${siteKey}`);
+    console.log(`uploadHealthRecords ${new Date()} ${siteKey}`);
     const { validateSiteUser } = require(`./firestore`);
     const authorize = await validateSiteUser(siteKey);
 
@@ -26,15 +26,10 @@ const uploadHealthRecords = async (req, res) => {
     const siteId = authorize.id;
     const busboy = new Busboy({headers: req.headers});
     busboy.on('file', async (fieldname, file, filename, encoding, mimetype) => {
-        console.log(mimetype)
+        const fileExtension = filename.substr(filename.lastIndexOf('.'), filename.length);
         const { getGCSbucket, storeUploadedFileDetails } = require('./firestore');
         const uuid = require('uuid');
-        let fileType = '';
-        if(mimetype === 'application/pdf') fileType = 'pdf';
-        if(mimetype === 'text/plain') fileType = 'txt';
-        if(mimetype === 'text/csv') fileType = 'csv';
-        if(fileType === '') return res.status(400).json({message:'File type not supported', code:400});
-        const newFileName = `${uuid()}${fileType !== '' ? `.${fileType}`:``}`;
+        const newFileName = `${uuid()}${fileExtension}`;
         const obj = {siteId, originalFileName: filename, newFileName};
         storeUploadedFileDetails(obj);
         const blob = getGCSbucket().file(newFileName);
