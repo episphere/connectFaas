@@ -297,7 +297,7 @@ const getToken = async (req, res) => {
 
                     const obj = {
                         state: { studyId, RcrtV_Verification_v1r0: 0},
-                        RcrtES_Site_v1r0: authorize.siteCode,
+                        RcrtES_Site_v1r0: siteCode,
                         RcrtSI_RecruitType_v1r0: 1,
                         pin: PIN,
                         token: uuid()

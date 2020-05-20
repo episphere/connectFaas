@@ -358,7 +358,7 @@ const verifyIdentity = async (type, token) => {
             const docId = snapShot.docs[0].id;
             let data = {};
             if(type){
-                // data['RcrtSI_RecruitType_v1r0'] = 1; // Active recruit
+                data['RcrtSI_RecruitType_v1r0'] = 1; // Active recruit
                 data['state.RcrtV_Verification_v1r0'] = 1;
             }
             else{
