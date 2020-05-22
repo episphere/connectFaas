@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders } = require('./shared');
+const { getResponseJSON, setHeaders, setHeadersDomainRestricted } = require('./shared');
 
 const submit = async (res, data, uid) => {
     const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
@@ -33,7 +33,7 @@ const submit = async (res, data, uid) => {
 };
 
 const recruitSubmit = async (req, res) => {
-    setHeaders(res);
+    setHeadersDomainRestricted(req, res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
@@ -229,7 +229,7 @@ const identifyParticipant = async (req, res) => {
 }
 
 const getUserProfile = async (req, res) => {
-    setHeaders(res);
+    setHeadersDomainRestricted(req, res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 

@@ -8,6 +8,16 @@ const setHeaders = (res) => {
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
 }
 
+const setHeadersDomainRestricted = (req, res) => {
+    const allowedOrigins = ['http://localhost:5000', 'https://episphere.github.io'];
+    const origin = req.headers.origin;
+    if(allowedOrigins.indexOf(origin) !== -1){
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
+        res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+   }
+}
+
 const generateConnectID = () => {
     return Math.floor(Math.random() * (9999999999 - 1000000000)) + 1000000000;
 }
@@ -30,7 +40,7 @@ const deleteDocuments = (req, res) => {
         res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    const siteCode = 8;
+    const siteCode = 3;
     const { deleteFirestoreDocuments } = require('./firestore')
     deleteFirestoreDocuments(siteCode)
     res.status(200).json(getResponseJSON('Success!', 200))
@@ -46,5 +56,6 @@ module.exports = {
     generateConnectID,
     generatePIN,
     randomString,
-    deleteDocuments
+    deleteDocuments,
+    setHeadersDomainRestricted
 }

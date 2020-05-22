@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders } = require('./shared');
+const { getResponseJSON, setHeaders, setHeadersDomainRestricted } = require('./shared');
 
 const validate = async (req, res) => {
     setHeaders(res);
@@ -30,7 +30,7 @@ const validate = async (req, res) => {
 };
 
 const generateToken = async (req, res) => {
-    setHeaders(res);
+    setHeadersDomainRestricted(req, res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
     console.log(req.method);
@@ -76,7 +76,7 @@ const generateToken = async (req, res) => {
 }
 
 const validateToken = async (req, res) => {
-    setHeaders(res);
+    setHeadersDomainRestricted(req, res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
     console.log(req.method);

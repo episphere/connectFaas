@@ -1,7 +1,7 @@
-const { getResponseJSON, setHeaders } = require('./shared');
+const { getResponseJSON, setHeadersDomainRestricted } = require('./shared');
 
 const subscribeToNotification = async (req, res) => {
-    setHeaders(res);
+    setHeadersDomainRestricted(req, res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
@@ -41,7 +41,7 @@ const subscribeToNotification = async (req, res) => {
 }
 
 const retrieveNotifications = async (req, res) => {
-    setHeaders(res);
+    setHeadersDomainRestricted(req, res)
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
