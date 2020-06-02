@@ -48,7 +48,7 @@ const generateToken = async (req, res) => {
     const decodedToken = await validateIDToken(idToken);
 
     if(decodedToken instanceof Error){
-        return res.status(500).json(getResponseJSON(decodedToken.message, 500));
+        return res.status(401).json(getResponseJSON(decodedToken.message, 401));
     }
 
     if(!decodedToken){
@@ -94,7 +94,7 @@ const validateToken = async (req, res) => {
     const decodedToken = await validateIDToken(idToken);
 
     if(decodedToken instanceof Error){
-        return res.status(500).json(getResponseJSON(decodedToken.message, 500));
+        return res.status(401).json(getResponseJSON(decodedToken.message, 401));
     }
 
     if(!decodedToken){
