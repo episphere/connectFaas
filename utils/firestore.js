@@ -2,14 +2,8 @@
 // admin.initializeApp({
 //     credential: admin.credential.applicationDefault(),
 // });
-// const firestore = require('@google-cloud/firestore');
-// const db = new firestore({
-//     credential: admin.credential.applicationDefault(),
-// });
-// const { Storage } = require('@google-cloud/storage');
-// const storage = new Storage({
-//     credential: admin.credential.applicationDefault(),
-// });
+// const db = admin.firestore();
+// const storage = admin.storage();
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
