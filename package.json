@@ -24,7 +24,7 @@
     "box-node-sdk": "^1.32.0",
     "busboy": "^0.3.1",
     "firebase-admin": "^8.12.1",
-    "firebase-functions": "^3.6.1",
+    "firebase-functions": "^3.7.0",
     "uuid": "^3.3.2"
   },
   "devDependencies": {
