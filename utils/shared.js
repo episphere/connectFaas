@@ -9,10 +9,11 @@ const setHeaders = (res) => {
 }
 
 const setHeadersDomainRestricted = (req, res) => {
-    const allowedOrigins = ['http://localhost:5000', 'https://episphere.github.io'];
+    // const allowedOrigins = ['http://localhost:5000', 'https://episphere.github.io'];
+    const allowedOrigins = ['https://episphere.github.io'];
     const origin = req.headers.origin;
     if(allowedOrigins.indexOf(origin) !== -1){
-        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Origin', origin);
         res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
         res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
    }
