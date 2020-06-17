@@ -23,7 +23,6 @@ const getSiteDetails = async (req, res) => {
 
 const submitParticipantsData = async (req, res) => {
     setHeaders(res);
-
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
     if(req.method !== 'POST') {
@@ -84,7 +83,7 @@ const submitParticipantsData = async (req, res) => {
                     }
                 }
                 const { updateParticipantData } = require('./firestore');
-                updateParticipantData(docID, newStateElements);
+                if(Object.keys(newStateElements).length > 0) updateParticipantData(docID, newStateElements);
             }
             else console.log(`${siteKey} Invalid token ${obj.token}`)
         }
