@@ -9,8 +9,8 @@ const setHeaders = (res) => {
 }
 
 const setHeadersDomainRestricted = (req, res) => {
-    // const allowedOrigins = ['http://localhost:5000', 'https://episphere.github.io'];
-    const allowedOrigins = ['https://episphere.github.io'];
+    const allowedOrigins = ['http://localhost:5000', 'https://episphere.github.io'];
+    // const allowedOrigins = ['https://episphere.github.io'];
     const origin = req.headers.origin;
     if(allowedOrigins.indexOf(origin) !== -1){
         res.header('Access-Control-Allow-Origin', origin);
