@@ -1,7 +1,6 @@
+// Run locally
 // const admin = require('firebase-admin');
-// admin.initializeApp({
-//     credential: admin.credential.applicationDefault(),
-// });
+// admin.initializeApp();
 // const db = admin.firestore();
 // const storage = admin.storage();
 

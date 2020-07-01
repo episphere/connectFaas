@@ -4,7 +4,8 @@ const { getQuestionnaire } = require('./utils/questionnaire');
 const { getSiteDetails, submitParticipantsData, updateParticipantsData } = require('./utils/sites');
 const { setHeaders, deleteDocuments } = require('./utils/shared');
 const { subscribeToNotification, retrieveNotifications } = require('./utils/notifications');
-const { uploadHealthRecords } = require('./utils/upload')
+const { uploadHealthRecords } = require('./utils/upload');
+const { connectApp } = require('./utils/connectApp');
 
 exports.validate = validate;
 
@@ -49,6 +50,8 @@ exports.validateUserSession = validateUserSession;
 exports.confluence = confluence;
 
 exports.deleteDocuments = deleteDocuments;
+
+exports.app = connectApp;
 
 exports.sendEmailNotification = (req, res) => {
     setHeaders(res);
