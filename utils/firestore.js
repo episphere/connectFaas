@@ -659,6 +659,25 @@ const filterDB = async (queries, siteCode, isParent) => {
     }
 }
 
+const validateBiospecimenUser = async (email) => {
+    try {
+        const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
+        if(snapshot.size === 1) {
+            return snapshot.docs[0].data().role;
+        }
+        else return false;
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+const assignCustomCLaims = (uid, role) => {
+    admin.auth().setCustomUserClaims(uid, {role}).then(() => {
+        // The new custom claims will propagate to the user's ID token the
+        // next time a new one is issued.
+      });
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -693,5 +712,7 @@ module.exports = {
     retrieveUserNotifications,
     getGCSbucket,
     storeUploadedFileDetails,
-    filterDB
+    filterDB,
+    validateBiospecimenUser,
+    assignCustomCLaims
 }
