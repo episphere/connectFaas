@@ -634,6 +634,31 @@ const storeUploadedFileDetails = async (obj) => {
     await db.collection('fileuploads').add(obj);
 }
 
+const filterDB = async (queries, siteCode, isParent) => {
+    try{
+        const operator = isParent ? 'in' : '==';
+        let query = db.collection('participants');
+        for(let key in queries) {
+            if(key === 'firstName' || key === 'lastName') query = query.where(`query.${key}`, '==', queries[key].toLowerCase());
+            if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
+            if(key === 'dob') query = query.where('RcrtUP_DOB_v1r0', '==', queries[key]);
+            if(key === 'connectId') query = query.where('Connect_ID', '==', parseInt(queries[key]));
+            if(key === 'token') query = query.where('token', '==', queries[key]);
+            if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
+        }
+        const snapshot = await query.where('RcrtES_Site_v1r0', operator, siteCode).get();
+        if(snapshot.size !== 0){
+            return snapshot.docs.map(document => document.data());
+        }
+        else{
+            return [];
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -667,5 +692,6 @@ module.exports = {
     notificationTokenExists,
     retrieveUserNotifications,
     getGCSbucket,
-    storeUploadedFileDetails
+    storeUploadedFileDetails,
+    filterDB
 }

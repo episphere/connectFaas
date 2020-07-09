@@ -130,7 +130,7 @@ const getParticipants = async (req, res) => {
     else if (req.query.type === 'cannotbeverified') queryType = 'cannotbeverified';
     else if (req.query.type === 'all') queryType = 'all';
     else if (req.query.type === 'individual'){
-        if (req.query.token && req.query.connectId === undefined && req.query.email === undefined) {
+        if (req.query.token) {
             queryType = "individual";
             const { individualParticipant } = require(`./firestore`);
             const response = await individualParticipant('token', req.query.token);
@@ -138,25 +138,21 @@ const getParticipants = async (req, res) => {
             if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
             if(response) return res.status(200).json({data: response, code: 200})
         }
-        else if(req.query.connectId && req.query.token === undefined && req.query.email === undefined){
-            queryType = "individual";
-            const { individualParticipant } = require(`./firestore`);
-            const response = await individualParticipant('Connect_ID', parseInt(req.query.connectId));
-            if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
-            if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
-            if(response) return res.status(200).json({data: response, code: 200})
-        }
-        else if(req.query.email && req.query.token === undefined && req.query.connectId === undefined){
-            queryType = "individual";
-            const { individualParticipant } = require(`./firestore`);
-            const response = await individualParticipant('RcrtUP_Email1_v1r0', req.query.email);
-            if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
-            if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
-            if(response) return res.status(200).json({data: response, code: 200})
-        }
         else{
             return res.status(404).json(getResponseJSON('Bad request', 400));
         }
+    }
+    else if(req.query.type === 'filter') {
+        const queries = req.query;
+        delete queries.type;
+        console.log(queries);
+        if(Object.keys(queries).length === 0) return res.status(404).json(getResponseJSON('Please include parameters to filter data.', 400));
+        const { filterDB } = require('./firestore');
+        const result = await filterDB(queries, siteCodes, isParent);
+        if(result instanceof Error){
+            return res.status(500).json(getResponseJSON(result.message, 500));
+        }
+        return res.status(200).json({data: result, code: 200})
     }
     else{
         return res.status(404).json(getResponseJSON('Resource not found', 404));

@@ -6,6 +6,7 @@ const { setHeaders, deleteDocuments } = require('./utils/shared');
 const { subscribeToNotification, retrieveNotifications } = require('./utils/notifications');
 const { uploadHealthRecords } = require('./utils/upload');
 const { connectApp } = require('./utils/connectApp');
+const { biospecimenAPIs } = require('./utils/biospecimen');
 
 exports.validate = validate;
 
@@ -52,6 +53,8 @@ exports.confluence = confluence;
 exports.deleteDocuments = deleteDocuments;
 
 exports.app = connectApp;
+
+exports.biospecimen = biospecimenAPIs;
 
 exports.sendEmailNotification = (req, res) => {
     setHeaders(res);
