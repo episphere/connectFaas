@@ -5,6 +5,7 @@ const biospecimenAPIs = (req, res) => {
     if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
     const api = query.api;
     if(api === 'getParticipants') return getParticipants(req, res);
+    else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 
 module.exports = {
