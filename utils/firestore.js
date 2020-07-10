@@ -689,11 +689,22 @@ const biospecimenUserList = async (siteCode, email) => {
     }
 }
 
-const assignCustomCLaims = (uid, role) => {
-    admin.auth().setCustomUserClaims(uid, {role}).then(() => {
-        // The new custom claims will propagate to the user's ID token the
-        // next time a new one is issued.
-      });
+const biospecimenUserExists = async (email) => {
+    try {
+        const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
+        if(snapshot.size === 0) return false;
+        else return true;
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+const addNewBiospecimenUser = async (data) => {
+    try {
+        await db.collection('biospecimenUsers').add(data);
+    } catch (error) {
+        return new Error(error);
+    }
 }
 
 module.exports = {
@@ -732,6 +743,7 @@ module.exports = {
     storeUploadedFileDetails,
     filterDB,
     validateBiospecimenUser,
-    assignCustomCLaims,
-    biospecimenUserList
+    biospecimenUserList,
+    biospecimenUserExists,
+    addNewBiospecimenUser
 }
