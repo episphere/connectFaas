@@ -51,6 +51,13 @@ const lockedAttributes = () => { // Read only access after initialization
     return ["RcrtV_Verification_v1r0", "RcrtSI_Account_v1r0", "RcrtUP_Submitted_v1r0", ""]
 }
 
+const filterData = async (queries, siteCodes, isParent) => {
+    console.log(queries);
+    const { filterDB } = require('./firestore');
+    const result = await filterDB(queries, siteCodes, isParent);
+    return result;
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -58,5 +65,6 @@ module.exports = {
     generatePIN,
     randomString,
     deleteDocuments,
-    setHeadersDomainRestricted
+    setHeadersDomainRestricted,
+    filterData
 }

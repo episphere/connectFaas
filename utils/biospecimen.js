@@ -1,17 +1,7 @@
 const { getParticipants } = require("./submission");
 const { getResponseJSON, setHeaders } = require('./shared');
 
-const biospecimenAPIs = (req, res) => {
-    const query = req.query;
-    if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
-    const api = query.api;
-    console.log(api)
-    if(api === 'getParticipants') return getParticipants(req, res);
-    if(api === 'validateUsers') return validateUsers(req, res);
-    else return res.status(400).json(getResponseJSON('Bad request!', 400));
-};
-
-const validateUsers = async (req, res) => {
+const biospecimenAPIs = async (req, res) => {
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -23,6 +13,11 @@ const validateUsers = async (req, res) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
+
+    const query = req.query;
+    if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
+    const api = query.api;
+    console.log(api)
 
     const idToken = req.headers.authorization.replace('Bearer','').trim();
     const { validateIDToken } = require('./firestore');
@@ -38,13 +33,32 @@ const validateUsers = async (req, res) => {
     
     const { validateBiospecimenUser } = require('./firestore');
     const email = decodedToken.email;
-    const uid = decodedToken.uid;
+
     const isValidUser = await validateBiospecimenUser(email);
     if(!isValidUser) res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    const { assignCustomCLaims } = require('./firestore');
-    assignCustomCLaims(uid, isValidUser);
-    return res.status(200).json({data: {role: isValidUser}, code:200});
-}
+    const {role, siteCode} = isValidUser;
+    
+    if(api === 'getParticipants') {
+        if(req.query.type === 'filter') {
+            const queries = req.query;
+            delete queries.type;
+            if(Object.keys(queries).length === 0) return res.status(404).json(getResponseJSON('Please include parameters to filter data.', 400));
+            const { filterData } = require('./shared');
+            const result = await filterData(queries, siteCode);
+            if(result instanceof Error){
+                return res.status(500).json(getResponseJSON(result.message, 500));
+            }
+            return res.status(200).json({data: result, code: 200})
+        }
+        else{
+            return res.status(400).json(getResponseJSON('Bad request!', 400));
+        }
+    }
+    else if(api === 'validateUsers') {
+        return res.status(200).json({data: {role}, code:200});
+    }
+    else return res.status(400).json(getResponseJSON('Bad request!', 400));
+};
 
 module.exports = {
     biospecimenAPIs
