@@ -77,10 +77,10 @@ const biospecimenAPIs = async (req, res) => {
         for(let person of requestData) {
             if(person.name && person.email && person.role){
                 if(role === 'admin' && ( person.role === 'manager' || person.role === 'user')){
-                    await addNewUser(person, email)
+                    await addNewUser(person, email, siteCode)
                 }
                 if(role === 'manager' && person.role === 'user'){
-                    await addNewUser(person, email)
+                    await addNewUser(person, email, siteCode)
                 }
             }
         }
@@ -89,12 +89,13 @@ const biospecimenAPIs = async (req, res) => {
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 
-const addNewUser = async (person, email) => {
+const addNewUser = async (person, email, siteCode) => {
     const { biospecimenUserExists } = require('./firestore');
     const exists = await biospecimenUserExists(person.email);
     if(exists === false) {
         person['addedBy'] = email;
         person['addedAt'] = new Date().toISOString();
+        person['siteCode'] = siteCode;
         const { addNewBiospecimenUser } = require('./firestore');
         await addNewBiospecimenUser(person);
     }
