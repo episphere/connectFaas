@@ -1,4 +1,3 @@
-const { getParticipants } = require("./submission");
 const { getResponseJSON, setHeaders } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
@@ -35,7 +34,7 @@ const biospecimenAPIs = async (req, res) => {
     const email = decodedToken.email;
 
     const isValidUser = await validateBiospecimenUser(email);
-    if(!isValidUser) res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     const {role, siteCode} = isValidUser;
     
     if(api === 'getParticipants') {
