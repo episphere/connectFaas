@@ -5,10 +5,6 @@ const biospecimenAPIs = async (req, res) => {
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
@@ -38,6 +34,9 @@ const biospecimenAPIs = async (req, res) => {
     const {role, siteCode} = isValidUser;
     
     if(api === 'getParticipants') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
         if(req.query.type === 'filter') {
             const queries = req.query;
             delete queries.type;
@@ -54,7 +53,18 @@ const biospecimenAPIs = async (req, res) => {
         }
     }
     else if(api === 'validateUsers') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
         return res.status(200).json({data: {role}, code:200});
+    }
+    else if(api === 'users' && role === 'admin' || 'manager') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const { biospecimenUserList } = require('./firestore');
+        const usersList = role === 'admin' ? await biospecimenUserList(siteCode) : await biospecimenUserList(siteCode, email);
+        return res.status(200).json({data: {users: usersList}, code: 200})
     }
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };

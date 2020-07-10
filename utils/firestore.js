@@ -663,14 +663,27 @@ const validateBiospecimenUser = async (email) => {
     try {
         const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
         if(snapshot.size === 1) {
-            const siteId = snapshot.docs[0].data().siteId;
-            console.log(siteId);
             const role = snapshot.docs[0].data().role;
-            const response = await db.collection('siteDetails').where('id', '==', siteId).get();
-            const siteCode = response.docs[0].data().siteCode;
+            const siteCode = snapshot.docs[0].data().siteCode;
             return {role, siteCode };
         }
         else return false;
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+const biospecimenUserList = async (siteCode, email) => {
+    try {
+        let query = db.collection('biospecimenUsers').where('siteCode', '==', siteCode)
+        if(email) query = query.where('addedBy', '==', email)
+        const snapShot = await query.get();
+        if(snapShot.size !== 0){
+            return snapShot.docs.map(document => document.data());
+        }
+        else{
+            return [];
+        }
     } catch (error) {
         return new Error(error);
     }
@@ -719,5 +732,6 @@ module.exports = {
     storeUploadedFileDetails,
     filterDB,
     validateBiospecimenUser,
-    assignCustomCLaims
+    assignCustomCLaims,
+    biospecimenUserList
 }
