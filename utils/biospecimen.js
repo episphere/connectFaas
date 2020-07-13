@@ -73,7 +73,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         const requestData = req.body;
         console.log(requestData);
-        if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Bad request!', 400));
+        if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         for(let person of requestData) {
             if(person.name && person.email && person.role){
                 if(role === 'admin' && ( person.role === 'manager' || person.role === 'user')){
@@ -84,7 +84,20 @@ const biospecimenAPIs = async (req, res) => {
                 }
             }
         }
-        return res.status(200).json({data: {}, code: 200})
+        return res.status(200).json({message: 'Success!', code: 200})
+    }
+    else if (api === 'removeUser'  && (role === 'admin' || role === 'manager')) {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const emailId = req.query.email;
+        if(!emailId) return res.status(400).json(getResponseJSON('Query parameter email is missing.', 400));
+        const { removeUser } = require('./firestore');
+        let response = '';
+        if(role === 'admin') response = await removeUser(emailId, siteCode, email);
+        else if(role === 'manager') response = await removeUser(emailId, siteCode, email, true);
+        if(!response) return res.status(404).json(getResponseJSON('User not found.', 404));
+        return res.status(200).json({message: 'Success!', code:200})
     }
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };

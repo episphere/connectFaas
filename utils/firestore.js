@@ -707,6 +707,23 @@ const addNewBiospecimenUser = async (data) => {
     }
 }
 
+const removeUser = async (userEmail, siteCode, email, manager) => {
+    try {
+        let query = db.collection('biospecimenUsers').where('email', '==', userEmail).where('siteCode', '==', siteCode);
+        if(manager) query = query.where('addedBy', '==', email);
+        const snapshot = await query.get();
+        if(snapshot.size === 1) {
+            console.log('Removing', userEmail);
+            const docId = snapshot.docs[0].id;
+            await db.collection('biospecimenUsers').doc(docId).delete();
+            return true;
+        }
+        else return false;
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -745,5 +762,6 @@ module.exports = {
     validateBiospecimenUser,
     biospecimenUserList,
     biospecimenUserExists,
-    addNewBiospecimenUser
+    addNewBiospecimenUser,
+    removeUser
 }
