@@ -92,6 +92,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         const emailId = req.query.email;
         if(!emailId) return res.status(400).json(getResponseJSON('Query parameter email is missing.', 400));
+        if(emailId === email) return res.status(400).json(getResponseJSON('Can not remove yourself.', 400));
         const { removeUser } = require('./firestore');
         let response = '';
         if(role === 'admin') response = await removeUser(emailId, siteCode, email);
