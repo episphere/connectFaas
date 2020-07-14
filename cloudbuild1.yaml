@@ -1,16 +1,23 @@
 steps:
-- name: 'gcr.io/cloud-builders/gcloud'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['functions', 'deploy', 'identifyParticipant', '--entry-point=identifyParticipant', '--trigger-http', '--runtime=nodejs10', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
-- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'gcloud'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['functions', 'deploy', 'generateToken', '--entry-point=generateToken', '--trigger-http', '--runtime=nodejs10', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
-- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'gcloud'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['functions', 'deploy', 'submitParticipantsData', '--entry-point=submitParticipantsData', '--trigger-http', '--runtime=nodejs10', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
-- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'gcloud'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['functions', 'deploy', 'subscribeToNotification', '--entry-point=subscribeToNotification', '--trigger-http', '--runtime=nodejs10', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
-- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'gcloud'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['functions', 'deploy', 'retrieveNotifications', '--entry-point=retrieveNotifications', '--trigger-http', '--runtime=nodejs10', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
-- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'gcloud'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['functions', 'deploy', 'uploadHealthRecords', '--entry-point=uploadHealthRecords', '--trigger-http', '--runtime=nodejs10', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
-- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'gcloud'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['functions', 'deploy', 'biospecimen', '--entry-point=biospecimen', '--trigger-http', '--runtime=nodejs10', '--source=https://source.developers.google.com/projects/nih-nci-dceg-episphere-dev/repos/github_episphere_connectfaas']
+  entrypoint: 'gcloud'
   
