@@ -677,7 +677,7 @@ const biospecimenUserList = async (siteCode, email) => {
     try {
         let query = db.collection('biospecimenUsers').where('siteCode', '==', siteCode)
         if(email) query = query.where('addedBy', '==', email)
-        const snapShot = await query.get();
+        const snapShot = await query.orderBy('role').orderBy('email').get();
         if(snapShot.size !== 0){
             return snapShot.docs.map(document => document.data());
         }
@@ -685,6 +685,7 @@ const biospecimenUserList = async (siteCode, email) => {
             return [];
         }
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
