@@ -77,10 +77,16 @@ const biospecimenAPIs = async (req, res) => {
         for(let person of requestData) {
             if(person.name && person.email && person.role){
                 if(role === 'admin' && ( person.role === 'manager' || person.role === 'user')){
-                    await addNewUser(person, email, siteCode)
+                    const response = await addNewUser(person, email, siteCode);
+                    if(response instanceof Error){
+                        return res.status(400).json(getResponseJSON(response.message, 400));
+                    }
                 }
                 if(role === 'manager' && person.role === 'user'){
-                    await addNewUser(person, email, siteCode)
+                    const response = await addNewUser(person, email, siteCode);
+                    if(response instanceof Error){
+                        return res.status(400).json(getResponseJSON(response.message, 400));
+                    }
                 }
             }
         }
@@ -113,6 +119,7 @@ const addNewUser = async (person, email, siteCode) => {
         const { addNewBiospecimenUser } = require('./firestore');
         await addNewBiospecimenUser(person);
     }
+    else return new Error('User with this email already exists');
 }
 
 module.exports = {
