@@ -116,7 +116,7 @@ const biospecimenAPIs = async (req, res) => {
             if(specimen.masterSpecimenId){
                 const masterSpecimenId = specimen.masterSpecimenId;
                 const { specimenExists } = require('./firestore');
-                const exists = await specimenExists(masterSpecimenId)
+                const exists = await specimenExists(masterSpecimenId, specimen)
                 if(exists === false){
                     const uuid = require('uuid');
                     specimen['id'] = uuid();
