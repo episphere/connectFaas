@@ -725,6 +725,22 @@ const removeUser = async (userEmail, siteCode, email, manager) => {
     }
 }
 
+const storeSpecimen = async (data) => {
+    await db.collection('biospecimen').add(data);
+}
+
+const searchSpecimen = async (masterSpecimenId, siteCode) => {
+    const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).get();
+    if(snapshot.size === 1) {
+        const token = snapshot.docs[0].data().token;
+        const response = await db.collection('participants').where('token', '==', token).get();
+        const participantSiteCode = response.docs[0].data().RcrtES_Site_v1r0;
+        if(participantSiteCode === siteCode) return snapshot.docs[0].data();
+        else return false;
+    }
+    else return false;
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -764,5 +780,7 @@ module.exports = {
     biospecimenUserList,
     biospecimenUserExists,
     addNewBiospecimenUser,
-    removeUser
+    removeUser,
+    storeSpecimen,
+    searchSpecimen
 }
