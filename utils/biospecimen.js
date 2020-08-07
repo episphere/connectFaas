@@ -114,11 +114,15 @@ const biospecimenAPIs = async (req, res) => {
         if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         for(let specimen of requestData) {
             if(specimen.masterSpecimenId){
-                // Check for biospecimen duplication
-                const uuid = require('uuid');
-                specimen['id'] = uuid();
-                const { storeSpecimen } = require('./firestore');
-                await storeSpecimen(specimen);
+                const masterSpecimenId = specimen.masterSpecimenId;
+                const { specimenExists } = require('./firestore');
+                const exists = await specimenExists(masterSpecimenId)
+                if(exists === false){
+                    const uuid = require('uuid');
+                    specimen['id'] = uuid();
+                    const { storeSpecimen } = require('./firestore');
+                    await storeSpecimen(specimen);
+                }
             }
             return res.status(200).json({message: 'Success!', code:200})
         }

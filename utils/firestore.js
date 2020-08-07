@@ -741,6 +741,16 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
     else return false;
 }
 
+const specimenExists = async (id, data) => {
+    const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', id).get();
+    if(snapshot.size === 1) {
+        const docId = snapshot.docs[0].id;
+        await db.collection('biospecimen').doc(docId).update(data);
+        return true;
+    }
+    else return false;
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -782,5 +792,6 @@ module.exports = {
     addNewBiospecimenUser,
     removeUser,
     storeSpecimen,
-    searchSpecimen
+    searchSpecimen,
+    specimenExists
 }
