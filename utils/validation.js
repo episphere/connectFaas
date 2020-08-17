@@ -68,7 +68,7 @@ const generateToken = async (req, res) => {
         821247024: 875007964,
         token: uuid(),
         512820379: 854703046,
-        RcrtSI_TypeTime_v1r0: (new Date()).toISOString()
+        471593703: (new Date()).toISOString()
     }
     console.log(JSON.stringify(obj));
     const { createRecord } = require('./firestore');
@@ -155,16 +155,6 @@ const validateToken = async (req, res) => {
     }
     else{
         return res.status(400).json(getResponseJSON('Bad request', 400));
-        // const uuid = require('uuid');
-        // const obj = {
-        //     state: {
-        //         uid: decodedToken.uid,
-        //         RcrtV_Verification_v1r0: 0
-        //     },
-        //     token: uuid()
-        // };
-        // const { createRecord } = require('./firestore');
-        // createRecord(obj);
     }
 };
 

@@ -111,7 +111,7 @@ const validateIDToken = async (idToken) => {
 const linkParticipanttoFirebaseUID = async (docID, uID) => {
     try{
         let data = {};
-        data['state.RcrtSI_Account_v1r0'] = 1;
+        data['state.230663853'] = 353358909;
         data['state.uid'] = uID
         await db.collection('participants').doc(docID).update(data);
         return true;
@@ -286,21 +286,21 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
             participants = await db.collection('participants')
                                     .where('827220437', operator, siteCode)
                                     .where('821247024', '==', 197316935)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .where('699625233', '==', 353358909)
                                     .get();
         }
         if(decider === 'notyetverified') {
             participants = await db.collection('participants')
                                     .where('827220437', operator, siteCode)
                                     .where('821247024', '==', 875007964)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .where('699625233', '==', 353358909)
                                     .get();
         }
         if(decider === 'cannotbeverified') {
             participants = await db.collection('participants')
                                     .where('827220437', operator, siteCode)
                                     .where('821247024', '==', 219863910)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .where('699625233', '==', 353358909)
                                     .get();
         }
         if(decider === 'all') {
@@ -641,7 +641,7 @@ const filterDB = async (queries, siteCode, isParent) => {
         for(let key in queries) {
             if(key === 'firstName' || key === 'lastName') query = query.where(`query.${key}`, '==', queries[key].toLowerCase());
             if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
-            if(key === 'dob') query = query.where('RcrtUP_DOB_v1r0', '==', queries[key]);
+            if(key === 'dob') query = query.where('371067537', '==', queries[key]);
             if(key === 'connectId') query = query.where('Connect_ID', '==', parseInt(queries[key]));
             if(key === 'token') query = query.where('token', '==', queries[key]);
             if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);

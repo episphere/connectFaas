@@ -3,7 +3,7 @@ const { getResponseJSON, setHeaders, setHeadersDomainRestricted } = require('./s
 const submit = async (res, data, uid) => {
     const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
     hotProperties.forEach(key => delete data[key]);
-    if(data.RcrtCS_Consented_v1r0 !== undefined && data.RcrtCS_Consented_v1r0 === 1) {
+    if(data[919254129] !== undefined && data[919254129] === 353358909) {
         // generate Connect_ID
         const { generateConnectID } = require('./shared');
         const { sanityCheckConnectID } = require('./firestore');
