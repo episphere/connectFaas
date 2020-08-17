@@ -48,7 +48,7 @@ const deleteDocuments = (req, res) => {
 }
 
 const lockedAttributes = () => { // Read only access after initialization
-    return ["RcrtV_Verification_v1r0", "RcrtSI_Account_v1r0", "RcrtUP_Submitted_v1r0", ""]
+    return ["821247024", "RcrtSI_Account_v1r0", "RcrtUP_Submitted_v1r0", ""]
 }
 
 const filterData = async (queries, siteCodes, isParent) => {

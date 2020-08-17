@@ -64,9 +64,10 @@ const generateToken = async (req, res) => {
     }
     const uuid = require('uuid');
     const obj = {
-        state: { RcrtV_Verification_v1r0: 0, uid: decodedToken.uid},
+        state: { uid: decodedToken.uid },
+        821247024: 875007964,
         token: uuid(),
-        RcrtSI_RecruitType_v1r0: 2,
+        512820379: 854703046,
         RcrtSI_TypeTime_v1r0: (new Date()).toISOString()
     }
     console.log(JSON.stringify(obj));
@@ -142,7 +143,7 @@ const validateToken = async (req, res) => {
             const { linkParticipanttoFirebaseUID } = require('./firestore');
             await linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
             const obj = {
-                RcrtES_PINmatch_v1r0: 1
+                948195369: 353358909
             }
             const { updateResponse } = require('./firestore');
             updateResponse(obj, decodedToken.uid);
@@ -296,9 +297,10 @@ const getToken = async (req, res) => {
                     }
 
                     const obj = {
-                        state: { studyId, RcrtV_Verification_v1r0: 0},
-                        RcrtES_Site_v1r0: siteCode,
-                        RcrtSI_RecruitType_v1r0: 1,
+                        state: { studyId },
+                        821247024: 875007964,
+                        827220437: siteCode,
+                        512820379: 486306141,
                         pin: PIN,
                         token: uuid()
                     }
