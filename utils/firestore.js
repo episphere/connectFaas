@@ -665,7 +665,9 @@ const validateBiospecimenUser = async (email) => {
         if(snapshot.size === 1) {
             const role = snapshot.docs[0].data().role;
             const siteCode = snapshot.docs[0].data().siteCode;
-            return {role, siteCode };
+            const response = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+            const siteAcronym = response.docs[0].data().acronym;
+            return { role, siteCode, siteAcronym };
         }
         else return false;
     } catch (error) {
