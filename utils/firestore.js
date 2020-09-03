@@ -111,7 +111,7 @@ const validateIDToken = async (idToken) => {
 const linkParticipanttoFirebaseUID = async (docID, uID) => {
     try{
         let data = {};
-        data['state.RcrtSI_Account_v1r0'] = 1;
+        data['state.230663853'] = 353358909;
         data['state.uid'] = uID
         await db.collection('participants').doc(docID).update(data);
         return true;
@@ -194,7 +194,7 @@ const createRecord = async (data) => {
 
 const recordExists = async (studyId, siteCode) => {
     try{
-        const snapShot = await db.collection('participants').where('state.studyId', '==', studyId).where('RcrtES_Site_v1r0', '==', siteCode).get();
+        const snapShot = await db.collection('participants').where('state.studyId', '==', studyId).where('827220437', '==', siteCode).get();
         if(snapShot.size === 1){
             return snapShot.docs[0].data();
         }
@@ -258,7 +258,7 @@ const storeParticipantData = async (token, siteCode) => {
     try{
         const snapShot = await db.collection('participants')
                                 .where('token', '==', token)
-                                .where('RcrtES_Site_v1r0', '==', siteCode)
+                                .where('827220437', '==', siteCode)
                                 .get();
         if(snapShot.size === 1) {
             return {id: snapShot.docs[0].id, data: snapShot.docs[0].data()};
@@ -284,29 +284,29 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
         let participants = {};
         if(decider === 'verified') {
             participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', operator, siteCode)
-                                    .where('state.RcrtV_Verification_v1r0', '==', 1)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .where('827220437', operator, siteCode)
+                                    .where('821247024', '==', 197316935)
+                                    .where('699625233', '==', 353358909)
                                     .get();
         }
         if(decider === 'notyetverified') {
             participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', operator, siteCode)
-                                    .where('state.RcrtV_Verification_v1r0', '==', 0)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .where('827220437', operator, siteCode)
+                                    .where('821247024', '==', 875007964)
+                                    .where('699625233', '==', 353358909)
                                     .get();
         }
         if(decider === 'cannotbeverified') {
             participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', operator, siteCode)
-                                    .where('state.RcrtV_Verification_v1r0', '==', 2)
-                                    .where('RcrtUP_Submitted_v1r0', '==', 1)
+                                    .where('827220437', operator, siteCode)
+                                    .where('821247024', '==', 219863910)
+                                    .where('699625233', '==', 353358909)
                                     .get();
         }
         if(decider === 'all') {
             participants = await db.collection('participants')
-                                    .where('RcrtES_Site_v1r0', operator, siteCode)
-                                    .orderBy("state.RcrtV_Verification_v1r0", "asc")
+                                    .where('827220437', operator, siteCode)
+                                    .orderBy("821247024", "asc")
                                     .get();
         }
         return participants.docs.map(document => {
@@ -351,11 +351,11 @@ const verifyIdentity = async (type, token) => {
             const docId = snapShot.docs[0].id;
             let data = {};
             if(type){
-                data['RcrtSI_RecruitType_v1r0'] = 1; // Active recruit
-                data['state.RcrtV_Verification_v1r0'] = 1;
+                data['512820379'] = 486306141; // Active recruit
+                data['821247024'] = 197316935;
             }
             else{
-                data['state.RcrtV_Verification_v1r0'] = 2;
+                data['821247024'] = 219863910;
             }
             await db.collection('participants').doc(docId).update(data);
             return true;
@@ -580,7 +580,7 @@ const individualParticipant = async (key, value) => {
 
 const deleteFirestoreDocuments = async (siteCode) => {
     try{
-        const data = await db.collection('participants').where('RcrtES_Site_v1r0', '==', siteCode).get();
+        const data = await db.collection('participants').where('827220437', '==', siteCode).get();
         if(data.size !== 0){
             data.docs.forEach(async dt =>{ 
                 await db.collection('participants').doc(dt.id).delete()
@@ -641,12 +641,12 @@ const filterDB = async (queries, siteCode, isParent) => {
         for(let key in queries) {
             if(key === 'firstName' || key === 'lastName') query = query.where(`query.${key}`, '==', queries[key].toLowerCase());
             if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
-            if(key === 'dob') query = query.where('RcrtUP_DOB_v1r0', '==', queries[key]);
+            if(key === 'dob') query = query.where('371067537', '==', queries[key]);
             if(key === 'connectId') query = query.where('Connect_ID', '==', parseInt(queries[key]));
             if(key === 'token') query = query.where('token', '==', queries[key]);
             if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
         }
-        const snapshot = await query.where('RcrtES_Site_v1r0', operator, siteCode).get();
+        const snapshot = await query.where('827220437', operator, siteCode).get();
         if(snapshot.size !== 0){
             return snapshot.docs.map(document => document.data());
         }
@@ -736,7 +736,7 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
     if(snapshot.size === 1) {
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
-        const participantSiteCode = response.docs[0].data().RcrtES_Site_v1r0;
+        const participantSiteCode = response.docs[0].data()[827220437];
         if(participantSiteCode === siteCode) return snapshot.docs[0].data();
         else return false;
     }
