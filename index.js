@@ -11,7 +11,7 @@ const { biospecimenAPIs } = require('./utils/biospecimen');
 exports.validate = validate;
 
 exports.generateToken = generateToken;
- 
+
 exports.validateToken = validateToken;
 
 exports.getParticipantToken = getToken;
