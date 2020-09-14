@@ -353,9 +353,11 @@ const verifyIdentity = async (type, token) => {
             if(type){
                 data['512820379'] = 486306141; // Active recruit
                 data['821247024'] = 197316935;
+                data['914594314'] = new Date().toISOString();
             }
             else{
                 data['821247024'] = 219863910;
+                data['914594314'] = new Date().toISOString();
             }
             await db.collection('participants').doc(docId).update(data);
             return true;
