@@ -171,54 +171,93 @@ const identifyParticipant = async (req, res) => {
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    if(req.method !== 'GET' && req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only GET or POST requests are accepted!', 405));
     }
 
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    if(!req.query.type || req.query.type.trim() === ""){
-        return res.status(401).json(getResponseJSON('Type is missing!', 401));
-    }
+    if(req.method === 'GET') {
+        if(!req.query.type || req.query.type.trim() === ""){
+            return res.status(401).json(getResponseJSON('Type is missing!', 401));
+        }
+    
+        if(!req.query.token || req.query.token.trim() === ""){
+            return res.status(401).json(getResponseJSON('Token is missing!', 401));
+        }
+        const siteKey = req.headers.authorization.replace('Bearer','').trim();
+        const { validateSiteUser } = require(`./firestore`);
+        const authorize = await validateSiteUser(siteKey);
+        if(authorize instanceof Error){
+            return res.status(500).json(getResponseJSON(authorize.message, 500));
+        }
 
-    if(!req.query.token || req.query.token.trim() === ""){
-        return res.status(401).json(getResponseJSON('Token is missing!', 401));
-    }
+        if(!authorize){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
 
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    const type = req.query.type;
-    const token = req.query.token;
-    console.log(`identifyParticipant ${new Date()} siteKey: -${siteKey}, type: - ${type} and participant token: - ${token}`);
-    const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey);
+        const type = req.query.type;
+        const token = req.query.token;
+        console.log(`identifyParticipant ${new Date()} siteKey: -${siteKey}, type: - ${type} and participant token: - ${token}`);
 
-    if(authorize instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
-    }
+        let bool = false;
+        if(type === 'verified'){
+            bool = true;
+        }
+        else if(type === 'cannotbeverified'){
+            bool = false;
+        }
+        else{
+            return res.status(400).json(getResponseJSON('Type not supported!', 400));
+        }
 
-    if(!authorize){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    let bool = false;
-    if(type === 'verified'){
-        bool = true;
-    }
-    else if(type === 'cannotbeverified'){
-        bool = false;
-    }
-    else{
-        return res.status(400).json(getResponseJSON('Type not supported!', 400));
-    }
+        const { verifyIdentity } = require('./firestore');
+        const identify = await verifyIdentity(bool, token);
+        if(identify instanceof Error){
+            return res.status(500).json(getResponseJSON(identify.message, 500));
+        }
 
-    const { verifyIdentity } = require('./firestore');
-    const identify = await verifyIdentity(bool, token);
-    if(identify instanceof Error){
-        return res.status(500).json(getResponseJSON(identify.message, 500));
+        if(identify){
+            return res.status(200).json(getResponseJSON('Success!', 200));
+        }
     }
+    else if (req.method === 'POST') {
+        if(req.body.data === undefined || req.body.data.length === 0) return res.status(400).json(getResponseJSON('Bad request!', 400));
+        const siteKey = req.headers.authorization.replace('Bearer','').trim();
+        const { validateSiteUser } = require(`./firestore`);
+        const authorize = await validateSiteUser(siteKey);
+        if(authorize instanceof Error){
+            return res.status(500).json(getResponseJSON(authorize.message, 500));
+        }
 
-    if(identify){
+        if(!authorize){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+        const dataArray = req.body.data;
+        console.log(dataArray)
+        for(let obj of dataArray) {
+            if(obj.token && obj.type) { // If both token and type exists
+                const type = obj.type;
+                const token = obj.token;
+                let supportedType = false;
+                let bool = false;
+                if(type === 'verified'){
+                    bool = true;
+                    supportedType = true;
+                }
+                else if(type === 'cannotbeverified'){
+                    bool = false;
+                    supportedType = true;
+                }
+
+                if(supportedType) {
+                    const { verifyIdentity } = require('./firestore');
+                    await verifyIdentity(bool, token);
+                }
+            }
+        }
         return res.status(200).json(getResponseJSON('Success!', 200));
     }
 }
