@@ -224,7 +224,7 @@ const identifyParticipant = async (req, res) => {
         }
     }
     else if (req.method === 'POST') {
-        if(req.body.data === undefined || req.body.data.length === 0) return res.status(400).json(getResponseJSON('Bad request!', 400));
+        if(req.body.data === undefined || req.body.data.length === 0 || req.body.data.length > 499) return res.status(400).json(getResponseJSON('Bad request!', 400));
         const siteKey = req.headers.authorization.replace('Bearer','').trim();
         const { validateSiteUser } = require(`./firestore`);
         const authorize = await validateSiteUser(siteKey);

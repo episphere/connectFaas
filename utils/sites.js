@@ -61,9 +61,9 @@ const submitParticipantsData = async (req, res) => {
         return res.status(400).json(getResponseJSON('data array doesn\'t have any element.', 400));
     }
 
-    if(req.body.data.length > 1000) {
-        console.log(`${siteKey} More than acceptable limit of 1000 records.`)
-        return res.status(400).json(getResponseJSON('More than acceptable limit of 1000 records.', 400));
+    if(req.body.data.length > 499) {
+        console.log(`${siteKey} More than acceptable limit of 500 records.`)
+        return res.status(400).json(getResponseJSON('More than acceptable limit of 500 records.', 400));
     }
     const data = req.body.data;
     console.log(`${siteKey} ${JSON.stringify(data)}`);

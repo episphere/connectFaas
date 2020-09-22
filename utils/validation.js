@@ -262,7 +262,7 @@ const getToken = async (req, res) => {
     if(req.body.data.length > 0){
         const uuid = require('uuid');
         let responseArray = [];
-        if(req.body.data.length > 1000) return res.status(400).json(getResponseJSON('Bad request!', 400));
+        if(req.body.data.length > 999) return res.status(400).json(getResponseJSON('Bad request!', 400));
         const data = req.body.data;
         console.log(data);
         for(let dt in data){
