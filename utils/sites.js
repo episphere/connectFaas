@@ -141,8 +141,9 @@ const updateParticipantData = async (req, res) => {
             if(primaryIdentifiers.indexOf(`state.${nestedKey}`) !== -1) continue;
             docData['state'][nestedKey] = dataObj['state'][nestedKey];
         }
-    }
-    console.log(docData)
+    };
+    const { updateParticipantData } = require('./firestore');
+    updateParticipantData(docID, docData);
     return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
