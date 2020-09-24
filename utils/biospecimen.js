@@ -138,6 +138,10 @@ const biospecimenAPIs = async (req, res) => {
         if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
         return res.status(200).json({data: response, code:200});
     }
+    else if (api === 'updateParticipantData') {
+        const { updateParticipantData } = require('./sites');
+        return updateParticipantData(req, res, siteCode)
+    }
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 

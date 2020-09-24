@@ -92,31 +92,36 @@ const submitParticipantsData = async (req, res) => {
     return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
-const updateParticipantData = async (req, res) => {
+const updateParticipantData = async (req, res, authorized) => {
     setHeaders(res);
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
-
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    let siteCode = '';
+    if(authorized) {
+        siteCode = authorized;
     }
-
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
+    else {
+        if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
     
-    const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey);
-
-    if(authorize instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
+        const siteKey = req.headers.authorization.replace('Bearer','').trim();
+        
+        const { validateSiteUser } = require(`./firestore`);
+        const authorize = await validateSiteUser(siteKey);
+    
+        if(authorize instanceof Error){
+            return res.status(500).json(getResponseJSON(authorize.message, 500));
+        }
+    
+        if(!authorize){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+        siteCode = authorize.siteCode;
     }
-
-    if(!authorize){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    const siteCode = authorize.siteCode;
     console.log(req.body);
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
     const dataObj = req.body.data;

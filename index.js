@@ -32,11 +32,11 @@ exports.identifyParticipant = identifyParticipant;
 
 exports.submitParticipantsData = submitParticipantsData;
 
+exports.updateParticipantData = updateParticipantData;
+
 exports.subscribeToNotification = subscribeToNotification;
 
 exports.retrieveNotifications = retrieveNotifications;
-
-exports.updateParticipantData = updateParticipantData;
 
 exports.uploadHealthRecords = uploadHealthRecords;
 
