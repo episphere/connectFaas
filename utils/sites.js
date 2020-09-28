@@ -71,8 +71,8 @@ const submitParticipantsData = async (req, res) => {
     for(let obj of data){
         if(obj.token){
             const participantToken = obj.token;
-            const { storeParticipantData } = require('./firestore');
-            const record = await storeParticipantData(participantToken, siteCode);
+            const { getParticipantData } = require('./firestore');
+            const record = await getParticipantData(participantToken, siteCode);
             if(record){
                 const docID = record.id;
                 delete obj.token;
@@ -92,12 +92,68 @@ const submitParticipantsData = async (req, res) => {
     return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
-const updateParticipantsData = async (req, res) => {
+const updateParticipantData = async (req, res, authorized) => {
+    setHeaders(res);
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+    let siteCode = '';
+    if(authorized) {
+        siteCode = authorized;
+    }
+    else {
+        if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+    
+        const siteKey = req.headers.authorization.replace('Bearer','').trim();
+        
+        const { validateSiteUser } = require(`./firestore`);
+        const authorize = await validateSiteUser(siteKey);
+    
+        if(authorize instanceof Error){
+            return res.status(500).json(getResponseJSON(authorize.message, 500));
+        }
+    
+        if(!authorize){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+        siteCode = authorize.siteCode;
+    }
+    console.log(req.body);
+    if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
+    const dataObj = req.body.data;
+    if(dataObj.token === undefined) return res.status(400).json(getResponseJSON('Invalid request, token missing.', 400));
+    const participantToken = dataObj.token;
+    const { getParticipantData } = require('./firestore');
+    const record = await getParticipantData(participantToken, siteCode);
+    if(!record) return res.status(400).json(getResponseJSON(`Invalid token ${participantToken}`, 400));
+    const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid']
+    const docID = record.id;
+    const docData = record.data;
+    console.log(docData)
+    for(let key in dataObj) {
+        if(key === 'state') continue;
+        if(docData[key] === undefined) continue;
+        if(primaryIdentifiers.indexOf(key) !== -1) continue;
+        docData[key] = dataObj[key];
+    }
+    if(dataObj['state']) {
+        for(let nestedKey in dataObj['state']) {
+            if(docData['state'][nestedKey] === undefined) continue;
+            if(primaryIdentifiers.indexOf(`state.${nestedKey}`) !== -1) continue;
+            docData['state'][nestedKey] = dataObj['state'][nestedKey];
+        }
+    };
+    const { updateParticipantData } = require('./firestore');
+    updateParticipantData(docID, docData);
+    return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
 module.exports = {
     getSiteDetails,
     submitParticipantsData,
-    updateParticipantsData
+    updateParticipantData
 }

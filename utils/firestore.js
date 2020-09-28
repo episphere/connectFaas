@@ -254,7 +254,7 @@ const validateSiteUser = async (siteKey) => {
     }
 }
 
-const storeParticipantData = async (token, siteCode) => {
+const getParticipantData = async (token, siteCode) => {
     try{
         const snapShot = await db.collection('participants')
                                 .where('token', '==', token)
@@ -706,7 +706,7 @@ module.exports = {
     individualParticipant,
     getChildrens,
     deleteFirestoreDocuments,
-    storeParticipantData,
+    getParticipantData,
     updateParticipantData,
     storeNotificationTokens,
     notificationTokenExists,
