@@ -129,7 +129,7 @@ const updateParticipantData = async (req, res, authorized) => {
     const participantToken = dataObj.token;
     const { getParticipantData } = require('./firestore');
     const record = await getParticipantData(participantToken, siteCode);
-    if(!record) return res.status(400).json(getResponseJSON(`Invalid token ${participantToken}`, 400));
+    if(!record) return res.status(404).json(getResponseJSON(`Invalid token ${participantToken}`, 404));
     const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid']
     const docID = record.id;
     const docData = record.data;
