@@ -237,6 +237,8 @@ const identifyParticipant = async (req, res) => {
         }
         const dataArray = req.body.data;
         console.log(dataArray)
+        let error = false;
+        let errorMsgs = [];
         for(let obj of dataArray) {
             if(obj.token && obj.type) { // If both token and type exists
                 const type = obj.type;
@@ -254,11 +256,20 @@ const identifyParticipant = async (req, res) => {
 
                 if(supportedType) {
                     const { verifyIdentity } = require('./firestore');
-                    await verifyIdentity(bool, token);
+                    const identified = await verifyIdentity(bool, token);
+                    if(identified instanceof Error) {
+                        error = true;
+                        errorMsgs.push({token, message: identified.message, code: 404});
+                    }
+                }
+                else {
+                    error = true;
+                    errorMsgs.push({token, message: 'Type not supported!', code: 400});
                 }
             }
         }
-        return res.status(200).json(getResponseJSON('Success!', 200));
+        if(error) return res.status(200).json({code: 200, errorMsgs})
+        else return res.status(200).json(getResponseJSON('Success!', 200));
     }
 }
 

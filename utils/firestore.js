@@ -363,7 +363,7 @@ const verifyIdentity = async (type, token) => {
             return true;
         }
         else {
-            return new Error('Record corresponding to token not found!!');
+            return new Error('Invalid token!');
         }
     }
     catch(error){
