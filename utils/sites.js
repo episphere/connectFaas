@@ -67,7 +67,8 @@ const submitParticipantsData = async (req, res) => {
     }
     const data = req.body.data;
     console.log(`${siteKey} ${JSON.stringify(data)}`);
-
+    let error = false;
+    let errorMsgs = [];
     for(let obj of data){
         if(obj.token){
             const participantToken = obj.token;
@@ -85,11 +86,20 @@ const submitParticipantsData = async (req, res) => {
                 const { updateParticipantData } = require('./firestore');
                 if(Object.keys(newStateElements).length > 0) updateParticipantData(docID, newStateElements);
             }
-            else console.log(`${siteKey} Invalid token ${obj.token}`)
+            else {
+                console.log(`${siteKey} Invalid token ${obj.token}`)
+                error = true;
+                errorMsgs.push({token: participantToken, message: 'Invalid token!', code: 404});
+            }
         }
-        else console.log(`${siteKey} record doesn't contain any token ${JSON.stringify(obj)}`)
+        else {
+            console.log(`${siteKey} record doesn't contain any token ${JSON.stringify(obj)}`)
+            error = true;
+            errorMsgs.push({...obj, message: 'token missing!', code: 400});
+        }
     }
-    return res.status(200).json(getResponseJSON('Success!', 200));
+    if(error) return res.status(206).json({code: 206, errorMsgs})
+    else return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
 const updateParticipantData = async (req, res, authorized) => {

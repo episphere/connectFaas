@@ -267,8 +267,12 @@ const identifyParticipant = async (req, res) => {
                     errorMsgs.push({token, message: 'Type not supported!', code: 400});
                 }
             }
+            else {
+                error = true;
+                errorMsgs.push({...obj, message: 'Bad request!', code: 400});
+            }
         }
-        if(error) return res.status(200).json({code: 200, errorMsgs})
+        if(error) return res.status(206).json({code: 206, errorMsgs})
         else return res.status(200).json(getResponseJSON('Success!', 200));
     }
 }
