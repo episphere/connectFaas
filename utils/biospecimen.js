@@ -57,7 +57,7 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        return res.status(200).json({data: {role, siteAcronym}, code:200});
+        return res.status(200).json({data: {role, siteAcronym, siteCode}, code:200});
     }
     else if(api === 'users' && (role === 'admin' || role === 'manager')) {
         if(req.method !== 'GET') {
