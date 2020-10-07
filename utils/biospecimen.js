@@ -131,12 +131,20 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        const masterSpecimenId = req.query.masterSpecimenId;
-        if(!masterSpecimenId) return res.status(400).json(getResponseJSON('Bad request!', 400));
-        const { searchSpecimen } = require('./firestore');
-        const response = await searchSpecimen(masterSpecimenId, siteCode);
-        if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
-        return res.status(200).json({data: response, code:200});
+        if(req.query.masterSpecimenId) {
+            const masterSpecimenId = req.query.masterSpecimenId;
+            if(!masterSpecimenId) return res.status(400).json(getResponseJSON('Bad request!', 400));
+            const { searchSpecimen } = require('./firestore');
+            const response = await searchSpecimen(masterSpecimenId, siteCode);
+            if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
+            return res.status(200).json({data: response, code:200});
+        }
+        else {
+            const { searchShipments } = require('./firestore');
+            const response = await searchShipments(siteAcronym);
+            return res.status(200).json({data: response, code:200});
+        }
+        
     }
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');

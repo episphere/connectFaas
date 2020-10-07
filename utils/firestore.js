@@ -671,6 +671,16 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
     else return false;
 }
 
+const searchShipments = async (siteAcronym) => {
+    const snapshot = await db.collection('biospecimen').where('siteAcronym', '==', siteAcronym).get();
+    if(snapshot.size !== 0){
+        return snapshot.docs.map(document => document.data());
+    }
+    else{
+        return [];
+    }
+}
+
 const specimenExists = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', id).get();
     if(snapshot.size === 1) {
@@ -721,5 +731,6 @@ module.exports = {
     removeUser,
     storeSpecimen,
     searchSpecimen,
+    searchShipments,
     specimenExists
 }
