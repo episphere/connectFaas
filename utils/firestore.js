@@ -569,12 +569,12 @@ const filterDB = async (queries, siteCode, isParent) => {
         for(let key in queries) {
             if(key === 'firstName' || key === 'lastName') query = query.where(`query.${key}`, '==', queries[key].toLowerCase());
             if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
-            if(key === 'dob') query = query.where('RcrtUP_DOB_v1r0', '==', queries[key]);
+            if(key === 'dob') query = query.where('371067537', '==', queries[key]);
             if(key === 'connectId') query = query.where('Connect_ID', '==', parseInt(queries[key]));
             if(key === 'token') query = query.where('token', '==', queries[key]);
             if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
         }
-        const snapshot = await query.where('RcrtES_Site_v1r0', operator, siteCode).get();
+        const snapshot = await query.where('827220437', operator, siteCode).get();
         if(snapshot.size !== 0){
             return snapshot.docs.map(document => document.data());
         }
@@ -661,15 +661,10 @@ const storeSpecimen = async (data) => {
 
 const searchSpecimen = async (masterSpecimenId, siteCode) => {
     const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).get();
-    console.log(siteCode)
-    console.log(masterSpecimenId)
-    console.log(snapshot)
     if(snapshot.size === 1) {
         const token = snapshot.docs[0].data().token;
-        console.log(token)
         const response = await db.collection('participants').where('token', '==', token).get();
-        console.log(token)
-        const participantSiteCode = await response.docs[0].data()['RcrtES_Site_v1r0'];
+        const participantSiteCode = response.docs[0].data()['827220437'];
         if(participantSiteCode === siteCode) return snapshot.docs[0].data();
         else return false;
     }
