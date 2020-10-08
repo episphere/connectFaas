@@ -664,7 +664,7 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
     if(snapshot.size === 1) {
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
-        const participantSiteCode = response.docs[0].data()['RcrtES_Site_v1r0'];
+        const participantSiteCode = await response.docs[0].data()['RcrtES_Site_v1r0'];
         if(participantSiteCode === siteCode) return snapshot.docs[0].data();
         else return false;
     }
