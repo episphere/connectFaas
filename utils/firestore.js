@@ -706,6 +706,16 @@ const boxExists = async (boxId, institute, data) => {
     else return false;
 }
 
+const searchBoxes = async (institute) => {
+    const snapshot = await db.collection('biospecimen').where('siteAcronym', '==', siteAcronym).get();
+    if(snapshot.size !== 0){
+        return snapshot.docs.map(document => document.data());
+    }
+    else{
+        return [];
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -749,6 +759,7 @@ module.exports = {
     searchShipments,
     specimenExists,
     boxExists,
-    storeBox
+    storeBox,
+    searchBoxes
     
 }

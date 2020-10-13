@@ -166,6 +166,15 @@ const biospecimenAPIs = async (req, res) => {
         }
         return res.status(200).json({message: 'Success!', code:200})
     }
+    else if (api === 'searchBoxes') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const { searchBoxes } = require('./firestore');
+        const response = await searchBoxes(siteAcronym);
+        return res.status(200).json({data: response, code:200});
+        
+    }
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
         return updateParticipantData(req, res, siteCode)
