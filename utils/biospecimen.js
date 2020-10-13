@@ -155,12 +155,13 @@ const biospecimenAPIs = async (req, res) => {
         
         if(requestData.boxId){
             const boxId = requestData.boxId;
+            requestData['boxId'] = boxId;
+            requestData['institute'] = siteAcronym; 
             const { boxExists } = require('./firestore');
             const exists = await boxExists(boxId, siteAcronym, requestData)
             if(exists === false){
                 const { storeBox } = require('./firestore');
-                requestData['boxId'] = boxId;
-                requestData['institute'] = siteAcronym; 
+                
                 await storeBox(requestData);
             }
         }
