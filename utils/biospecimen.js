@@ -146,6 +146,24 @@ const biospecimenAPIs = async (req, res) => {
         }
         
     }
+    else if(api == 'addBox'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        
+        if(requestData.boxId){
+            const boxId = requestData.boxId;
+            const { boxExists } = require('./firestore');
+            const exists = await boxExists(boxId, siteAcronym, specimen)
+            if(exists === false){
+                const { storeBox } = require('./firestore');
+                await storeBox(requestData);
+            }
+        }
+        return res.status(200).json({message: 'Success!', code:200})
+    }
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
         return updateParticipantData(req, res, siteCode)

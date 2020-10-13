@@ -659,6 +659,11 @@ const storeSpecimen = async (data) => {
     await db.collection('biospecimen').add(data);
 }
 
+
+const storeBox = async (data) => {
+    await db.collection('boxes').add(data);
+}
+
 const searchSpecimen = async (masterSpecimenId, siteCode) => {
     const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).get();
     if(snapshot.size === 1) {
@@ -683,6 +688,16 @@ const searchShipments = async (siteAcronym) => {
 
 const specimenExists = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', id).get();
+    if(snapshot.size === 1) {
+        const docId = snapshot.docs[0].id;
+        await db.collection('biospecimen').doc(docId).update(data);
+        return true;
+    }
+    else return false;
+}
+
+const boxExists = async (boxId, institute, data) => {
+    const snapshot = await db.collection('biospecimen').where('boxId', '==', boxId).where('institute', '==',institute).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
         await db.collection('biospecimen').doc(docId).update(data);
@@ -732,5 +747,8 @@ module.exports = {
     storeSpecimen,
     searchSpecimen,
     searchShipments,
-    specimenExists
+    specimenExists,
+    boxExists,
+    storeBox
+    
 }
