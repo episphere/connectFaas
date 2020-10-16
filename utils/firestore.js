@@ -699,9 +699,8 @@ const specimenExists = async (id, data) => {
 const boxExists = async (boxId, institute, data) => {
     const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
     if(snapshot.size === 1) {
-        console.log('found');
         const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).update(data);
+        await db.collection('boxes').doc(docId).set(data);
         return true;
     }
     else{
