@@ -710,7 +710,7 @@ const boxExists = async (boxId, institute, data) => {
 }
 
 const searchBoxes = async (institute) => {
-    const snapshot = await db.collection('boxes').where('institute', '==', institute).where('shipped', '!=', 'true').get();
+    const snapshot = await db.collection('boxes').where('institute', '==', institute).get();
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
