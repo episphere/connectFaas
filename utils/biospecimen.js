@@ -176,6 +176,22 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data: response, code:200});
         
     }
+    else if(api == 'ship'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const requestData = req.body;
+        if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        for(let box of requestData) {
+            const { boxExists } = require('./firestore');
+            const exists = await boxExists(boxId, {'shipped':true})
+            if(exists === false){
+                return res.status(500).json({message: 'Box does not exist', code:500})
+            }
+        }
+        return res.status(200).json({message: 'Success!', code:200})
+
+    }
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
         return updateParticipantData(req, res, siteCode)
