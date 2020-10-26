@@ -183,8 +183,8 @@ const biospecimenAPIs = async (req, res) => {
         const requestData = req.body;
         if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         for(let box of requestData) {
-            const { boxExists } = require('./firestore');
-            const exists = await boxExists(box, {'shipped':true})
+            const { shipBox } = require('./firestore');
+            const exists = await shipBox(box, siteAcronym, {'shipped':true})
             if(exists === false){
                 return res.status(500).json({message: 'Box does not exist', code:500})
             }

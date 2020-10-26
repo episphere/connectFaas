@@ -709,6 +709,19 @@ const boxExists = async (boxId, institute, data) => {
     }
 }
 
+const shipBox = async (boxId, institute, data) => {
+    const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
+    if(snapshot.size === 1) {
+        const docId = snapshot.docs[0].id;
+        await db.collection('boxes').doc(docId).update(data);
+        return true;
+    }
+    else{
+        console.log('not found')
+        return false;
+    }
+}
+
 const searchBoxes = async (institute) => {
     const snapshot = await db.collection('boxes').where('institute', '==', institute).get();
     if(snapshot.size !== 0){
@@ -763,6 +776,7 @@ module.exports = {
     specimenExists,
     boxExists,
     storeBox,
-    searchBoxes
+    searchBoxes,
+    shipBox,
     
 }
