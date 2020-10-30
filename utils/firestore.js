@@ -704,7 +704,6 @@ const boxExists = async (boxId, institute, data) => {
         return true;
     }
     else{
-        console.log('not found')
         return false;
     }
 }
@@ -717,9 +716,23 @@ const shipBox = async (boxId, institute, data) => {
         return true;
     }
     else{
-        console.log('not found')
         return false;
     }
+}
+
+const getLocations = async () => {
+    const snapshot = await db.collection('SiteLocations').where('Site', '==', institute).get();
+    if(snapshot.size === 1) {
+        const docId = snapshot.docs[0].id;
+        await db.collection('SiteLocations').doc(docId).set(data);
+        return snapshot.docs.map(document => document.data());
+        ;
+    }
+    else{
+        return [];
+    }
+
+
 }
 
 const searchBoxes = async (institute) => {

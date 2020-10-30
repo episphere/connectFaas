@@ -176,7 +176,7 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data: response, code:200});
         
     }
-    else if(api == 'ship'){
+    else if(api === 'ship'){
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
@@ -184,7 +184,7 @@ const biospecimenAPIs = async (req, res) => {
         if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         for(let box of requestData) {
             const { shipBox } = require('./firestore');
-            const exists = await shipBox(box, siteAcronym, {'shipped':true})
+            const exists = await shipBox(box, siteAcronym, {'shipped':'true'})
             if(exists === false){
                 return res.status(500).json({message: 'Box does not exist', code:500})
             }
@@ -195,6 +195,14 @@ const biospecimenAPIs = async (req, res) => {
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
         return updateParticipantData(req, res, siteCode)
+    }
+    else if (api === 'getLocations'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const {getLocations} = require('./firestore');
+        const response = await getLocations(siteAcronym);
+        return res.status(200).json({message: 'Success!', response, code:200});
     }
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
