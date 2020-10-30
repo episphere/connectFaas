@@ -176,6 +176,15 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data: response, code:200});
         
     }
+    else if (api === 'searchBoxesByLocation'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        let location = req.location;
+        const { searchBoxesByLocation } = require('./firestore');
+        const response = await searchBoxesByLocation(siteAcronym, location);
+        return res.status(200).json({data: response, code:200});
+    }
     else if(api === 'ship'){
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));

@@ -743,6 +743,18 @@ const searchBoxes = async (institute) => {
     }
 }
 
+const searchBoxesByLocation = async (institute, location) => {
+
+    const snapshot = await db.collection('boxes').where('institute', '==', institute).where('location','==',location).get();
+    if(snapshot.size !== 0){
+        return snapshot.docs.map(document => document.data());
+    }
+    else{
+        return [];
+    }
+    
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -790,4 +802,5 @@ module.exports = {
     searchBoxes,
     shipBox,
     getLocations,
+    searchBoxesByLocation,
 }
