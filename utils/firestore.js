@@ -722,9 +722,7 @@ const shipBox = async (boxId, institute, data) => {
 
 const getLocations = async (institute) => {
     const snapshot = await db.collection('SiteLocations').where('Site', '==', institute).get();
-    if(snapshot.size === 1) {
-        const docId = snapshot.docs[0].id;
-        await db.collection('SiteLocations').doc(docId).set(data);
+    if(snapshot.size !== 0) {
         return snapshot.docs.map(document => document.data());
         ;
     }
