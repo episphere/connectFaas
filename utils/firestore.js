@@ -791,5 +791,5 @@ module.exports = {
     storeBox,
     searchBoxes,
     shipBox,
-    
+    getLocations,
 }
