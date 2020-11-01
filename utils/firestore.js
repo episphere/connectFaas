@@ -748,6 +748,7 @@ const searchBoxesByLocation = async (institute, location) => {
     const snapshot = await db.collection('boxes').where('institute', '==', institute).where('location','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
+        console.log(JSON.stringify(result));
         let toReturn = result.filter(data => (!data.hasOwnProperty('shipped')||data.shipped!=true))
         return toReturn;
     }
