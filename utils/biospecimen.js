@@ -205,6 +205,17 @@ const biospecimenAPIs = async (req, res) => {
         const { updateParticipantData } = require('./sites');
         return updateParticipantData(req, res, siteCode)
     }
+    else if (api === 'removeBag') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const {removeBag} = require('./firestore');
+        const requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+
+        await removeBag(siteAcronym, requestData);
+        return res.status(200).json({message: 'Success!', code:200});
+    }
     else if (api === 'getLocations'){
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));

@@ -664,6 +664,32 @@ const storeBox = async (data) => {
     await db.collection('boxes').add(data);
 }
 
+const removeBag = async (institute, requestData) => {
+    let boxId = requestData.boxId;
+    let bags = requestData.bags;
+    
+    const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
+    if(snapshot.size === 1){
+        let box = snapshot.docs[0];
+        let data = box.data()
+        let currBags = data.bags;
+        let bagIds = Object.keys(currBags);
+        
+        for(let i = 0; i < bags.length; i++){
+            if(currBags.hasOwnProperty(bags[i])){
+                delete currBags[bags[i]]
+            }
+            
+        }
+        const docId = snapshot.docs[0].id;
+        await db.collection('boxes').doc(docId).set(data);
+        return 'Success!';
+    }
+    else{
+        return 'Failure! Could not find box mentioned';
+    }
+}
+
 const searchSpecimen = async (masterSpecimenId, siteCode) => {
     const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).get();
     if(snapshot.size === 1) {
@@ -806,4 +832,5 @@ module.exports = {
     shipBox,
     getLocations,
     searchBoxesByLocation,
+    removeBag,
 }
