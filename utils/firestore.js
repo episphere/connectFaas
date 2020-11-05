@@ -679,6 +679,9 @@ const removeBag = async (institute, requestData) => {
             if(currBags.hasOwnProperty(bags[i])){
                 delete currBags[bags[i]]
             }
+            else{
+                console.log(bags[i] + ' NOT FOUND')
+            }
             
         }
         const docId = snapshot.docs[0].id;
@@ -705,7 +708,20 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
 const searchShipments = async (siteAcronym) => {
     const snapshot = await db.collection('biospecimen').where('siteAcronym', '==', siteAcronym).get();
     if(snapshot.size !== 0){
-        return snapshot.docs.map(document => document.data());
+        //
+        return snapshot.docs.filter(document => {
+            
+            let data = document.data();
+            let keys = Object.keys(data);
+            for(let i = 0; i < keys.length; i++){
+                if(keys[i].match(/tube[0-9]*Shipped/)){
+                    if(data[keys[i]] == true){
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }).map(document => document.data());
     }
     else{
         return [];
@@ -738,7 +754,40 @@ const shipBox = async (boxId, institute, data) => {
     const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
+        
+
+        let data = snapshot.docs[0].data();
         await db.collection('boxes').doc(docId).update(data);
+        let bags = data.bags;
+        let bagIds = Object.keys(data.bags);
+
+        for(let i = 0; i < bagIds.length; i++){
+            //get tubes under current bag master specimen
+            let currBag = bagIds[i]
+            let currSpecimen = currBag.split(' ')[0];
+            
+            //get currspecimen
+            let response = await searchSpecimen(currSpecimen, institute);
+            let responseKeys = Object.keys(response)
+            for(let j = 0; j < responseKeys; j++){
+                let toCheck = responseKeys[j];
+                if(toCheck.match(/tube[0-9]+Id/)){
+                    for(let k = 0; k < currArr.length; k++){
+                        let currElement = currArr[k];
+                        let currId = currElement.split(' ')[1]
+                        if(currId == tubeId){
+                            let currTubeNum = toCheck.match(/[0-9]+/g)[0];
+                            response['tube' + currTubeNum + "Shipped"] = true;
+
+                        }
+                    }
+                }
+            }
+            
+            //update currspecimen
+            await specimenExists(currSpecimen, response);
+
+        }
         return true;
     }
     else{
