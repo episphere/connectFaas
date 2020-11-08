@@ -713,14 +713,21 @@ const searchShipments = async (siteAcronym) => {
             
             let data = document.data();
             let keys = Object.keys(data);
+            let found = false;
             for(let i = 0; i < keys.length; i++){
                 if(keys[i].match(/tube[0-9]*Shipped/)){
                     if(data[keys[i]] == true){
                         return true;
+                        found = true;
                     }
                 }
             }
-            return false;
+            if(found == false){
+                return true;
+            }
+            else{
+                return false;
+            }
         }).map(document => document.data());
     }
     else{
