@@ -772,9 +772,16 @@ const shipBox = async (boxId, institute, data) => {
             //get tubes under current bag master specimen
             let currBag = bagIds[i]
             let currSpecimen = currBag.split(' ')[0];
-            
+            let response = {}
             //get currspecimen
-            let response = await searchSpecimen(currSpecimen, institute);
+            const snapshot1 = await db.collection('biospecimen').where('masterSpecimenId', '==', currSpecimen).get();
+            if(snapshot.size === 1) {
+                let thisdata = snapshot.docs[0].data();
+                if(thisdata['siteAcronym'] == institute){
+                    response = thisdata;
+                }
+            }
+
             let responseKeys = Object.keys(response)
             for(let j = 0; j < responseKeys; j++){
                 let toCheck = responseKeys[j];
@@ -790,15 +797,8 @@ const shipBox = async (boxId, institute, data) => {
                     }
                 }
             }
-            console.log("currSpecimen: " + currSpecimen);
-            console.log('siteId: ' + institute)
-            console.log("response: " + response)
-            const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', currSpecimen).get();
-            console.log(snapshot.docs.map(document => document.data()))
             //update currspecimen
-            if(response != false){
-                await specimenExists(currSpecimen, response);
-            }
+            await specimenExists(currSpecimen, response);
         }
         return true;
     }
