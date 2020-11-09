@@ -761,7 +761,7 @@ const shipBox = async (boxId, institute, data) => {
     const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).update({'shipped':'true'});
+        await db.collection('boxes').doc(docId).update({'shipped':true});
 
 
         let data = snapshot.docs[0].data();
