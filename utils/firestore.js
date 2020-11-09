@@ -761,10 +761,10 @@ const shipBox = async (boxId, institute, data) => {
     const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
-        
+        await db.collection('boxes').doc(docId).update({'shipped':'true'});
+
 
         let data = snapshot.docs[0].data();
-        await db.collection('boxes').doc(docId).update(data);
         let bags = data.bags;
         let bagIds = Object.keys(data.bags);
 
@@ -790,12 +790,15 @@ const shipBox = async (boxId, institute, data) => {
                     }
                 }
             }
-            console.log(currSpecimen);
+            console.log("currSpecimen: " + currSpecimen);
+            console.log('siteId: ' + institute)
             console.log("response: " + response)
+            const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', currSpecimen).get();
+            console.log(snapshot.docs.map(document => document.data()))
             //update currspecimen
-            
-            await specimenExists(currSpecimen, response);
-
+            if(response != false){
+                await specimenExists(currSpecimen, response);
+            }
         }
         return true;
     }
