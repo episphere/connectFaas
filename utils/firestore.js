@@ -784,8 +784,8 @@ const shipBox = async (boxId, institute, data) => {
             }
 
             let responseKeys = Object.keys(response)
-            console.log("currArr: " + currArr);
-            for(let j = 0; j < responseKeys; j++){
+            console.log("currArr: " + JSON.stringify(currArr));
+            for(let j = 0; j < responseKeys.length; j++){
                 let toCheck = responseKeys[j];
                 if(toCheck.match(/tube[0-9]+Id/)){
                     let currTube = response[responseKeys[j]];
