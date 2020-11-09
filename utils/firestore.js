@@ -771,6 +771,7 @@ const shipBox = async (boxId, institute, data) => {
         for(let i = 0; i < bagIds.length; i++){
             //get tubes under current bag master specimen
             let currBag = bagIds[i]
+            let currArr = bags[currBag]['arrElements'];
             let currSpecimen = currBag.split(' ')[0];
             let response = {}
             //get currspecimen
