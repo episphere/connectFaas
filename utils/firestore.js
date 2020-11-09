@@ -790,8 +790,10 @@ const shipBox = async (boxId, institute, data) => {
                     }
                 }
             }
+            console.log(currSpecimen);
             console.log("response: " + response)
             //update currspecimen
+            
             await specimenExists(currSpecimen, response);
 
         }
