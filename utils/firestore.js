@@ -786,10 +786,13 @@ const shipBox = async (boxId, institute, data) => {
             for(let j = 0; j < responseKeys; j++){
                 let toCheck = responseKeys[j];
                 if(toCheck.match(/tube[0-9]+Id/)){
+                    let currTube = response[responseKeys[j]];
                     for(let k = 0; k < currArr.length; k++){
                         let currElement = currArr[k];
                         let currId = currElement.split(' ')[1]
-                        if(currId == tubeId){
+                        console.log("currTube: " + currTube);
+                        console.log("currId: " + currId);
+                        if(currId == currTube){
                             let currTubeNum = toCheck.match(/[0-9]+/g)[0];
                             response['tube' + currTubeNum + "Shipped"] = true;
 
@@ -801,7 +804,7 @@ const shipBox = async (boxId, institute, data) => {
             console.log('siteId: ' + institute)
             console.log("response: " + JSON.stringify(response))
             //update currspecimen
-            await specimenExists(currSpecimen, response);
+            console.log(await specimenExists(currSpecimen, response));
         }
         return true;
     }
