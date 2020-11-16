@@ -695,12 +695,12 @@ const removeBag = async (institute, requestData) => {
 
 const reportMissingSpecimen = async (siteAcronym, requestData) => {
 
-    let tubeId = requestData.tubeId;
-    if(tubeId.split(' ').length < 2){
+    let tube = requestData.tubeId;
+    if(tube.split(' ').length < 2){
         return 'Failure! Could not find tube mentioned';
     }
-    let masterSpecimenId = tubeId.split(' ')[0];
-    let tubeId = tubeId.split(' ')[1];
+    let masterSpecimenId = tube.split(' ')[0];
+    let tubeId = tube.split(' ')[1];
 
     const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).where('siteAcronym', '==', siteAcronym).get();
     if(snapshot.size === 1){
