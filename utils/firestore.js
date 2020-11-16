@@ -693,6 +693,39 @@ const removeBag = async (institute, requestData) => {
     }
 }
 
+const reportMissingSpecimen = async (siteAcronym, requestData) => {
+
+    let tubeId = requestData.tubeId;
+    if(tubeId.split(' ').length < 2){
+        return 'Failure! Could not find tube mentioned';
+    }
+    let masterSpecimenId = tubeId.split(' ')[0];
+    let tubeId = tubeId.split(' ')[1];
+
+    const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).where('siteAcronym', '==', siteAcronym).get();
+    if(snapshot.size === 1){
+        const docId = snapshot.docs[0].id;
+        let currDoc = snapshot.docs[0].data();
+        //find id before updating
+        let keys = Object.keys(currDoc)
+        for(let i = 0; i < keys.length; i++){
+            if(keys[i].match(/tube[0-9]+Id/)){
+                if(currDoc[keys[i]] == tubeId){
+                    let currTubeNum = keys[i].match(/[0-9]+/g)[0];
+                    let toUpdate = {};
+                    toUpdate['tube' + currTubeNum + 'Missing'] = true;
+                    await db.collection('biospecimen').doc(docId).update(toUpdate);
+                    return 'Success!'
+                }
+            }
+        }
+    }
+    else{
+        return 'Failure! Could not find tube mentioned';
+    }
+
+}
+
 const searchSpecimen = async (masterSpecimenId, siteCode) => {
     const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).get();
     if(snapshot.size === 1) {
@@ -715,10 +748,22 @@ const searchShipments = async (siteAcronym) => {
             let keys = Object.keys(data);
             let found = false;
             for(let i = 0; i < keys.length; i++){
-                if(keys[i].match(/tube[0-9]*Shipped/)){
+                if(keys[i].match(/tube[0-9]+Shipped/)){
                     if(data[keys[i]] == true){
-                        return true;
                         found = true;
+                    }
+                    else{
+                        let currTubeNum = keys[i].match(/[0-9]+/g)[0];
+                        let currMissing = 'tube' + currTubeNum + 'Missing';
+                        if(data.hasOwnProperty(currMissing)){
+                            if(data[currMissing] == false){
+                                return true;
+                            }
+                            found = true;
+                        }
+                        else{
+                            return true;
+                        }
                     }
                 }
             }
@@ -734,6 +779,7 @@ const searchShipments = async (siteAcronym) => {
         return [];
     }
 }
+
 
 const specimenExists = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', id).get();
@@ -902,4 +948,5 @@ module.exports = {
     getLocations,
     searchBoxesByLocation,
     removeBag,
+    reportMissingSpecimen,
 }
