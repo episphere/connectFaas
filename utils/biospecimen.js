@@ -243,7 +243,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         const {updateTempCheckDate} = require('./firestore');
         await updateTempCheckDate(siteAcronym);
-        return res.status(200).json({message: 'Success!', response, code:200});
+        return res.status(200).json({message: 'Success!', code:200});
     }
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
