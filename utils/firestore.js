@@ -807,10 +807,11 @@ const updateTempCheckDate = async (institute) => {
     let currDate = new Date();
     let randomStart = Math.floor(Math.random()*5)+15 - currDate.getDay();
     currDate.setDate(currDate.getDate() + randomStart);
-    const snapshot = await db.collection('siteLocations').where('institute', '==',institute).get();
+    const snapshot = await db.collection('siteLocations').where('Site', '==',institute).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
         await db.collection('siteLocations').doc(docId).update({'nextTempMonitor':currDate.toString()});
+        //console.log(currDate.toString());
     }
 
 }
