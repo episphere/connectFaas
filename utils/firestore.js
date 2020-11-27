@@ -727,7 +727,7 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
 }
 
 const searchSpecimen = async (masterSpecimenId, siteCode) => {
-    const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).get();
+    const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).get();
     if(snapshot.size === 1) {
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
