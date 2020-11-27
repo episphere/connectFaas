@@ -113,8 +113,8 @@ const biospecimenAPIs = async (req, res) => {
         const requestData = req.body;
         if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         for(let specimen of requestData) {
-            if(specimen.masterSpecimenId){
-                const masterSpecimenId = specimen.masterSpecimenId;
+            if(specimen['820476880']){
+                const masterSpecimenId = specimen['820476880'];
                 const { specimenExists } = require('./firestore');
                 const exists = await specimenExists(masterSpecimenId, specimen)
                 if(exists === false){

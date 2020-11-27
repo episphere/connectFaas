@@ -41,7 +41,7 @@ const deleteDocuments = (req, res) => {
         res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    const siteCode = 3;
+    const siteCode = 809703864;
     const { deleteFirestoreDocuments } = require('./firestore')
     deleteFirestoreDocuments(siteCode)
     res.status(200).json(getResponseJSON('Success!', 200))

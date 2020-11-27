@@ -782,7 +782,7 @@ const searchShipments = async (siteAcronym) => {
 
 
 const specimenExists = async (id, data) => {
-    const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', id).get();
+    const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
         await db.collection('biospecimen').doc(docId).update(data);
