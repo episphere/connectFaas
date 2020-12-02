@@ -898,7 +898,6 @@ const searchBoxes = async (institute) => {
 }
 
 const searchBoxesByLocation = async (institute, location) => {
-
     const snapshot = await db.collection('boxes').where('institute', '==', institute).where('location','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
@@ -910,6 +909,16 @@ const searchBoxesByLocation = async (institute, location) => {
         return [];
     }
     
+}
+
+const getSpecimenCollections = async (token, siteAcronym) => {
+    const snapshot = await db.collection('biospecimen').where('token', '==', token).where('siteAcronym', '==', siteAcronym).get();
+    if(snapshot.size !== 0){
+        return snapshot.docs.map(document => document.data());
+    }
+    else{
+        return false;
+    }
 }
 
 module.exports = {
@@ -963,4 +972,5 @@ module.exports = {
     removeBag,
     reportMissingSpecimen,
     updateTempCheckDate,
+    getSpecimenCollections
 }
