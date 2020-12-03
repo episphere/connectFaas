@@ -667,14 +667,13 @@ const storeBox = async (data) => {
 const removeBag = async (institute, requestData) => {
     let boxId = requestData.boxId;
     let bags = requestData.bags;
-    
+    let currDate = requestData.date;    
     const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
     if(snapshot.size === 1){
         let box = snapshot.docs[0];
         let data = box.data()
         let currBags = data.bags;
         let bagIds = Object.keys(currBags);
-        
         for(let i = 0; i < bags.length; i++){
             if(currBags.hasOwnProperty(bags[i])){
                 delete currBags[bags[i]]
@@ -686,6 +685,7 @@ const removeBag = async (institute, requestData) => {
         }
         const docId = snapshot.docs[0].id;
         await db.collection('boxes').doc(docId).set(data);
+        await db.collection('boxes').doc(docId).update({'lastUpdatedTime':currDate})
         return 'Success!';
     }
     else{
