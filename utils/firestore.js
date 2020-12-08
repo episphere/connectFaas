@@ -668,7 +668,7 @@ const removeBag = async (institute, requestData) => {
     let boxId = requestData.boxId;
     let bags = requestData.bags;
     let currDate = requestData.date;    
-    const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
     if(snapshot.size === 1){
         let box = snapshot.docs[0];
         let data = box.data()
@@ -774,7 +774,49 @@ const searchShipments = async (siteAcronym) => {
             let data = document.data();
             let keys = Object.keys(data);
             let found = false;
+            const conversion = {
+                "299553921":"0001",
+                "703954371":"0002",
+                "838567176":"0003",
+                "454453939":"0004",
+                "652357376":"0005",
+                "973670172":"0006",
+                "143615646":"0007",
+                "787237543":"0008",
+                "223999569":"0009",
+                "376960806":"0011",
+                "232343615":"0012",
+                "589588440":"0021",
+                "746999767":"0022",
+                "857757831":"0031",
+                "654812257":"0032",
+                "958646668":"0013",
+                "677469051":"0014",
+                "683613884":"0024"
+            }
+
             for(let i = 0; i < keys.length; i++){
+                if(conversion.hasOwnProperty(keys[i])){
+                    let currJSON = data[keys[i]];
+                    if(currJSON,hasOwnProperty('258745303')){
+                        if(currJSON['258745303'] == '104430631'){
+                            return true;
+                        }
+                        found = true;
+                    }
+                    else if(currJSON,hasOwnProperty('145971562')){
+                        if(currJSON['145971562'] == '104430631'){
+                            found = true;
+                        }
+                        else{
+                            
+                        }
+                        found = true;
+                    }
+                    else{
+                        return true;
+                    }
+                }
                 if(keys[i].match(/tube[0-9]+Shipped/)){
                     if(data[keys[i]] == true){
                         found = true;
@@ -819,7 +861,7 @@ const specimenExists = async (id, data) => {
 }
 
 const boxExists = async (boxId, institute, data) => {
-    const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
         await db.collection('boxes').doc(docId).set(data);
@@ -844,10 +886,10 @@ const updateTempCheckDate = async (institute) => {
 }
 
 const shipBox = async (boxId, institute, data) => {
-    const snapshot = await db.collection('boxes').where('boxId', '==', boxId).where('institute', '==',institute).get();
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).update({'shipped':true});
+        await db.collection('boxes').doc(docId).update({'145971562':'353358909'});
 
 
         let data = snapshot.docs[0].data();
@@ -922,7 +964,7 @@ const getLocations = async (institute) => {
 }
 
 const searchBoxes = async (institute) => {
-    const snapshot = await db.collection('boxes').where('institute', '==', institute).get();
+    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).get();
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
@@ -932,11 +974,11 @@ const searchBoxes = async (institute) => {
 }
 
 const searchBoxesByLocation = async (institute, location) => {
-    const snapshot = await db.collection('boxes').where('institute', '==', institute).where('location','==',location).get();
+    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('560975149','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
         console.log(JSON.stringify(result));
-        let toReturn = result.filter(data => (!data.hasOwnProperty('shipped')||data.shipped!=true))
+        let toReturn = result.filter(data => (!data.hasOwnProperty('353358909')||data['353358909']!=true))
         return toReturn;
     }
     else{
