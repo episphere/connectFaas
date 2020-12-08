@@ -685,7 +685,7 @@ const removeBag = async (institute, requestData) => {
         }
         const docId = snapshot.docs[0].id;
         await db.collection('boxes').doc(docId).set(data);
-        await db.collection('boxes').doc(docId).update({'lastUpdatedTime':currDate})
+        await db.collection('boxes').doc(docId).update({'lastUpdatedTiime':currDate})
         return 'Success!';
     }
     else{
@@ -701,14 +701,35 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
     }
     let masterSpecimenId = tube.split(' ')[0];
     let tubeId = tube.split(' ')[1];
+    let conversion = {
+        "0007": "143615646",
+        "0009": "223999569",
+        "0012": "232343615",
+        "0001": "299553921",
+        "0011": "376960806",
+        "0004": "454453939",
+        "0021": "589588440",
+        "0005": "652357376",
+        "0032": "654812257",
+        "0014": "677469051",
+        "0024": "683613884",
+        "0002": "703954371",
+        "0022": "746999767",
+        "0008": "787237543",
+        "0003": "838567176",
+        "0031": "857757831",
+        "0013": "958646668",
+        "0006": "973670172"
+    }
+    let conceptTube = conversion[tubeId];
 
-    const snapshot = await db.collection('biospecimen').where('masterSpecimenId', '==', masterSpecimenId).where('siteAcronym', '==', siteAcronym).get();
-    if(snapshot.size === 1){
+    const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).where('siteAcronym', '==', siteAcronym).get();
+    if(snapshot.size === 1 && conceptTube != undefined){
         const docId = snapshot.docs[0].id;
         let currDoc = snapshot.docs[0].data();
         //find id before updating
         let keys = Object.keys(currDoc)
-        for(let i = 0; i < keys.length; i++){
+        /*for(let i = 0; i < keys.length; i++){
             if(keys[i].match(/tube[0-9]+Id/)){
                 if(currDoc[keys[i]] == tubeId){
                     let currTubeNum = keys[i].match(/[0-9]+/g)[0];
@@ -718,6 +739,12 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
                     return 'Success!'
                 }
             }
+        }*/
+        if(currDoc.hasOwnProperty(conceptTube)){
+            let currObj = currDoc[conceptTube];
+            currObj['258745303'] = '353358909';
+            let toUpdate = {conceptTube: currObj};
+            await db.collection('biospecimen').doc(docId).update(toUpdate);
         }
     }
     else{
@@ -842,29 +869,36 @@ const shipBox = async (boxId, institute, data) => {
                 }
             }
 
-            let responseKeys = Object.keys(response)
-            console.log("currArr: " + JSON.stringify(currArr));
-            for(let j = 0; j < responseKeys.length; j++){
-                let toCheck = responseKeys[j];
-                if(toCheck.match(/tube[0-9]+Id/)){
-                    let currTube = response[responseKeys[j]];
-                    for(let k = 0; k < currArr.length; k++){
-                        let currElement = currArr[k];
-                        let currId = currElement.split(' ')[1]
-                        console.log("currTube: " + currTube);
-                        console.log("currId: " + currId);
-                        if(currId == currTube){
-                            let currTubeNum = toCheck.match(/[0-9]+/g)[0];
-                            response['tube' + currTubeNum + "Shipped"] = true;
-
-                        }
-                    }
-                }
+            let conversion = {
+                "0007": "143615646",
+                "0009": "223999569",
+                "0012": "232343615",
+                "0001": "299553921",
+                "0011": "376960806",
+                "0004": "454453939",
+                "0021": "589588440",
+                "0005": "652357376",
+                "0032": "654812257",
+                "0014": "677469051",
+                "0024": "683613884",
+                "0002": "703954371",
+                "0022": "746999767",
+                "0008": "787237543",
+                "0003": "838567176",
+                "0031": "857757831",
+                "0013": "958646668",
+                "0006": "973670172"
             }
-            console.log("currSpecimen: " + currSpecimen);
-            console.log('siteId: ' + institute)
-            console.log("response: " + JSON.stringify(response))
-            //update currspecimen
+            for(let k = 0; k < currArr.length; k++){
+                let currElement = currArr[k];
+                let currId = currElement.split(' ')[1]
+                let conceptTube = conversion[currId];
+                if(response.hasOwnProperty(conceptTube)){
+                    let currObj = response[conceptTube];
+                    currObj['145971562'] = '353358909'
+                }
+
+            }
             console.log(await specimenExists(currSpecimen, response));
         }
         return true;
