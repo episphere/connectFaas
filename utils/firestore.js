@@ -808,31 +808,10 @@ const searchShipments = async (siteAcronym) => {
                         if(currJSON['145971562'] == '104430631'){
                             found = true;
                         }
-                        else{
-                            
-                        }
                         found = true;
                     }
                     else{
                         return true;
-                    }
-                }
-                if(keys[i].match(/tube[0-9]+Shipped/)){
-                    if(data[keys[i]] == true){
-                        found = true;
-                    }
-                    else{
-                        let currTubeNum = keys[i].match(/[0-9]+/g)[0];
-                        let currMissing = 'tube' + currTubeNum + 'Missing';
-                        if(data.hasOwnProperty(currMissing)){
-                            if(data[currMissing] == false){
-                                return true;
-                            }
-                            found = true;
-                        }
-                        else{
-                            return true;
-                        }
                     }
                 }
             }
