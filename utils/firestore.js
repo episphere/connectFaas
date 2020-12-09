@@ -303,6 +303,13 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .where('699625233', '==', 353358909)
                                     .get();
         }
+        if(decider === 'profileNotSubmitted') {
+            participants = await db.collection('participants')
+                                    .where('827220437', operator, siteCode)
+                                    .where('699625233', '==', 104430631)
+                                    .where('919254129', '==', 353358909)
+                                    .get()
+        }
         if(decider === 'all') {
             participants = await db.collection('participants')
                                     .where('827220437', operator, siteCode)
