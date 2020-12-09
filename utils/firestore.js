@@ -357,15 +357,18 @@ const verifyIdentity = async (type, token) => {
         if(snapShot.size > 0){
             const docId = snapShot.docs[0].id;
             let data = {};
-            if(type){
+            let concept;
+            if(type === 'verified') {
+                concept = 197316935;
                 data['512820379'] = 486306141; // Active recruit
-                data['821247024'] = 197316935;
-                data['914594314'] = new Date().toISOString();
             }
-            else{
-                data['821247024'] = 219863910;
-                data['914594314'] = new Date().toISOString();
-            }
+            if(type === 'cannotbeverified') concept = 875007964;
+            if(type === 'duplicate') concept = 922622075;
+            if(type === 'outreachtimedout') concept = 160161595;
+
+            data['821247024'] = concept;
+            data['914594314'] = new Date().toISOString();
+            
             await db.collection('participants').doc(docId).update(data);
             return true;
         }

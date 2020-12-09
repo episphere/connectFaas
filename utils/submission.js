@@ -203,19 +203,10 @@ const identifyParticipant = async (req, res) => {
         const token = req.query.token;
         console.log(`identifyParticipant ${new Date()} siteKey: -${siteKey}, type: - ${type} and participant token: - ${token}`);
 
-        let bool = false;
-        if(type === 'verified'){
-            bool = true;
-        }
-        else if(type === 'cannotbeverified'){
-            bool = false;
-        }
-        else{
-            return res.status(400).json(getResponseJSON('Type not supported!', 400));
-        }
-
+        if(type !== 'verified' && type !== 'cannotbeverified' && type !== 'duplicate' && type !== 'outreachtimedout') return res.status(400).json(getResponseJSON('Type not supported!', 400));
+        
         const { verifyIdentity } = require('./firestore');
-        const identify = await verifyIdentity(bool, token);
+        const identify = await verifyIdentity(type, token);
         if(identify instanceof Error){
             return res.status(500).json(getResponseJSON(identify.message, 500));
         }
@@ -244,20 +235,10 @@ const identifyParticipant = async (req, res) => {
             if(obj.token && obj.type) { // If both token and type exists
                 const type = obj.type;
                 const token = obj.token;
-                let supportedType = false;
-                let bool = false;
-                if(type === 'verified'){
-                    bool = true;
-                    supportedType = true;
-                }
-                else if(type === 'cannotbeverified'){
-                    bool = false;
-                    supportedType = true;
-                }
 
-                if(supportedType) {
+                if(type === 'verified' || type === 'cannotbeverified' || type === 'duplicate' || type === 'outreachtimedout') {
                     const { verifyIdentity } = require('./firestore');
-                    const identified = await verifyIdentity(bool, token);
+                    const identified = await verifyIdentity(type, token);
                     if(identified instanceof Error) {
                         error = true;
                         errorMsgs.push({token, message: identified.message, code: 404});
