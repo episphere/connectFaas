@@ -882,7 +882,7 @@ const shipBox = async (boxId, institute, data) => {
             let currSpecimen = currBag.split(' ')[0];
             let response = {}
             //get currspecimen
-            const snapshot1 = await db.collection('biospecimen').where('masterSpecimenId', '==', currSpecimen).get();
+            const snapshot1 = await db.collection('biospecimen').where('820476880', '==', currSpecimen).get();
             if(snapshot1.size === 1) {
                 let thisdata = snapshot1.docs[0].data();
                 if(thisdata['siteAcronym'] == institute){
