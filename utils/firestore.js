@@ -794,17 +794,17 @@ const searchShipments = async (siteAcronym) => {
                 "677469051":"0014",
                 "683613884":"0024"
             }
-
             for(let i = 0; i < keys.length; i++){
                 if(conversion.hasOwnProperty(keys[i])){
-                    let currJSON = data[keys[i]];
-                    if(currJSON,hasOwnProperty('258745303')){
+                   
+                    let currJSON = data[keys[i]]; 
+                    if(currJSON.hasOwnProperty('258745303')){
                         if(currJSON['258745303'] == '104430631'){
                             return true;
                         }
                         found = true;
                     }
-                    else if(currJSON,hasOwnProperty('145971562')){
+                    else if(currJSON.hasOwnProperty('145971562')){
                         if(currJSON['145971562'] == '104430631'){
                             found = true;
                         }
@@ -930,7 +930,7 @@ const shipBox = async (boxId, institute, data) => {
 }
 
 const getLocations = async (institute) => {
-    const snapshot = await db.collection('SiteLocations').where('Site', '==', institute).get();
+    const snapshot = await db.collection('SiteLocations').where('siteAcronym', '==', institute).get();
     console.log(institute)
     if(snapshot.size !== 0) {
         return snapshot.docs.map(document => document.data());
