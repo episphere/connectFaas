@@ -969,7 +969,7 @@ const searchBoxesByLocation = async (institute, location) => {
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
         console.log(JSON.stringify(result));
-        let toReturn = result.filter(data => (!data.hasOwnProperty('353358909')||data['353358909']!=true))
+        let toReturn = result.filter(data => (!data.hasOwnProperty('145971562')||data['145971562']!='353358909'))
         return toReturn;
     }
     else{
