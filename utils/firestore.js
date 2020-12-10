@@ -753,7 +753,9 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
         if(currDoc.hasOwnProperty(conceptTube)){
             let currObj = currDoc[conceptTube];
             currObj['258745303'] = '353358909';
-            let toUpdate = {conceptTube: currObj};
+            //let toUpdate = {conceptTube: currObj};
+            let toUpdate = {};
+            toUpdate[conceptTube] = currObj;
             await db.collection('biospecimen').doc(docId).update(toUpdate);
         }
     }
