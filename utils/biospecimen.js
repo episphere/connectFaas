@@ -18,7 +18,7 @@ const biospecimenAPIs = async (req, res) => {
     console.log(idToken)
     const { validateIDToken } = require('./firestore');
     const decodedToken = await validateIDToken(idToken);
-    console.log(decodedToken)
+    console.log(JSON.stringify(decodedToken))
     if(decodedToken instanceof Error){
         return res.status(401).json(getResponseJSON(decodedToken.message, 401));
     }
