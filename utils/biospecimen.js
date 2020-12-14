@@ -13,12 +13,9 @@ const biospecimenAPIs = async (req, res) => {
     if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
     const api = query.api;
     console.log(api)
-
     const idToken = req.headers.authorization.replace('Bearer','').trim();
-    console.log(idToken)
     const { validateIDToken } = require('./firestore');
     const decodedToken = await validateIDToken(idToken);
-    console.log(JSON.stringify(decodedToken))
     if(decodedToken instanceof Error){
         return res.status(401).json(getResponseJSON(decodedToken.message, 401));
     }
