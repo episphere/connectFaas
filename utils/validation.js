@@ -247,7 +247,7 @@ const getToken = async (req, res) => {
     }
 
     const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(`getParticipantToken ${new Date()} ${siteKey}`)
+    console.log(`getParticipantToken ${new Date()} - ${siteKey}`)
     const { validateSiteUser } = require(`./firestore`);
     const authorize = await validateSiteUser(siteKey);
     if(authorize instanceof Error){
@@ -258,6 +258,7 @@ const getToken = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
     const siteCode = authorize.siteCode;
+    console.log(`siteCode ${siteCode} and siteName ${authorize.siteName}`);
 
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
     if(req.body.data.length > 0){
