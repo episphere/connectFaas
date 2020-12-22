@@ -880,7 +880,7 @@ const shipBox = async (boxId, institute, shippingData) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
     if(snapshot.size === 1) {
         let currDate = new Date();
-        shippingData['656548982'] = new currDate.toString();
+        shippingData['656548982'] = currDate.toString();
         shippingData['145971562'] = '353358909';
         const docId = snapshot.docs[0].id;
         await db.collection('boxes').doc(docId).update(shippingData);
