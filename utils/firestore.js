@@ -876,12 +876,13 @@ const updateTempCheckDate = async (institute) => {
 
 }
 
-const shipBox = async (boxId, institute, data) => {
+const shipBox = async (boxId, institute, shippingData) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
         await db.collection('boxes').doc(docId).update({'145971562':'353358909'});
-
+        await db.collection('boxes').doc(docId).update(shippingData);
+        
 
         let data = snapshot.docs[0].data();
         let bags = data.bags;
