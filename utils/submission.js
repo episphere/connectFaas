@@ -129,6 +129,7 @@ const getParticipants = async (req, res) => {
     else if (req.query.type === 'notyetverified') queryType = 'notyetverified';
     else if (req.query.type === 'cannotbeverified') queryType = 'cannotbeverified';
     else if (req.query.type === 'profileNotSubmitted') queryType = 'profileNotSubmitted';
+    else if (req.query.type === 'consentNotSubmitted') queryType = 'consentNotSubmitted';
     else if (req.query.type === 'all') queryType = 'all';
     else if (req.query.type === 'individual'){
         if (req.query.token) {

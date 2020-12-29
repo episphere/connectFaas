@@ -111,7 +111,7 @@ const validateIDToken = async (idToken) => {
 const linkParticipanttoFirebaseUID = async (docID, uID) => {
     try{
         let data = {};
-        data['state.230663853'] = 353358909;
+        data['230663853'] = 353358909;
         data['state.uid'] = uID
         await db.collection('participants').doc(docID).update(data);
         return true;
@@ -308,6 +308,14 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .where('827220437', operator, siteCode)
                                     .where('699625233', '==', 104430631)
                                     .where('919254129', '==', 353358909)
+                                    .get()
+        }
+        if(decider === 'consentNotSubmitted') {
+            participants = await db.collection('participants')
+                                    .where('827220437', operator, siteCode)
+                                    .where('699625233', '==', 104430631)
+                                    .where('919254129', '==', 104430631)
+                                    .where('230663853', '==', 353358909)
                                     .get()
         }
         if(decider === 'all') {

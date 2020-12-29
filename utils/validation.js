@@ -67,6 +67,8 @@ const generateToken = async (req, res) => {
         state: { uid: decodedToken.uid },
         821247024: 875007964,
         699625233: 104430631,
+        919254129: 104430631,
+        230663853: 104430631,
         token: uuid(),
         512820379: 854703046,
         471593703: (new Date()).toISOString()
@@ -294,6 +296,8 @@ const getToken = async (req, res) => {
                         827220437: siteCode,
                         512820379: 486306141,
                         699625233: 104430631,
+                        919254129: 104430631,
+                        230663853: 104430631,
                         pin: PIN,
                         token: uuid()
                     }
