@@ -204,8 +204,20 @@ const biospecimenAPIs = async (req, res) => {
         const requestData = req.body.boxes;
         const shippingData = req.body.shippingData;
         if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        let tempMonitorShipped = false;
+        if(shippingData['105891443'] != '104430631'){
+            tempMonitorShipped = shippingData['105891443'];
+        }
         for(let box of requestData) {
             const { shipBox } = require('./firestore');
+            if(tempMonitorShipped != false){
+                if(tempMonitorShipped == box['boxId']){
+                    shippingData['105891443'] = '353358909';
+                }
+                else{
+                    shippingData['105891443'] = '104430631';
+                }
+            }
             const exists = await shipBox(box, siteAcronym, shippingData)
             if(exists === false){
                 return res.status(500).json({message: 'Box does not exist', code:500})
