@@ -29,7 +29,13 @@ const generatePIN = () => {
 
 const randomString = () => {
     const length = 6;
-    return (Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1)).toUpperCase();
+    let pinChecker = false;
+    let pin
+    while(pinChecker === false) {
+        pin = (Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1)).toUpperCase();
+        if(!pin.includes('0') && !pin.includes('O')) pinChecker = true;
+    }
+    return pin;
 }
 
 const deleteDocuments = (req, res) => {
