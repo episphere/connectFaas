@@ -1003,8 +1003,9 @@ const getBoxesPagination = async (institute, body) => {
     let currPage = body.pageNumber;
     let orderByField = body.orderBy;
     let elementsPerPage = body.elementsPerPage;
-    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField).get();
-    if(snapshot.size !== 0){
+    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+    return snapshot.docs;
+    /*if(snapshot.size !== 0){
         
         let arrSnaps = snapshot.docs;
         let toStart = currPage * elementsPerPage;
@@ -1014,7 +1015,7 @@ const getBoxesPagination = async (institute, body) => {
     }
     else{
         return [[],0]
-    }
+    }*/
 
     
 }
