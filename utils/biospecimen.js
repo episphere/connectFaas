@@ -270,6 +270,15 @@ const biospecimenAPIs = async (req, res) => {
         await updateTempCheckDate(siteAcronym);
         return res.status(200).json({message: 'Success!', code:200});
     }
+    else if (api === 'getBoxesPagination'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const {getBoxesPagination} = require('./firestore');
+        const requestData = req.body;
+        let toReturn = await getBoxesPagination(siteAcronym, requestData);
+        return res.status(200).json({data: toReturn, code:200});
+    }
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 

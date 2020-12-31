@@ -999,6 +999,25 @@ const getSpecimenCollections = async (token, siteAcronym) => {
     }
 }
 
+const getBoxesPagination = async (institute, body) => {
+    let currPage = body.pageNumber;
+    let orderByField = body.orderBy;
+    let elementsPerPage = body.elementsPerPage;
+    if(snapshot.size !== 0){
+        const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField).get();
+        let arrSnaps = snapshot.docs;
+        let toStart = currPage * elementsPerPage;
+        let toReturnArr = snapshot.splice(toStart, toStart+25 > arrSnaps.length? arrSnaps.length : tStart + 25);
+        let toReturn = [toReturnArr, Math.ceil(arrSnaps.length)]
+        return toReturn;
+    }
+    else{
+        return [[],0]
+    }
+
+    
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -1050,5 +1069,6 @@ module.exports = {
     removeBag,
     reportMissingSpecimen,
     updateTempCheckDate,
-    getSpecimenCollections
+    getSpecimenCollections,
+    getBoxesPagination
 }
