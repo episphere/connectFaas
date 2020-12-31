@@ -1004,7 +1004,8 @@ const getBoxesPagination = async (institute, body) => {
     let orderByField = body.orderBy;
     let elementsPerPage = body.elementsPerPage;
     const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-    return snapshot.docs;
+    let result = snapshot.docs.map(document => document.data());
+    return result;
     /*if(snapshot.size !== 0){
         
         let arrSnaps = snapshot.docs;
