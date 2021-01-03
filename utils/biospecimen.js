@@ -211,14 +211,14 @@ const biospecimenAPIs = async (req, res) => {
         for(let box of requestData) {
             const { shipBox } = require('./firestore');
             if(tempMonitorShipped != false){
-                if(tempMonitorShipped == box['boxId']){
+                if(tempMonitorShipped == box){
                     shippingData['105891443'] = '353358909';
                 }
                 else{
                     shippingData['105891443'] = '104430631';
                 }
             }
-            const exists = await shipBox(box['boxId'], siteAcronym, shippingData, box)
+            const exists = await shipBox(box, siteAcronym, shippingData, requestData[box])
             if(exists === false){
                 return res.status(500).json({message: 'Box does not exist', code:500})
             }
