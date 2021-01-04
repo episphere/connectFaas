@@ -1022,6 +1022,12 @@ const getBoxesPagination = async (institute, body) => {
     
 }
 
+const getNumBoxesShipped = async (institute) => {
+    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').get();
+    let result = snapshot.docs.length;
+    return result;
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -1074,5 +1080,6 @@ module.exports = {
     reportMissingSpecimen,
     updateTempCheckDate,
     getSpecimenCollections,
-    getBoxesPagination
+    getBoxesPagination,
+    getNumBoxesShipped
 }

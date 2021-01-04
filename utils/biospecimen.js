@@ -205,7 +205,7 @@ const biospecimenAPIs = async (req, res) => {
         const shippingData = req.body.shippingData;
         const trackingNumbers = req.body.trackingNumbers;
         console.log('this is the shippingData: ' + JSON.stringify(shippingData))
-        
+
         if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         let tempMonitorShipped = false;
         if(shippingData['105891443'] != '104430631'){
@@ -284,6 +284,15 @@ const biospecimenAPIs = async (req, res) => {
         const requestData = req.body;
         let toReturn = await getBoxesPagination(siteAcronym, requestData);
         return res.status(200).json({data: toReturn, code:200});
+    }
+    else if(api === 'getNumBoxesShipped'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const {getNumBoxesShipped} = require('./firestore');
+        const requestData = req.body;
+        let response = await getNumBoxesShipped(siteAcronym);
+        return res.status(200).json({message: 'Success!', response, code:200});
     }
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
