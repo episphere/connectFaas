@@ -1078,6 +1078,8 @@ const getBoxesPagination = async (institute, body) => {
 }
 
 const getNumBoxesShipped = async (institute) => {
+    let filters = body.filters;
+    
     let startDate = 0;
     let trackingId = '';
     let endDate = 0;
