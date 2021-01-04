@@ -1024,42 +1024,42 @@ const getBoxesPagination = async (institute, body) => {
     if(trackingId !== ''){
         if(endDate !== 0){
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
         else{
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '>=', startDate).orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '>=', startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
     }
     else{
         if(endDate !== 0){
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', "<=", endDate).where('656548982' ,">=", startDate).orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', "<=", endDate).where('656548982' ,">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', "<=", endDate).orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', "<=", endDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
         else{
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', ">=", startDate).orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', ">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
     }
 
     
-    //const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField).limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+    //const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
     let result = snapshot.docs.map(document => document.data());
     return result;
     /*if(snapshot.size !== 0){
