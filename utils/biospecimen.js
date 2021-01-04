@@ -222,6 +222,7 @@ const biospecimenAPIs = async (req, res) => {
             }
             console.log('box: ' + box)
             console.log(JSON.stringify(requestData))
+            console.log('this is the shippingData: ' + JSON.stringify(shippingData))
             const exists = await shipBox(box, siteAcronym, shippingData, trackingNumbers)
             if(exists === false){
                 return res.status(500).json({message: 'Box does not exist', code:500})
