@@ -204,6 +204,7 @@ const biospecimenAPIs = async (req, res) => {
         const requestData = req.body.boxes;
         const shippingData = req.body.shippingData;
         const trackingNumbers = req.body.trackingNumbers;
+        console.log('this is the shippingData: ' + JSON.stringify(shippingData))
         
         if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         let tempMonitorShipped = false;
@@ -222,7 +223,7 @@ const biospecimenAPIs = async (req, res) => {
             }
             console.log('box: ' + box)
             console.log(JSON.stringify(requestData))
-            console.log('this is the shippingData: ' + JSON.stringify(shippingData))
+            
             const exists = await shipBox(box, siteAcronym, shippingData, trackingNumbers)
             if(exists === false){
                 return res.status(500).json({message: 'Box does not exist', code:500})
