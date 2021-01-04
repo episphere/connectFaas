@@ -1013,7 +1013,6 @@ const getBoxesPagination = async (institute, body) => {
         if(filters.hasOwnProperty('startDate')){
             startDate = filters['startDate']
         }
-        
         if(filters.hasOwnProperty('trackingId')){
             trackingId = filters['trackingId'];
         }
@@ -1092,7 +1091,6 @@ const getNumBoxesShipped = async (institute) => {
     if(filters.hasOwnProperty('endDate')){
         endDate = filters['endDate']
     }
-    let snapshot;
     let snapshot;
     if(trackingId !== ''){
         if(endDate !== 0){
