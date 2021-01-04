@@ -1077,8 +1077,8 @@ const getBoxesPagination = async (institute, body) => {
     
 }
 
-const getNumBoxesShipped = async (institute) => {
-    let filters = body.filters;
+const getNumBoxesShipped = async (institute, body) => {
+    let filters = body;
 
     let startDate = 0;
     let trackingId = '';

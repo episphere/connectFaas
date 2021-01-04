@@ -286,13 +286,13 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data: toReturn, code:200});
     }
     else if(api === 'getNumBoxesShipped'){
-        if(req.method !== 'GET') {
+        if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         const {getNumBoxesShipped} = require('./firestore');
         const requestData = req.body;
-        let response = await getNumBoxesShipped(siteAcronym);
-        return res.status(200).json({message: 'Success!', response, code:200});
+        let response = await getNumBoxesShipped(siteAcronym, requestData);
+        return res.status(200).json({data:response, code:200});
     }
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
