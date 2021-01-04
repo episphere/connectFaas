@@ -1093,7 +1093,7 @@ const getNumBoxesShipped = async (institute, body) => {
     if(filters.hasOwnProperty('endDate')){
         endDate = filters['endDate']
     }
-    let snapshot;
+    let snapshot = [];
     if(trackingId !== ''){
         if(endDate !== 0){
             if(startDate !== 0){
