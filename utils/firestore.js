@@ -1131,7 +1131,7 @@ const getNumBoxesShipped = async (institute, body) => {
         }
     }
     
-    let result = snapshot.docs.length;
+    let result = snapshot.size;
     return result;
 }
 
