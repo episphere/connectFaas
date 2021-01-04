@@ -886,7 +886,7 @@ const updateTempCheckDate = async (institute) => {
 
 const shipBox = async (boxId, institute, shippingData, trackingNumbers) => {
     console.log('this is the shippingData: ' + JSON.stringify(shippingData))
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
+    /*const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
     if(snapshot.size === 1) {
         let currDate = new Date();
         shippingData['656548982'] = Date.parse(currDate);
@@ -951,7 +951,8 @@ const shipBox = async (boxId, institute, shippingData, trackingNumbers) => {
     }
     else{
         return false;
-    }
+    }*/
+    return true;
 }
 
 const getLocations = async (institute) => {
