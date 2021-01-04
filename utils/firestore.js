@@ -1079,7 +1079,7 @@ const getBoxesPagination = async (institute, body) => {
 
 const getNumBoxesShipped = async (institute) => {
     let filters = body.filters;
-    
+
     let startDate = 0;
     let trackingId = '';
     let endDate = 0;
@@ -1097,15 +1097,15 @@ const getNumBoxesShipped = async (institute) => {
     if(trackingId !== ''){
         if(endDate !== 0){
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982' <= endDate).where('656548982' >= startDate);
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<= ', endDate).where('656548982', '>=', startDate);
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982' <= endDate);
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate);
             }
         }
         else{
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982' >= startDate);
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '>=', startDate);
             }
             else{
                 snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId);
@@ -1115,15 +1115,15 @@ const getNumBoxesShipped = async (institute) => {
     else{
         if(endDate !== 0){
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982' <= endDate).where('656548982' >= startDate);
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', '<=', endDate).where('656548982' >= startDate);
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982' <= endDate);
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', '<=', endDate);
             }
         }
         else{
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982' >= startDate);
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', '>=', startDate);
             }
             else{
                 snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909');
