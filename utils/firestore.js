@@ -1097,7 +1097,7 @@ const getNumBoxesShipped = async (institute, body) => {
     if(trackingId !== ''){
         if(endDate !== 0){
             if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<= ', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
+                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
             }
             else{
                 snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy('656548982', 'desc').get();
