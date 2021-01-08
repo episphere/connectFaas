@@ -318,6 +318,14 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .where('230663853', '==', 353358909)
                                     .get()
         }
+        if(decider === 'notSignedIn') {
+            participants = await db.collection('participants')
+                                    .where('827220437', operator, siteCode)
+                                    .where('699625233', '==', 104430631)
+                                    .where('919254129', '==', 104430631)
+                                    .where('230663853', '==', 104430631)
+                                    .get()
+        }
         if(decider === 'all') {
             participants = await db.collection('participants')
                                     .where('827220437', operator, siteCode)
