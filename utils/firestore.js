@@ -378,7 +378,7 @@ const verifyIdentity = async (type, token) => {
                 concept = 197316935;
                 data['512820379'] = 486306141; // Active recruit
             }
-            if(type === 'cannotbeverified') concept = 875007964;
+            if(type === 'cannotbeverified') concept = 219863910;
             if(type === 'duplicate') concept = 922622075;
             if(type === 'outreachtimedout') concept = 160161595;
 
