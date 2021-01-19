@@ -184,13 +184,16 @@ const storeAPIKeyandToken = async (data) => {
     }
 }
 
-const createRecord = async (data, siteCode) => {
+const incrementCounter = async (field, siteCode) => {
+    const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
+    let obj = {}
+    obj[field] = increment;
+    await db.collection('stats').doc(snapShot.docs[0].id).update(obj);
+}
+
+const createRecord = async (data) => {
     try{
         await db.collection('participants').add(data);
-        if(siteCode) {
-            const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
-            await db.collection('stats').doc(snapShot.docs[0].id).update({ 'participantCount': increment});
-        }
         return true;
     }
     catch(error){
@@ -1208,5 +1211,6 @@ module.exports = {
     updateTempCheckDate,
     getSpecimenCollections,
     getBoxesPagination,
-    getNumBoxesShipped
+    getNumBoxesShipped,
+    incrementCounter
 }
