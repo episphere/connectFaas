@@ -6,6 +6,11 @@ const submit = async (res, data, uid) => {
     if(data[827220437]) {
         const { incrementCounter } = require('./firestore');
         await incrementCounter('participantCount', data[827220437]);
+        await incrementCounter('accountCreationCount', data[827220437]);
+        await incrementCounter('passiveRecruitCount', data[827220437]);
+    }
+    else {
+        // get site code from participant record.
     }
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
         // generate Connect_ID
