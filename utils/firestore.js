@@ -9,6 +9,7 @@ const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
+const decrement = admin.firestore.FieldValue.increment(-1);
 
 const storage = admin.storage();
 
