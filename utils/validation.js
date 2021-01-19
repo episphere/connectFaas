@@ -304,6 +304,7 @@ const getToken = async (req, res) => {
                     const { createRecord, incrementCounter } = require('./firestore');
                     await createRecord(obj);
                     await incrementCounter('participantCount', siteCode);
+                    await incrementCounter('activeRecruitCount', siteCode);
                     responseArray.push({studyId: studyId, token: obj.token, pin: obj.pin});
                 } else {
                     response.pin ? responseArray.push({studyId: studyId, token: response.token, pin: response.pin}) : responseArray.push({studyId: studyId, token: response.token});

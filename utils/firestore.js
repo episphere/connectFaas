@@ -192,6 +192,13 @@ const incrementCounter = async (field, siteCode) => {
     await db.collection('stats').doc(snapShot.docs[0].id).update(obj);
 }
 
+const decrementCounter = async (field, siteCode) => {
+    const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
+    let obj = {}
+    obj[field] = decrement;
+    await db.collection('stats').doc(snapShot.docs[0].id).update(obj);
+}
+
 const createRecord = async (data) => {
     try{
         await db.collection('participants').add(data);
@@ -1213,5 +1220,6 @@ module.exports = {
     getSpecimenCollections,
     getBoxesPagination,
     getNumBoxesShipped,
-    incrementCounter
+    incrementCounter,
+    decrementCounter
 }
