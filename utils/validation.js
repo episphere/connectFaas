@@ -302,7 +302,7 @@ const getToken = async (req, res) => {
                         token: uuid()
                     }
                     const { createRecord } = require('./firestore');
-                    createRecord(obj);
+                    await createRecord(obj, siteCode);
                     responseArray.push({studyId: studyId, token: obj.token, pin: obj.pin});
                 } else {
                     response.pin ? responseArray.push({studyId: studyId, token: response.token, pin: response.pin}) : responseArray.push({studyId: studyId, token: response.token});

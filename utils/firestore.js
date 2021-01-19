@@ -8,6 +8,8 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
+const increment = admin.firestore.FieldValue.increment(1);
+
 const storage = admin.storage();
 
 const validateKey = async (access_token) => {
@@ -182,9 +184,13 @@ const storeAPIKeyandToken = async (data) => {
     }
 }
 
-const createRecord = async (data) => {
+const createRecord = async (data, siteCode) => {
     try{
         await db.collection('participants').add(data);
+        if(siteCode) {
+            const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
+            await db.collection('stats').doc(snapShot.docs[0].id).update({ 'participantCount': increment});
+        }
         return true;
     }
     catch(error){
@@ -327,6 +333,12 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .get()
         }
         if(decider === 'all') {
+            participants = await db.collection('participants')
+                                    .where('827220437', operator, siteCode)
+                                    .orderBy("821247024", "asc")
+                                    .get();
+        }
+        if(decider === 'stats') {
             participants = await db.collection('participants')
                                     .where('827220437', operator, siteCode)
                                     .orderBy("821247024", "asc")
