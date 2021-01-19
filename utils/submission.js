@@ -13,7 +13,8 @@ const submit = async (res, data, uid) => {
         // get site code from participant record.
         const { retrieveUserProfile } = require('./firestore');
         const response = await retrieveUserProfile(uid);
-        console.log(JSON.stringify(response))
+        console.log(response[827220437])
+        const { incrementCounter } = require('./firestore');
         if(response[827220437]) await incrementCounter('profileCreationCount', response[827220437]);
     }
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
@@ -22,7 +23,7 @@ const submit = async (res, data, uid) => {
         const { sanityCheckConnectID, incrementCounter } = require('./firestore');
         const { retrieveUserProfile } = require('./firestore');
         const response = await retrieveUserProfile(uid);
-        console.log(JSON.stringify(response))
+        console.log(response[827220437])
         if(response[827220437]) await incrementCounter('consentCount', response[827220437]);
         let boo = false;
         let Connect_ID;
