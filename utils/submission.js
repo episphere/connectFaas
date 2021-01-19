@@ -5,7 +5,7 @@ const submit = async (res, data, uid) => {
     hotProperties.forEach(key => delete data[key]);
     if(data[827220437]) {
         const { incrementCounter } = require('./firestore');
-        await incrementCounter('participantCount', siteCode);
+        await incrementCounter('participantCount', data[827220437]);
     }
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
         // generate Connect_ID
