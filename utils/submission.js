@@ -9,13 +9,19 @@ const submit = async (res, data, uid) => {
         await incrementCounter('accountCreationCount', data[827220437]);
         await incrementCounter('passiveRecruitCount', data[827220437]);
     }
-    else {
+    if(data[699625233]) {
         // get site code from participant record.
+        const { retrieveUserProfile } = require('./firestore');
+        const response = await retrieveUserProfile(uid);
+        if(response['827220437']) await incrementCounter('profileCreationCount', response['827220437']);
     }
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
         // generate Connect_ID
         const { generateConnectID } = require('./shared');
-        const { sanityCheckConnectID } = require('./firestore');
+        const { sanityCheckConnectID, incrementCounter } = require('./firestore');
+        const { retrieveUserProfile } = require('./firestore');
+        const response = await retrieveUserProfile(uid);
+        if(response['827220437']) await incrementCounter('consentCount', response['827220437']);
         let boo = false;
         let Connect_ID;
         while(boo === false){
