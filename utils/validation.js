@@ -76,6 +76,13 @@ const generateToken = async (req, res) => {
     console.log(JSON.stringify(obj));
     const { createRecord } = require('./firestore');
     createRecord(obj);
+    const { retrieveUserProfile } = require('./firestore');
+    const userProfile = (await retrieveUserProfile(decodedToken.uid))[0];
+    const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
+    if(userProfile[230663853]) { // Signed In
+        const { incrementCounter } = require('./firestore');
+        await incrementCounter(`${recruitType}.signedIn`, userProfile[827220437]);
+    }
     return res.status(200).json(getResponseJSON('Ok', 200));
 }
 
@@ -126,6 +133,13 @@ const validateToken = async (req, res) => {
         if(isValid){ // add uid to participant record
             const { linkParticipanttoFirebaseUID } = require('./firestore');
             linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
+            const { retrieveUserProfile } = require('./firestore');
+            const userProfile = (await retrieveUserProfile(decodedToken.uid))[0];
+            const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
+            if(userProfile[230663853]) { // Signed In
+                const { incrementCounter } = require('./firestore');
+                await incrementCounter(`${recruitType}.signedIn`, userProfile[827220437]);
+            }
             return res.status(200).json(getResponseJSON('Ok', 200));
         }
         else{ // Invalid token
@@ -150,6 +164,13 @@ const validateToken = async (req, res) => {
             }
             const { updateResponse } = require('./firestore');
             updateResponse(obj, decodedToken.uid);
+            const { retrieveUserProfile } = require('./firestore');
+            const userProfile = (await retrieveUserProfile(decodedToken.uid))[0];
+            const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
+            if(userProfile[230663853]) { // Signed In
+                const { incrementCounter } = require('./firestore');
+                await incrementCounter(`${recruitType}.signedIn`, userProfile[827220437]);
+            }
             return res.status(200).json(getResponseJSON('Ok', 200));
         }
         else{ // Invalid pin

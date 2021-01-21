@@ -6,10 +6,7 @@ const submit = async (res, data, uid) => {
     const { retrieveUserProfile } = require('./firestore');
     const userProfile = (await retrieveUserProfile(uid))[0];
     const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
-    if(data[230663853]) { // Signed In
-        const { incrementCounter } = require('./firestore');
-        await incrementCounter(`${recruitType}.signedIn`, data[827220437]);
-    }
+    
     if(data[827220437]) { 
         const { incrementCounter } = require('./firestore');
         await incrementCounter(`${recruitType}.count`, data[827220437]);
