@@ -350,9 +350,8 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .get();
         }
         if(decider === 'stats') {
-            participants = await db.collection('participants')
-                                    .where('827220437', operator, siteCode)
-                                    .orderBy("821247024", "asc")
+            participants = await db.collection('stats')
+                                    .where('siteCode', operator, siteCode)
                                     .get();
         }
         return participants.docs.map(document => {
@@ -399,7 +398,7 @@ const verifyIdentity = async (type, token) => {
             let concept;
             if(type === 'verified') {
                 concept = 197316935;
-                data['512820379'] = 486306141; // Active recruit
+                data['512820379'] = 486306141; // Make this participant active recruit
             }
             if(type === 'cannotbeverified') concept = 219863910;
             if(type === 'duplicate') concept = 922622075;
