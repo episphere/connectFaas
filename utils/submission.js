@@ -10,7 +10,7 @@ const submit = async (res, data, uid) => {
     if(data[827220437]) { 
         const { incrementCounter } = require('./firestore');
         await incrementCounter(`${recruitType}.count`, data[827220437]);
-        await incrementCounter(`passive.signedIn`, userProfile[827220437]);
+        await incrementCounter(`passive.signedIn`, data[827220437]);
     }
     if(data[699625233]) {
         // get site code from participant record.
