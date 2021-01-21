@@ -4,8 +4,8 @@ const submit = async (res, data, uid) => {
     const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
     hotProperties.forEach(key => delete data[key]);
     const { retrieveUserProfile } = require('./firestore');
-    const response = (await retrieveUserProfile(uid))[0];
-    const recruitType = response['512820379'] === 486306141 ? 'active' : 'passive';
+    const userProfile = (await retrieveUserProfile(uid))[0];
+    const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
     if(data[995036844]) { // Signed In
         const { incrementCounter } = require('./firestore');
         await incrementCounter(`${recruitType}.signedIn`, data[827220437]);
@@ -17,13 +17,13 @@ const submit = async (res, data, uid) => {
     if(data[699625233]) {
         // get site code from participant record.
         const { incrementCounter } = require('./firestore');
-        if(response[827220437]) await incrementCounter(`${recruitType}.profileSubmitted`, response[827220437]);
+        if(userProfile[827220437]) await incrementCounter(`${recruitType}.profileSubmitted`, userProfile[827220437]);
     }
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
         // generate Connect_ID
         const { generateConnectID } = require('./shared');
         const { sanityCheckConnectID, incrementCounter } = require('./firestore');
-        if(response[827220437]) await incrementCounter(`${recruitType}.consented`, response[827220437]);
+        if(userProfile[827220437]) await incrementCounter(`${recruitType}.consented`, userProfile[827220437]);
         let boo = false;
         let Connect_ID;
         while(boo === false){
