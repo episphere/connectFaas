@@ -4,17 +4,20 @@ const submit = async (res, data, uid) => {
     const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
     hotProperties.forEach(key => delete data[key]);
     if(data[827220437]) {
+        const { retrieveUserProfile } = require('./firestore');
+        const response = (await retrieveUserProfile(uid))[0];
+        const recruitType = response['512820379'] === 486306141 ? 'active' : 'passive';
         const { incrementCounter } = require('./firestore');
-        await incrementCounter('participantCount', data[827220437]);
-        await incrementCounter('accountCreationCount', data[827220437]);
-        await incrementCounter('passiveRecruitCount', data[827220437]);
+        await incrementCounter(`${recruitType}.count`, data[827220437]);
+        await incrementCounter(`${recruitType}.signedIn`, data[827220437]);
     }
     if(data[699625233]) {
         // get site code from participant record.
         const { retrieveUserProfile } = require('./firestore');
         const response = (await retrieveUserProfile(uid))[0];
+        const recruitType = response['512820379'] === 486306141 ? 'active' : 'passive';
         const { incrementCounter } = require('./firestore');
-        if(response[827220437]) await incrementCounter('profileCreationCount', response[827220437]);
+        if(response[827220437]) await incrementCounter(`${recruitType}.profileSubmitted`, response[827220437]);
     }
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
         // generate Connect_ID
@@ -22,7 +25,8 @@ const submit = async (res, data, uid) => {
         const { sanityCheckConnectID, incrementCounter } = require('./firestore');
         const { retrieveUserProfile } = require('./firestore');
         const response = (await retrieveUserProfile(uid))[0];
-        if(response[827220437]) await incrementCounter('consentCount', response[827220437]);
+        const recruitType = response['512820379'] === 486306141 ? 'active' : 'passive';
+        if(response[827220437]) await incrementCounter(`${recruitType}.consented`, response[827220437]);
         let boo = false;
         let Connect_ID;
         while(boo === false){
