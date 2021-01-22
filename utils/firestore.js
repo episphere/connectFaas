@@ -295,15 +295,19 @@ const updateParticipantData = async (id, data) => {
             .update(data);
 }
 
-const retrieveParticipants = async (siteCode, decider, isParent) => {
+const retrieveParticipants = async (siteCode, decider, isParent, limit, page) => {
     try{
         const operator = isParent ? 'in' : '==';
         let participants = {};
+        const offset = (page-1)*limit;
         if(decider === 'verified') {
             participants = await db.collection('participants')
                                     .where('827220437', operator, siteCode)
                                     .where('821247024', '==', 197316935)
                                     .where('699625233', '==', 353358909)
+                                    .orderBy("Connect_ID", "asc")
+                                    .limit(limit)
+                                    .offset(offset)
                                     .get();
         }
         if(decider === 'notyetverified') {
@@ -311,6 +315,9 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .where('827220437', operator, siteCode)
                                     .where('821247024', '==', 875007964)
                                     .where('699625233', '==', 353358909)
+                                    .orderBy("Connect_ID", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
                                     .get();
         }
         if(decider === 'cannotbeverified') {
@@ -318,6 +325,9 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .where('827220437', operator, siteCode)
                                     .where('821247024', '==', 219863910)
                                     .where('699625233', '==', 353358909)
+                                    .orderBy("Connect_ID", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
                                     .get();
         }
         if(decider === 'profileNotSubmitted') {
@@ -325,6 +335,9 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .where('827220437', operator, siteCode)
                                     .where('699625233', '==', 104430631)
                                     .where('919254129', '==', 353358909)
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
                                     .get()
         }
         if(decider === 'consentNotSubmitted') {
@@ -333,6 +346,9 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .where('699625233', '==', 104430631)
                                     .where('919254129', '==', 104430631)
                                     .where('230663853', '==', 353358909)
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
                                     .get()
         }
         if(decider === 'notSignedIn') {
@@ -341,12 +357,17 @@ const retrieveParticipants = async (siteCode, decider, isParent) => {
                                     .where('699625233', '==', 104430631)
                                     .where('919254129', '==', 104430631)
                                     .where('230663853', '==', 104430631)
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
                                     .get()
         }
         if(decider === 'all') {
             participants = await db.collection('participants')
                                     .where('827220437', operator, siteCode)
                                     .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
                                     .get();
         }
         if(decider === 'stats') {

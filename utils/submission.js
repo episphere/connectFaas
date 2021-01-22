@@ -132,6 +132,8 @@ const getParticipants = async (req, res) => {
 
     if(req.query.type === false) return res.status(404).json(getResponseJSON('Resource not found', 404));
 
+    if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request!', 400));
+
     // Get all data if it's a parent
     const ID = authorized.id;
     const { getChildrens } = require('./firestore');
@@ -140,6 +142,8 @@ const getParticipants = async (req, res) => {
     siteCodes = siteCodes ? siteCodes : authorized.siteCode;
     console.log('Site codes: - '+siteCodes);
     let queryType = '';
+    const limit = req.query.limit ? parseInt(req.query.limit) : 1000;
+    const page = req.query.page ? parseInt(req.query.page) : 1;
     if(req.query.type === 'verified') queryType = req.query.type;
     else if (req.query.type === 'notyetverified') queryType = req.query.type;
     else if (req.query.type === 'cannotbeverified') queryType = req.query.type;
@@ -181,13 +185,13 @@ const getParticipants = async (req, res) => {
         return res.status(404).json(getResponseJSON('Resource not found', 404));
     }
     const { retrieveParticipants } = require(`./firestore`);
-    const data = await retrieveParticipants(siteCodes, queryType, isParent);
+    const data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page);
 
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
     }
 
-    return res.status(200).json({data, code:200})
+    return res.status(200).json({data, code:200, limit, dataSize: data.length})
 }
 
 const identifyParticipant = async (req, res) => {
