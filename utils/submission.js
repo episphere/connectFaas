@@ -132,7 +132,7 @@ const getParticipants = async (req, res) => {
 
     if(req.query.type === false) return res.status(404).json(getResponseJSON('Resource not found', 404));
 
-    if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request!', 400));
+    if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
 
     // Get all data if it's a parent
     const ID = authorized.id;
@@ -142,7 +142,7 @@ const getParticipants = async (req, res) => {
     siteCodes = siteCodes ? siteCodes : authorized.siteCode;
     console.log('Site codes: - '+siteCodes);
     let queryType = '';
-    const limit = req.query.limit ? parseInt(req.query.limit) : 1000;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 500;
     const page = req.query.page ? parseInt(req.query.page) : 1;
     if(req.query.type === 'verified') queryType = req.query.type;
     else if (req.query.type === 'notyetverified') queryType = req.query.type;
