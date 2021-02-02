@@ -7,6 +7,7 @@ const { subscribeToNotification, retrieveNotifications } = require('./utils/noti
 const { uploadHealthRecords } = require('./utils/upload');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
+const { encryptAsymmetric } = require('./utils/encrypt')
 
 exports.validate = validate;
 
@@ -51,6 +52,8 @@ exports.deleteDocuments = deleteDocuments;
 exports.app = connectApp;
 
 exports.biospecimen = biospecimenAPIs;
+
+// exports.encrypt = encryptAsymmetric;
 
 exports.sendEmailNotification = (req, res) => {
     setHeaders(res);
