@@ -379,13 +379,17 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page) =>
                                     .orderBy('Connect_ID', 'asc')
                                     .offset(offset)
                                     .limit(limit);
+            let roundType = ''
+            if(decider === 'eligibleForIncentive.baseline') roundType = '266600170'
+            if(decider === 'eligibleForIncentive.followup1') roundType = '496823485';
+            if(decider === 'eligibleForIncentive.followup2') roundType = '650465111'
+            if(decider === 'eligibleForIncentive.followup3') roundType = '303552867';
 
-            if(decider === 'eligibleForIncentive.baseline') query = query.where("266600170.222373868", "==", 353358909)
-            if(decider === 'eligibleForIncentive.followup1') query = query.where("496823485.222373868", "==", 353358909)
-            if(decider === 'eligibleForIncentive.followup2') query = query.where("650465111.222373868", "==", 353358909)
-            if(decider === 'eligibleForIncentive.followup3') query = query.where("303552867.222373868", "==", 353358909)
-
-            participants = await query.get();
+            participants = await query
+                                    .where(`${roundType}.222373868`, "==", 353358909)
+                                    .where(`${roundType}.648936790`, '==', 104430631)
+                                    .where(`${roundType}.648228701`, '==', 104430631)
+                                    .get();
         }
         if(decider === 'stats') {
             participants = await db.collection('stats')
