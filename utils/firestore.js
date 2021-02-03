@@ -581,9 +581,10 @@ const sanityCheckPIN = async (pin) => {
     }
 }
 
-const individualParticipant = async (key, value) => {
+const individualParticipant = async (key, value, siteCode, isParent) => {
     try {
-        const snapshot = await db.collection('participants').where(key, '==', value).get();
+        const operator = isParent ? 'in' : '==';
+        const snapshot = await db.collection('participants').where(key, '==', value).where('827220437', operator, siteCode).get();
         if(snapshot.size > 0) {
             return snapshot.docs.map(document => {
                 let data = document.data();

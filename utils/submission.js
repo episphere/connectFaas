@@ -166,7 +166,7 @@ const getParticipants = async (req, res) => {
         if (req.query.token) {
             queryType = "individual";
             const { individualParticipant } = require(`./firestore`);
-            const response = await individualParticipant('token', req.query.token);
+            const response = await individualParticipant('token', req.query.token, siteCodes, isParent);
             if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
             if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
             if(response) return res.status(200).json({data: response, code: 200})
