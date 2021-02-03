@@ -64,6 +64,34 @@ const filterData = async (queries, siteCodes, isParent) => {
     return result;
 }
 
+const incentiveFlags = {
+    266600170: { // Baseline
+		731498909: 104430631,
+		648936790: 104430631,
+		648228701: 104430631,
+		222373868: 104430631
+    },
+    496823485: { // Follow up 1
+		731498909: 104430631,
+		648936790: 104430631,
+		648228701: 104430631,
+		222373868: 104430631
+    },
+    650465111: { // Follow up 2
+		731498909: 104430631,
+		648936790: 104430631,
+		648228701: 104430631,
+		222373868: 104430631
+    },
+    303552867: { // Follow up 3
+		731498909: 104430631,
+		648936790: 104430631,
+		648228701: 104430631,
+		222373868: 104430631
+    }
+}
+
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -72,5 +100,6 @@ module.exports = {
     randomString,
     deleteDocuments,
     setHeadersDomainRestricted,
-    filterData
+    filterData,
+    incentiveFlags
 }

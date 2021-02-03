@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted } = require('./shared');
+const { getResponseJSON, setHeaders, setHeadersDomainRestricted, incentiveFlags } = require('./shared');
 
 const validate = async (req, res) => {
     setHeaders(res);
@@ -63,6 +63,7 @@ const generateToken = async (req, res) => {
         return res.status(401).json(getResponseJSON('Account already exists', 401));
     }
     const uuid = require('uuid');
+    const { incentiveFlags } = require('./shared');
     const obj = {
         state: { uid: decodedToken.uid },
         821247024: 875007964,
@@ -71,7 +72,8 @@ const generateToken = async (req, res) => {
         230663853: 353358909,
         token: uuid(),
         512820379: 854703046,
-        471593703: (new Date()).toISOString()
+        471593703: (new Date()).toISOString(),
+        ...incentiveFlags
     }
     console.log(JSON.stringify(obj));
     const { createRecord } = require('./firestore');
@@ -303,7 +305,7 @@ const getToken = async (req, res) => {
                             boo = true;
                         }
                     }
-
+                    const { incentiveFlags } = require('./shared');
                     const obj = {
                         state: { studyId },
                         821247024: 875007964,
@@ -313,7 +315,8 @@ const getToken = async (req, res) => {
                         919254129: 104430631,
                         230663853: 104430631,
                         pin: PIN,
-                        token: uuid()
+                        token: uuid(),
+                        ...incentiveFlags
                     }
                     const { createRecord, incrementCounter } = require('./firestore');
                     await createRecord(obj);
