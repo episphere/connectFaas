@@ -372,9 +372,11 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page) =>
         }
         if(decider.includes('eligibleForIncentive')) {
             if(siteCode.indexOf(809703864) !== -1) siteCode.splice(siteCode.indexOf(809703864), 1)
-            console.log(siteCode)
+            
             let query = db.collection('participants')
                                     .where('827220437', operator, siteCode)
+                                    .where('821247024', '==', 197316935)
+                                    .orderBy('Connect_ID', 'asc')
                                     .offset(offset)
                                     .limit(limit);
 
