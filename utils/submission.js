@@ -1,6 +1,10 @@
 const { getResponseJSON, setHeaders, setHeadersDomainRestricted } = require('./shared');
 
 const submit = async (res, data, uid) => {
+    // Remove locked attributes.
+    const { lockedAttributes } = require('./shared');
+    lockedAttributes.forEach(atr => delete data[atr]);
+    
     const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
     hotProperties.forEach(key => delete data[key]);
     const { retrieveUserProfile } = require('./firestore');

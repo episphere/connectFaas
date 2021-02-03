@@ -53,9 +53,7 @@ const deleteDocuments = (req, res) => {
     res.status(200).json(getResponseJSON('Success!', 200))
 }
 
-const lockedAttributes = () => { // Read only access after initialization
-    return ["821247024", "230663853", "699625233", ""]
-}
+const lockedAttributes = ["state", "token", "pin", "Connect_ID", "821247024", "230663853", "266600170", "496823485", "650465111", "303552867"] // Read only access after initialization
 
 const filterData = async (queries, siteCodes, isParent) => {
     console.log(queries);
@@ -101,5 +99,6 @@ module.exports = {
     deleteDocuments,
     setHeadersDomainRestricted,
     filterData,
-    incentiveFlags
+    incentiveFlags,
+    lockedAttributes
 }
