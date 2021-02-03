@@ -370,6 +370,21 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page) =>
                                     .limit(limit)
                                     .get();
         }
+        if(decider.includes('eligibleForIncentive')) {
+            if(siteCode.indexOf(809703864) !== -1) siteCode.splice(siteCode.indexOf(809703864), 1)
+            console.log(siteCode)
+            let query = db.collection('participants')
+                                    .where('827220437', operator, siteCode)
+                                    .offset(offset)
+                                    .limit(limit);
+
+            if(decider === 'eligibleForIncentive.baseline') query = query.where("266600170.222373868", "==", 353358909)
+            if(decider === 'eligibleForIncentive.followup1') query = query.where("496823485.222373868", "==", 353358909)
+            if(decider === 'eligibleForIncentive.followup2') query = query.where("650465111.222373868", "==", 353358909)
+            if(decider === 'eligibleForIncentive.followup3') query = query.where("303552867.222373868", "==", 353358909)
+
+            participants = await query.get();
+        }
         if(decider === 'stats') {
             participants = await db.collection('stats')
                                     .where('siteCode', operator, siteCode)
@@ -377,7 +392,8 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page) =>
         }
         return participants.docs.map(document => {
             let data = document.data();
-            return data;
+            if(decider.includes('eligibleForIncentive')) return {firstName: data['399159511'], lastName: data['996038075'], email: data['869588347'], token: data['token']}
+            else return data;
         });
     }
     catch(error){
