@@ -5,8 +5,6 @@ const submit = async (res, data, uid) => {
     const { lockedAttributes } = require('./shared');
     lockedAttributes.forEach(atr => delete data[atr]);
     
-    const hotProperties = Object.keys(data).filter(k => k.indexOf("state") === 0);
-    hotProperties.forEach(key => delete data[key]);
     const { retrieveUserProfile } = require('./firestore');
     const userProfile = (await retrieveUserProfile(uid))[0];
     const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
