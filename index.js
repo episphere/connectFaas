@@ -2,8 +2,8 @@ const { validate, validateToken, getKey, validateSiteUsers, validateUserSession,
 const { recruitSubmit, getParticipants, identifyParticipant, participantData, getUserProfile } = require('./utils/submission');
 const { getQuestionnaire } = require('./utils/questionnaire');
 const { getSiteDetails, submitParticipantsData, updateParticipantData } = require('./utils/sites');
-const { setHeaders, deleteDocuments } = require('./utils/shared');
-const { subscribeToNotification, retrieveNotifications } = require('./utils/notifications');
+const { deleteDocuments } = require('./utils/shared');
+const { subscribeToNotification, retrieveNotifications, notificationHandler } = require('./utils/notifications');
 const { uploadHealthRecords } = require('./utils/upload');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
@@ -60,17 +60,4 @@ exports.biospecimen = biospecimenAPIs;
 
 // exports.encrypt = encryptAsymmetric;
 
-exports.sendEmailNotification = (req, res) => {
-    setHeaders(res);
-    const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey('');
-    const msg = {
-        to: 'bhaumik55231@gmail.com',
-        from: 'connect@example.com',
-        subject: 'Thanks for participating in Connect Cohort Study',
-        text: 'Thanks for participating in Connect Cohort Study',
-        html: '<strong>Connect Support Team</strong>',
-      };
-    sgMail.send(msg);
-    res.status(200).json({code:200, message: 'ok'})
-}
+exports.sendEmailNotification = notificationHandler

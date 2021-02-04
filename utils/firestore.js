@@ -1226,6 +1226,33 @@ const getNumBoxesShipped = async (institute, body) => {
     return result;
 }
 
+const getNotificationSpecifications = async (notificationType) => {
+    try {
+        const snapshot = await db.collection('notificationSpecifications').where("notificationType", "array-contains", notificationType).get();
+        return snapshot.docs.map(document => {
+            return document.data();
+        });
+    } catch (error) {
+        return new Error(error)
+    }
+}
+
+const retrieveParticipantsByStatus = async (conditions) => {
+    try {
+        let query = await db.collection('participants')
+        for(let obj in conditions) {
+            query = query.where(obj, '==', conditions[obj]);
+        }
+        const participants = await query.get();
+        return participants.docs.map(document => {
+            let data = document.data();
+            return data;
+        });
+    } catch (error) {
+        return new Error(error)
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -1283,5 +1310,7 @@ module.exports = {
     incrementCounter,
     decrementCounter,
     updateParticipantRecord,
-    retrieveParticipantsEligibleForIncentives
+    retrieveParticipantsEligibleForIncentives,
+    getNotificationSpecifications,
+    retrieveParticipantsByStatus
 }
