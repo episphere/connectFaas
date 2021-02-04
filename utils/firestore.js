@@ -370,27 +370,6 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page) =>
                                     .limit(limit)
                                     .get();
         }
-        if(decider.includes('eligibleForIncentive')) {
-            if(siteCode.indexOf(809703864) !== -1) siteCode.splice(siteCode.indexOf(809703864), 1)
-            
-            let query = db.collection('participants')
-                                    .where('827220437', operator, siteCode)
-                                    .where('821247024', '==', 197316935)
-                                    .orderBy('Connect_ID', 'asc')
-                                    .offset(offset)
-                                    .limit(limit);
-            let roundType = ''
-            if(decider === 'eligibleForIncentive.baseline') roundType = '266600170'
-            if(decider === 'eligibleForIncentive.followup1') roundType = '496823485';
-            if(decider === 'eligibleForIncentive.followup2') roundType = '650465111'
-            if(decider === 'eligibleForIncentive.followup3') roundType = '303552867';
-
-            participants = await query
-                                    .where(`${roundType}.222373868`, "==", 353358909)
-                                    .where(`${roundType}.648936790`, '==', 104430631)
-                                    .where(`${roundType}.648228701`, '==', 104430631)
-                                    .get();
-        }
         if(decider === 'stats') {
             participants = await db.collection('stats')
                                     .where('siteCode', operator, siteCode)
@@ -398,12 +377,38 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page) =>
         }
         return participants.docs.map(document => {
             let data = document.data();
-            if(decider.includes('eligibleForIncentive')) return {firstName: data['399159511'], lastName: data['996038075'], email: data['869588347'], token: data['token']}
-            else return data;
+            return data;
         });
     }
     catch(error){
         return new Error(error);
+    }
+}
+
+const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, isParent, limit, page) => {
+    try {
+        const operator = isParent ? 'in' : '==';
+        const offset = (page-1)*limit;
+        let query = db.collection('participants')
+                                .where('827220437', operator, siteCode)
+                                .where('821247024', '==', 197316935)
+                                .orderBy('Connect_ID', 'asc')
+                                .offset(offset)
+                                .limit(limit);
+    
+        const { incentiveConcepts } = require('./shared');
+        const participants = await query
+                                .where(`${incentiveConcepts[roundType]}.222373868`, "==", 353358909)
+                                .where(`${incentiveConcepts[roundType]}.648936790`, '==', 104430631)
+                                .where(`${incentiveConcepts[roundType]}.648228701`, '==', 104430631)
+                                .get();
+    
+        return participants.docs.map(document => {
+            let data = document.data();
+            return {firstName: data['399159511'], lastName: data['996038075'], email: data['869588347'], token: data['token']}
+        });
+    } catch (error) {
+        return new Error(error)
     }
 }
 
@@ -592,6 +597,18 @@ const individualParticipant = async (key, value, siteCode, isParent) => {
             });
         }
         else return false;
+    }
+    catch(error) {
+        return new Error(error);
+    }
+}
+
+const updateParticipantRecord = async (key, value, siteCode, isParent, obj) => {
+    try {
+        const operator = isParent ? 'in' : '==';
+        const snapshot = await db.collection('participants').where(key, '==', value).where('827220437', operator, siteCode).get();
+        const docId = snapshot.docs[0].id;
+        await db.collection('participants').doc(docId).update(obj);
     }
     catch(error) {
         return new Error(error);
@@ -1264,5 +1281,7 @@ module.exports = {
     getBoxesPagination,
     getNumBoxesShipped,
     incrementCounter,
-    decrementCounter
+    decrementCounter,
+    updateParticipantRecord,
+    retrieveParticipantsEligibleForIncentives
 }

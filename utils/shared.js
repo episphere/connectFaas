@@ -89,6 +89,18 @@ const incentiveFlags = {
     }
 }
 
+const incentiveConcepts = {
+    'baseline': 266600170,
+    'followup1': 496823485,
+    'followup2': 650465111,
+    'followup3': 303552867,
+    'incentiveIssued': 648936790,
+    'incentiveIssuedAt': 297462035,
+    'incentiveRefused': 648228701,
+    'incentiveRefusedAt': 438636757,
+    'caseNumber': 320023644,
+    'incentiveChosen': 945795905
+}
 
 module.exports = {
     getResponseJSON,
@@ -100,5 +112,6 @@ module.exports = {
     setHeadersDomainRestricted,
     filterData,
     incentiveFlags,
-    lockedAttributes
+    lockedAttributes,
+    incentiveConcepts
 }

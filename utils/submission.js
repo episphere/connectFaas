@@ -154,14 +154,6 @@ const getParticipants = async (req, res) => {
     else if (req.query.type === 'notSignedIn') queryType = req.query.type;
     else if (req.query.type === 'all') queryType = req.query.type;
     else if (req.query.type === 'stats') queryType = req.query.type;
-    else if (req.query.type === 'eligibleForIncentive') {
-        if(authorized.acronym !== 'NORC') return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        if(!req.query.round) return res.status(400).json(getResponseJSON('Round query parameter missing!', 400));
-        const round = req.query.round
-        if(round !== 'baseline' && round !== 'followup1' && round !== 'followup2' && round !== 'followup3') return res.status(400).json(getResponseJSON('Invalid round!', 400));
-        // Only NORC should be able to make this call
-        queryType = `${req.query.type}.${round}`
-    }
     else if (req.query.type === 'individual'){
         if (req.query.token) {
             queryType = "individual";

@@ -7,7 +7,12 @@ const { subscribeToNotification, retrieveNotifications } = require('./utils/noti
 const { uploadHealthRecords } = require('./utils/upload');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
-const { encryptAsymmetric } = require('./utils/encrypt')
+const { encryptAsymmetric } = require('./utils/encrypt');
+const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive')
+
+exports.incentiveCompleted = incentiveCompleted
+
+exports.participantsEligibleForIncentive = eligibleForIncentive;
 
 exports.validate = validate;
 
