@@ -76,30 +76,38 @@ const notificationHandler = async (req, res) => {
     const specifications = await getNotificationSpecifications('email');
     for(let obj of specifications) {
         const conditions = obj.conditions;
-        console.log(conditions)
+        const messageBody = obj.message.body;
+        const messageSubject = obj.message.subject;
+        const emailField = obj.emailField;
+        const phoneField = obj.phoneField;
+        const showdown  = require('showdown');
+        const converter = new showdown.Converter();
+        const html = converter.makeHtml(messageBody);
+
         const { retrieveParticipantsByStatus } = require('./firestore');
-        console.log(await retrieveParticipantsByStatus(conditions))
+        const participantData = await retrieveParticipantsByStatus(conditions);
+        for( let participant of participantData) {
+            if(participant[emailField]) sendEmail(participant[emailField], messageSubject, html);
+        }
     }
     return res.status(200).json({code:200, message: 'ok'})
-    
-    
-    
-    // const sgMail = require('@sendgrid/mail');
-    // sgMail.setApiKey('');
-    // const msg = {
-    //     to: 'bhaumik7230@gmail.com',
-    //     from: 'bhaumik55231@gmail.com',
-    //     subject: 'Thanks for participating in Connect Cohort Study',
-    //     text: 'Thanks for participating in Connect Cohort Study',
-    //     html: '<strong>Connect Support Team</strong></br></br>',
-    // };
-    // sgMail.send(msg).then(() => {
-    //     console.log('Email sent')
-    // })
-    // .catch((error) => {
-    //     console.error(error)
-    // });
-    
+}
+
+const sendEmail = (emailTo, messageSubject, html) => {
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey('');
+    const msg = {
+        to: emailTo,
+        from: 'bhaumik55231@gmail.com',
+        subject: messageSubject,
+        html: html,
+    };
+    sgMail.send(msg).then(() => {
+        console.log('Email sent to '+emailTo)
+    })
+    .catch((error) => {
+        console.error(error)
+    });
 }
 
 module.exports = {
