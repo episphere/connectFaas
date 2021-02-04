@@ -1253,6 +1253,24 @@ const retrieveParticipantsByStatus = async (conditions) => {
     }
 }
 
+const notificationAlreadySent = async (token, notificationSpecificationsID) => {
+    try {
+        const snapshot = await db.collection('notifications').where('token', '==', token).where('notificationSpecificationsID', '==', notificationSpecificationsID).get()
+        if(snapshot.size === 0) return false
+        else true;
+    } catch (error) {
+        new Error(error)
+    }
+}
+
+const storeNotifications = async payload => {
+    try {
+        await db.collection('notifications').add(payload);
+    } catch (error) {
+        return new Error(error)
+    }
+}
+
 module.exports = {
     validateKey,
     authorizeToken,
@@ -1312,5 +1330,7 @@ module.exports = {
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
     getNotificationSpecifications,
-    retrieveParticipantsByStatus
+    retrieveParticipantsByStatus,
+    notificationAlreadySent,
+    storeNotifications
 }

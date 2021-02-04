@@ -73,21 +73,62 @@ const retrieveNotifications = async (req, res) => {
 const notificationHandler = async (req, res) => {
     setHeaders(res);
     const { getNotificationSpecifications } = require('./firestore');
-    const specifications = await getNotificationSpecifications('email');
+    const notificationType = 'email';
+    const specifications = await getNotificationSpecifications(notificationType);
     for(let obj of specifications) {
+        const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;
         const messageBody = obj.message.body;
         const messageSubject = obj.message.subject;
         const emailField = obj.emailField;
+        const firstNameField = obj.firstNameField;
         const phoneField = obj.phoneField;
+        const primaryField = obj.primaryField;
+        const day = obj.time.day;
+        const hour = obj.time.hour;
+        const minute = obj.time.minute;
+
         const showdown  = require('showdown');
         const converter = new showdown.Converter();
-        const html = converter.makeHtml(messageBody);
+        let html = converter.makeHtml(messageBody);
+        const uuid = require('uuid');
+
 
         const { retrieveParticipantsByStatus } = require('./firestore');
         const participantData = await retrieveParticipantsByStatus(conditions);
         for( let participant of participantData) {
-            if(participant[emailField]) sendEmail(participant[emailField], messageSubject, html);
+            if(participant[emailField]) {
+
+                let d = new Date(participant[primaryField]);
+                d.setDate(d.getDate() + day);
+                d.setHours(d.getHours() + hour);
+                d.setMinutes(d.getMinutes() + minute);
+                
+                const currentDate = new Date();
+                let reminder = {
+                    notificationSpecificationsID,
+                    id: uuid(),
+                    notificationType,
+                    email: participant[emailField],
+                    notification : {
+                        title: messageSubject,
+                        body: html,
+                        time: new Date().toISOString()
+                    },
+                    token: participant.token,
+                    uid: participant.state.uid
+                }
+
+                // Check if similar notifications has already been sent
+                const { notificationAlreadySent } = require('./firestore');
+                const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
+                if(sent === false && d <= currentDate) {
+                    const { storeNotifications } = require('./firestore');
+                    await storeNotifications(reminder)
+                    html = html.replace('<firstName>', participant[firstNameField]);
+                    sendEmail(participant[emailField], messageSubject, html);
+                }
+            }
         }
     }
     return res.status(200).json({code:200, message: 'ok'})
@@ -95,7 +136,7 @@ const notificationHandler = async (req, res) => {
 
 const sendEmail = (emailTo, messageSubject, html) => {
     const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey('');
+    sgMail.setApiKey('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');
     const msg = {
         to: emailTo,
         from: 'bhaumik55231@gmail.com',
