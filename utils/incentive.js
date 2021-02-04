@@ -45,7 +45,6 @@ const incentiveCompleted = async (req, res) => {
             const { incentiveConcepts } = require('./shared');
             const roundConcept = incentiveConcepts[round];
             let obj = {};
-            
             if(data[i].incentiveIssued) {
                 obj[`${roundConcept}.${incentiveConcepts['caseNumber']}`] = caseNumber;
                 if(data[i].incentiveChosen) obj[`${roundConcept}.${incentiveConcepts['incentiveChosen']}`] = data[i].incentiveChosen;
@@ -56,7 +55,7 @@ const incentiveCompleted = async (req, res) => {
                 obj[`${roundConcept}.${incentiveConcepts['caseNumber']}`] = caseNumber;
                 if(data[i].incentiveChosen) obj[`${roundConcept}.${incentiveConcepts['incentiveChosen']}`] = data[i].incentiveChosen;
                 obj[`${roundConcept}.${incentiveConcepts['incentiveRefused']}`] = data[i].incentiveRefused ? 353358909 : 104430631;
-                if(data[i].incetiveRefusedAt) obj[`${roundConcept}.${incentiveConcepts['incetiveRefusedAt']}`] = data[i].incetiveRefusedAt;
+                if(data[i].incentiveRefusedAt) obj[`${roundConcept}.${incentiveConcepts['incentiveRefusedAt']}`] = data[i].incentiveRefusedAt;
             }
             const { updateParticipantRecord } = require(`./firestore`);
             await updateParticipantRecord('token', token, siteCodes, isParent, obj);
