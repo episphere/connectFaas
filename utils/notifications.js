@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeadersDomainRestricted, setHeaders } = require('./shared');
+const { getResponseJSON, setHeadersDomainRestricted } = require('./shared');
 
 const subscribeToNotification = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -70,15 +70,7 @@ const retrieveNotifications = async (req, res) => {
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
 }
 
-const notificationHandler = async (req, res) => {
-    setHeaders(res);
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-
+const notificationHandler = async (event, context) => {
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
     const specifications = await getNotificationSpecifications(notificationType);
@@ -138,7 +130,7 @@ const notificationHandler = async (req, res) => {
             }
         }
     }
-    return res.status(200).json({code:200, message: 'ok'})
+    return true;
 }
 
 const sendEmail = (emailTo, messageSubject, html) => {
