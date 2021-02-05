@@ -72,6 +72,13 @@ const retrieveNotifications = async (req, res) => {
 
 const notificationHandler = async (req, res) => {
     setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+    
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
     const specifications = await getNotificationSpecifications(notificationType);

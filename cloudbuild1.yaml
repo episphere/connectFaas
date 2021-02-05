@@ -9,3 +9,5 @@ steps:
   args: ['functions', 'deploy', 'updateParticipantData', '--trigger-http', '--runtime=nodejs10', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'incentiveCompleted', '--trigger-http', '--runtime=nodejs10', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'sendEmailNotification', '--trigger-http', '--runtime=nodejs10', '--timeout=240s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
