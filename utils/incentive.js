@@ -49,13 +49,13 @@ const incentiveCompleted = async (req, res) => {
                 obj[`${roundConcept}.${incentiveConcepts['caseNumber']}`] = caseNumber;
                 if(data[i].incentiveChosen) obj[`${roundConcept}.${incentiveConcepts['incentiveChosen']}`] = data[i].incentiveChosen;
                 obj[`${roundConcept}.${incentiveConcepts['incentiveIssued']}`] = data[i].incentiveIssued ? 353358909 : 104430631;
-                if(data[i].incentiveIssuedAt) obj[`${roundConcept}.${incentiveConcepts['incentiveIssuedAt']}`] = data[i].incentiveIssuedAt;
+                obj[`${roundConcept}.${incentiveConcepts['incentiveIssuedAt']}`] = new Date().toISOString();
             }
             else if (data[i].incentiveRefused) {
                 obj[`${roundConcept}.${incentiveConcepts['caseNumber']}`] = caseNumber;
                 if(data[i].incentiveChosen) obj[`${roundConcept}.${incentiveConcepts['incentiveChosen']}`] = data[i].incentiveChosen;
                 obj[`${roundConcept}.${incentiveConcepts['incentiveRefused']}`] = data[i].incentiveRefused ? 353358909 : 104430631;
-                if(data[i].incentiveRefusedAt) obj[`${roundConcept}.${incentiveConcepts['incentiveRefusedAt']}`] = data[i].incentiveRefusedAt;
+                obj[`${roundConcept}.${incentiveConcepts['incentiveRefusedAt']}`] = new Date().toISOString();
             }
             const { updateParticipantRecord } = require(`./firestore`);
             await updateParticipantRecord('token', token, siteCodes, isParent, obj);
