@@ -102,6 +102,7 @@ const eligibleForIncentive = async (req, res) => {
     if(!req.query.round) return res.status(400).json(getResponseJSON('Round query parameter missing!', 400));
     const round = req.query.round
     if(round !== 'baseline' && round !== 'followup1' && round !== 'followup2' && round !== 'followup3') return res.status(400).json(getResponseJSON('Invalid round!', 400));
+    if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
     const limit = req.query.limit ? parseInt(req.query.limit) : 500;
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const { retrieveParticipantsEligibleForIncentives } = require('./firestore');
