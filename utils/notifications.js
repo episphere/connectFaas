@@ -78,7 +78,7 @@ const notificationHandler = async (req, res) => {
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
-    
+
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
     const specifications = await getNotificationSpecifications(notificationType);
@@ -143,7 +143,7 @@ const notificationHandler = async (req, res) => {
 
 const sendEmail = (emailTo, messageSubject, html) => {
     const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey('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');
+    sgMail.setApiKey(process.env.sg_email);
     const msg = {
         to: emailTo,
         from: 'bhaumik55231@gmail.com',
