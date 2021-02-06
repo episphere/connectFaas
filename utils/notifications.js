@@ -110,28 +110,27 @@ const notificationHandler = async (req, res) => {
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
                 d.setMinutes(d.getMinutes() + minute);
-                
+                const body = html.replace('<firstName>', participant[firstNameField]);
                 const currentDate = new Date();
-
+                let reminder = {
+                    notificationSpecificationsID,
+                    id: uuid(),
+                    notificationType,
+                    email: participant[emailField],
+                    notification : {
+                        title: messageSubject,
+                        body: body,
+                        time: new Date().toISOString()
+                    },
+                    token: participant.token,
+                    uid: participant.state.uid
+                }
                 // Check if similar notifications has already been sent
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
+                
                 if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
-                    const body = html.replace('<firstName>', participant[firstNameField]);
-                    let reminder = {
-                        notificationSpecificationsID,
-                        id: uuid(),
-                        notificationType,
-                        email: participant[emailField],
-                        notification : {
-                            title: messageSubject,
-                            body: body,
-                            time: new Date().toISOString()
-                        },
-                        token: participant.token,
-                        uid: participant.state.uid
-                    }
                     await storeNotifications(reminder)
                     sendEmail(participant[emailField], messageSubject, body);
                 }
