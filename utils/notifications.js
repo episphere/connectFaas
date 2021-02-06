@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeadersDomainRestricted } = require('./shared');
+const { getResponseJSON, setHeadersDomainRestricted, setHeaders } = require('./shared');
 
 const subscribeToNotification = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -70,7 +70,15 @@ const retrieveNotifications = async (req, res) => {
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
 }
 
-const notificationHandler = async (event, context) => {
+const notificationHandler = async (req, res) => {
+    // setHeaders(res);
+
+    // if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    // if(req.method !== 'GET') {
+    //     return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    // }
+
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
     const specifications = await getNotificationSpecifications(notificationType);
@@ -89,7 +97,7 @@ const notificationHandler = async (event, context) => {
 
         const showdown  = require('showdown');
         const converter = new showdown.Converter();
-        let html = converter.makeHtml(messageBody);
+        const html = converter.makeHtml(messageBody);
         const uuid = require('uuid');
 
 
@@ -104,32 +112,33 @@ const notificationHandler = async (event, context) => {
                 d.setMinutes(d.getMinutes() + minute);
                 
                 const currentDate = new Date();
-                let reminder = {
-                    notificationSpecificationsID,
-                    id: uuid(),
-                    notificationType,
-                    email: participant[emailField],
-                    notification : {
-                        title: messageSubject,
-                        body: html,
-                        time: new Date().toISOString()
-                    },
-                    token: participant.token,
-                    uid: participant.state.uid
-                }
 
                 // Check if similar notifications has already been sent
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
                 if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
+                    const body = html.replace('<firstName>', participant[firstNameField]);
+                    let reminder = {
+                        notificationSpecificationsID,
+                        id: uuid(),
+                        notificationType,
+                        email: participant[emailField],
+                        notification : {
+                            title: messageSubject,
+                            body: body,
+                            time: new Date().toISOString()
+                        },
+                        token: participant.token,
+                        uid: participant.state.uid
+                    }
                     await storeNotifications(reminder)
-                    html = html.replace('<firstName>', participant[firstNameField]);
-                    sendEmail(participant[emailField], messageSubject, html);
+                    sendEmail(participant[emailField], messageSubject, body);
                 }
             }
         }
     }
+    // return res.status(200).json({code:200, message: 'ok'})
     return true;
 }
 
