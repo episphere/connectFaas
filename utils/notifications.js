@@ -71,8 +71,7 @@ const retrieveNotifications = async (req, res) => {
 }
 
 const notificationHandler = async (message, context) => {
-    const messageBody = message.data ? Buffer.from(message.data, 'base64').toString() : null;
-    console.log(messageBody)
+    const notificationCategory = message.data ? Buffer.from(message.data, 'base64').toString() : null;
     // setHeaders(res);
 
     // if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -83,7 +82,7 @@ const notificationHandler = async (message, context) => {
 
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
-    const specifications = await getNotificationSpecifications(notificationType);
+    const specifications = await getNotificationSpecifications(notificationType, notificationCategory);
     for(let obj of specifications) {
         const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;

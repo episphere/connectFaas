@@ -1226,9 +1226,11 @@ const getNumBoxesShipped = async (institute, body) => {
     return result;
 }
 
-const getNotificationSpecifications = async (notificationType) => {
+const getNotificationSpecifications = async (notificationType, notificationCategory) => {
     try {
-        const snapshot = await db.collection('notificationSpecifications').where("notificationType", "array-contains", notificationType).get();
+        let snapshot = db.collection('notificationSpecifications').where("notificationType", "array-contains", notificationType);
+        if(notificationCategory) snapshot = snapshot.where('category', '==', notificationCategory);
+        snapshot = await snapshot.get();
         return snapshot.docs.map(document => {
             return document.data();
         });
