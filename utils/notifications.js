@@ -70,9 +70,9 @@ const retrieveNotifications = async (req, res) => {
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
 }
 
-const notificationHandler = async (req, res) => {
-    console.log(JSON.stringify(req))
-    console.log(JSON.stringify(res.resource))
+const notificationHandler = async (message, context) => {
+    const messageBody = message.data ? Buffer.from(message.data, 'base64').toString() : null;
+    console.log(messageBody)
     // setHeaders(res);
 
     // if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
