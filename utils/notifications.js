@@ -72,7 +72,7 @@ const retrieveNotifications = async (req, res) => {
 
 const notificationHandler = async (req, res) => {
     console.log(JSON.stringify(req))
-    console.log(JSON.stringify(res))
+    console.log(JSON.stringify(res.resource))
     // setHeaders(res);
 
     // if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
