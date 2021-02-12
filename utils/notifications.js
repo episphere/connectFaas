@@ -71,7 +71,12 @@ const retrieveNotifications = async (req, res) => {
 }
 
 const notificationHandler = async (message, context) => {
-    const notificationCategory = message.data ? Buffer.from(message.data, 'base64').toString() : null;
+    const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().split(',') : null;
+    const notificationCategory = publishedMessage[0];
+    let limit = parseInt(publishedMessage[1]);
+    let offset = parseInt(publishedMessage[2]);
+    console.log(limit);
+    console.log(offset);
     // setHeaders(res);
 
     // if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -83,6 +88,7 @@ const notificationHandler = async (message, context) => {
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
     const specifications = await getNotificationSpecifications(notificationType, notificationCategory);
+    let specCounter = 0;
     for(let obj of specifications) {
         const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;
@@ -101,12 +107,11 @@ const notificationHandler = async (message, context) => {
         const html = converter.makeHtml(messageBody);
         const uuid = require('uuid');
 
-
         const { retrieveParticipantsByStatus } = require('./firestore');
-        const participantData = await retrieveParticipantsByStatus(conditions);
+        const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
+        let participantCounter = 0;
         for( let participant of participantData) {
             if(participant[emailField]) {
-
                 let d = new Date(participant[primaryField]);
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
@@ -126,20 +131,34 @@ const notificationHandler = async (message, context) => {
                     token: participant.token,
                     uid: participant.state.uid
                 }
-                // Check if similar notifications has already been sent
+                // Check if same notifications has already been sent
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
                 
                 if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
-                    await storeNotifications(reminder)
-                    sendEmail(participant[emailField], messageSubject, body);
+                    // sendEmail(participant[emailField], messageSubject, body);
+                    // await storeNotifications(reminder);
                 }
             }
+            if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
+                const PubSub = require('@google-cloud/pubsub');
+                const pubSubClient = new PubSub();
+                const dataBuffer = Buffer.from(`${notificationCategory},${limit+2},${offset+2}`);
+                try {
+                    const messageId = await pubSubClient.topic('connect-notifications').publisher().publish(dataBuffer);
+                    console.log(`Message ${messageId} published.`);
+                } catch (error) {
+                    console.error(`Received error while publishing: ${error.message}`);
+                }
+
+            }
+            participantCounter++;
         }
+        specCounter++;
     }
-    // return res.status(200).json({code:200, message: 'ok'})
     return true;
+    // return res.status(200).json({code:200, message: 'ok'})
 }
 
 const sendEmail = (emailTo, messageSubject, html) => {

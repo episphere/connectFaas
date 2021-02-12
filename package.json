@@ -20,6 +20,7 @@
     "@google-cloud/firestore": "^2.6.1",
     "@google-cloud/functions-framework": "^1.7.1",
     "@google-cloud/kms": "^2.3.0",
+    "@google-cloud/pubsub": "^2.8.0",
     "@google-cloud/storage": "^5.7.0",
     "@sendgrid/mail": "^6.5.5",
     "box-node-sdk": "^1.34.3",

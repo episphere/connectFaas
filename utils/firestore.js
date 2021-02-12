@@ -1239,9 +1239,11 @@ const getNotificationSpecifications = async (notificationType, notificationCateg
     }
 }
 
-const retrieveParticipantsByStatus = async (conditions) => {
+const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
     try {
-        let query = await db.collection('participants')
+        let query = db.collection('participants')
+                                .limit(limit)
+                                .offset(offset);
         for(let obj in conditions) {
             query = query.where(obj, '==', conditions[obj]);
         }
