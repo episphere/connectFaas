@@ -142,11 +142,11 @@ const notificationHandler = async (message, context) => {
                 }
             }
             if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
-                const PubSub = require('@google-cloud/pubsub');
+                const {PubSub} = require('@google-cloud/pubsub');
                 const pubSubClient = new PubSub();
                 const dataBuffer = Buffer.from(`${notificationCategory},${limit+2},${offset+2}`);
                 try {
-                    const messageId = await pubSubClient.topic('connect-notifications').publisher().publish(dataBuffer);
+                    const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
                     console.log(`Message ${messageId} published.`);
                 } catch (error) {
                     console.error(`Received error while publishing: ${error.message}`);
