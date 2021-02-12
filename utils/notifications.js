@@ -137,14 +137,14 @@ const notificationHandler = async (message, context) => {
                 
                 if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
-                    // sendEmail(participant[emailField], messageSubject, body);
-                    // await storeNotifications(reminder);
+                    sendEmail(participant[emailField], messageSubject, body);
+                    await storeNotifications(reminder);
                 }
             }
             if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
                 const {PubSub} = require('@google-cloud/pubsub');
                 const pubSubClient = new PubSub();
-                const dataBuffer = Buffer.from(`${notificationCategory},${limit+2},${offset+2}`);
+                const dataBuffer = Buffer.from(`${notificationCategory},${limit},${offset+limit}`);
                 try {
                     const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
                     console.log(`Message ${messageId} published.`);
