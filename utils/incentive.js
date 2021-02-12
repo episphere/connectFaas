@@ -98,7 +98,7 @@ const eligibleForIncentive = async (req, res) => {
     let siteCodes = await getChildrens(ID);
     const isParent = siteCodes ? true : false;
     siteCodes = siteCodes ? siteCodes : authorized.siteCode;
-    if(siteCodes.indexOf(809703864) !== -1) siteCodes.splice(siteCodes.indexOf(809703864), 1)
+    if(siteCodes.indexOf(809703864) !== -1) siteCodes.splice(siteCodes.indexOf(809703864), 1) // remove UoC from Sites list
     if(!req.query.round) return res.status(400).json(getResponseJSON('Round query parameter missing!', 400));
     const round = req.query.round
     if(round !== 'baseline' && round !== 'followup1' && round !== 'followup2' && round !== 'followup3') return res.status(400).json(getResponseJSON('Invalid round!', 400));

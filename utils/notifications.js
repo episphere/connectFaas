@@ -86,8 +86,8 @@ const notificationHandler = async (message, context) => {
     for(let obj of specifications) {
         const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;
-        const messageBody = obj.message.body;
-        const messageSubject = obj.message.subject;
+        const messageBody = obj[notificationType].body;
+        const messageSubject = obj[notificationType].subject;
         const emailField = obj.emailField;
         const firstNameField = obj.firstNameField;
         const phoneField = obj.phoneField;

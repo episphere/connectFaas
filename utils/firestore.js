@@ -103,7 +103,7 @@ const verifyPin = async (pin) => {
 
 const validateIDToken = async (idToken) => {
     try{
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const decodedToken = await admin.auth().verifyIdToken(idToken, true);
         return decodedToken;
     }
     catch(error){
