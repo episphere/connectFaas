@@ -444,10 +444,7 @@ const verifyIdentity = async (type, token) => {
             const docId = snapShot.docs[0].id;
             let data = {};
             let concept;
-            if(type === 'verified') {
-                concept = 197316935;
-                data['512820379'] = 486306141; // Make this participant active recruit
-            }
+            if(type === 'verified') concept = 197316935;
             if(type === 'cannotbeverified') concept = 219863910;
             if(type === 'duplicate') concept = 922622075;
             if(type === 'outreachtimedout') concept = 160161595;

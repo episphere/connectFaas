@@ -151,7 +151,6 @@ const notificationHandler = async (message, context) => {
                 } catch (error) {
                     console.error(`Received error while publishing: ${error.message}`);
                 }
-
             }
             participantCounter++;
         }
@@ -159,6 +158,16 @@ const notificationHandler = async (message, context) => {
     }
     return true;
     // return res.status(200).json({code:200, message: 'ok'})
+}
+
+const sendSms = (phoneNo) => {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const client = require('twilio')(accountSid, authToken);
+
+    client.messages
+        .create({body: 'Thanks for joining Connect', from: process.env.from_phone_no, to: phoneNo})
+        .then(message => console.log(message.sid));
 }
 
 const sendEmail = (emailTo, messageSubject, html) => {

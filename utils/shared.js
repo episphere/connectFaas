@@ -53,7 +53,7 @@ const deleteDocuments = (req, res) => {
     res.status(200).json(getResponseJSON('Success!', 200))
 }
 
-const lockedAttributes = ["state", "token", "pin", "Connect_ID", "821247024", "230663853", "266600170", "496823485", "650465111", "303552867"] // Read only access after initialization
+const lockedAttributes = ["state", "token", "pin", "Connect_ID", "821247024", "230663853", "266600170", "496823485", "650465111", "303552867", "512820379"] // Read only access after initialization
 
 const filterData = async (queries, siteCodes, isParent) => {
     console.log(queries);
