@@ -260,23 +260,17 @@ const getToken = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+    const {APIAuthorization} = require('./shared');
+    const authorized = await APIAuthorization(req);
+    if(authorized instanceof Error){
+        return res.status(401).json(getResponseJSON(authorized.message, 500));
+    }
+
+    if(!authorized){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(`getParticipantToken ${new Date()} - ${siteKey}`)
-    const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey);
-    if(authorize instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
-    }
-
-    if(!authorize){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    const siteCode = authorize.siteCode;
-    console.log(`siteCode ${siteCode} and siteName ${authorize.siteName}`);
+    const siteCode = authorized.siteCode;
 
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
     if(req.body.data.length > 0){

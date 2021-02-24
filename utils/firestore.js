@@ -271,6 +271,23 @@ const validateSiteUser = async (siteKey) => {
     }
 }
 
+const validateSiteSAEmail = async (saEmail) => {
+    try{
+        const snapShot = await db.collection('siteDetails')
+                                .where('saEmail', '==', saEmail)
+                                .get();
+        if(snapShot.size === 1) {
+            return snapShot.docs[0].data();
+        }
+        else{
+            return false;
+        };
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 const getParticipantData = async (token, siteCode) => {
     try{
         const snapShot = await db.collection('participants')
@@ -1333,5 +1350,6 @@ module.exports = {
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,
-    storeNotifications
+    storeNotifications,
+    validateSiteSAEmail
 }

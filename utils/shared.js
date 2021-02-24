@@ -102,6 +102,58 @@ const incentiveConcepts = {
     'incentiveChosen': 945795905
 }
 
+const APIAuthorization = async (req) => {
+    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+        return false;
+    }
+    try {
+        let authorized = false;
+        const access_token = req.headers.authorization.replace('Bearer ','').trim();
+        
+        // Remove this after SSO and SA authorization are implemented.
+        const { validateSiteUser } = require(`./firestore`);
+        authorized = await validateSiteUser(access_token);
+        if(authorized instanceof Error){
+            return new Error(authorized)
+        }
+        if(authorized) return authorized;
+
+        const {google} = require("googleapis");
+        const OAuth2 = google.auth.OAuth2;
+        const oauth2Client = new OAuth2();
+        oauth2Client.setCredentials({access_token: access_token});
+        const oauth2 = await google.oauth2({
+            auth: oauth2Client,
+            version: 'v2'
+        });
+
+        const response = await oauth2.userinfo.get();
+        if(response.status === 200) {
+            const saEmail = response.data.email;
+            console.log('API accessed by ' +saEmail);
+            const { validateSiteSAEmail } = require(`./firestore`);
+            authorized = await validateSiteSAEmail(saEmail);
+            if(authorized instanceof Error){
+                return new Error(authorized)
+            }
+            if(authorized) return authorized;
+        }
+        return false;
+    } catch (error) {
+        if(error.code === 401) return false;
+        else return new Error(error)
+    }
+}
+
+const isParentEntity = async (authorized) => {
+    const ID = authorized.id;
+    const { getChildrens } = require('./firestore');
+    let siteCodes = await getChildrens(ID);
+    let isParent = siteCodes ? true : false;
+    siteCodes = siteCodes ? siteCodes : authorized.siteCode;
+    return {isParent, siteCodes};
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -113,5 +165,7 @@ module.exports = {
     filterData,
     incentiveFlags,
     lockedAttributes,
-    incentiveConcepts
+    incentiveConcepts,
+    APIAuthorization,
+    isParentEntity
 }
