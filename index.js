@@ -46,6 +46,8 @@ exports.deleteDocuments = deleteDocuments;
 
 exports.app = connectApp;
 
+// Biospecimen
+
 exports.biospecimen = biospecimenAPIs;
 
 // exports.encrypt = encryptAsymmetric;

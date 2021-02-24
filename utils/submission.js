@@ -286,35 +286,10 @@ const getUserProfile = async (req, res) => {
     }
 }
 
-const uploadFile = (req, res) => {
-    setHeaders(res);
-    const Busboy = require('busboy');
-    const bb = new Busboy({ headers: req.headers });
-
-    bb.on('field', (fieldname, val, fieldnameTruncated, valTruncated, encoding, mimetype) => {
-        console.log(`${fieldname} --> ${val}`)
-    });
-
-    bb.on('file', async (fieldname, file, filename, encoding, mimetype) => {
-        console.log(file._readableState.buffer);
-        const { storeFile } = require('./firestore');
-        await storeFile(file._readableState.buffer, filename, encoding, mimetype);
-    });
-
-    bb.on('finish', () => {
-        res.end();
-    });
-
-    bb.end(req.rawBody);
-
-    return res.status(200).json('Success!');
-}
-
 module.exports = {
     submit,
     recruitSubmit,
     getParticipants,
     identifyParticipant,
-    getUserProfile,
-    uploadFile
+    getUserProfile
 }

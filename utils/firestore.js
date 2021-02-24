@@ -10,62 +10,8 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-
 const storage = admin.storage();
 
-const validateKey = async (access_token) => {
-    try{
-        const response = await db.collection('apiKeys').where('access_token', '==', access_token).get();
-        
-        if(response.size !== 0) {
-            const expiry = response.docs[0].data().expires.toDate().getTime();
-            const currentTime = new Date().getTime();
-            if(expiry > currentTime){
-                return true;
-            }
-            else{
-                return false;
-            }
-        }
-        else{
-            return false;
-        }
-    }
-    catch(error){
-        return new Error(error);
-    } 
-}
-
-const authorizeToken = async(token) => {
-    try{
-        const response = await db.collection('apiKeys').where('token', '==', token).get();
-        if(response.size > 0) {
-            for(let doc of response.docs){
-                const expiry = doc.data().expires.toDate().getTime();
-                const currentTime = new Date().getTime();
-                
-                if(expiry > currentTime){
-                    return {access_token: doc.data().access_token, expires: doc.data().expires.toDate()}
-                }
-                else{
-                    const uuid = require('uuid');
-                    const data = {
-                        access_token: uuid(),
-                        expires: new Date(Date.now() + 3600000)
-                    }
-                    await db.collection('apiKeys').doc(doc.id).update(data);
-                    return data;
-                }
-            }
-        }
-        else{
-            return false;
-        }
-    }
-    catch(error){
-        return new Error(error);
-    }
-}
 
 const verifyToken = async (token) => {
     try{
@@ -174,17 +120,6 @@ const updateResponse = async (data, uid) => {
     }
 }
 
-const storeAPIKeyandToken = async (data) => {
-    try{
-        await db.collection('apiKeys').add(data);
-        await db.collection('participants').add({state: {token: data.token, verified: false, identityClaimDeniedBySite: false}});
-        return true;
-    }
-    catch(error){
-        return new Error(error);
-    }
-}
-
 const incrementCounter = async (field, siteCode) => {
     const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
     let obj = {}
@@ -217,36 +152,6 @@ const recordExists = async (studyId, siteCode) => {
         }
         else {
             return false;
-        }
-    }
-    catch(error){
-        return new Error(error);
-    }
-}
-
-const pinExists = async (pin) => {
-    try{
-        const snapShot = await db.collection('participants').where('pin', '==', pin).get();
-        if(snapShot.size === 1){
-            return snapShot.docs[0].data();
-        }
-        else {
-            return false;
-        }
-    }
-    catch(error){
-        return new Error(error);
-    }
-}
-
-const retrieveQuestionnaire = async (source) => {
-    try{
-        const data = await db.collection('questionnaire').where('source', '==', source).orderBy('sequence').get();
-        if(data.size !== 0){
-            return data.docs.map(document => document.data());
-        }
-        else{
-            return new Error(`No questions found for source ${source}`);
         }
     }
     catch(error){
@@ -482,26 +387,6 @@ const verifyIdentity = async (type, token, siteCode) => {
     }
 }
 
-const retrieveSiteDetails = async () => {
-    try{
-        const snapShot = await db.collection('siteDetails').orderBy('siteCode').get();
-        if(snapShot.size > 0){
-            return snapShot.docs.map(document => {
-                return {
-                    siteName: document.data().siteName,
-                    siteCode: document.data().siteCode
-                }
-            });
-        }
-        else{
-            return new Error('No site details found!')
-        }
-    }
-    catch(error){
-        return new Error(error)
-    }
-}
-
 const retrieveUserProfile = async (uid) => {
     try{
         const snapShot = await db.collection('participants')
@@ -545,37 +430,6 @@ const retrieveToken = async (access_token) => {
     }
     catch(error){
         return new Error(error);
-    }
-}
-
-const storeFile = async (subission, filename, encoding, mimetype) => {
-    try{
-        const uuid = require('uuid');
-        const myBucket = gcs.bucket('connect-cohort-submisssions-dev');
-        const gcsname = Date.now() + `${uuid()}_${filename}`;
-        const file = myBucket.file(gcsname);
-        await file.save(subission);
-        // const stream = file.createWriteStream({
-        //     metadata: {
-        //         contentType: mimetype
-        //     },
-        //     resumable: false
-        // });
-
-        // stream.on('error', (err) => {
-        //     req.file.cloudStorageError = err;
-        //     next(err);
-        // });
-    
-        // stream.on('finish', () => {
-        //     req.file.cloudStorageObject = gcsname;
-        //     next();
-        // });
-    
-        // stream.end(subission);
-    }
-    catch(error){
-        return new Error(error)
     }
 }
 
@@ -675,15 +529,6 @@ const retrieveUserNotifications = async (uid) => {
     else {
         return false;
     }
-}
-
-const getGCSbucket = () => {
-    const bucket = storage.bucket('connect4cancer');
-    return bucket;
-}
-
-const storeUploadedFileDetails = async (obj) => {
-    await db.collection('fileuploads').add(obj);
 }
 
 const filterDB = async (queries, siteCode, isParent) => {
@@ -1291,20 +1136,13 @@ const storeNotifications = async payload => {
 }
 
 module.exports = {
-    validateKey,
-    authorizeToken,
-    storeAPIKeyandToken,
-    retrieveQuestionnaire,
     updateResponse,
     validateSiteUser,
     retrieveParticipants,
     verifyIdentity,
-    retrieveSiteDetails,
     retrieveUserProfile,
-    storeFile,
     createRecord,
     recordExists,
-    pinExists,
     validateIDToken,
     verifyToken,
     verifyPin,
@@ -1320,8 +1158,6 @@ module.exports = {
     storeNotificationTokens,
     notificationTokenExists,
     retrieveUserNotifications,
-    getGCSbucket,
-    storeUploadedFileDetails,
     filterDB,
     validateBiospecimenUser,
     biospecimenUserList,
