@@ -81,38 +81,6 @@ const recruitSubmit = async (req, res) => {
     return submit(res, data, decodedToken.uid);
 }
 
-const participantData = async (req, res) => {
-    setHeaders(res);
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
-    if(req.method !== 'POST') {
-        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-    }
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(`participantData ${new Date()} ${siteKey}`)
-    const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey);
-
-    if(authorize instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
-    }
-
-    if(!authorize){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    
-    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
-
-    if(Object.keys(req.body.data).length > 0){
-        
-    }
-}
-
 const getParticipants = async (req, res) => {
     setHeaders(res);
 
@@ -122,27 +90,22 @@ const getParticipants = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+    const { APIAuthorization } = require('./shared');
+    const authorized = await APIAuthorization(req);
+    if(authorized instanceof Error){
+        return res.status(500).json(getResponseJSON(authorized.message, 500));
+    }
+
+    if(!authorized){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(`getParticipants ${new Date()} ${siteKey} ${JSON.stringify(req.query)}`);
-    const { validateSiteUser } = require('./firestore');
-    const authorized = await validateSiteUser(siteKey);
-    if(authorized === false) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-
-    if(req.query.type === false) return res.status(404).json(getResponseJSON('Resource not found', 404));
+    const { isParentEntity } = require('./shared');
+    const {isParent, siteCodes} = await isParentEntity(authorized)
+    if(!req.query.type) return res.status(404).json(getResponseJSON('Resource not found', 404));
 
     if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
 
-    // Get all data if it's a parent
-    const ID = authorized.id;
-    const { getChildrens } = require('./firestore');
-    let siteCodes = await getChildrens(ID);
-    let isParent = siteCodes ? true : false;
-    siteCodes = siteCodes ? siteCodes : authorized.siteCode;
-    console.log('Site codes: - '+siteCodes);
     let queryType = '';
     const limit = req.query.limit ? parseInt(req.query.limit) : 500;
     const page = req.query.page ? parseInt(req.query.page) : 1;
@@ -164,13 +127,13 @@ const getParticipants = async (req, res) => {
             if(response) return res.status(200).json({data: response, code: 200})
         }
         else{
-            return res.status(404).json(getResponseJSON('Bad request', 400));
+            return res.status(400).json(getResponseJSON('Bad request', 400));
         }
     }
     else if(req.query.type === 'filter') {
         const queries = req.query;
         delete queries.type;
-        if(Object.keys(queries).length === 0) return res.status(404).json(getResponseJSON('Please include parameters to filter data.', 400));
+        if(Object.keys(queries).length === 0) return res.status(400).json(getResponseJSON('Please include parameters to filter data.', 400));
         const { filterData } = require('./shared');
         const result = await filterData(queries, siteCodes, isParent);
         if(result instanceof Error){
@@ -200,10 +163,6 @@ const identifyParticipant = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only GET or POST requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
     if(req.method === 'GET') {
         if(!req.query.type || req.query.type.trim() === ""){
             return res.status(401).json(getResponseJSON('Type is missing!', 401));
@@ -212,25 +171,26 @@ const identifyParticipant = async (req, res) => {
         if(!req.query.token || req.query.token.trim() === ""){
             return res.status(401).json(getResponseJSON('Token is missing!', 401));
         }
-        const siteKey = req.headers.authorization.replace('Bearer','').trim();
-        const { validateSiteUser } = require(`./firestore`);
-        const authorize = await validateSiteUser(siteKey);
-        if(authorize instanceof Error){
-            return res.status(500).json(getResponseJSON(authorize.message, 500));
+        
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(500).json(getResponseJSON(authorized.message, 500));
         }
 
-        if(!authorize){
+        if(!authorized){
             return res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
+        const siteCode = authorized.siteCode;
 
         const type = req.query.type;
         const token = req.query.token;
-        console.log(`identifyParticipant ${new Date()} siteKey: -${siteKey}, type: - ${type} and participant token: - ${token}`);
+        console.log(`identifyParticipant type: - ${type} and participant token: - ${token}`);
 
         if(type !== 'verified' && type !== 'cannotbeverified' && type !== 'duplicate' && type !== 'outreachtimedout') return res.status(400).json(getResponseJSON('Type not supported!', 400));
         
         const { verifyIdentity } = require('./firestore');
-        const identify = await verifyIdentity(type, token);
+        const identify = await verifyIdentity(type, token, siteCode);
         if(identify instanceof Error){
             return res.status(500).json(getResponseJSON(identify.message, 500));
         }
@@ -241,16 +201,18 @@ const identifyParticipant = async (req, res) => {
     }
     else if (req.method === 'POST') {
         if(req.body.data === undefined || req.body.data.length === 0 || req.body.data.length > 499) return res.status(400).json(getResponseJSON('Bad request!', 400));
-        const siteKey = req.headers.authorization.replace('Bearer','').trim();
-        const { validateSiteUser } = require(`./firestore`);
-        const authorize = await validateSiteUser(siteKey);
-        if(authorize instanceof Error){
-            return res.status(500).json(getResponseJSON(authorize.message, 500));
+        
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(500).json(getResponseJSON(authorized.message, 500));
         }
 
-        if(!authorize){
+        if(!authorized){
             return res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
+        const siteCode = authorized.siteCode;
+
         const dataArray = req.body.data;
         console.log(dataArray)
         let error = false;
@@ -262,7 +224,7 @@ const identifyParticipant = async (req, res) => {
 
                 if(type === 'verified' || type === 'cannotbeverified' || type === 'duplicate' || type === 'outreachtimedout') {
                     const { verifyIdentity } = require('./firestore');
-                    const identified = await verifyIdentity(type, token);
+                    const identified = await verifyIdentity(type, token, siteCode);
                     if(identified instanceof Error) {
                         error = true;
                         errorMsgs.push({token, message: identified.message, code: 404});
@@ -354,6 +316,5 @@ module.exports = {
     getParticipants,
     identifyParticipant,
     getUserProfile,
-    uploadFile,
-    participantData
+    uploadFile
 }

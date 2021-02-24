@@ -452,10 +452,11 @@ const getChildrens = async (ID) => {
     }
 }
 
-const verifyIdentity = async (type, token) => {
+const verifyIdentity = async (type, token, siteCode) => {
     try{
         const snapShot = await db.collection('participants')
                                 .where('token', '==', token)
+                                .where('827220437', '==', siteCode)
                                 .get();
         if(snapShot.size > 0){
             const docId = snapShot.docs[0].id;

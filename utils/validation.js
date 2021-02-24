@@ -1,34 +1,5 @@
 const { getResponseJSON, setHeaders, setHeadersDomainRestricted, incentiveFlags } = require('./shared');
 
-const validate = async (req, res) => {
-    setHeaders(res);
-    
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
-    if(req.method === 'GET') {
-        if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-            res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        }
-        else{
-            let access_token = req.headers.authorization.replace('Bearer','').trim();
-            const { validateKey } = require(`./firestore`);
-            const authorize = await validateKey(access_token);
-            if(authorize instanceof Error){
-                res.status(500).json(getResponseJSON(authorize.message, 500));
-            }
-            if(authorize){
-                res.status(200).json(getResponseJSON('Success!', 200));
-            }
-            else{
-                res.status(401).json(getResponseJSON('Authorization failed!', 401));
-            }
-        }
-    }
-    else {
-        res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-};
-
 const generateToken = async (req, res) => {
     setHeadersDomainRestricted(req, res);
 
@@ -177,36 +148,6 @@ const validateToken = async (req, res) => {
     }
 };
 
-const getKey = async (req, res) => {
-    setHeaders(res);
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
-    if(req.method === 'GET') {
-        const expires = new Date(Date.now() + 3600000);
-        res.header('expires', expires);
-        const uuid = require('uuid');
-        const data = {
-            access_token: uuid(),
-            token: uuid(),
-            expires: expires
-        }
-        
-        const { storeAPIKeyandToken } = require('./firestore');
-        const response = await storeAPIKeyandToken(data);
-        if(response instanceof Error){
-            return res.status(500).json(getResponseJSON(response.message, 500));
-        }
-        if(response){
-            res.header('Set-Cookie', `access_token=${data.access_token}; Expires=${expires}`)
-            return res.status(200).json({access_token: data.access_token, token: data.token, code: 200});
-        }
-    }
-    else {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-};
-
 const validateSiteUsers = async (req, res) => {
     setHeaders(res);
 
@@ -216,20 +157,13 @@ const validateSiteUsers = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    const {APIAuthorization} = require('./shared');
+    const authorized = await APIAuthorization(req);
+    if(authorized instanceof Error){
+        return res.status(401).json(getResponseJSON(authorized.message, 500));
     }
 
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(`validateSiteUser ${new Date()} ${siteKey}`);
-    const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey);
-
-    if(authorize instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
-    }
-
-    if(!authorize){
+    if(!authorized){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
@@ -260,10 +194,10 @@ const getToken = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
-    const {APIAuthorization} = require('./shared');
+    const { APIAuthorization } = require('./shared');
     const authorized = await APIAuthorization(req);
     if(authorized instanceof Error){
-        return res.status(401).json(getResponseJSON(authorized.message, 500));
+        return res.status(500).json(getResponseJSON(authorized.message, 500));
     }
 
     if(!authorized){
@@ -331,46 +265,10 @@ const getToken = async (req, res) => {
     }
 }
 
-const confluence = async (req, res) => {
-    setHeaders(res);
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-
-    // if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-    //     return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    // }
-
-    // const jwt = req.headers.authorization.replace('Bearer','').trim();
-    
-    var BoxSDK = require('box-node-sdk');
-
-    var sdkConfig = require('../355526_yrxqfe8i_config.json');
-    var sdk = BoxSDK.getPreconfiguredInstance(sdkConfig);
-
-    // Get the service account client, used to create and manage app user accounts
-    // The enterprise ID is pre-populated by the JSON configuration,
-    // so you don't need to specify it here
-    // var serviceAccountClient = sdk.getAppAuthClient('enterprise');
-
-    // Get an app user client
-    var appUserClient = sdk.getAppAuthClient('user', '8277592800');
-    appUserClient.folders.get('0')
-        .then(dt => console.log(dt))
-        .catch(err => console.log(err));
-    console.log(appUserClient);
-    
-}
-
 module.exports = {
-    validate,
     generateToken,
     validateToken,
-    getKey,
     validateSiteUsers,
     validateUserSession,
-    getToken,
-    confluence
+    getToken
 }

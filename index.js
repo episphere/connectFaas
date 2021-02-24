@@ -1,56 +1,46 @@
-const { validate, validateToken, getKey, validateSiteUsers, validateUserSession, getToken, confluence, generateToken } = require('./utils/validation');
-const { recruitSubmit, getParticipants, identifyParticipant, participantData, getUserProfile } = require('./utils/submission');
-const { getQuestionnaire } = require('./utils/questionnaire');
-const { getSiteDetails, submitParticipantsData, updateParticipantData } = require('./utils/sites');
+const { validateToken, validateSiteUsers, getToken, generateToken } = require('./utils/validation');
+const { recruitSubmit, getParticipants, identifyParticipant, getUserProfile } = require('./utils/submission');
+const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
 const { deleteDocuments } = require('./utils/shared');
 const { subscribeToNotification, retrieveNotifications, notificationHandler } = require('./utils/notifications');
-const { uploadHealthRecords } = require('./utils/upload');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
 const { encryptAsymmetric } = require('./utils/encrypt');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive')
 
-exports.incentiveCompleted = incentiveCompleted
+// For NORC Incentive
+
+exports.incentiveCompleted = incentiveCompleted 
 
 exports.participantsEligibleForIncentive = eligibleForIncentive;
 
-exports.validate = validate;
+// For Sites
 
-exports.generateToken = generateToken;
+exports.getParticipantToken = getToken; // new auth done
 
-exports.validateToken = validateToken;
+exports.getParticipants = getParticipants; // new auth done
 
-exports.getParticipantToken = getToken;
+exports.validateSiteUsers = validateSiteUsers; // new auth done
 
-exports.getKey = getKey;
-
-exports.getQuestionnaire = getQuestionnaire;
-
-exports.submit = recruitSubmit;
-
-exports.getUserProfile = getUserProfile;
-
-exports.getParticipants = getParticipants;
-
-exports.validateSiteUsers = validateSiteUsers;
-
-exports.identifyParticipant = identifyParticipant;
+exports.identifyParticipant = identifyParticipant; // new auth done
 
 exports.submitParticipantsData = submitParticipantsData;
 
 exports.updateParticipantData = updateParticipantData;
 
+// For Connect App
+
+exports.generateToken = generateToken;
+
+exports.validateToken = validateToken;
+
+exports.submit = recruitSubmit;
+
+exports.getUserProfile = getUserProfile;
+
 exports.subscribeToNotification = subscribeToNotification;
 
 exports.retrieveNotifications = retrieveNotifications;
-
-exports.uploadHealthRecords = uploadHealthRecords;
-
-exports.getSiteDetails = getSiteDetails;
-
-exports.validateUserSession = validateUserSession;
-
-exports.confluence = confluence;
 
 exports.deleteDocuments = deleteDocuments;
 
