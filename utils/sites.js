@@ -8,44 +8,24 @@ const submitParticipantsData = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+    const { APIAuthorization } = require('./shared');
+    const authorized = await APIAuthorization(req);
+    if(authorized instanceof Error){
+        return res.status(500).json(getResponseJSON(authorized.message, 500));
+    }
+
+    if(!authorized){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
+    const siteCode = authorized.siteCode;
 
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    const body = req.body;
-    if(Object.keys(body).length <= 0){
-        console.log(`${siteKey} request body is empty.`)
-        return res.status(400).json(getResponseJSON('Bad request!', 400));
-    }
-    console.log(`${siteKey} ${JSON.stringify(req.body)}`);
+    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('data is undefined in request body.', 400));
+    if(req.body.data.length === undefined || req.body.data.length < 1) return res.status(400).json(getResponseJSON('data array doesn\'t have any element.', 400));
 
-    const { validateSiteUser } = require(`./firestore`);
-    const authorize = await validateSiteUser(siteKey);
+    if(req.body.data.length > 499) return res.status(400).json(getResponseJSON('More than acceptable limit of 500 records.', 400));
 
-    if(authorize instanceof Error){
-        return res.status(500).json(getResponseJSON(authorize.message, 500));
-    }
-
-    if(!authorize){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    const siteCode = authorize.siteCode;
-    if(req.body.data === undefined) {
-        console.log(`${siteKey} data is undefined in request body.`)
-        return res.status(400).json(getResponseJSON('data is undefined in request body.', 400));
-    }
-    if(req.body.data.length === undefined || req.body.data.length < 1) {
-        console.log(`${siteKey} data array doesn't have any element.`)
-        return res.status(400).json(getResponseJSON('data array doesn\'t have any element.', 400));
-    }
-
-    if(req.body.data.length > 499) {
-        console.log(`${siteKey} More than acceptable limit of 500 records.`)
-        return res.status(400).json(getResponseJSON('More than acceptable limit of 500 records.', 400));
-    }
     const data = req.body.data;
-    console.log(`${siteKey} ${JSON.stringify(data)}`);
+    console.log(`${JSON.stringify(data)}`);
     let error = false;
     let errorMsgs = [];
     for(let obj of data){
@@ -66,13 +46,13 @@ const submitParticipantsData = async (req, res) => {
                 if(Object.keys(newStateElements).length > 0) updateParticipantData(docID, newStateElements);
             }
             else {
-                console.log(`${siteKey} Invalid token ${obj.token}`)
+                console.log(`Invalid token ${obj.token}`)
                 error = true;
                 errorMsgs.push({token: participantToken, message: 'Invalid token!', code: 404});
             }
         }
         else {
-            console.log(`${siteKey} record doesn't contain any token ${JSON.stringify(obj)}`)
+            console.log(`Record doesn't contain any token ${JSON.stringify(obj)}`)
             error = true;
             errorMsgs.push({...obj, message: 'token missing!', code: 400});
         }
@@ -81,7 +61,7 @@ const submitParticipantsData = async (req, res) => {
     else return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
-const updateParticipantData = async (req, res, authorized) => {
+const updateParticipantData = async (req, res, site) => {
     setHeaders(res);
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
@@ -89,27 +69,20 @@ const updateParticipantData = async (req, res, authorized) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
     let siteCode = '';
-    if(authorized) {
-        siteCode = authorized;
+    if(site) {
+        siteCode = site;
     }
     else {
-        if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(500).json(getResponseJSON(authorized.message, 500));
+        }
+
+        if(!authorized){
             return res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
-    
-        const siteKey = req.headers.authorization.replace('Bearer','').trim();
-        
-        const { validateSiteUser } = require(`./firestore`);
-        const authorize = await validateSiteUser(siteKey);
-    
-        if(authorize instanceof Error){
-            return res.status(500).json(getResponseJSON(authorize.message, 500));
-        }
-    
-        if(!authorize){
-            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        }
-        siteCode = authorize.siteCode;
+        siteCode = authorized.siteCode;
     }
     console.log(req.body);
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
