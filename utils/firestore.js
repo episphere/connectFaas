@@ -405,7 +405,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     
         return participants.docs.map(document => {
             let data = document.data();
-            return {firstName: data['399159511'], lastName: data['996038075'], email: data['869588347'], token: data['token']}
+            return {firstName: data['399159511'], email: data['869588347'], token: data['token']}
         });
     } catch (error) {
         return new Error(error)
