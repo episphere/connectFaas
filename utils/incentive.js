@@ -9,30 +9,17 @@ const incentiveCompleted = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(`incentiveCompleted ${new Date()} ${siteKey}`)
-    if(req.body.data === undefined || req.body.data.length === 0 || req.body.data.length > 499) return res.status(400).json(getResponseJSON('Bad request!', 400));
-    const { validateSiteUser } = require(`./firestore`);
-    const authorized = await validateSiteUser(siteKey);
-    
+    const { APIAuthorization } = require('./shared');
+    const authorized = await APIAuthorization(req, true);
     if(authorized instanceof Error){
         return res.status(500).json(getResponseJSON(authorized.message, 500));
     }
-
     if(!authorized){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
-    if(authorized.acronym !== 'NORC') return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     
-    const ID = authorized.id;
-    const { getChildrens } = require('./firestore');
-    let siteCodes = await getChildrens(ID);
-    let isParent = siteCodes ? true : false;
-    siteCodes = siteCodes ? siteCodes : authorized.siteCode;
+    const { isParentEntity } = require('./shared');
+    const {isParent, siteCodes} = await isParentEntity(authorized);
 
     const data = req.body.data;
     for(let i = 0; i < data.length; i++) {
@@ -62,7 +49,6 @@ const incentiveCompleted = async (req, res) => {
         }
     }
     return res.status(200).json(getResponseJSON('Success!', 200));
-
 }
 
 const eligibleForIncentive = async (req, res) => {
@@ -74,30 +60,18 @@ const eligibleForIncentive = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    const siteKey = req.headers.authorization.replace('Bearer','').trim();
-    console.log(`eligibleForIncentive ${new Date()} ${siteKey}`)
-    
-    const { validateSiteUser } = require(`./firestore`);
-    const authorized = await validateSiteUser(siteKey);
-    
+    const { APIAuthorization } = require('./shared');
+    const authorized = await APIAuthorization(req, true);
     if(authorized instanceof Error){
         return res.status(500).json(getResponseJSON(authorized.message, 500));
     }
-
     if(!authorized){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
-    if(authorized.acronym !== 'NORC') return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     
-    const ID = authorized.id;
-    const { getChildrens } = require('./firestore');
-    let siteCodes = await getChildrens(ID);
-    const isParent = siteCodes ? true : false;
-    siteCodes = siteCodes ? siteCodes : authorized.siteCode;
+    const { isParentEntity } = require('./shared');
+    const {isParent, siteCodes} = await isParentEntity(authorized);
+
     if(siteCodes.indexOf(809703864) !== -1) siteCodes.splice(siteCodes.indexOf(809703864), 1) // remove UoC from Sites list
     if(!req.query.round) return res.status(400).json(getResponseJSON('Round query parameter missing!', 400));
     const round = req.query.round

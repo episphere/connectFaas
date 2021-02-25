@@ -102,7 +102,7 @@ const incentiveConcepts = {
     'incentiveChosen': 945795905
 }
 
-const APIAuthorization = async (req) => {
+const APIAuthorization = async (req, notAuthorized) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return false;
     }
@@ -113,6 +113,8 @@ const APIAuthorization = async (req) => {
         // Remove this after SSO and SA authorization are implemented.
         const { validateSiteUser } = require(`./firestore`);
         authorized = await validateSiteUser(access_token);
+        if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
+        if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
         if(authorized instanceof Error){
             return new Error(authorized)
         }
@@ -133,6 +135,8 @@ const APIAuthorization = async (req) => {
             console.log('API accessed by ' +saEmail);
             const { validateSiteSAEmail } = require(`./firestore`);
             authorized = await validateSiteSAEmail(saEmail);
+            if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
+            if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
             if(authorized instanceof Error){
                 return new Error(authorized)
             }

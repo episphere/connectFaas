@@ -10,9 +10,9 @@ const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive'
 
 // For NORC Incentive
 
-exports.incentiveCompleted = incentiveCompleted 
+exports.incentiveCompleted = incentiveCompleted; // new auth done
 
-exports.participantsEligibleForIncentive = eligibleForIncentive;
+exports.participantsEligibleForIncentive = eligibleForIncentive; // new auth done
 
 // For Sites
 
