@@ -53,3 +53,26 @@ exports.biospecimen = biospecimenAPIs;
 // exports.encrypt = encryptAsymmetric;
 
 exports.sendEmailNotification = notificationHandler
+
+const getAccessTokenForSA = async () => {
+    const serviceAccount = require(process.env.GCP_SA);
+
+    const scopes = ["https://www.googleapis.com/auth/userinfo.email"];
+
+    const jwtClient = new google.auth.JWT(
+        serviceAccount.client_email,
+        null,
+        serviceAccount.private_key,
+        scopes
+    );
+
+    try {
+        const tokens = await jwtClient.authorize();
+        const accessToken = tokens.access_token;
+        if(accessToken === null) return console.log("Provided service account does not have permission to generate access tokens");
+        return accessToken;
+    } 
+    catch (error) {
+        console.log(error)
+    };
+}
