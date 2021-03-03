@@ -29,12 +29,9 @@ const generatePIN = () => {
 
 const randomString = () => {
     const length = 6;
-    let pinChecker = false;
-    let pin
-    while(pinChecker === false) {
-        pin = (Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1)).toUpperCase();
-        if(!pin.includes('0') && !pin.includes('O')) pinChecker = true;
-    }
+    let pin = '';
+    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+    for (let i = length; i > 0; --i) pin += chars[Math.round(Math.random() * (chars.length - 1))];
     return pin;
 }
 
