@@ -1104,8 +1104,19 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
         let query = db.collection('participants')
                                 .limit(limit)
                                 .offset(offset);
+
         for(let obj in conditions) {
-            query = query.where(obj, '==', conditions[obj]);
+            let operator = '';
+            let values = ''
+            if(conditions[obj]['equals']) {
+                values = conditions[obj]['equals'];
+                operator = '==';
+            }
+            if(conditions[obj]['notequals']) {
+                values = conditions[obj]['notequals'];
+                operator = '!=';
+            }
+            query = query.where(obj, operator, values);
         }
         const participants = await query.get();
         return participants.docs.map(document => {
