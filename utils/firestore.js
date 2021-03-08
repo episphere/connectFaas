@@ -57,6 +57,17 @@ const validateIDToken = async (idToken) => {
     }
 }
 
+const validateMultiTenantIDToken = async (idToken, tenant) => {
+    try{
+        const decodedToken = await admin.auth().tenantManager().authForTenant(tenant).verifyIdToken(idToken, true);
+        return decodedToken;
+    }
+    catch(error){
+        console.log(error)
+        return new Error(error);
+    }
+}
+
 const linkParticipanttoFirebaseUID = async (docID, uID) => {
     try{
         let data = {};
@@ -1146,6 +1157,16 @@ const storeNotifications = async payload => {
     }
 }
 
+// const readNotificationSpecifications = async () => {
+//     const snapshot = await db.collection('notificationSpecifications').get();
+//     const data = snapshot.docs.map(dt => dt.data());
+    
+//     const fs = require('fs');
+//     fs.writeFileSync(__dirname+'/notificationSpecifications.json', JSON.stringify(data));
+// }
+
+// readNotificationSpecifications();
+
 module.exports = {
     updateResponse,
     validateSiteUser,
@@ -1199,5 +1220,6 @@ module.exports = {
     retrieveParticipantsByStatus,
     notificationAlreadySent,
     storeNotifications,
-    validateSiteSAEmail
+    validateSiteSAEmail,
+    validateMultiTenantIDToken
 }

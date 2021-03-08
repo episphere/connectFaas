@@ -99,6 +99,24 @@ const incentiveConcepts = {
     'incentiveChosen': 945795905
 }
 
+const SSOValidation = async (idToken) => {
+    const tenant = decodingJWT(idToken).firebase.tenant;
+    const { validateMultiTenantIDToken } = require('./firestore');
+    const decodedToken = await validateMultiTenantIDToken(idToken, tenant);
+    console.log(decodedToken.firebase.sign_in_attributes)
+}
+
+const decodingJWT = (token) => {
+    if(token !== null || token !== undefined){
+        const base64String = token.split('.')[1];
+        const decodedValue = JSON.parse(Buffer.from(base64String, 'base64').toString('ascii'));
+        return decodedValue;
+    }
+    return null;
+}
+
+SSOValidation();
+
 const APIAuthorization = async (req, notAuthorized) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return false;
