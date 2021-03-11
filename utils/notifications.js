@@ -67,6 +67,7 @@ const retrieveNotifications = async (req, res) => {
     const uid = decodedToken.uid;
     const { retrieveUserNotifications } = require('./firestore');
     const notifications = await retrieveUserNotifications(uid);
+    console.log(notificatins);
     markAllNotificationsAsAlreadyRead(notifications.map(dt => dt.id));
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
 }
