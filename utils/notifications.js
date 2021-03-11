@@ -67,7 +67,17 @@ const retrieveNotifications = async (req, res) => {
     const uid = decodedToken.uid;
     const { retrieveUserNotifications } = require('./firestore');
     const notifications = await retrieveUserNotifications(uid);
+    markAllNotificationsAsAlreadyRead(notifications.map(dt => dt.id));
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
+}
+
+const markAllNotificationsAsAlreadyRead = (notification) => {
+    for(let id of notification) {
+        if(id) {
+            const {markNotificationAsRead} = require('./firestore');
+            markNotificationAsRead(id);
+        }
+    }
 }
 
 const notificationHandler = async (message, context) => {
@@ -129,7 +139,8 @@ const notificationHandler = async (message, context) => {
                         time: new Date().toISOString()
                     },
                     token: participant.token,
-                    uid: participant.state.uid
+                    uid: participant.state.uid,
+                    read: false
                 }
                 // Check if same notifications has already been sent
                 const { notificationAlreadySent } = require('./firestore');

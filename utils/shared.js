@@ -115,7 +115,7 @@ const decodingJWT = (token) => {
     return null;
 }
 
-SSOValidation();
+// SSOValidation();
 
 const APIAuthorization = async (req, notAuthorized) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
