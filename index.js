@@ -5,7 +5,6 @@ const { deleteDocuments } = require('./utils/shared');
 const { subscribeToNotification, retrieveNotifications, notificationHandler } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
-const { encryptAsymmetric } = require('./utils/encrypt');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive')
 
 // For NORC Incentive
@@ -49,8 +48,6 @@ exports.app = connectApp;
 // Biospecimen
 
 exports.biospecimen = biospecimenAPIs;
-
-// exports.encrypt = encryptAsymmetric;
 
 exports.sendEmailNotification = notificationHandler
 

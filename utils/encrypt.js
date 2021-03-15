@@ -3,26 +3,24 @@ const locationId = 'global';
 const keyRingId = 'test-key';
 const keyId = 'my-key';
 const versionId = '1';
-const plaintextBuffer = Buffer.from('123123121');
 
 const { KeyManagementServiceClient } = require('@google-cloud/kms');
 
 const client = new KeyManagementServiceClient();
 
-const versionName = client.cryptoKeyVersionPath(
-    projectId,
-    locationId,
-    keyRingId,
-    keyId,
-    versionId
-);
-
 const encryptAsymmetric = async () => {
+    const plaintextBuffer = Buffer.from('123123121');
     // Get public key from Cloud KMS
+    const versionName = client.cryptoKeyVersionPath(
+        projectId,
+        locationId,
+        keyRingId,
+        keyId,
+        versionId
+    );
     const [publicKey] = await client.getPublicKey({
         name: versionName,
     });
-
     const crc32c = require('fast-crc32c');
     if (publicKey.name !== versionName) {
         throw new Error('GetPublicKey: request corrupted in-transit');
@@ -39,38 +37,46 @@ const encryptAsymmetric = async () => {
         },
         plaintextBuffer
     );
-
-    console.log(`Ciphertext: ${ciphertextBuffer.toString('base64')}`);
-    // decryptAsymmetric(ciphertextBuffer.toString('base64'))
-    return ciphertextBuffer;
+    const ciphertext = ciphertextBuffer.toString('base64');
+    console.log(ciphertext)
+    return ciphertext;
 }
 
-async function decryptAsymmetric(ciphertext) {
-    const crc32c = require('fast-crc32c');
-    const ciphertextCrc32c = crc32c.calculate(ciphertext);  
-    const [decryptResponse] = await client.asymmetricDecrypt({
-      name: versionName,
-      ciphertext: ciphertext,
-      ciphertextCrc32c: {
-        value: ciphertextCrc32c,
-      },
-    });
-  
-    if (!decryptResponse.verifiedCiphertextCrc32c) {
-      throw new Error('AsymmetricDecrypt: request corrupted in-transit');
-    }
-    if (
-      crc32c.calculate(decryptResponse.plaintext) !==
-      Number(decryptResponse.plaintextCrc32c.value)
-    ) {
-      throw new Error('AsymmetricDecrypt: response corrupted in-transit');
-    }
-  
-    const plaintext = decryptResponse.plaintext.toString('utf8');
-  
-    console.log(`Plaintext: ${plaintext}`);
-    return plaintext;
-}
+// const decryptAsymmetric = async () => {
+//     try {
+//         const versionName = client.cryptoKeyVersionPath(
+//             projectId,
+//             locationId,
+//             keyRingId,
+//             keyId,
+//             versionId
+//         );
+//         const cipherTextBuffer = Buffer.from(await encryptAsymmetric(),'base64');
+//         const crc32c = require('fast-crc32c');
+//         const ciphertextCrc32c = crc32c.calculate(cipherTextBuffer);
+//         const [decryptResponse] = await client.asymmetricDecrypt({
+//             name: versionName,
+//             ciphertext: cipherTextBuffer,
+//             ciphertextCrc32c: {
+//                 value: ciphertextCrc32c,
+//             }
+//         });
+//         if (!decryptResponse.verifiedCiphertextCrc32c) {
+//             throw new Error('AsymmetricDecrypt: request corrupted in-transit');
+//         }
+//         if (crc32c.calculate(decryptResponse.plaintext) !== Number(decryptResponse.plaintextCrc32c.value)) {
+//             throw new Error('AsymmetricDecrypt: response corrupted in-transit');
+//         }
+        
+//         const plaintext = decryptResponse.plaintext.toString('utf8');
+        
+//         console.log(`Plaintext: ${plaintext}`);
+//         return plaintext;
+//     }
+//     catch (error) {
+//         console.error(error)
+//     }
+// }
 
 module.exports = {
     encryptAsymmetric
