@@ -1163,6 +1163,15 @@ const markNotificationAsRead = async (id) => {
     await db.collection('notifications').doc(docId).update({read: true});
 }
 
+const storeSSN = async (data) => {
+    await db.collection('ssn').add(data);
+}
+
+const getTokenForParticipant = async (uid) => {
+    const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
+    return snapshot.docs[0].data()['token'];
+}
+
 // const readNotificationSpecifications = async () => {
 //     const snapshot = await db.collection('notificationSpecifications').get();
 //     const data = snapshot.docs.map(dt => dt.data());
@@ -1228,5 +1237,7 @@ module.exports = {
     storeNotifications,
     validateSiteSAEmail,
     validateMultiTenantIDToken,
-    markNotificationAsRead
+    markNotificationAsRead,
+    storeSSN,
+    getTokenForParticipant
 }

@@ -8,8 +8,8 @@ const { KeyManagementServiceClient } = require('@google-cloud/kms');
 
 const client = new KeyManagementServiceClient();
 
-const encryptAsymmetric = async () => {
-    const plaintextBuffer = Buffer.from('123123121');
+const encryptAsymmetric = async (data = '123123121') => {
+    const plaintextBuffer = Buffer.from(data);
     // Get public key from Cloud KMS
     const versionName = client.cryptoKeyVersionPath(
         projectId,
@@ -38,7 +38,6 @@ const encryptAsymmetric = async () => {
         plaintextBuffer
     );
     const ciphertext = ciphertextBuffer.toString('base64');
-    console.log(ciphertext)
     return ciphertext;
 }
 
@@ -70,7 +69,6 @@ const encryptAsymmetric = async () => {
         
 //         const plaintext = decryptResponse.plaintext.toString('utf8');
         
-//         console.log(`Plaintext: ${plaintext}`);
 //         return plaintext;
 //     }
 //     catch (error) {
