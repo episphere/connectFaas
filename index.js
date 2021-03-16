@@ -5,7 +5,8 @@ const { deleteDocuments } = require('./utils/shared');
 const { subscribeToNotification, retrieveNotifications, notificationHandler } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
-const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive')
+const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive');
+const { stats } = require('./utils/stats');
 
 // For NORC Incentive
 
@@ -26,6 +27,8 @@ exports.identifyParticipant = identifyParticipant; // new auth done
 exports.submitParticipantsData = submitParticipantsData; // new auth done
 
 exports.updateParticipantData = updateParticipantData; // new auth done
+
+exports.stats = stats;
 
 // For Connect App
 

@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/episphere/connectFaas#readme",
   "dependencies": {
+    "@google-cloud/bigquery": "^5.5.0",
     "@google-cloud/firestore": "^2.6.1",
     "@google-cloud/functions-framework": "^1.7.1",
     "@google-cloud/kms": "^2.3.0",
