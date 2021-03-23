@@ -120,9 +120,17 @@ const SSOConfig = {
         group: 'https://federation.nih.gov/person/Groups',
         firstName: 'https://federation.nih.gov/person/FirstName',
         lastName: 'https://federation.nih.gov/person/LastName',
+        email: 'https://federation.nih.gov/person/Mail',
         siteManagerUser: 'CN=connect-study-manager-user',
         biospecimenUser: 'CN=connect-biospecimen-user',
         helpDeskUser: 'CN=connect-help-desk-user'
+    },
+    'UCM-SSO-tovai': {
+        group: '1.3.6.1.4.1.9902.2.1.41',
+        firstName: 'urn:oid:0.9.2342.19200300.100.1.1',
+        email: 'urn:oid:1.3.6.1.4.1.5923.1.1.1.6',
+        siteManagerUser: 'uc:org:bsd:applications:connect:connect-study-manager-user:authorized',
+        biospecimenUser: 'uc:org:bsd:applications:connect:connect-biospecimen-user:authorized'
     }
 }
 
@@ -147,7 +155,7 @@ const decodingJWT = (token) => {
 // SSOValidation();
 
 const APIAuthorization = async (req, notAuthorized) => {
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
+    if(!req.headers.authorization || req.headers.authorization.trim() === "" || req.headers.authorization.replace('Bearer ','').trim() === ""){
         return false;
     }
     try {

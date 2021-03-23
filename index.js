@@ -28,7 +28,7 @@ exports.submitParticipantsData = submitParticipantsData; // new auth done
 
 exports.updateParticipantData = updateParticipantData; // new auth done
 
-exports.stats = stats;
+exports.stats = stats; // new auth done
 
 // For Connect App
 
