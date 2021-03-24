@@ -42,6 +42,7 @@ const submitParticipantsData = async (req, res) => {
                         newStateElements[`state.${key}`] = obj[key];
                     }
                 }
+                // Make participant active if Study invitaion is sent out.
                 const { updateParticipantData } = require('./firestore');
                 if(Object.keys(newStateElements).length > 0) updateParticipantData(docID, newStateElements);
             }

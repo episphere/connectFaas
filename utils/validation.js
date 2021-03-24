@@ -42,7 +42,7 @@ const generateToken = async (req, res) => {
         919254129: 104430631,
         230663853: 353358909,
         token: uuid(),
-        512820379: 854703046,
+        512820379: 854703046, // defaulting it as passive
         471593703: (new Date()).toISOString(),
         ...incentiveFlags
     }
@@ -238,7 +238,7 @@ const getToken = async (req, res) => {
                         state: { studyId },
                         821247024: 875007964,
                         827220437: siteCode,
-                        512820379: 486306141,
+                        512820379: 180583933, // default recruit type not-active
                         699625233: 104430631,
                         919254129: 104430631,
                         230663853: 104430631,
