@@ -30,26 +30,11 @@ const submit = async (res, data, uid) => {
         data[`${moduleSSN}.598680838`] = new Date().toISOString();
         delete data[`${moduleSSN}.SOCIALSECUR2`]
     }
-
-    const { retrieveUserProfile } = require('./firestore');
-    const userProfile = (await retrieveUserProfile(uid))[0];
-    const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
     
-    if(data[827220437]) { 
-        const { incrementCounter } = require('./firestore');
-        await incrementCounter(`${recruitType}.count`, data[827220437]);
-        await incrementCounter(`passive.signedIn`, data[827220437]);
-    }
-    if(data[699625233]) {
-        // get site code from participant record.
-        const { incrementCounter } = require('./firestore');
-        if(userProfile[827220437]) await incrementCounter(`${recruitType}.profileSubmitted`, userProfile[827220437]);
-    }
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
         // generate Connect_ID
         const { generateConnectID } = require('./shared');
-        const { sanityCheckConnectID, incrementCounter } = require('./firestore');
-        if(userProfile[827220437]) await incrementCounter(`${recruitType}.consented`, userProfile[827220437]);
+        const { sanityCheckConnectID } = require('./firestore');
         let boo = false;
         let Connect_ID;
         while(boo === false){

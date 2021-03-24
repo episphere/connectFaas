@@ -99,13 +99,6 @@ const validateToken = async (req, res) => {
         if(isValid){ // add uid to participant record
             const { linkParticipanttoFirebaseUID } = require('./firestore');
             linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
-            const { retrieveUserProfile } = require('./firestore');
-            const userProfile = (await retrieveUserProfile(decodedToken.uid))[0];
-            const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
-            if(userProfile[230663853]) { // Signed In
-                const { incrementCounter } = require('./firestore');
-                await incrementCounter(`${recruitType}.signedIn`, userProfile[827220437]);
-            }
             return res.status(200).json(getResponseJSON('Ok', 200));
         }
         else{ // Invalid token
@@ -130,13 +123,6 @@ const validateToken = async (req, res) => {
             }
             const { updateResponse } = require('./firestore');
             updateResponse(obj, decodedToken.uid);
-            const { retrieveUserProfile } = require('./firestore');
-            const userProfile = (await retrieveUserProfile(decodedToken.uid))[0];
-            const recruitType = userProfile['512820379'] === 486306141 ? 'active' : 'passive';
-            if(userProfile[230663853]) { // Signed In
-                const { incrementCounter } = require('./firestore');
-                await incrementCounter(`${recruitType}.signedIn`, userProfile[827220437]);
-            }
             return res.status(200).json(getResponseJSON('Ok', 200));
         }
         else{ // Invalid pin
@@ -246,10 +232,8 @@ const getToken = async (req, res) => {
                         token: uuid(),
                         ...incentiveFlags
                     }
-                    const { createRecord, incrementCounter } = require('./firestore');
+                    const { createRecord } = require('./firestore');
                     await createRecord(obj);
-                    const recruitType = obj['512820379'] === 486306141 ? 'active' : 'passive';
-                    await incrementCounter(`${recruitType}.count`, siteCode);
                     responseArray.push({studyId: studyId, token: obj.token, pin: obj.pin});
                 } else {
                     response.pin ? responseArray.push({studyId: studyId, token: response.token, pin: response.pin}) : responseArray.push({studyId: studyId, token: response.token});
