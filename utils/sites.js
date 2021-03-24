@@ -43,6 +43,10 @@ const submitParticipantsData = async (req, res) => {
                     }
                 }
                 // Make participant active if Study invitaion is sent out.
+                if(obj['934298480']) { // If age deidentified data is provided make this participant Active
+                    newStateElements['512820379'] = 486306141;
+                    newStateElements['471593703'] = new Date().toISOString();
+                }
                 const { updateParticipantData } = require('./firestore');
                 if(Object.keys(newStateElements).length > 0) updateParticipantData(docID, newStateElements);
             }
