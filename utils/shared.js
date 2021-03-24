@@ -103,7 +103,7 @@ const incentiveFlags = {
 }
 
 const moduleConcepts = {
-    "moduleSSN": D_716117818
+    "moduleSSN": 'D_716117818'
 }
 
 const incentiveConcepts = {
