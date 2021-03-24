@@ -102,6 +102,10 @@ const incentiveFlags = {
     }
 }
 
+const moduleConcepts = {
+    "moduleSSN": D_716117818
+}
+
 const incentiveConcepts = {
     'baseline': 266600170,
     'followup1': 496823485,
@@ -221,6 +225,7 @@ module.exports = {
     filterData,
     incentiveFlags,
     lockedAttributes,
+    moduleConcepts,
     incentiveConcepts,
     APIAuthorization,
     isParentEntity

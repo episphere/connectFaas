@@ -4,30 +4,31 @@ const submit = async (res, data, uid) => {
     // Remove locked attributes.
     const { lockedAttributes } = require('./shared');
     lockedAttributes.forEach(atr => delete data[atr]);
-    
-    if(data['D_716117818.SOCIALSECUR1']) { // SSN 9 digits
+    const {moduleConcepts} = require('./shared');
+    const moduleSSN = moduleConcepts.moduleSSN;
+    if(data[`${moduleSSN}.SOCIALSECUR1`]) { // SSN 9 digits
         const ssnObj = {};
         const { encryptAsymmetric } = require('./encrypt');
         const { getTokenForParticipant, storeSSN } = require('./firestore');
-        ssnObj[447051482] = await encryptAsymmetric(data['D_716117818.SOCIALSECUR1'].replace(/-/g, ''));
+        ssnObj[447051482] = await encryptAsymmetric(data[`${moduleSSN}.SOCIALSECUR1`].replace(/-/g, ''));
         ssnObj['uid'] = uid;
         ssnObj['token'] = await getTokenForParticipant(uid);
         storeSSN(ssnObj);
-        data[311580100] = 353358909;
-        data[454067894] = new Date().toISOString();
-        delete data['D_716117818.SOCIALSECUR1']
+        data[`${moduleSSN}.311580100`] = 353358909;
+        data[`${moduleSSN}.454067894`] = new Date().toISOString();
+        delete data[`${moduleSSN}.SOCIALSECUR1`]
     }
-    if(data['D_716117818.SOCIALSECUR2']) { // SSN last 4 digits
+    if(data[`${moduleSSN}.SOCIALSECUR2`]) { // SSN last 4 digits
         const ssnObj = {};
         const { encryptAsymmetric } = require('./encrypt');
         const { getTokenForParticipant, storeSSN } = require('./firestore');
-        ssnObj[920333151] = await encryptAsymmetric(data['D_716117818.SOCIALSECUR2']);
+        ssnObj[920333151] = await encryptAsymmetric(data[`${moduleSSN}.SOCIALSECUR2`]);
         ssnObj['uid'] = uid;
         ssnObj['token'] = await getTokenForParticipant(uid);
         storeSSN(ssnObj);
-        data[914639140] = 353358909;
-        data[598680838] = new Date().toISOString();
-        delete data['D_716117818.SOCIALSECUR2']
+        data[`${moduleSSN}.914639140`] = 353358909;
+        data[`${moduleSSN}.598680838`] = new Date().toISOString();
+        delete data[`${moduleSSN}.SOCIALSECUR2`]
     }
 
     const { retrieveUserProfile } = require('./firestore');
