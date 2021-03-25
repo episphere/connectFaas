@@ -1,4 +1,6 @@
 const { getResponseJSON, setHeaders } = require('./shared');
+
+
 const stats = async (req, res) => {
     setHeaders(res);
 
@@ -27,7 +29,23 @@ const stats = async (req, res) => {
     if(type === 'race') response = await getTable('participants_race_count_by_sites', isParent, siteCodes);
     if(type === 'age') response = await getTable('participants_age_range_count_by_sites', isParent, siteCodes);
     if(type === 'sex') response = await getTable('participants_sex_count_by_sites', isParent, siteCodes);
-    
+    if(type === 'metrics_denominator') response = await getTable('participants_workflow_status', isParent, siteCodes, 'metricsDenominator'); 
+
+    if(type === 'active_verification_status') response = await getTable('participants_verification_status', isParent, siteCodes, 'activeVerification');
+    if(type === 'verification_status_denominator') response = await getTable('participant_verification_status_denominator', isParent, siteCodes, 'VerificationDenominator');
+    if(type === 'passive_verification_status') response = await getTable('participants_verification_status', isParent, siteCodes, 'passiveVerification');
+
+    if(type === 'active_participant_workflow') response = await getTable('participants_workflow_status', isParent, siteCodes, 'currentWorkflow', 'active'); 
+    if(type === 'passive_participant_workflow') response = await getTable('participants_workflow_status', isParent, siteCodes, 'currentWorkflow', 'passive'); 
+    if(type === 'total_participant_workflow') response = await getTable('participants_workflow_status', isParent, siteCodes, 'totalCurrentWorkflow'); 
+
+    if(type === 'active_cummulative_workflow') response = await getTable('participants_workflow_status', isParent, siteCodes, 'cummulativeWorkflow', 'active'); 
+    if(type === 'passive_cummulative_workflow') response = await getTable('participants_workflow_status', isParent, siteCodes, 'cummulativeWorkflow', 'passive');
+    if(type === 'total_cummulative_workflow') response = await getTable('participants_workflow_status', isParent, siteCodes, 'totalCummulativeWorkflow'); 
+
+    if(type === 'active_recruits') response = await getTable('participants_active_recruits', isParent, siteCodes, 'activeRecruits');
+    if(type === 'passive_recruits') response = await getTable('participants_passive_recruits', isParent, siteCodes, 'passiveRecruits');
+
     return res.status(200).json({stats: response, code:200});
 }
 

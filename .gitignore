@@ -3,3 +3,7 @@ nih-nci-dceg-episphere-dev-70e8e321d62d.json
 355526_yrxqfe8i_config.json
 .vscode
 utils/notificationSpecifications.json
+functions
+firebase.json
+.firebaserc
+.DS_Store
