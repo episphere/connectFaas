@@ -110,7 +110,8 @@ const defaultFlags = {
     875549268: 104430631,
     948195369: 104430631,
     919254129: 104430631,
-    821247024: 875007964
+    821247024: 875007964,
+    828729648: 104430631
 }
 
 const moduleConcepts = {
@@ -239,5 +240,6 @@ module.exports = {
     moduleConcepts,
     incentiveConcepts,
     APIAuthorization,
-    isParentEntity
+    isParentEntity,
+    defaultFlags
 }
