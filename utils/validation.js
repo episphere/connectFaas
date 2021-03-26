@@ -34,17 +34,16 @@ const generateToken = async (req, res) => {
         return res.status(401).json(getResponseJSON('Account already exists', 401));
     }
     const uuid = require('uuid');
-    const { incentiveFlags } = require('./shared');
+    const { incentiveFlags, defaultFlags } = require('./shared');
     const obj = {
         state: { uid: decodedToken.uid },
-        821247024: 875007964,
         699625233: 104430631,
-        919254129: 104430631,
         230663853: 353358909,
         token: uuid(),
         512820379: 854703046, // defaulting it as passive
         471593703: (new Date()).toISOString(),
-        ...incentiveFlags
+        ...incentiveFlags,
+        ...defaultFlags
     }
     console.log(JSON.stringify(obj));
     const { createRecord } = require('./firestore');
@@ -222,15 +221,14 @@ const getToken = async (req, res) => {
                     const { incentiveFlags } = require('./shared');
                     const obj = {
                         state: { studyId },
-                        821247024: 875007964,
                         827220437: siteCode,
                         512820379: 180583933, // default recruit type not-active
                         699625233: 104430631,
-                        919254129: 104430631,
                         230663853: 104430631,
                         pin: PIN,
                         token: uuid(),
-                        ...incentiveFlags
+                        ...incentiveFlags,
+                        ...defaultFlags
                     }
                     const { createRecord } = require('./firestore');
                     await createRecord(obj);

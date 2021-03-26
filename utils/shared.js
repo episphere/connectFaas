@@ -65,7 +65,10 @@ const lockedAttributes = [
                         "598680838",
                         "454067894",
                         "914639140",
-                        "311580100"
+                        "311580100",
+                        "158291096",
+                        "875549268",
+                        "948195369"
                     ] // Read only access after initialization
 
 const filterData = async (queries, siteCodes, isParent) => {
@@ -100,6 +103,14 @@ const incentiveFlags = {
 		648228701: 104430631,
 		222373868: 104430631
     }
+}
+
+const defaultFlags = {
+    158291096: 104430631,
+    875549268: 104430631,
+    948195369: 104430631,
+    919254129: 104430631,
+    821247024: 875007964
 }
 
 const moduleConcepts = {
