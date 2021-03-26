@@ -1,4 +1,6 @@
 const { getResponseJSON, setHeaders } = require('./shared');
+
+
 const stats = async (req, res) => {
     setHeaders(res);
 
@@ -28,6 +30,12 @@ const stats = async (req, res) => {
     if(type === 'age') response = await getTable('participants_age_range_count_by_sites', isParent, siteCodes);
     if(type === 'sex') response = await getTable('participants_sex_count_by_sites', isParent, siteCodes);
     
+    if(type === 'participants_verification') response = await getTable('participants_verification_status', isParent, siteCodes);
+    if(type === 'participants_workflow') response = await getTable('participants_workflow_status', isParent, siteCodes,);
+
+    if(type === 'participants_recruits_count') response = await getTable('participants_recruits_count', isParent, siteCodes);
+
+
     return res.status(200).json({stats: response, code:200});
 }
 
