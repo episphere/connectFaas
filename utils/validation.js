@@ -217,7 +217,7 @@ const getToken = async (req, res) => {
                             boo = true;
                         }
                     }
-                    const { incentiveFlags } = require('./shared');
+                    const { incentiveFlags, defaultFlags } = require('./shared');
                     const obj = {
                         state: { studyId },
                         827220437: siteCode,
