@@ -36,7 +36,9 @@ const generateToken = async (req, res) => {
     const uuid = require('uuid');
     const { incentiveFlags, defaultFlags } = require('./shared');
     const obj = {
-        state: { uid: decodedToken.uid },
+        state: { uid: decodedToken.uid, 
+            875549268: 104430631 
+        },
         230663853: 353358909,
         token: uuid(),
         512820379: 854703046, // defaulting it as passive
@@ -219,7 +221,9 @@ const getToken = async (req, res) => {
                     }
                     const { incentiveFlags, defaultFlags } = require('./shared');
                     const obj = {
-                        state: { studyId },
+                        state: { studyId, 
+                            875549268: 104430631 
+                        },
                         827220437: siteCode,
                         512820379: 180583933, // default recruit type not-active
                         230663853: 104430631,
