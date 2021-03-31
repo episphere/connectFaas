@@ -7,3 +7,5 @@ functions
 firebase.json
 .firebaserc
 .DS_Store
+firebase-debug.log
+ui-debug.log
