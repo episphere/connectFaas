@@ -27,7 +27,7 @@ const stats = async (req, res) => {
     const { getTable } = require('./bigquery');
     let response
     if(type === 'race') response = await getTable('participants_race_count_by_sites', isParent, siteCodes);
-    if(type === 'age') response = await getTable('participants_age_range_count_by_sites', isParent, siteCodes);
+    if(type === 'age') response = await getTable('participant_birthYear_by_siteCode', isParent, siteCodes );
     if(type === 'sex') response = await getTable('participants_sex_count_by_sites', isParent, siteCodes);
 
     if(type === 'participants_verification') response = await getTable('participants_verification_status', isParent, siteCodes);
