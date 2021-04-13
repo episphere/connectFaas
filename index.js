@@ -7,6 +7,7 @@ const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive');
 const { stats } = require('./utils/stats');
+const { dashboard } = require('./utils/dashboard');
 
 // For NORC Incentive
 
@@ -29,6 +30,8 @@ exports.submitParticipantsData = submitParticipantsData; // new auth done
 exports.updateParticipantData = updateParticipantData; // new auth done
 
 exports.stats = stats; // new auth done
+
+exports.dashboard = dashboard;
 
 // For Connect App
 
