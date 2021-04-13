@@ -20,7 +20,8 @@ const dashboard = async (req, res) => {
 
     }
     else if (api === 'getParticipants') {
-
+        const { getParticipants } = require('./submission');
+        return await getParticipants(req, res, authObj);
     }
     else if (api === 'identifyParticipant' && isParent === false) {
         const { identifyParticipant } = require('./submission');

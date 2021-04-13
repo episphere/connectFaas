@@ -92,7 +92,7 @@ const recruitSubmit = async (req, res) => {
     return submit(res, data, decodedToken.uid);
 }
 
-const getParticipants = async (req, res) => {
+const getParticipants = async (req, res, authObj) => {
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -100,19 +100,28 @@ const getParticipants = async (req, res) => {
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
-
-    const { APIAuthorization } = require('./shared');
-    const authorized = await APIAuthorization(req);
-    if(authorized instanceof Error){
-        return res.status(500).json(getResponseJSON(authorized.message, 500));
+    let obj = {};
+    if(authObj) {
+        obj = authObj;
     }
-
-    if(!authorized){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    else {
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(500).json(getResponseJSON(authorized.message, 500));
+        }
+    
+        if(!authorized){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+    
+        const { isParentEntity } = require('./shared');
+        obj = await isParentEntity(authorized);
     }
+    
+    const isParent = obj.isParent;
+    const siteCodes = obj.siteCodes;
 
-    const { isParentEntity } = require('./shared');
-    const {isParent, siteCodes} = await isParentEntity(authorized)
     if(!req.query.type) return res.status(404).json(getResponseJSON('Resource not found', 404));
 
     if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
