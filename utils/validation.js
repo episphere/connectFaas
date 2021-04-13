@@ -134,7 +134,7 @@ const validateToken = async (req, res) => {
     }
 };
 
-const validateSiteUsers = async (req, res) => {
+const validateSiteUsers = async (req, res, authObj) => {
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -142,18 +142,22 @@ const validateSiteUsers = async (req, res) => {
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
-
-    const {APIAuthorization} = require('./shared');
-    const authorized = await APIAuthorization(req);
-    if(authorized instanceof Error){
-        return res.status(401).json(getResponseJSON(authorized.message, 500));
+    if(authObj) {
+        return res.status(200).json(getResponseJSON('Ok', 200));
     }
-
-    if(!authorized){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    else {
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(401).json(getResponseJSON(authorized.message, 500));
+        }
+    
+        if(!authorized){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+    
+        return res.status(200).json(getResponseJSON('Ok', 200));
     }
-
-    return res.status(200).json(getResponseJSON('Ok', 200));
 }
 
 const validateUserSession = (req, res) => {

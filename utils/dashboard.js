@@ -17,7 +17,8 @@ const dashboard = async (req, res) => {
     const api = query.api;
 
     if(api === 'validateSiteUsers') {
-
+        const { validateSiteUsers } = require('./validation');
+        return await validateSiteUsers(req, res, authObj);
     }
     else if (api === 'getParticipants') {
         const { getParticipants } = require('./submission');
