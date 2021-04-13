@@ -165,7 +165,7 @@ const getParticipants = async (req, res) => {
     return res.status(200).json({data, code:200, limit, dataSize: data.length})
 }
 
-const identifyParticipant = async (req, res) => {
+const identifyParticipant = async (req, res, site) => {
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -182,17 +182,22 @@ const identifyParticipant = async (req, res) => {
         if(!req.query.token || req.query.token.trim() === ""){
             return res.status(401).json(getResponseJSON('Token is missing!', 401));
         }
-        
-        const { APIAuthorization } = require('./shared');
-        const authorized = await APIAuthorization(req);
-        if(authorized instanceof Error){
-            return res.status(500).json(getResponseJSON(authorized.message, 500));
+        let siteCode = '';
+        if(site) {
+            siteCode = site;
         }
-
-        if(!authorized){
-            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        else {
+            const { APIAuthorization } = require('./shared');
+            const authorized = await APIAuthorization(req);
+            if(authorized instanceof Error){
+                return res.status(500).json(getResponseJSON(authorized.message, 500));
+            }
+    
+            if(!authorized){
+                return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+            }
+            siteCode = authorized.siteCode;
         }
-        const siteCode = authorized.siteCode;
 
         const type = req.query.type;
         const token = req.query.token;
@@ -212,17 +217,22 @@ const identifyParticipant = async (req, res) => {
     }
     else if (req.method === 'POST') {
         if(req.body.data === undefined || req.body.data.length === 0 || req.body.data.length > 499) return res.status(400).json(getResponseJSON('Bad request!', 400));
-        
-        const { APIAuthorization } = require('./shared');
-        const authorized = await APIAuthorization(req);
-        if(authorized instanceof Error){
-            return res.status(500).json(getResponseJSON(authorized.message, 500));
+        let siteCode = '';
+        if(site) {
+            siteCode = site;
         }
-
-        if(!authorized){
-            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        else {
+            const { APIAuthorization } = require('./shared');
+            const authorized = await APIAuthorization(req);
+            if(authorized instanceof Error){
+                return res.status(500).json(getResponseJSON(authorized.message, 500));
+            }
+    
+            if(!authorized){
+                return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+            }
+            siteCode = authorized.siteCode;
         }
-        const siteCode = authorized.siteCode;
 
         const dataArray = req.body.data;
         console.log(dataArray)

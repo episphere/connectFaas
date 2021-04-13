@@ -1,23 +1,28 @@
 const { getResponseJSON, setHeaders } = require('./shared');
 
-const submitParticipantsData = async (req, res) => {
+const submitParticipantsData = async (req, res, site) => {
     setHeaders(res);
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
-
-    const { APIAuthorization } = require('./shared');
-    const authorized = await APIAuthorization(req);
-    if(authorized instanceof Error){
-        return res.status(500).json(getResponseJSON(authorized.message, 500));
+    let siteCode = '';
+    if(site) {
+        siteCode = site;
     }
-
-    if(!authorized){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    else {
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(500).json(getResponseJSON(authorized.message, 500));
+        }
+    
+        if(!authorized){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+        siteCode = authorized.siteCode;
     }
-    const siteCode = authorized.siteCode;
 
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('data is undefined in request body.', 400));
     if(req.body.data.length === undefined || req.body.data.length < 1) return res.status(400).json(getResponseJSON('data array doesn\'t have any element.', 400));
@@ -92,6 +97,7 @@ const updateParticipantData = async (req, res, site) => {
     console.log(req.body);
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
     const dataObj = req.body.data;
+    console.log(`${JSON.stringify(dataObj)}`);
     if(dataObj.token === undefined) return res.status(400).json(getResponseJSON('Invalid request, token missing.', 400));
     const participantToken = dataObj.token;
     const { getParticipantData } = require('./firestore');
