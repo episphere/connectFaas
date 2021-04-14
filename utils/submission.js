@@ -178,7 +178,7 @@ const identifyParticipant = async (req, res, site) => {
     if(req.method !== 'GET' && req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only GET or POST requests are accepted!', 405));
     }
-
+    const verificationStatus = ['verified', 'cannotbeverified', 'duplicate', 'outreachtimedout'];
     if(req.method === 'GET') {
         if(!req.query.type || req.query.type.trim() === ""){
             return res.status(401).json(getResponseJSON('Type is missing!', 401));
@@ -212,12 +212,12 @@ const identifyParticipant = async (req, res, site) => {
         const token = req.query.token;
         console.log(`identifyParticipant type: - ${type} and participant token: - ${token}`);
 
-        if(type !== 'verified' && type !== 'cannotbeverified' && type !== 'duplicate' && type !== 'outreachtimedout') return res.status(400).json(getResponseJSON('Type not supported!', 400));
+        if(verificationStatus.indexOf(type) === -1) return res.status(400).json(getResponseJSON('Type not supported!', 400));
         
         const { verifyIdentity } = require('./firestore');
         const identify = await verifyIdentity(type, token, siteCode);
         if(identify instanceof Error){
-            return res.status(500).json(getResponseJSON(identify.message, 500));
+            return res.status(400).json(getResponseJSON(identify.message, 400));
         }
 
         if(identify){
@@ -255,13 +255,13 @@ const identifyParticipant = async (req, res, site) => {
             if(obj.token && obj.type) { // If both token and type exists
                 const type = obj.type;
                 const token = obj.token;
-
-                if(type === 'verified' || type === 'cannotbeverified' || type === 'duplicate' || type === 'outreachtimedout') {
+                
+                if(verificationStatus.indexOf(type) !== -1) {
                     const { verifyIdentity } = require('./firestore');
                     const identified = await verifyIdentity(type, token, siteCode);
                     if(identified instanceof Error) {
                         error = true;
-                        errorMsgs.push({token, message: identified.message, code: 404});
+                        errorMsgs.push({token, message: identified.message, code: 400});
                     }
                 }
                 else {

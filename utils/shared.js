@@ -128,7 +128,14 @@ const incentiveConcepts = {
     'incentiveRefusedAt': 438636757,
     'caseNumber': 320023644,
     'incentiveChosen': 945795905
-}
+};
+
+const conceptMappings = {
+    'verified': 197316935,
+    'cannotbeverified': 219863910,
+    'duplicate': 922622075,
+    'outreachtimedout': 160161595
+};
 
 const SSOConfig = {
     'NIH-SSO-qfszp': {
@@ -253,5 +260,6 @@ module.exports = {
     APIAuthorization,
     isParentEntity,
     defaultFlags,
-    SSOValidation
+    SSOValidation,
+    conceptMappings
 }

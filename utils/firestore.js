@@ -375,12 +375,16 @@ const verifyIdentity = async (type, token, siteCode) => {
                                 .get();
         if(snapShot.size > 0){
             const docId = snapShot.docs[0].id;
+            const docData = snapShot.docs[0].data();
+            const existingVerificationStatus = docData[821247024];
+            const { conceptMappings } = require('./shared');
+            const concept = conceptMappings[type];
+            if([875007964, 160161595].indexOf(existingVerificationStatus) === -1) {
+                console.log(`Verification status cannot be changed from ${existingVerificationStatus} to ${concept}`);
+                return new Error(`Verification status cannot be changed from ${existingVerificationStatus} to ${concept}`);
+            }
+
             let data = {};
-            let concept;
-            if(type === 'verified') concept = 197316935;
-            if(type === 'cannotbeverified') concept = 219863910;
-            if(type === 'duplicate') concept = 922622075;
-            if(type === 'outreachtimedout') concept = 160161595;
 
             data['821247024'] = concept;
             data['914594314'] = new Date().toISOString();
