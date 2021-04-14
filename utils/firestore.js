@@ -63,7 +63,6 @@ const validateMultiTenantIDToken = async (idToken, tenant) => {
         return decodedToken;
     }
     catch(error){
-        console.log(error)
         return new Error(error);
     }
 }
@@ -1172,6 +1171,11 @@ const getTokenForParticipant = async (uid) => {
     return snapshot.docs[0].data()['token'];
 }
 
+const getSiteDetailsWithSignInProvider = async (signInProvider) => {
+    const snapshot = await db.collection('siteDetails').where('signInProvider', '==', signInProvider).get();
+    return snapshot.docs[0].data();
+}
+
 // const readNotificationSpecifications = async () => {
 //     const snapshot = await db.collection('notificationSpecifications').get();
 //     const data = snapshot.docs.map(dt => dt.data());
@@ -1239,5 +1243,6 @@ module.exports = {
     validateMultiTenantIDToken,
     markNotificationAsRead,
     storeSSN,
-    getTokenForParticipant
+    getTokenForParticipant,
+    getSiteDetailsWithSignInProvider
 }
