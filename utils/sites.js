@@ -1,9 +1,6 @@
 const { getResponseJSON, setHeaders } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
-    setHeaders(res);
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
@@ -12,6 +9,10 @@ const submitParticipantsData = async (req, res, site) => {
         siteCode = site;
     }
     else {
+        setHeaders(res);
+
+        if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){
@@ -72,9 +73,6 @@ const submitParticipantsData = async (req, res, site) => {
 }
 
 const updateParticipantData = async (req, res, site) => {
-    setHeaders(res);
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
@@ -83,6 +81,10 @@ const updateParticipantData = async (req, res, site) => {
         siteCode = site;
     }
     else {
+        setHeaders(res);
+        
+        if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){

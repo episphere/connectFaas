@@ -135,10 +135,6 @@ const validateToken = async (req, res) => {
 };
 
 const validateSiteUsers = async (req, res, authObj) => {
-    setHeaders(res);
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
@@ -146,6 +142,10 @@ const validateSiteUsers = async (req, res, authObj) => {
         return res.status(200).json(getResponseJSON('Ok', 200));
     }
     else {
+        setHeaders(res);
+
+        if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){
