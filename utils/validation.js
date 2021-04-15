@@ -226,7 +226,8 @@ const getToken = async (req, res) => {
                     const { incentiveFlags, defaultFlags } = require('./shared');
                     const obj = {
                         state: { studyId, 
-                            875549268: 104430631 
+                            875549268: 104430631,
+                            521025370: new Date().toISOString()
                         },
                         827220437: siteCode,
                         512820379: 180583933, // default recruit type not-active
