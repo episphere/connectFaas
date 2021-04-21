@@ -175,7 +175,7 @@ const getParticipants = async (req, res, authObj) => {
 }
 
 const identifyParticipant = async (req, res, site) => {
-    if(req.method !== 'GET' || req.method !== 'POST') {
+    if(req.method !== 'GET' && req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only GET or POST requests are accepted!', 405));
     }
     const verificationStatus = ['verified', 'cannotbeverified', 'duplicate', 'outreachtimedout'];
