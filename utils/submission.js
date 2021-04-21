@@ -93,6 +93,10 @@ const recruitSubmit = async (req, res) => {
 }
 
 const getParticipants = async (req, res, authObj) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+        
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
@@ -101,10 +105,6 @@ const getParticipants = async (req, res, authObj) => {
         obj = authObj;
     }
     else {
-        setHeaders(res);
-
-        if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-        
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){
@@ -231,10 +231,6 @@ const identifyParticipant = async (req, res, site) => {
             siteCode = site;
         }
         else {
-            setHeaders(res);
-        
-            if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-            
             const { APIAuthorization } = require('./shared');
             const authorized = await APIAuthorization(req);
             if(authorized instanceof Error){
