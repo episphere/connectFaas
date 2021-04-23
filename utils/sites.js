@@ -129,6 +129,5 @@ const updateParticipantData = async (req, res, site) => {
 
 module.exports = {
     submitParticipantsData,
-    submitNonStateParticipantsData,
     updateParticipantData
 }
