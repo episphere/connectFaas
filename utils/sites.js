@@ -124,7 +124,7 @@ const updateParticipantData = async (req, res, site) => {
     };
     const { updateParticipantData } = require('./firestore');
     updateParticipantData(docID, docData);
-    return res.status(200).json(getResponseJSON('Success!', 200));
+    return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
 }
 
 module.exports = {
