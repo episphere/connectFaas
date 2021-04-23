@@ -106,17 +106,6 @@ const incentiveFlags = {
     }
 }
 
-const defaultFlags = {
-    158291096: 104430631,
-    948195369: 104430631,
-    919254129: 104430631,
-    821247024: 875007964,
-    828729648: 104430631,
-    699625233: 104430631,
-    ...incentiveFlags,
-    ...withdrawalConcepts
-}
-
 const refusalConcepts = {
     851245875: 104430631,
 	919699172: 104430631,
@@ -161,6 +150,17 @@ const withdrawalConcepts = {
     831041022: 104430631,
     987563196: 104430631,
     ...refusalConcepts
+}
+
+const defaultFlags = {
+    158291096: 104430631,
+    948195369: 104430631,
+    919254129: 104430631,
+    821247024: 875007964,
+    828729648: 104430631,
+    699625233: 104430631,
+    ...incentiveFlags,
+    ...withdrawalConcepts
 }
 
 const moduleConcepts = {
