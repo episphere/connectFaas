@@ -34,10 +34,11 @@ const generateToken = async (req, res) => {
         return res.status(401).json(getResponseJSON('Account already exists', 401));
     }
     const uuid = require('uuid');
-    const { defaultFlags } = require('./shared');
+    const { defaultFlags, defaultStateFlags } = require('./shared');
     const obj = {
-        state: { uid: decodedToken.uid, 
-            875549268: 104430631 
+        state: { 
+            uid: decodedToken.uid, 
+            ...defaultStateFlags
         },
         230663853: 353358909,
         token: uuid(),
@@ -222,10 +223,10 @@ const getToken = async (req, res) => {
                             boo = true;
                         }
                     }
-                    const { defaultFlags } = require('./shared');
+                    const { defaultFlags, defaultStateFlags } = require('./shared');
                     const obj = {
                         state: { studyId, 
-                            875549268: 104430631,
+                            ...defaultStateFlags,
                             521025370: new Date().toISOString()
                         },
                         827220437: siteCode,
