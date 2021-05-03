@@ -194,7 +194,7 @@ const conceptMappings = {
 
 const SSOConfig = {
     'NIH-SSO-qfszp': {
-        group: 'https://federation.nih.gov/person/Groups',
+        group: 'https://federation.nih.gov/person/DLGroups',
         firstName: 'https://federation.nih.gov/person/FirstName',
         lastName: 'https://federation.nih.gov/person/LastName',
         email: 'https://federation.nih.gov/person/Mail',
@@ -222,8 +222,13 @@ const SSOValidation = async (dashboardType, idToken) => {
             return false;
         }
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
-        const requiredGroups = allGroups.filter(dt => new RegExp(SSOConfig[tenant][dashboardType], 'g').test(dt));
-        if(requiredGroups.length === 0) return false;
+        let requiredGroups = false;
+        if(typeof allGroups === 'string') requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups);
+        else {
+            const tmp = allGroups.filter(dt => new RegExp(SSOConfig[tenant][dashboardType], 'g').test(dt));
+            if(tmp.length > 0) requiredGroups = true;
+        }
+        if(!requiredGroups) return false;
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(signInProvider);
         return siteDetails;
@@ -241,7 +246,6 @@ const decodingJWT = (token) => {
     return null;
 }
 
-// SSOValidation();
 
 const APIAuthorization = async (req, notAuthorized) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === "" || req.headers.authorization.replace('Bearer ','').trim() === ""){
