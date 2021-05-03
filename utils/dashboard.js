@@ -7,8 +7,16 @@ const dashboard = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
     const access_token = req.headers.authorization.replace('Bearer ','').trim();
+    let siteDetails = '';
+    
     const { SSOValidation } = require('./shared');
-    const siteDetails = await SSOValidation('siteManagerUser', access_token);
+    siteDetails = await SSOValidation('siteManagerUser', access_token);
+
+    if(!siteDetails) { // Temporary allowing used of siteKey to validate
+        const { APIAuthorization } = require('./shared');
+        siteDetails = await APIAuthorization(req);
+    }
+
     if(!siteDetails) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     const { isParentEntity } = require('./shared');
     const authObj = await isParentEntity(siteDetails);

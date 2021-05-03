@@ -223,6 +223,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         }
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
         let requiredGroups = false;
+        console.log(decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']])
         if(typeof allGroups === 'string') requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups);
         else {
             const tmp = allGroups.filter(dt => new RegExp(SSOConfig[tenant][dashboardType], 'g').test(dt));
