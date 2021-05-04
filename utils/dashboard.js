@@ -25,7 +25,7 @@ const dashboard = async (req, res) => {
     const query = req.query;
     if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
     const api = query.api;
-
+    console.log(api);
     if(api === 'validateSiteUsers') {
         const { validateSiteUsers } = require('./validation');
         return await validateSiteUsers(req, res, authObj);
