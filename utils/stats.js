@@ -33,6 +33,7 @@ const stats = async (req, res, authObj) => {
     
     if(!req.query.type) return res.status(404).json(getResponseJSON('Resource not found', 404));
     const type = req.query.type;
+    console.log(`Stats type: ${type}`)
     const { getTable } = require('./bigquery');
     let response
     if(type === 'race') response = await getTable('participants_race_count_by_sites', isParent, siteCodes);
