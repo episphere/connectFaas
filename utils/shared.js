@@ -255,7 +255,6 @@ const decodingJWT = (token) => {
     return null;
 }
 
-
 const APIAuthorization = async (req, notAuthorized) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === "" || req.headers.authorization.replace('Bearer ','').trim() === ""){
         return false;
@@ -270,7 +269,8 @@ const APIAuthorization = async (req, notAuthorized) => {
         if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
         if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
         if(authorized instanceof Error){
-            return new Error(authorized)
+            console.log(JSON.stringify(authorized))
+            return false;
         }
         if(authorized) return authorized;
 
