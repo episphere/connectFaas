@@ -25,7 +25,6 @@
     "@google-cloud/storage": "^5.8.3",
     "@sendgrid/mail": "^6.5.5",
     "box-node-sdk": "^1.36.0",
-    "busboy": "^0.3.1",
     "crypto": "^1.0.1",
     "fast-crc32c": "^2.0.0",
     "firebase-admin": "^8.13.0",
