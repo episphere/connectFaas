@@ -1180,15 +1180,47 @@ const getSiteDetailsWithSignInProvider = async (signInProvider) => {
     return snapshot.docs[0].data();
 }
 
-// const readNotificationSpecifications = async () => {
-//     const snapshot = await db.collection('notificationSpecifications').get();
-//     const data = snapshot.docs.map(dt => dt.data());
-    
-//     const fs = require('fs');
-//     fs.writeFileSync(__dirname+'/notificationSpecifications.json', JSON.stringify(data));
-// }
+const retrieveNotificationSchemaByID = async (id) => {
+    const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
+    if(snapshot.size === 1) {
+        return snapshot.docs[0].id;
+    }
+    else return new Error('Invalid notification Id!!')
+}
 
-// readNotificationSpecifications();
+const retrieveNotificationSchemaByCategory = async (category) => {
+    let query = db.collection('notificationSpecifications')
+    if(category !== 'all') query = query.where('category', '==', category)
+    const snapshot = await query.orderBy('attempt').get();
+    if(snapshot.size === 0) return false;
+    return snapshot.docs.map(dt => dt.data());
+}
+
+const storeNewNotificationSchema = async (data) => {
+    await db.collection('notificationSpecifications').add(data);
+    return true;
+}
+
+const updateNotificationSchema = async (docID, data) => {
+    await db.collection('notificationSpecifications').doc(docID).update(data);
+    return true;
+}
+
+const getNotificationHistoryByParticipant = async (token, siteCode, isParent) => {
+    const operator = isParent ? 'in' : '==';
+    const participantRecord = await db.collection('participants')
+                                        .where('token', '==', token)
+                                        .where('827220437', operator, siteCode)
+                                        .get();
+    if(participantRecord.size === 1) {
+        const snapshot = await db.collection('notifications')
+                                    .where('token', '==', token)
+                                    .orderBy('notification.time', 'desc')
+                                    .get();
+        return snapshot.docs.map(dt => dt.data());
+    }
+    else return false;
+}
 
 module.exports = {
     updateResponse,
@@ -1248,5 +1280,10 @@ module.exports = {
     markNotificationAsRead,
     storeSSN,
     getTokenForParticipant,
-    getSiteDetailsWithSignInProvider
+    getSiteDetailsWithSignInProvider,
+    retrieveNotificationSchemaByID,
+    retrieveNotificationSchemaByCategory,
+    storeNewNotificationSchema,
+    updateNotificationSchema,
+    getNotificationHistoryByParticipant
 }

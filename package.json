@@ -19,12 +19,10 @@
   "dependencies": {
     "@google-cloud/bigquery": "^5.5.0",
     "@google-cloud/firestore": "^2.6.1",
-    "@google-cloud/functions-framework": "^1.7.1",
     "@google-cloud/kms": "^2.3.1",
     "@google-cloud/pubsub": "^2.10.0",
     "@google-cloud/storage": "^5.8.3",
     "@sendgrid/mail": "^6.5.5",
-    "box-node-sdk": "^1.36.0",
     "crypto": "^1.0.1",
     "fast-crc32c": "^2.0.0",
     "firebase-admin": "^8.13.0",
@@ -36,6 +34,7 @@
     "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "@google-cloud/functions-framework": "^1.7.1",
     "mocha": "^7.2.0",
     "supertest": "^4.0.2"
   }

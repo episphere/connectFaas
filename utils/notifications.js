@@ -200,8 +200,29 @@ const sendEmail = (emailTo, messageSubject, html) => {
     });
 }
 
+const retrieveNotificationSchema = async (req, res, authObj) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+        
+    if(req.method !== 'GET') return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+
+    if(!authObj) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+
+    if(!req.query.category) return res.status(400).json(getResponseJSON('category is missing in request parameter!', 400));
+
+    const category = req.query.category;
+    const { retrieveNotificationSchemaByCategory } = require('./firestore');
+    const data = await retrieveNotificationSchemaByCategory(category);
+    if(!data) return res.status(404).json(getResponseJSON(`Notification schema not found for given category - ${category}`, 404))
+    return res.status(200).json({data, code:200});
+}
+
 module.exports = {
     subscribeToNotification,
     retrieveNotifications,
-    notificationHandler
+    notificationHandler,
+    storeNotificationSchema,
+    retrieveNotificationSchema,
+    getParticipantNotification
 }

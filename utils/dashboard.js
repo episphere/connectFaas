@@ -16,7 +16,6 @@ const dashboard = async (req, res) => {
         const { APIAuthorization } = require('./shared');
         siteDetails = await APIAuthorization(req);
     }
-
     if(!siteDetails) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     const { isParentEntity } = require('./shared');
     const authObj = await isParentEntity(siteDetails);
@@ -49,6 +48,18 @@ const dashboard = async (req, res) => {
     else if (api === 'stats') {
         const { stats } = require('./stats');
         return await stats(req, res, authObj);
+    }
+    else if (api === 'getParticipantNotification') {
+        const { getParticipantNotification } = require('./notifications');
+        return await getParticipantNotification(req, res, authObj);
+    }
+    else if (api === 'storeNotificationSchema' && isParent && siteDetails.acronym === 'NCI') {
+        const { storeNotificationSchema } = require('./notifications');
+        return await storeNotificationSchema(req, res, authObj);
+    }
+    else if (api === 'retrieveNotificationSchema' && isParent && siteDetails.acronym === 'NCI') {
+        const { retrieveNotificationSchema } = require('./notifications');
+        return await retrieveNotificationSchema(req, res, authObj);
     }
     else return res.status(404).json(getResponseJSON('API not found!', 404));
 }
