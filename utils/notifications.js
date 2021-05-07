@@ -200,6 +200,34 @@ const sendEmail = (emailTo, messageSubject, html) => {
     });
 }
 
+const storeNotificationSchema = async (req, res, authObj) => {
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+        
+    if(req.method !== 'POST') return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+
+    if(!authObj) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+
+    if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
+
+    const data = req.body.data;
+    if(data.id) {
+        const { retrieveNotificationSchemaByID } = require('./firestore');
+        const docID = await retrieveNotificationSchemaByID(data.id);
+        if(docID instanceof Error) return res.status(404).json(getResponseJSON(docID.message, 404));
+        const { updateNotificationSchema } = require('./firestore');
+        await updateNotificationSchema(docID, data);
+    }
+    else {
+        const uuid = require('uuid')
+        data['id'] = uuid();
+        const { storeNewNotificationSchema } = require('./firestore');
+        await storeNewNotificationSchema(data);
+    }
+    return res.status(200).json(getResponseJSON('Ok', 200));
+}
+
 const retrieveNotificationSchema = async (req, res, authObj) => {
     setHeaders(res);
 
