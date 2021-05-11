@@ -111,22 +111,24 @@ const updateParticipantData = async (req, res, authObj) => {
     const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid']
     const docID = record.id;
     const docData = record.data;
-    console.log(docData)
+    let updatedData = {}
     for(let key in dataObj) {
-        if(key === 'state') continue;
         if(docData[key] === undefined) continue;
         if(primaryIdentifiers.indexOf(key) !== -1) continue;
-        docData[key] = dataObj[key];
-    }
-    if(dataObj['state']) {
-        for(let nestedKey in dataObj['state']) {
-            if(docData['state'][nestedKey] === undefined) continue;
-            if(primaryIdentifiers.indexOf(`state.${nestedKey}`) !== -1) continue;
-            docData['state'][nestedKey] = dataObj['state'][nestedKey];
+
+        if (typeof(dataObj[key]) === 'object') { // Handle nested object updates.
+            for(let nestedKey in dataObj[key]) {
+                if(docData[key][nestedKey] === undefined) continue;
+                if(primaryIdentifiers.indexOf(`${key}.${nestedKey}`) !== -1) continue;
+                updatedData[`${key}.${nestedKey}`] = {}
+                updatedData[`${key}.${nestedKey}`] = dataObj[key][nestedKey];
+            }
         }
-    };
+        else updatedData[key] = dataObj[key];
+    }
+    console.log(updatedData)
     const { updateParticipantData } = require('./firestore');
-    updateParticipantData(docID, docData);
+    updateParticipantData(docID, updatedData);
     return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
 }
 
