@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted } = require('./shared');
+const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress } = require('./shared');
 
 const submit = async (res, data, uid) => {
     // Remove locked attributes.
@@ -93,6 +93,7 @@ const recruitSubmit = async (req, res) => {
 }
 
 const getParticipants = async (req, res, authObj) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -175,6 +176,7 @@ const getParticipants = async (req, res, authObj) => {
 }
 
 const identifyParticipant = async (req, res, site) => {
+    logIPAdddress(req);
     setHeaders(res);
         
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});

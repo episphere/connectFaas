@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeadersDomainRestricted, setHeaders } = require('./shared');
+const { getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress } = require('./shared');
 
 const subscribeToNotification = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -201,6 +201,7 @@ const sendEmail = (emailTo, messageSubject, html) => {
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -229,6 +230,7 @@ const storeNotificationSchema = async (req, res, authObj) => {
 }
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -247,6 +249,7 @@ const retrieveNotificationSchema = async (req, res, authObj) => {
 }
 
 const getParticipantNotification = async (req, res, authObj) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({code: 200});

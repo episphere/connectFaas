@@ -1,6 +1,7 @@
-const { getResponseJSON, setHeaders } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});

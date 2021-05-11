@@ -1,6 +1,7 @@
-const { getResponseJSON, setHeaders } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -73,6 +74,7 @@ const submitParticipantsData = async (req, res, site) => {
 }
 
 const updateParticipantData = async (req, res, authObj) => {
+    logIPAdddress(req);
     setHeaders(res);
     
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -101,7 +103,6 @@ const updateParticipantData = async (req, res, authObj) => {
     console.log(req.body);
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
     const dataObj = req.body.data;
-    console.log(`${JSON.stringify(dataObj)}`);
     if(dataObj.token === undefined) return res.status(400).json(getResponseJSON('Invalid request, token missing.', 400));
     const participantToken = dataObj.token;
     const { getParticipantData } = require('./firestore');

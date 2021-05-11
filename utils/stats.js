@@ -1,7 +1,8 @@
-const { getResponseJSON, setHeaders } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 
 const stats = async (req, res, authObj) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});

@@ -310,6 +310,11 @@ const isParentEntity = async (authorized) => {
     return {isParent, siteCodes};
 }
 
+const logIPAdddress = (req) => {
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    console.log(ipAddress)
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -328,5 +333,6 @@ module.exports = {
     defaultFlags,
     defaultStateFlags,
     SSOValidation,
-    conceptMappings
+    conceptMappings,
+    logIPAdddress
 }

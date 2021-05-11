@@ -1,6 +1,7 @@
-const { setHeaders, getResponseJSON } = require('./shared');
+const { setHeaders, getResponseJSON, logIPAdddress } = require('./shared');
 
 const incentiveCompleted = async (req, res) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -52,6 +53,7 @@ const incentiveCompleted = async (req, res) => {
 }
 
 const eligibleForIncentive = async (req, res) => {
+    logIPAdddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
