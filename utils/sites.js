@@ -72,7 +72,7 @@ const submitParticipantsData = async (req, res, site) => {
     else return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
-const updateParticipantData = async (req, res, site) => {
+const updateParticipantData = async (req, res, authObj) => {
     setHeaders(res);
     
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -80,10 +80,8 @@ const updateParticipantData = async (req, res, site) => {
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
-    let siteCode = '';
-    if(site) {
-        siteCode = site;
-    }
+    let obj = {};
+    if (authObj) obj = authObj;
     else {
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
@@ -94,8 +92,12 @@ const updateParticipantData = async (req, res, site) => {
         if(!authorized){
             return res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
-        siteCode = authorized.siteCode;
+    
+        const { isParentEntity } = require('./shared');
+        obj = await isParentEntity(authorized);
     }
+    const isParent = obj.isParent;
+    const siteCodes = obj.siteCodes;
     console.log(req.body);
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
     const dataObj = req.body.data;
@@ -103,7 +105,7 @@ const updateParticipantData = async (req, res, site) => {
     if(dataObj.token === undefined) return res.status(400).json(getResponseJSON('Invalid request, token missing.', 400));
     const participantToken = dataObj.token;
     const { getParticipantData } = require('./firestore');
-    const record = await getParticipantData(participantToken, siteCode);
+    const record = await getParticipantData(participantToken, siteCodes, isParent);
     if(!record) return res.status(404).json(getResponseJSON(`Invalid token ${participantToken}`, 404));
     const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid']
     const docID = record.id;

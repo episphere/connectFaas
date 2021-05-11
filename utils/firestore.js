@@ -203,11 +203,12 @@ const validateSiteSAEmail = async (saEmail) => {
     }
 }
 
-const getParticipantData = async (token, siteCode) => {
+const getParticipantData = async (token, siteCode, isParent) => {
     try{
+        const operator = isParent ? 'in' : '==';
         const snapShot = await db.collection('participants')
                                 .where('token', '==', token)
-                                .where('827220437', '==', siteCode)
+                                .where('827220437', operator, siteCode)
                                 .get();
         if(snapShot.size === 1) {
             return {id: snapShot.docs[0].id, data: snapShot.docs[0].data()};
