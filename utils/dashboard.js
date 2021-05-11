@@ -43,7 +43,7 @@ const dashboard = async (req, res) => {
     }
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
-        return await updateParticipantData(req, res, siteCodes);
+        return await updateParticipantData(req, res, authObj);
     }
     else if (api === 'stats') {
         const { stats } = require('./stats');
