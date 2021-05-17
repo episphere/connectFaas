@@ -228,85 +228,87 @@ const updateParticipantData = async (id, data) => {
             .update(data);
 }
 
-const retrieveParticipants = async (siteCode, decider, isParent, limit, page) => {
+const retrieveParticipants = async (siteCode, decider, isParent, limit, page, site) => {
     try{
         const operator = isParent ? 'in' : '==';
         let participants = {};
         const offset = (page-1)*limit;
         if(decider === 'verified') {
-            participants = await db.collection('participants')
-                                    .where('827220437', operator, siteCode)
-                                    .where('821247024', '==', 197316935)
-                                    .where('699625233', '==', 353358909)
-                                    .orderBy("Connect_ID", "asc")
-                                    .limit(limit)
-                                    .offset(offset)
-                                    .get();
+            let query = db.collection('participants')
+                            .where('821247024', '==', 197316935)
+                            .where('699625233', '==', 353358909)
+                            .orderBy("Connect_ID", "asc")
+                            .limit(limit)
+                            .offset(offset)
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent
+            participants = await query.get();
         }
         if(decider === 'notyetverified') {
-            participants = await db.collection('participants')
-                                    .where('827220437', operator, siteCode)
+            let query = db.collection('participants')
                                     .where('821247024', '==', 875007964)
                                     .where('699625233', '==', 353358909)
                                     .orderBy("Connect_ID", "asc")
                                     .offset(offset)
                                     .limit(limit)
-                                    .get();
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
         }
         if(decider === 'cannotbeverified') {
-            participants = await db.collection('participants')
-                                    .where('827220437', operator, siteCode)
+            let query = db.collection('participants')
                                     .where('821247024', '==', 219863910)
                                     .where('699625233', '==', 353358909)
                                     .orderBy("Connect_ID", "asc")
                                     .offset(offset)
                                     .limit(limit)
-                                    .get();
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
         }
         if(decider === 'profileNotSubmitted') {
-            participants = await db.collection('participants')
-                                    .where('827220437', operator, siteCode)
+            let query = db.collection('participants')
                                     .where('699625233', '==', 104430631)
                                     .where('919254129', '==', 353358909)
                                     .orderBy("821247024", "asc")
                                     .offset(offset)
                                     .limit(limit)
-                                    .get()
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
         }
         if(decider === 'consentNotSubmitted') {
-            participants = await db.collection('participants')
-                                    .where('827220437', operator, siteCode)
+            let query = db.collection('participants')
                                     .where('699625233', '==', 104430631)
                                     .where('919254129', '==', 104430631)
                                     .where('230663853', '==', 353358909)
                                     .orderBy("821247024", "asc")
                                     .offset(offset)
                                     .limit(limit)
-                                    .get()
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
         }
         if(decider === 'notSignedIn') {
-            participants = await db.collection('participants')
-                                    .where('827220437', operator, siteCode)
+            let query = db.collection('participants')
                                     .where('699625233', '==', 104430631)
                                     .where('919254129', '==', 104430631)
                                     .where('230663853', '==', 104430631)
                                     .orderBy("821247024", "asc")
                                     .offset(offset)
                                     .limit(limit)
-                                    .get()
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
         }
         if(decider === 'all') {
-            participants = await db.collection('participants')
-                                    .where('827220437', operator, siteCode)
+            let query = db.collection('participants')
                                     .orderBy("821247024", "asc")
                                     .offset(offset)
                                     .limit(limit)
-                                    .get();
-        }
-        if(decider === 'stats') {
-            participants = await db.collection('stats')
-                                    .where('siteCode', operator, siteCode)
-                                    .get();
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
         }
         return participants.docs.map(document => {
             let data = document.data();

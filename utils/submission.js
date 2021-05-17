@@ -130,14 +130,13 @@ const getParticipants = async (req, res, authObj) => {
     let queryType = '';
     const limit = req.query.limit ? parseInt(req.query.limit) : 500;
     const page = req.query.page ? parseInt(req.query.page) : 1;
-    if(req.query.type === 'verified') queryType = req.query.type;
+    if (req.query.type === 'verified') queryType = req.query.type;
     else if (req.query.type === 'notyetverified') queryType = req.query.type;
     else if (req.query.type === 'cannotbeverified') queryType = req.query.type;
     else if (req.query.type === 'profileNotSubmitted') queryType = req.query.type;
     else if (req.query.type === 'consentNotSubmitted') queryType = req.query.type;
     else if (req.query.type === 'notSignedIn') queryType = req.query.type;
     else if (req.query.type === 'all') queryType = req.query.type;
-    else if (req.query.type === 'stats') queryType = req.query.type;
     else if (req.query.type === 'individual'){
         if (req.query.token) {
             queryType = "individual";
@@ -166,7 +165,9 @@ const getParticipants = async (req, res, authObj) => {
         return res.status(404).json(getResponseJSON('Resource not found', 404));
     }
     const { retrieveParticipants } = require(`./firestore`);
-    const data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page);
+    const site = isParent && req.query.siteCode ? parseInt(req.query.siteCode) : null;
+    if(site) console.log(`Retrieving data for siteCode - ${site}`)
+    const data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page, site);
 
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
