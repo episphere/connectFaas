@@ -165,7 +165,7 @@ const getParticipants = async (req, res, authObj) => {
         return res.status(404).json(getResponseJSON('Resource not found', 404));
     }
     const { retrieveParticipants } = require(`./firestore`);
-    const site = isParent && req.query.siteCode ? parseInt(req.query.siteCode) : null;
+    const site = isParent && req.query.siteCode && siteCodes.includes(parseInt(req.query.siteCode)) ? parseInt(req.query.siteCode) : null;
     if(site) console.log(`Retrieving data for siteCode - ${site}`)
     const data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page, site);
 
