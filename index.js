@@ -9,7 +9,7 @@ const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive'
 const { stats } = require('./utils/stats');
 const { dashboard } = require('./utils/dashboard');
 const { getParticipantNotification } = require('./utils/notifications');
-const { importToBigQuery } = require('./utils/storage');
+const { importToBigQuery } = require('./utils/events');
 
 // For NORC Incentive
 
