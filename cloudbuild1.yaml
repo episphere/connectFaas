@@ -1,7 +1,7 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'identifyParticipant', '--trigger-http', '--runtime=nodejs12', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'identifyParticipant', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'submitParticipantsData', '--trigger-http', '--runtime=nodejs12', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'submitParticipantsData', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'biospecimen', '--trigger-http', '--runtime=nodejs12', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'biospecimen', '--allow-unauthenticated', '--trigger-http', '--runtime=nodejs12', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']

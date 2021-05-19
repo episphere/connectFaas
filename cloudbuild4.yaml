@@ -1,5 +1,5 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'updateParticipantData', '--trigger-http', '--runtime=nodejs12', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'updateParticipantData', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'dashboard', '--trigger-http', '--runtime=nodejs12', '--timeout=240s', '--memory=1024MB', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'dashboard', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--timeout=240s', '--memory=1024MB', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
