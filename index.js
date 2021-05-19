@@ -9,7 +9,7 @@ const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive'
 const { stats } = require('./utils/stats');
 const { dashboard } = require('./utils/dashboard');
 const { getParticipantNotification } = require('./utils/notifications');
-const { importToBigQuery } = require('./utils/events');
+const { importToBigQuery, firestoreExport } = require('./utils/events');
 
 // For NORC Incentive
 
@@ -86,3 +86,4 @@ const getAccessTokenForSA = async () => {
 
 exports.importToBigQuery = importToBigQuery;
   
+exports.scheduleFirestoreDataExport = firestoreExport;
