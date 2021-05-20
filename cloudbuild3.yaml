@@ -1,9 +1,9 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'incentiveCompleted', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'incentiveCompleted', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--timeout=120s', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-stg-5519/repos/github_episphere_connectfaas']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'sendEmailNotification', '--trigger-topic=connect-notifications', '--runtime=nodejs12', '--timeout=480s', '--memory=1024MB', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'sendEmailNotification', '--trigger-topic=connect-notifications', '--runtime=nodejs12', '--timeout=480s', '--memory=1024MB', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-stg-5519/repos/github_episphere_connectfaas']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'participantsEligibleForIncentive', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'participantsEligibleForIncentive', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-stg-5519/repos/github_episphere_connectfaas']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'stats', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas']
+  args: ['functions', 'deploy', 'stats', '--trigger-http', '--allow-unauthenticated', '--runtime=nodejs12', '--source=https://source.developers.google.com/projects/nih-nci-dceg-connect-stg-5519/repos/github_episphere_connectfaas']
