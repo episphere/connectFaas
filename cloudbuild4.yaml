@@ -10,10 +10,11 @@ steps:
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'importToBigQuery', '--trigger-resource=${_RESOURCE}', '--trigger-event=${_EVENT}', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'scheduleFirestoreDataExport', '--trigger-topic=schedule-firestore-backup', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}']
+  args: ['functions', 'deploy', 'scheduleFirestoreDataExport', '--trigger-topic=${_TOPIC}', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}']
 substitutions:
   _SOURCE: https://source.developers.google.com/projects/nih-nci-dceg-connect-stg-5519/repos/github_episphere_connectfaas
   _RUNTIME: nodejs12
   _ROLE: roles/cloudfunctions.invoker
   _RESOURCE: connect_firestore_backup
   _EVENT: google.storage.object.finalize
+  _TOPIC: schedule-firestore-backup
