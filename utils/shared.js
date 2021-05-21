@@ -223,6 +223,15 @@ const SSOConfig = {
         email: 'UserEmail',
         siteManagerUser: 'Connect-Study-Manager-User'
     },
+    'HFHS-SSO-ay0iz': {
+        group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
+        firstName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
+        lastName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
+        email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
+    },
+    'KP-SSO-wulix': {},
+    'NORC-SSO-dilvf': {},
+    'MFC-SSO-fljvd': {},
     'UCM-SSO-tovai': {
         group: '1.3.6.1.4.1.9902.2.1.41',
         firstName: 'urn:oid:0.9.2342.19200300.100.1.1',
