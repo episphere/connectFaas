@@ -213,6 +213,16 @@ const SSOConfig = {
         biospecimenUser: 'CN=connect-biospecimen-user',
         helpDeskUser: 'CN=connect-help-desk-user'
     },
+    'HP-SSO-wb1zb': {
+        group: 'AD_groups',
+        email: 'email',
+        siteManagerUser: 'CN=connect-dshbrd-user'
+    },
+    'SFH-SSO-cgzpj': {
+        group: 'UserRole',
+        email: 'UserEmail',
+        siteManagerUser: 'Connect-Study-Manager-User'
+    },
     'UCM-SSO-tovai': {
         group: '1.3.6.1.4.1.9902.2.1.41',
         firstName: 'urn:oid:0.9.2342.19200300.100.1.1',
