@@ -213,6 +213,25 @@ const SSOConfig = {
         biospecimenUser: 'CN=connect-biospecimen-user',
         helpDeskUser: 'CN=connect-help-desk-user'
     },
+    'HP-SSO-wb1zb': {
+        group: 'AD_groups',
+        email: 'email',
+        siteManagerUser: 'CN=connect-dshbrd-user'
+    },
+    'SFH-SSO-cgzpj': {
+        group: 'UserRole',
+        email: 'UserEmail',
+        siteManagerUser: 'Connect-Study-Manager-User'
+    },
+    'HFHS-SSO-ay0iz': {
+        group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
+        firstName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
+        lastName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
+        email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
+    },
+    'KP-SSO-wulix': {},
+    'NORC-SSO-dilvf': {},
+    'MFC-SSO-fljvd': {},
     'UCM-SSO-tovai': {
         group: '1.3.6.1.4.1.9902.2.1.41',
         firstName: 'urn:oid:0.9.2342.19200300.100.1.1',
@@ -233,7 +252,9 @@ const SSOValidation = async (dashboardType, idToken) => {
             return false;
         }
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
-        console.log(decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']])
+        const email = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']];
+        console.log(allGroups)
+        console.log(email)
         const requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
         if(!requiredGroups) return false;
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
