@@ -10,7 +10,7 @@ steps:
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'importToBigQuery', '--trigger-resource=${_RESOURCE}', '--trigger-event=${_EVENT}', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'scheduleFirestoreDataExport', '--trigger-topic=${_TOPIC}', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}', '--set-env-vars .env.yaml']
+  args: ['functions', 'deploy', 'scheduleFirestoreDataExport', '--trigger-topic=${_TOPIC}', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}', '--set-env-vars=.env.yaml']
 substitutions:
   _SOURCE: https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas
   _RUNTIME: nodejs12
