@@ -354,5 +354,6 @@ module.exports = {
     defaultStateFlags,
     SSOValidation,
     conceptMappings,
-    logIPAdddress
+    logIPAdddress,
+    decodingJWT
 }
