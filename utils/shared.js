@@ -224,7 +224,11 @@ const SSOConfig = {
         email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
     },
     'KP-SSO-wulix': {},
-    'NORC-SSO-dilvf': {},
+    'NORC-SSO-dilvf': {
+        group: 'http://schemas.xmlsoap.org/claims/Group',
+        email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+        helpDeskUser: 'connect-help-desk-user'
+    },
     'MFC-SSO-fljvd': {},
     'UCM-SSO-tovai': {
         group: '1.3.6.1.4.1.9902.2.1.41',
@@ -233,6 +237,15 @@ const SSOConfig = {
         siteManagerUser: 'uc:org:bsd:applications:connect:connect-study-manager-user:authorized',
         biospecimenUser: 'uc:org:bsd:applications:connect:connect-biospecimen-user:authorized'
     }
+}
+
+const decodingJWT = (token) => {
+    if(token !== null || token !== undefined){
+        const base64String = token.split('.')[1];
+        const decodedValue = JSON.parse(Buffer.from(base64String, 'base64').toString('ascii'));
+        return decodedValue;
+    }
+    return null;
 }
 
 const SSOValidation = async (dashboardType, idToken) => {
@@ -249,6 +262,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         const email = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']];
         console.log(allGroups)
         console.log(email)
+        if(!SSOConfig[tenant][dashboardType]) return false;
         const requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
         if(!requiredGroups) return false;
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
@@ -257,15 +271,6 @@ const SSOValidation = async (dashboardType, idToken) => {
     } catch (error) {
         return false;
     }
-}
-
-const decodingJWT = (token) => {
-    if(token !== null || token !== undefined){
-        const base64String = token.split('.')[1];
-        const decodedValue = JSON.parse(Buffer.from(base64String, 'base64').toString('ascii'));
-        return decodedValue;
-    }
-    return null;
 }
 
 const APIAuthorization = async (req, notAuthorized) => {
