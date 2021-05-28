@@ -140,6 +140,8 @@ const notificationHandler = async (message, context) => {
                         body: body,
                         time: new Date().toISOString()
                     },
+                    attempt: obj.attempt,            
+                    category: obj.category,
                     token: participant.token,
                     uid: participant.state.uid,
                     read: false
