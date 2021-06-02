@@ -206,26 +206,30 @@ const SSOConfig = {
         siteManagerUser: 'CN=connect-study-manager-user',
         biospecimenUser: 'CN=connect-biospecimen-user',
         helpDeskUser: 'CN=connect-help-desk-user',
-        siteCode: 111111111
+        siteCode: 111111111,
+        acronym: 'NIH'
     },
     'HP-SSO-wb1zb': {
         group: 'AD_groups',
         email: 'email',
         siteManagerUser: 'CN=connect-dshbrd-user',
-        siteCode: 531629870
+        siteCode: 531629870,
+        acronym: 'HP'
     },
     'SFH-SSO-cgzpj': {
         group: 'UserRole',
         email: 'UserEmail',
         siteManagerUser: 'Connect-Study-Manager-User',
-        siteCode: 657167265
+        siteCode: 657167265,
+        acronym: 'SFH'
     },
     'HFHS-SSO-ay0iz': {
         group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
         firstName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
         lastName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
         email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-        siteCode: 548392715
+        siteCode: 548392715,
+        acronym: 'HFHS'
     },
     'KP-SSO-wulix': {
         group: 'memberOf',
@@ -234,29 +238,35 @@ const SSOConfig = {
         siteManagerUser: 'CN=connect_study_manager_user',
         kpco: {
             name: 'CN=connect_kpco_user',
-            siteCode: 125001209
+            siteCode: 125001209,
+            acronym: 'KPCO'
         },
         kpnw: {
             name: 'CN=connect_kpnw_user',
-            siteCode: 452412599
+            siteCode: 452412599,
+            acronym: 'KPNW'
         },
         kphi: {
             name: 'CN=connect_kphi_user',
-            siteCode: 300267574
+            siteCode: 300267574,
+            acronym: 'KPHI'
         },
         kpga: {
             name: 'CN=connect_kpga_user',
-            siteCode: 327912200
+            siteCode: 327912200,
+            acronym: 'KPGA'
         }
     },
     'NORC-SSO-dilvf': {
         group: 'http://schemas.xmlsoap.org/claims/Group',
         email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
         helpDeskUser: 'connect-help-desk-user',
-        siteCode: 222222222
+        siteCode: 222222222,
+        acronym: 'NORC'
     },
     'MFC-SSO-fljvd': {
-        siteCode: 303349821
+        siteCode: 303349821,
+        acronym: 'MFC'
     },
     'UCM-SSO-tovai': {
         group: '1.3.6.1.4.1.9902.2.1.41',
@@ -264,7 +274,8 @@ const SSOConfig = {
         email: 'urn:oid:1.3.6.1.4.1.5923.1.1.1.6',
         siteManagerUser: 'uc:org:bsd:applications:connect:connect-study-manager-user:authorized',
         biospecimenUser: 'uc:org:bsd:applications:connect:connect-biospecimen-user:authorized',
-        siteCode: 809703864
+        siteCode: 809703864,
+        acronym: 'UCM'
     }
 }
 
@@ -293,19 +304,19 @@ const SSOValidation = async (dashboardType, idToken) => {
         if(!SSOConfig[tenant][dashboardType]) return false;
         const requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
         if(!requiredGroups) return false;
-        let siteCode = SSOConfig[tenant].siteCode;
+        let acronym = SSOConfig[tenant].acronym;
         if(tenant === 'KP-SSO-wulix') {
             const moreThanOneRegion = allGroups.toString().match(/CN=connect_kp(co|hi|nw|ga)_user/ig);
             if(moreThanOneRegion.length > 1) return false;
-            if(new RegExp(SSOConfig[tenant]['kpco']['name'], 'g').test(allGroups.toString())) siteCode = SSOConfig[tenant]['kpco']['siteCode'];
-            if(new RegExp(SSOConfig[tenant]['kpga']['name'], 'g').test(allGroups.toString())) siteCode = SSOConfig[tenant]['kpga']['siteCode'];
-            if(new RegExp(SSOConfig[tenant]['kphi']['name'], 'g').test(allGroups.toString())) siteCode = SSOConfig[tenant]['kphi']['siteCode'];
-            if(new RegExp(SSOConfig[tenant]['kpnw']['name'], 'g').test(allGroups.toString())) siteCode = SSOConfig[tenant]['kpnw']['siteCode'];
-            if(!siteCode) return false;
+            if(new RegExp(SSOConfig[tenant]['kpco']['name'], 'g').test(allGroups.toString())) acronym = SSOConfig[tenant]['kpco']['acronym'];
+            if(new RegExp(SSOConfig[tenant]['kpga']['name'], 'g').test(allGroups.toString())) acronym = SSOConfig[tenant]['kpga']['acronym'];
+            if(new RegExp(SSOConfig[tenant]['kphi']['name'], 'g').test(allGroups.toString())) acronym = SSOConfig[tenant]['kphi']['acronym'];
+            if(new RegExp(SSOConfig[tenant]['kpnw']['name'], 'g').test(allGroups.toString())) acronym = SSOConfig[tenant]['kpnw']['acronym'];
+            if(!acronym) return false;
         }
-        console.log(siteCode)
+        console.log(acronym)
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
-        const siteDetails = await getSiteDetailsWithSignInProvider(siteCode);
+        const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
         return siteDetails;
     } catch (error) {
         return false;
