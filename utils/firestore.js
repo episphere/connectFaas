@@ -1178,8 +1178,8 @@ const getTokenForParticipant = async (uid) => {
     return snapshot.docs[0].data()['token'];
 }
 
-const getSiteDetailsWithSignInProvider = async (signInProvider) => {
-    const snapshot = await db.collection('siteDetails').where('signInProvider', '==', signInProvider).get();
+const getSiteDetailsWithSignInProvider = async (siteCode) => {
+    const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
     return snapshot.docs[0].data();
 }
 
