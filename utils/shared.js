@@ -174,7 +174,7 @@ const defaultStateFlags = {
 }
 
 const moduleConcepts = {
-    "moduleSSN": 'D_716117818'
+    "moduleSSN": 'D_166676176'
 }
 
 const incentiveConcepts = {
