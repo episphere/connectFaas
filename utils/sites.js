@@ -115,7 +115,7 @@ const updateParticipantData = async (req, res, authObj) => {
     for(let key in dataObj) {
         if(docData[key] === undefined) continue;
         if(primaryIdentifiers.indexOf(key) !== -1) continue;
-
+        if(key === '821247024') continue; // Don't allow updates to verification status.
         if (typeof(dataObj[key]) === 'object') { // Handle nested object updates.
             for(let nestedKey in dataObj[key]) {
                 if(docData[key][nestedKey] === undefined) continue;
