@@ -10,8 +10,6 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const storage = admin.storage();
-
 
 const verifyToken = async (token) => {
     try{
@@ -1225,6 +1223,16 @@ const getNotificationHistoryByParticipant = async (token, siteCode, isParent) =>
     else return false;
 }
 
+const getNotificationsCategories = async () => {
+    const snapshot = await db.collection('notificationSpecifications').get();
+    const categories = [];
+    snapshot.forEach(dt => {
+        const category = dt.data().category;
+        if(!categories.includes(category)) categories.push(category);
+    })
+    return categories;
+}
+
 module.exports = {
     updateResponse,
     validateSiteUser,
@@ -1288,5 +1296,6 @@ module.exports = {
     retrieveNotificationSchemaByCategory,
     storeNewNotificationSchema,
     updateNotificationSchema,
-    getNotificationHistoryByParticipant
+    getNotificationHistoryByParticipant,
+    getNotificationsCategories
 }

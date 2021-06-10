@@ -83,19 +83,29 @@ const markAllNotificationsAsAlreadyRead = (notification) => {
 }
 
 const notificationHandler = async (message, context) => {
-    const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().split(',') : null;
-    const notificationCategory = publishedMessage[0];
-    let limit = parseInt(publishedMessage[1]);
-    let offset = parseInt(publishedMessage[2]);
+    const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
+    const messageArray = publishedMessage ? publishedMessage.split(',') : null;
+    if(!messageArray) {
+        const {PubSub} = require('@google-cloud/pubsub');
+        const pubSubClient = new PubSub();
+        const { getNotificationsCategories } = require('./firestore');
+        const categories = await getNotificationsCategories();
+        for(let category of categories) {
+            const dataBuffer = Buffer.from(`${category},250,0`);
+            try {
+                const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
+                console.log(`Message ${messageId} published.`);
+            } catch (error) {
+                console.error(`Received error while publishing: ${error.message}`);
+            }
+        }
+        return;
+    }
+    const notificationCategory = messageArray[0];
+    let limit = parseInt(messageArray[1]);
+    let offset = parseInt(messageArray[2]);
     console.log(limit);
     console.log(offset);
-    // setHeaders(res);
-
-    // if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
-    // if(req.method !== 'GET') {
-    //     return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    // }
 
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
@@ -123,7 +133,7 @@ const notificationHandler = async (message, context) => {
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
         let participantCounter = 0;
         for( let participant of participantData) {
-            if(participant[emailField]) {
+            if(participant[emailField]) { // If email doesn't exists try sms.
                 let d = new Date(participant[primaryField]);
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
@@ -172,7 +182,6 @@ const notificationHandler = async (message, context) => {
         specCounter++;
     }
     return true;
-    // return res.status(200).json({code:200, message: 'ok'})
 }
 
 const sendSms = (phoneNo) => {
