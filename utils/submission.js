@@ -14,8 +14,8 @@ const submit = async (res, data, uid) => {
         ssnObj['uid'] = uid;
         ssnObj['token'] = await getTokenForParticipant(uid);
         storeSSN(ssnObj);
-        data[`${moduleSSN}.311580100`] = 353358909;
-        data[`${moduleSSN}.454067894`] = new Date().toISOString();
+        data[`311580100`] = 353358909;
+        data[`454067894`] = new Date().toISOString();
         delete data[`${moduleSSN}.SOCIALSECUR1`]
     }
     if(data[`${moduleSSN}.SOCIALSECUR2`]) { // SSN last 4 digits
@@ -26,8 +26,8 @@ const submit = async (res, data, uid) => {
         ssnObj['uid'] = uid;
         ssnObj['token'] = await getTokenForParticipant(uid);
         storeSSN(ssnObj);
-        data[`${moduleSSN}.914639140`] = 353358909;
-        data[`${moduleSSN}.598680838`] = new Date().toISOString();
+        data[`914639140`] = 353358909;
+        data[`598680838`] = new Date().toISOString();
         delete data[`${moduleSSN}.SOCIALSECUR2`]
     }
     
