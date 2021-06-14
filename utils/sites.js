@@ -116,6 +116,8 @@ const updateParticipantData = async (req, res, authObj) => {
         if(docData[key] === undefined) continue;
         if(primaryIdentifiers.indexOf(key) !== -1) continue;
         if(key === '821247024') continue; // Don't allow updates to verification status.
+        if(key === '399159511') updatedData[`query.firstName`] = dataObj[key]; // update first name
+        if(key === '996038075') updatedData[`query.lastName`] = dataObj[key]; // update last name
         if (typeof(dataObj[key]) === 'object') { // Handle nested object updates.
             for(let nestedKey in dataObj[key]) {
                 if(docData[key][nestedKey] === undefined) continue;
