@@ -5,7 +5,8 @@ const importToBigQuery = async (event, context) => {
     if(gcsEvent.name.includes('participants')) tableName = 'participants';
     if(gcsEvent.name.includes('biospecimen')) tableName = 'biospecimen';
     console.log(`Processing file: ${gcsEvent.name}`);
-    const url = `gs://connect_firestore_dev_backup/${gcsEvent.name}`;
+    const { gcsBucket } = require('./config');
+    const url = `gs://${gcsBucket}/${gcsEvent.name}`;
     console.log(url)
     const {BigQuery} = require('@google-cloud/bigquery');
     const {Storage} = require('@google-cloud/storage');
@@ -14,7 +15,6 @@ const importToBigQuery = async (event, context) => {
   
     const datasetId = 'Connect';
     const tableId = tableName;
-    const bucketName = 'connect_firestore_dev_backup';
   
     const metadata = {
       sourceFormat: 'DATASTORE_BACKUP',
@@ -27,7 +27,7 @@ const importToBigQuery = async (event, context) => {
     const [job] = await bigquery
         .dataset(datasetId)
         .table(tableId)
-        .load(storage.bucket(bucketName).file(gcsEvent.name), metadata);
+        .load(storage.bucket(gcsBucket).file(gcsEvent.name), metadata);
   
     // load() waits for the job to finish
     console.log(`Load job ${job.id} completed.`);
@@ -44,8 +44,8 @@ const importToBigQuery = async (event, context) => {
 const firestoreExport = async (event, context) => {
     const firestore = require('@google-cloud/firestore');
     const client = new firestore.v1.FirestoreAdminClient();
-    
-    const bucket = 'gs://connect_firestore_dev_backup';
+    const { gcsBucket } = require('./config');
+    const bucket = `gs://${gcsBucket}`;
     const projectId = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
     console.log(projectId)
     const databaseName = 
