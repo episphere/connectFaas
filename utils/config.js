@@ -1,5 +1,5 @@
-const gcsBucket = 'myconnect_firestore_backup_stage';
-const projectId = 'nih-nci-dceg-connect-stg-5519';
+const gcsBucket = 'myconnect_firestore_backup_prod';
+const projectId = 'nih-nci-dceg-connect-prod-6d04';
 
 module.exports = {
     gcsBucket,
