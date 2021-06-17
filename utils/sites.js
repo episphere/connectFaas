@@ -48,11 +48,17 @@ const submitParticipantsData = async (req, res, site) => {
                     if(record.data.state[key] === undefined){
                         newStateElements[`state.${key}`] = obj[key];
                     }
-                }
-                // Make participant active if Study invitaion is sent out.
-                if(obj['934298480'] && record.data['512820379'] !== 854703046) { // If age deidentified data is provided and participant is not passive then make this participant Active
-                    newStateElements['512820379'] = 486306141;
-                    newStateElements['471593703'] = new Date().toISOString();
+                    // Make participant active if Study invitaion is sent.
+                    if(key === '934298480' && record.data['512820379'] !== 854703046) { // If age deidentified data is provided and participant is not passive then make this participant Active
+                        newStateElements['512820379'] = 486306141;
+                        newStateElements['471593703'] = new Date().toISOString();
+                    }
+                    // If Update recruit type is non-zero
+                    // Passive to Active
+                    if(key === '793822265' && obj['793822265'] === 854903954 && record.data['512820379'] === 854703046) newStateElements['512820379'] = 486306141;
+                    // Active to Passive
+                    if(key === '793822265' && obj['793822265'] === 965707001 && record.data['512820379'] === 486306141) newStateElements['512820379'] = 854703046;
+
                 }
                 const { updateParticipantData } = require('./firestore');
                 if(Object.keys(newStateElements).length > 0) updateParticipantData(docID, newStateElements);
