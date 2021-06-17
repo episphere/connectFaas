@@ -1,4 +1,4 @@
-const projectId = 'nih-nci-dceg-connect-dev';
+const { projectId } = require('./config');
 const locationId = 'global';
 const keyRingId = 'test-key';
 const keyId = 'my-key';
