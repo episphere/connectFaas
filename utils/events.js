@@ -5,7 +5,7 @@ const importToBigQuery = async (event, context) => {
     if(gcsEvent.name.includes('participants')) tableName = 'participants';
     if(gcsEvent.name.includes('biospecimen')) tableName = 'biospecimen';
     console.log(`Processing file: ${gcsEvent.name}`);
-    const { gcsBucket } = require('./config');
+    const gcsBucket = process.env.GCLOUD_BUCKET;
     const url = `gs://${gcsBucket}/${gcsEvent.name}`;
     console.log(url)
     const {BigQuery} = require('@google-cloud/bigquery');
@@ -44,7 +44,7 @@ const importToBigQuery = async (event, context) => {
 const firestoreExport = async (event, context) => {
     const firestore = require('@google-cloud/firestore');
     const client = new firestore.v1.FirestoreAdminClient();
-    const { gcsBucket } = require('./config');
+    const gcsBucket = process.env.GCLOUD_BUCKET;
     const bucket = `gs://${gcsBucket}`;
     const projectId = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
     console.log(projectId)
