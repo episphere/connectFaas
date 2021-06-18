@@ -1,18 +1,18 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'getParticipantToken', '--trigger-http', '--runtime=${_RUNTIME}', '--timeout=120s', '--source=${_SOURCE}', '--env-vars-file=.env.yaml']
+  args: ['functions', 'deploy', 'getParticipantToken', '--trigger-http', '--runtime=${_RUNTIME}', '--timeout=120s', '--source=${_SOURCE}', '--env-vars-file=config/dev/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'add-iam-policy-binding', 'getParticipantToken', '--member=allUsers', '--role=${_ROLE}']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'getParticipants', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=.env.yaml']
+  args: ['functions', 'deploy', 'getParticipants', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=config/dev/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'add-iam-policy-binding', 'getParticipants', '--member=allUsers', '--role=${_ROLE}']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'validateSiteUsers', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=.env.yaml']
+  args: ['functions', 'deploy', 'validateSiteUsers', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=config/dev/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'add-iam-policy-binding', 'validateSiteUsers', '--member=allUsers', '--role=${_ROLE}']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'app', '--trigger-http', '--runtime=${_RUNTIME}', '--timeout=240s', '--memory=1024MB',  '--source=${_SOURCE}', '--env-vars-file=.env.yaml']
+  args: ['functions', 'deploy', 'app', '--trigger-http', '--runtime=${_RUNTIME}', '--timeout=240s', '--memory=1024MB',  '--source=${_SOURCE}', '--env-vars-file=config/dev/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'add-iam-policy-binding', 'app', '--member=allUsers', '--role=${_ROLE}']
 substitutions:
