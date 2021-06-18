@@ -1,4 +1,4 @@
-const { projectId } = require('./config');
+const projectId = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
 const locationId = 'global';
 const keyRingId = 'test-key';
 const keyId = 'my-key';
