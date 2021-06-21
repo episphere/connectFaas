@@ -1,7 +1,7 @@
 const projectId = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT;
 const locationId = 'global';
-const keyRingId = 'test-key';
-const keyId = 'my-key';
+const keyRingId = 'Connect-SSN-Asymmetric-Key';
+const keyId = 'asymmetric-key';
 const versionId = '1';
 
 const { KeyManagementServiceClient } = require('@google-cloud/kms');
