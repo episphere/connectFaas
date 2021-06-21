@@ -6,7 +6,6 @@ const submit = async (res, data, uid) => {
     lockedAttributes.forEach(atr => delete data[atr]);
     const {moduleConcepts} = require('./shared');
     const moduleSSN = moduleConcepts.moduleSSN;
-    debugger
     if(data[`${moduleSSN}.SOCIALSECUR1`] || data[moduleSSN]['SOCIALSECUR1']) { // SSN 9 digits
         const ssn = data[`${moduleSSN}.SOCIALSECUR1`] || data[moduleSSN]['SOCIALSECUR1'];
         const ssnObj = {};
