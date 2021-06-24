@@ -197,6 +197,21 @@ const conceptMappings = {
     'outreachtimedout': 160161595
 };
 
+const retentionConcepts = [
+    'token',
+    'pin',
+    'Connect_ID',
+    'state.uid',
+    'state.studyId',
+    '399159511', // user profile first name
+    '996038075', // user profile last name
+    '371067537', // DOB
+    '388711124', // Mobile no.
+    '869588347', // Preferred email
+    '454205108', // Consent version
+    '454445267', // consent datetime
+]
+
 const SSOConfig = {
     'NIH-SSO-qfszp': {
         group: 'https://federation.nih.gov/person/DLGroups',

@@ -8,7 +8,7 @@ const { KeyManagementServiceClient } = require('@google-cloud/kms');
 
 const client = new KeyManagementServiceClient();
 
-const encryptAsymmetric = async (data = '123123121') => {
+const encryptAsymmetric = async (data) => {
     const plaintextBuffer = Buffer.from(data);
     // Get public key from Cloud KMS
     const versionName = client.cryptoKeyVersionPath(

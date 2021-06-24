@@ -6,31 +6,35 @@ const submit = async (res, data, uid) => {
     lockedAttributes.forEach(atr => delete data[atr]);
     const {moduleConcepts} = require('./shared');
     const moduleSSN = moduleConcepts.moduleSSN;
-    if(data[`${moduleSSN}.SOCIALSECUR1`]) { // SSN 9 digits
+    if(data[`${moduleSSN}.SOCIALSECUR1`] || (data[moduleSSN] && data[moduleSSN]['SOCIALSECUR1'])) { // SSN 9 digits
+        const ssn = data[`${moduleSSN}.SOCIALSECUR1`] || data[moduleSSN]['SOCIALSECUR1'];
         const ssnObj = {};
         const { encryptAsymmetric } = require('./encrypt');
         const { getTokenForParticipant, storeSSN } = require('./firestore');
-        ssnObj[447051482] = await encryptAsymmetric(data[`${moduleSSN}.SOCIALSECUR1`].replace(/-/g, ''));
+        ssnObj[447051482] = await encryptAsymmetric(ssn.replace(/-/g, ''));
         ssnObj['uid'] = uid;
         ssnObj['token'] = await getTokenForParticipant(uid);
         storeSSN(ssnObj);
         data[`311580100`] = 353358909;
         data[`454067894`] = new Date().toISOString();
         delete data[`${moduleSSN}.SOCIALSECUR1`]
+        delete data[moduleSSN]
     }
-    if(data[`${moduleSSN}.SOCIALSECUR2`]) { // SSN last 4 digits
+    if(data[`${moduleSSN}.SOCIALSECUR2`] || (data[moduleSSN] && data[moduleSSN]['SOCIALSECUR2'])) { // SSN last 4 digits
+        const ssn = data[`${moduleSSN}.SOCIALSECUR2`] || data[moduleSSN]['SOCIALSECUR2'];
         const ssnObj = {};
         const { encryptAsymmetric } = require('./encrypt');
         const { getTokenForParticipant, storeSSN } = require('./firestore');
-        ssnObj[920333151] = await encryptAsymmetric(data[`${moduleSSN}.SOCIALSECUR2`]);
+        ssnObj[920333151] = await encryptAsymmetric(ssn.replace(/-/g, ''));
         ssnObj['uid'] = uid;
         ssnObj['token'] = await getTokenForParticipant(uid);
         storeSSN(ssnObj);
         data[`914639140`] = 353358909;
         data[`598680838`] = new Date().toISOString();
         delete data[`${moduleSSN}.SOCIALSECUR2`]
+        delete data[moduleSSN];
     }
-    
+
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
         // generate Connect_ID
         const { generateConnectID } = require('./shared');
