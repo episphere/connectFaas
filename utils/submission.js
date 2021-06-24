@@ -6,7 +6,7 @@ const submit = async (res, data, uid) => {
     lockedAttributes.forEach(atr => delete data[atr]);
     const {moduleConcepts} = require('./shared');
     const moduleSSN = moduleConcepts.moduleSSN;
-    if(data[`${moduleSSN}.SOCIALSECUR1`] || data[moduleSSN]['SOCIALSECUR1']) { // SSN 9 digits
+    if(data[`${moduleSSN}.SOCIALSECUR1`] || (data[moduleSSN] && data[moduleSSN]['SOCIALSECUR1'])) { // SSN 9 digits
         const ssn = data[`${moduleSSN}.SOCIALSECUR1`] || data[moduleSSN]['SOCIALSECUR1'];
         const ssnObj = {};
         const { encryptAsymmetric } = require('./encrypt');
@@ -20,7 +20,7 @@ const submit = async (res, data, uid) => {
         delete data[`${moduleSSN}.SOCIALSECUR1`]
         delete data[moduleSSN]
     }
-    if(data[`${moduleSSN}.SOCIALSECUR2`] || data[moduleSSN]['SOCIALSECUR2']) { // SSN last 4 digits
+    if(data[`${moduleSSN}.SOCIALSECUR2`] || (data[moduleSSN] && data[moduleSSN]['SOCIALSECUR2'])) { // SSN last 4 digits
         const ssn = data[`${moduleSSN}.SOCIALSECUR2`] || data[moduleSSN]['SOCIALSECUR2'];
         const ssnObj = {};
         const { encryptAsymmetric } = require('./encrypt');
