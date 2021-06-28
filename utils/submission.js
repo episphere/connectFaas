@@ -213,7 +213,7 @@ const identifyParticipant = async (req, res, site) => {
         }
 
         if(!req.query.type || req.query.type.trim() === ""){
-            return res.status(404).json(getResponseJSON('Type is missing!', 404));
+            return res.status(400).json(getResponseJSON('Type is missing!', 400));
         }
         
         const type = req.query.type;
