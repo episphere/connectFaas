@@ -199,7 +199,7 @@ const sendEmail = (emailTo, messageSubject, html) => {
     sgMail.setApiKey(process.env.sg_email);
     const msg = {
         to: emailTo,
-        from: 'bhaumik55231@gmail.com',
+        from: 'donotreply@myconnect.cancer.gov',
         subject: messageSubject,
         html: html,
     };
