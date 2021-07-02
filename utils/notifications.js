@@ -207,9 +207,7 @@ const getSecrets = async () => {
 const sendEmail = async (emailTo, messageSubject, html) => {
     const sgMail = require('@sendgrid/mail');
     const apiKey = await getSecrets();
-    console.log(apiKey);
-    return
-    sgMail.setApiKey();
+    sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
         from: 'donotreply@myconnect.cancer.gov',
