@@ -194,12 +194,23 @@ const sendSms = (phoneNo) => {
         .then(message => console.log(message.sid));
 }
 
-const sendEmail = (emailTo, messageSubject, html) => {
+const getSecrets = async () => {
+    const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+    const client = new SecretManagerServiceClient();
+    const [version] = await client.accessSecretVersion({
+        name: process.env.GCLOUD_SENDGRID_SECRET,
+    });
+    const payload = version.payload.data.toString();
+    return payload;
+}
+
+const sendEmail = async (emailTo, messageSubject, html) => {
     const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey(process.env.sg_email);
+    const apiKey = await getSecrets();
+    sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
-        from: 'bhaumik55231@gmail.com',
+        from: 'donotreply@myconnect.cancer.gov',
         subject: messageSubject,
         html: html,
     };
