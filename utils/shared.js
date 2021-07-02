@@ -9,7 +9,7 @@ const setHeaders = (res) => {
 }
 
 const setHeadersDomainRestricted = (req, res) => {
-    const allowedOrigins = ['http://localhost:5000', 'https://episphere.github.io'];
+    const allowedOrigins = ['https://episphere.github.io', 'https://myconnect-stage.cancer.gov', 'https://myconnect.cancer.gov'];
     // const allowedOrigins = ['https://episphere.github.io'];
     const origin = req.headers.origin;
     if(allowedOrigins.indexOf(origin) !== -1){
