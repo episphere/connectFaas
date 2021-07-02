@@ -47,6 +47,14 @@ const stats = async (req, res, authObj) => {
 
     if(type === 'participants_recruits_count') response = await getTable('participants_recruits_count', isParent, siteCodes);
 
+    if(type === 'participants_optOuts') response = await getTable('participants_optOuts', isParent, siteCodes);
+
+    if(type === 'participants_allModules') response = await getTable('participants_allModules', isParent, siteCodes);
+    if(type === 'participants_moduleOne') response = await getTable('participants_moduleOne', isParent, siteCodes);
+    if(type === 'participants_modulesTwoThree') response = await getTable('participants_modulesTwoThree', isParent, siteCodes);
+
+    if(type === 'participants_ssn') response = await getTable('participants_ssn', isParent, siteCodes);
+
     return res.status(200).json({stats: response, code:200});
 }
 
