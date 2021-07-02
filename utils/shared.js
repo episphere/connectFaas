@@ -9,13 +9,9 @@ const setHeaders = (res) => {
 }
 
 const setHeadersDomainRestricted = (req, res) => {
-    const allowedOrigins = ['https://episphere.github.io', 'https://myconnect-stage.cancer.gov', 'https://myconnect.cancer.gov'];
-    // const allowedOrigins = ['https://episphere.github.io'];
-    const origin = req.headers.origin;
-    if(allowedOrigins.indexOf(origin) !== -1){
-        res.header('Access-Control-Allow-Origin', origin);
-        res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
-        res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
    }
 }
 
