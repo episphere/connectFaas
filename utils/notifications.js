@@ -203,7 +203,7 @@ const notificationHandler = async (message, context) => {
                 console.log(sent)
                 console.log(d)
                 console.log(currentDate)
-                if(sent === false && d <= currentDate) {
+                if((sent === undefined || sent === false) && d <= currentDate) {
                     console.log('sending email');
                     console.log(participant[emailField])
                     const { storeNotifications } = require('./firestore');
