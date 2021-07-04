@@ -84,12 +84,14 @@ const markAllNotificationsAsAlreadyRead = (notification) => {
 
 const notificationHandler = async (message, context) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
+    console.log(publishedMessage)
     const messageArray = publishedMessage ? publishedMessage.split(',') : null;
     if(!messageArray) {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
         const { getNotificationsCategories } = require('./firestore');
         const categories = await getNotificationsCategories();
+        console.log(categories)
         for(let category of categories) {
             const dataBuffer = Buffer.from(`${category},250,0`);
             try {
