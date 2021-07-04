@@ -135,7 +135,6 @@ const notificationHandler = async (message, context) => {
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
         let participantCounter = 0;
         for( let participant of participantData) {
-            console.log(participant)
             if(participant[emailField]) { // If email doesn't exists try sms.
                 let d = new Date(participant[primaryField]);
                 d.setDate(d.getDate() + day);
