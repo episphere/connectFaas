@@ -82,6 +82,45 @@ const markAllNotificationsAsAlreadyRead = (notification) => {
     }
 }
 
+const sendSms = (phoneNo) => {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const client = require('twilio')(accountSid, authToken);
+
+    client.messages
+        .create({body: 'Thanks for joining Connect', from: process.env.from_phone_no, to: phoneNo})
+        .then(message => console.log(message.sid));
+}
+
+const getSecrets = async () => {
+    const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+    const client = new SecretManagerServiceClient();
+    const [version] = await client.accessSecretVersion({
+        name: process.env.GCLOUD_SENDGRID_SECRET,
+    });
+    const payload = version.payload.data.toString();
+    return payload;
+}
+
+const sendEmail = async (emailTo, messageSubject, html) => {
+    const sgMail = require('@sendgrid/mail');
+    const apiKey = await getSecrets();
+    console.log(apiKey)
+    sgMail.setApiKey(apiKey);
+    const msg = {
+        to: emailTo,
+        from: 'donotreply@myconnect.cancer.gov',
+        subject: messageSubject,
+        html: html,
+    };
+    sgMail.send(msg).then(() => {
+        console.log('Email sent to '+emailTo)
+    })
+    .catch((error) => {
+        console.error(error)
+    });
+}
+
 const notificationHandler = async (message, context) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     console.log(publishedMessage)
@@ -141,7 +180,6 @@ const notificationHandler = async (message, context) => {
                 d.setHours(d.getHours() + hour);
                 d.setMinutes(d.getMinutes() + minute);
                 const body = html.replace('<firstName>', participant[firstNameField]);
-                const currentDate = new Date();
                 let reminder = {
                     notificationSpecificationsID,
                     id: uuid(),
@@ -161,8 +199,13 @@ const notificationHandler = async (message, context) => {
                 // Check if same notifications has already been sent
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
-                
+                const currentDate = new Date();
+                console.log(sent)
+                console.log(d)
+                console.log(currentDate)
                 if(sent === false && d <= currentDate) {
+                    console.log('sending email');
+                    console.log(participant[emailField])
                     const { storeNotifications } = require('./firestore');
                     sendEmail(participant[emailField], messageSubject, body);
                     await storeNotifications(reminder);
@@ -184,45 +227,6 @@ const notificationHandler = async (message, context) => {
         specCounter++;
     }
     return true;
-}
-
-const sendSms = (phoneNo) => {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const client = require('twilio')(accountSid, authToken);
-
-    client.messages
-        .create({body: 'Thanks for joining Connect', from: process.env.from_phone_no, to: phoneNo})
-        .then(message => console.log(message.sid));
-}
-
-const getSecrets = async () => {
-    const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-    const client = new SecretManagerServiceClient();
-    const [version] = await client.accessSecretVersion({
-        name: process.env.GCLOUD_SENDGRID_SECRET,
-    });
-    const payload = version.payload.data.toString();
-    return payload;
-}
-
-const sendEmail = async (emailTo, messageSubject, html) => {
-    const sgMail = require('@sendgrid/mail');
-    const apiKey = await getSecrets();
-    console.log(apiKey)
-    sgMail.setApiKey(apiKey);
-    const msg = {
-        to: emailTo,
-        from: 'donotreply@myconnect.cancer.gov',
-        subject: messageSubject,
-        html: html,
-    };
-    sgMail.send(msg).then(() => {
-        console.log('Email sent to '+emailTo)
-    })
-    .catch((error) => {
-        console.error(error)
-    });
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
