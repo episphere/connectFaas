@@ -180,7 +180,6 @@ const notificationHandler = async (message, context) => {
                 d.setHours(d.getHours() + hour);
                 d.setMinutes(d.getMinutes() + minute);
                 const body = html.replace('<firstName>', participant[firstNameField]);
-                const currentDate = new Date();
                 let reminder = {
                     notificationSpecificationsID,
                     id: uuid(),
@@ -200,7 +199,10 @@ const notificationHandler = async (message, context) => {
                 // Check if same notifications has already been sent
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
-                
+                const currentDate = new Date();
+                console.log(sent)
+                console.log(d)
+                console.log(currentDate)
                 if(sent === false && d <= currentDate) {
                     console.log('sending email');
                     console.log(participant[emailField])
