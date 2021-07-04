@@ -145,7 +145,6 @@ const notificationHandler = async (message, context) => {
     let offset = parseInt(messageArray[2]);
     console.log(limit);
     console.log(offset);
-
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
     const specifications = await getNotificationSpecifications(notificationType, notificationCategory);
@@ -197,7 +196,6 @@ const notificationHandler = async (message, context) => {
                 // Check if same notifications has already been sent
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
-                console.log(sent)
                 const currentDate = new Date();
                 if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
