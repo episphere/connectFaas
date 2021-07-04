@@ -105,7 +105,6 @@ const getSecrets = async () => {
 const sendEmail = async (emailTo, messageSubject, html) => {
     const sgMail = require('@sendgrid/mail');
     const apiKey = await getSecrets();
-    console.log(apiKey)
     sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
@@ -123,7 +122,6 @@ const sendEmail = async (emailTo, messageSubject, html) => {
 
 const notificationHandler = async (message, context) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
-    console.log(publishedMessage)
     const messageArray = publishedMessage ? publishedMessage.split(',') : null;
     if(!messageArray) {
         const {PubSub} = require('@google-cloud/pubsub');
@@ -199,16 +197,12 @@ const notificationHandler = async (message, context) => {
                 // Check if same notifications has already been sent
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
-                const currentDate = new Date();
                 console.log(sent)
-                console.log(d)
-                console.log(currentDate)
-                if((sent === undefined || sent === false) && d <= currentDate) {
-                    console.log('sending email');
-                    console.log(participant[emailField])
+                const currentDate = new Date();
+                if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
-                    sendEmail(participant[emailField], messageSubject, body);
                     await storeNotifications(reminder);
+                    sendEmail(participant[emailField], messageSubject, body);
                 }
             }
             if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
