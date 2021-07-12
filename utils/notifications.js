@@ -108,8 +108,10 @@ const sendEmail = async (emailTo, messageSubject, html) => {
     sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
-        from: 'donotreply@myconnect.cancer.gov',
-        fromname: 'Connect for Cancer Prevention Study',
+        from: {
+            name: 'Connect for Cancer Prevention Study',
+            email: 'donotreply@myconnect.cancer.gov'
+        },
         subject: messageSubject,
         html: html,
     };
