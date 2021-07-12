@@ -109,6 +109,7 @@ const sendEmail = async (emailTo, messageSubject, html) => {
     const msg = {
         to: emailTo,
         from: 'donotreply@myconnect.cancer.gov',
+        fromname: 'Connect for Cancer Prevention Study',
         subject: messageSubject,
         html: html,
     };
