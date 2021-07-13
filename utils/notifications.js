@@ -159,6 +159,7 @@ const notificationHandler = async (message, context) => {
         const messageSubject = obj[notificationType].subject;
         const emailField = obj.emailField;
         const firstNameField = obj.firstNameField;
+        const preferredNameField = obj.preferredNameField;
         const phoneField = obj.phoneField;
         const primaryField = obj.primaryField;
         const day = obj.time.day;
@@ -179,7 +180,7 @@ const notificationHandler = async (message, context) => {
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
                 d.setMinutes(d.getMinutes() + minute);
-                const body = html.replace('<firstName>', participant[firstNameField]);
+                const body = html.replace('<firstName>', preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]);
                 let reminder = {
                     notificationSpecificationsID,
                     id: uuid(),
