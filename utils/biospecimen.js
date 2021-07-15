@@ -295,7 +295,6 @@ const biospecimenAPIs = async (req, res) => {
         let response = await getNumBoxesShipped(siteAcronym, requestData);
         return res.status(200).json({data:response, code:200});
     }
-    else return res.status(400).json(getResponseJSON('Bad request!', 400));
 
     else if(api == 'addKitData'){
         if(req.method !== 'POST') {
@@ -303,6 +302,10 @@ const biospecimenAPIs = async (req, res) => {
         }
         const requestData = req.body;
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        const uuid = require('uuid');
+        const currentDate = new Date();
+        requestData.id = uuid.v4();
+        requestData.timeStamp = currentDate;
         const { addKitAssemblyData } = require('./firestore');
         const response = await addKitAssemblyData(requestData);
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
@@ -318,6 +321,8 @@ const biospecimenAPIs = async (req, res) => {
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
         return res.status(200).json({data: response, code:200})
     }
+
+    else return res.status(400).json(getResponseJSON('Bad request!', 400));
     
 };
 
