@@ -304,7 +304,7 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         const uuid = require('uuid');
         const currentDate = new Date().toISOString();
-        requestData.id = uuid.v4();
+        requestData.id = uuid();
         requestData.timeStamp = currentDate;
         const { addKitAssemblyData } = require('./firestore');
         const response = await addKitAssemblyData(requestData);
