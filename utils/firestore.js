@@ -1234,6 +1234,27 @@ const getNotificationsCategories = async () => {
     return categories;
 }
 
+const addKitAssemblyData = async (data) => {
+    try {
+        await db.collection('kitAssembly').add(data);
+        return true;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const getKitAssemblyData = async () => {
+    try {
+        const snapshot = await db.collection("kitAssembly").get();
+        if(snapshot.size !== 0)  return snapshot.docs.map(doc => doc.data()) 
+        else return false;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     updateResponse,
     validateSiteUser,
@@ -1298,5 +1319,7 @@ module.exports = {
     storeNewNotificationSchema,
     updateNotificationSchema,
     getNotificationHistoryByParticipant,
-    getNotificationsCategories
+    getNotificationsCategories,
+    addKitAssemblyData,
+    getKitAssemblyData
 }
