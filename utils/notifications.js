@@ -82,108 +82,6 @@ const markAllNotificationsAsAlreadyRead = (notification) => {
     }
 }
 
-const notificationHandler = async (message, context) => {
-    const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
-    const messageArray = publishedMessage ? publishedMessage.split(',') : null;
-    if(!messageArray) {
-        const {PubSub} = require('@google-cloud/pubsub');
-        const pubSubClient = new PubSub();
-        const { getNotificationsCategories } = require('./firestore');
-        const categories = await getNotificationsCategories();
-        for(let category of categories) {
-            const dataBuffer = Buffer.from(`${category},250,0`);
-            try {
-                const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
-                console.log(`Message ${messageId} published.`);
-            } catch (error) {
-                console.error(`Received error while publishing: ${error.message}`);
-            }
-        }
-        return;
-    }
-    const notificationCategory = messageArray[0];
-    let limit = parseInt(messageArray[1]);
-    let offset = parseInt(messageArray[2]);
-    console.log(limit);
-    console.log(offset);
-
-    const { getNotificationSpecifications } = require('./firestore');
-    const notificationType = 'email';
-    const specifications = await getNotificationSpecifications(notificationType, notificationCategory);
-    let specCounter = 0;
-    for(let obj of specifications) {
-        const notificationSpecificationsID = obj.id;
-        const conditions = obj.conditions;
-        const messageBody = obj[notificationType].body;
-        const messageSubject = obj[notificationType].subject;
-        const emailField = obj.emailField;
-        const firstNameField = obj.firstNameField;
-        const phoneField = obj.phoneField;
-        const primaryField = obj.primaryField;
-        const day = obj.time.day;
-        const hour = obj.time.hour;
-        const minute = obj.time.minute;
-
-        const showdown  = require('showdown');
-        const converter = new showdown.Converter();
-        const html = converter.makeHtml(messageBody);
-        const uuid = require('uuid');
-
-        const { retrieveParticipantsByStatus } = require('./firestore');
-        const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
-        let participantCounter = 0;
-        for( let participant of participantData) {
-            if(participant[emailField]) { // If email doesn't exists try sms.
-                let d = new Date(participant[primaryField]);
-                d.setDate(d.getDate() + day);
-                d.setHours(d.getHours() + hour);
-                d.setMinutes(d.getMinutes() + minute);
-                const body = html.replace('<firstName>', participant[firstNameField]);
-                const currentDate = new Date();
-                let reminder = {
-                    notificationSpecificationsID,
-                    id: uuid(),
-                    notificationType,
-                    email: participant[emailField],
-                    notification : {
-                        title: messageSubject,
-                        body: body,
-                        time: new Date().toISOString()
-                    },
-                    attempt: obj.attempt,            
-                    category: obj.category,
-                    token: participant.token,
-                    uid: participant.state.uid,
-                    read: false
-                }
-                // Check if same notifications has already been sent
-                const { notificationAlreadySent } = require('./firestore');
-                const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
-                
-                if(sent === false && d <= currentDate) {
-                    const { storeNotifications } = require('./firestore');
-                    sendEmail(participant[emailField], messageSubject, body);
-                    await storeNotifications(reminder);
-                }
-            }
-            if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
-                const {PubSub} = require('@google-cloud/pubsub');
-                const pubSubClient = new PubSub();
-                const dataBuffer = Buffer.from(`${notificationCategory},${limit},${offset+limit}`);
-                try {
-                    const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
-                    console.log(`Message ${messageId} published.`);
-                } catch (error) {
-                    console.error(`Received error while publishing: ${error.message}`);
-                }
-            }
-            participantCounter++;
-        }
-        specCounter++;
-    }
-    return true;
-}
-
 const sendSms = (phoneNo) => {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -210,7 +108,10 @@ const sendEmail = async (emailTo, messageSubject, html) => {
     sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
-        from: 'donotreply@myconnect.cancer.gov',
+        from: {
+            name: 'Connect for Cancer Prevention Study',
+            email: 'donotreply@myconnect.cancer.gov'
+        },
         subject: messageSubject,
         html: html,
     };
@@ -220,6 +121,107 @@ const sendEmail = async (emailTo, messageSubject, html) => {
     .catch((error) => {
         console.error(error)
     });
+}
+
+const notificationHandler = async (message, context) => {
+    const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
+    const messageArray = publishedMessage ? publishedMessage.split(',') : null;
+    if(!messageArray) {
+        const {PubSub} = require('@google-cloud/pubsub');
+        const pubSubClient = new PubSub();
+        const { getNotificationsCategories } = require('./firestore');
+        const categories = await getNotificationsCategories();
+        for(let category of categories) {
+            const dataBuffer = Buffer.from(`${category},250,0`);
+            try {
+                const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
+                console.log(`Message ${messageId} published.`);
+            } catch (error) {
+                console.error(`Received error while publishing: ${error.message}`);
+            }
+        }
+        return;
+    }
+    const notificationCategory = messageArray[0];
+    let limit = parseInt(messageArray[1]);
+    let offset = parseInt(messageArray[2]);
+    console.log(limit);
+    console.log(offset);
+    const { getNotificationSpecifications } = require('./firestore');
+    const notificationType = 'email';
+    const specifications = await getNotificationSpecifications(notificationType, notificationCategory);
+    let specCounter = 0;
+    for(let obj of specifications) {
+        const notificationSpecificationsID = obj.id;
+        const conditions = obj.conditions;
+        const messageBody = obj[notificationType].body;
+        const messageSubject = obj[notificationType].subject;
+        const emailField = obj.emailField;
+        const firstNameField = obj.firstNameField;
+        const preferredNameField = obj.preferredNameField;
+        const phoneField = obj.phoneField;
+        const primaryField = obj.primaryField;
+        const day = obj.time.day;
+        const hour = obj.time.hour;
+        const minute = obj.time.minute;
+
+        const showdown  = require('showdown');
+        const converter = new showdown.Converter();
+        const html = converter.makeHtml(messageBody);
+        const uuid = require('uuid');
+
+        const { retrieveParticipantsByStatus } = require('./firestore');
+        const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
+        let participantCounter = 0;
+        for( let participant of participantData) {
+            if(participant[emailField]) { // If email doesn't exists try sms.
+                let d = new Date(participant[primaryField]);
+                d.setDate(d.getDate() + day);
+                d.setHours(d.getHours() + hour);
+                d.setMinutes(d.getMinutes() + minute);
+                const body = html.replace('<firstName>', preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]);
+                let reminder = {
+                    notificationSpecificationsID,
+                    id: uuid(),
+                    notificationType,
+                    email: participant[emailField],
+                    notification : {
+                        title: messageSubject,
+                        body: body,
+                        time: new Date().toISOString()
+                    },
+                    attempt: obj.attempt,            
+                    category: obj.category,
+                    token: participant.token,
+                    uid: participant.state.uid,
+                    read: false
+                }
+                // Check if same notifications has already been sent
+                const { notificationAlreadySent } = require('./firestore');
+                const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
+                const currentDate = new Date();
+                if(sent === false && d <= currentDate) {
+                    const { storeNotifications } = require('./firestore');
+                    await storeNotifications(reminder);
+                    sendEmail(participant[emailField], messageSubject, body);
+                }
+            }
+            if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
+                const {PubSub} = require('@google-cloud/pubsub');
+                const pubSubClient = new PubSub();
+                const dataBuffer = Buffer.from(`${notificationCategory},${limit},${offset+limit}`);
+                try {
+                    const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
+                    console.log(`Message ${messageId} published.`);
+                } catch (error) {
+                    console.error(`Received error while publishing: ${error.message}`);
+                }
+            }
+            participantCounter++;
+        }
+        specCounter++;
+    }
+    return true;
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {

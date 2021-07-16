@@ -1124,11 +1124,11 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
             let operator = '';
             let values = ''
             if(conditions[obj]['equals']) {
-                values = conditions[obj]['equals'];
+                values = parseInt(conditions[obj]['equals']);
                 operator = '==';
             }
             if(conditions[obj]['notequals']) {
-                values = conditions[obj]['notequals'];
+                values = parseInt(conditions[obj]['notequals']);
                 operator = '!=';
             }
             query = query.where(obj, operator, values);
@@ -1146,6 +1146,7 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
 const notificationAlreadySent = async (token, notificationSpecificationsID) => {
     try {
         const snapshot = await db.collection('notifications').where('token', '==', token).where('notificationSpecificationsID', '==', notificationSpecificationsID).get()
+        console.log(snapshot)
         if(snapshot.size === 0) return false
         else true;
     } catch (error) {

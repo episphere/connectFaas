@@ -58,11 +58,11 @@ const dashboard = async (req, res) => {
         const { getParticipantNotification } = require('./notifications');
         return await getParticipantNotification(req, res, authObj);
     }
-    else if (api === 'storeNotificationSchema' && isParent && siteDetails.acronym === 'NCI') {
+    else if (api === 'storeNotificationSchema' && isParent && siteDetails.acronym === 'NIH') {
         const { storeNotificationSchema } = require('./notifications');
         return await storeNotificationSchema(req, res, authObj);
     }
-    else if (api === 'retrieveNotificationSchema' && isParent && siteDetails.acronym === 'NCI') {
+    else if (api === 'retrieveNotificationSchema' && isParent && siteDetails.acronym === 'NIH') {
         const { retrieveNotificationSchema } = require('./notifications');
         return await retrieveNotificationSchema(req, res, authObj);
     }
