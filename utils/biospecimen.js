@@ -295,6 +295,33 @@ const biospecimenAPIs = async (req, res) => {
         let response = await getNumBoxesShipped(siteAcronym, requestData);
         return res.status(200).json({data:response, code:200});
     }
+
+    else if(api == 'addKitData'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        const uuid = require('uuid');
+        const currentDate = new Date().toISOString();
+        requestData.id = uuid.v4();
+        requestData.timeStamp = currentDate;
+        const { addKitAssemblyData } = require('./firestore');
+        const response = await addKitAssemblyData(requestData);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({message: `Success!`, code:200})
+    }
+
+    else if(api == 'getKitData'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const { getKitAssemblyData } = require('./firestore');
+        const response = await getKitAssemblyData();
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({data: response, code:200})
+    }
+
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 
