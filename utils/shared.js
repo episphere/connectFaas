@@ -9,14 +9,9 @@ const setHeaders = (res) => {
 }
 
 const setHeadersDomainRestricted = (req, res) => {
-    const allowedOrigins = ['http://localhost:5000', 'https://episphere.github.io'];
-    // const allowedOrigins = ['https://episphere.github.io'];
-    const origin = req.headers.origin;
-    if(allowedOrigins.indexOf(origin) !== -1){
-        res.header('Access-Control-Allow-Origin', origin);
-        res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
-        res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-   }
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers','Accept,Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
 }
 
 const generateConnectID = () => {
@@ -165,6 +160,14 @@ const defaultFlags = {
     828729648: 104430631,
     699625233: 104430631,
     912301837: 208325815,
+    253883960: 972455046,
+    547363263: 972455046,
+    949302066: 972455046,
+    536735468: 972455046,
+    976570371: 972455046,
+    663265240: 972455046,
+    311580100: 104430631,
+    914639140: 104430631,
     ...incentiveFlags,
     ...withdrawalConcepts
 }
@@ -213,92 +216,131 @@ const retentionConcepts = [
     '454445267', // consent datetime
 ]
 
-const SSOConfig = {
-    'NIH-SSO-qfszp': {
-        group: 'https://federation.nih.gov/person/DLGroups',
-        firstName: 'https://federation.nih.gov/person/FirstName',
-        lastName: 'https://federation.nih.gov/person/LastName',
-        email: 'https://federation.nih.gov/person/Mail',
-        siteManagerUser: 'CN=connect-study-manager-user',
-        biospecimenUser: 'CN=connect-biospecimen-user',
-        helpDeskUser: 'CN=connect-help-desk-user',
-        siteCode: 111111111,
-        acronym: 'NIH'
+const nihSSOConfig = {
+    group: 'https://federation.nih.gov/person/DLGroups',
+    firstName: 'https://federation.nih.gov/person/FirstName',
+    lastName: 'https://federation.nih.gov/person/LastName',
+    email: 'https://federation.nih.gov/person/Mail',
+    siteManagerUser: 'CN=connect-study-manager-user',
+    biospecimenUser: 'CN=connect-biospecimen-user',
+    helpDeskUser: 'CN=connect-help-desk-user',
+    siteCode: 111111111,
+    acronym: 'NIH'
+}
+
+const hpSSOConfig = {
+    group: 'AD_groups',
+    email: 'email',
+    siteManagerUser: 'CN=connect-dshbrd-user',
+    siteCode: 531629870,
+    acronym: 'HP'
+}
+
+const sfhSSOConfig = {
+    group: 'UserRole',
+    email: 'UserEmail',
+    siteManagerUser: 'Connect-Study-Manager-User',
+    siteCode: 657167265,
+    acronym: 'SFH'
+}
+
+const hfhsSSOConfig = {
+    group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
+    firstName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
+    lastName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
+    email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+    siteCode: 548392715,
+    acronym: 'HFHS'
+}
+
+const kpSSOConfig = {
+    group: 'memberOf',
+    firstName: 'givenName',
+    email: 'userPrincipalName',
+    siteManagerUser: 'CN=connect_study_manager_user',
+    kpco: {
+        name: 'CN=connect_kpco_user',
+        siteCode: 125001209,
+        acronym: 'KPCO'
     },
-    'HP-SSO-wb1zb': {
-        group: 'AD_groups',
-        email: 'email',
-        siteManagerUser: 'CN=connect-dshbrd-user',
-        siteCode: 531629870,
-        acronym: 'HP'
+    kpnw: {
+        name: 'CN=connect_kpnw_user',
+        siteCode: 452412599,
+        acronym: 'KPNW'
     },
-    'SFH-SSO-cgzpj': {
-        group: 'UserRole',
-        email: 'UserEmail',
-        siteManagerUser: 'Connect-Study-Manager-User',
-        siteCode: 657167265,
-        acronym: 'SFH'
+    kphi: {
+        name: 'CN=connect_kphi_user',
+        siteCode: 300267574,
+        acronym: 'KPHI'
     },
-    'HFHS-SSO-ay0iz': {
-        group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
-        firstName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
-        lastName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
-        email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-        siteCode: 548392715,
-        acronym: 'HFHS'
-    },
-    'KP-SSO-wulix': {
-        group: 'memberOf',
-        firstName: 'givenName',
-        email: 'userPrincipalName',
-        siteManagerUser: 'CN=connect_study_manager_user',
-        kpco: {
-            name: 'CN=connect_kpco_user',
-            siteCode: 125001209,
-            acronym: 'KPCO'
-        },
-        kpnw: {
-            name: 'CN=connect_kpnw_user',
-            siteCode: 452412599,
-            acronym: 'KPNW'
-        },
-        kphi: {
-            name: 'CN=connect_kphi_user',
-            siteCode: 300267574,
-            acronym: 'KPHI'
-        },
-        kpga: {
-            name: 'CN=connect_kpga_user',
-            siteCode: 327912200,
-            acronym: 'KPGA'
-        }
-    },
-    'NORC-SSO-dilvf': {
-        group: 'http://schemas.xmlsoap.org/claims/Group',
-        email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-        helpDeskUser: 'connect-help-desk-user',
-        siteCode: 222222222,
-        acronym: 'NORC'
-    },
-    'MFC-SSO-fljvd': {
-        siteCode: 303349821,
-        acronym: 'MFC'
-    },
-    'UCM-SSO-tovai': {
-        group: '1.3.6.1.4.1.9902.2.1.41',
-        firstName: 'urn:oid:0.9.2342.19200300.100.1.1',
-        email: 'urn:oid:1.3.6.1.4.1.5923.1.1.1.6',
-        siteManagerUser: 'uc:org:bsd:applications:connect:connect-study-manager-user:authorized',
-        biospecimenUser: 'uc:org:bsd:applications:connect:connect-biospecimen-user:authorized',
-        siteCode: 809703864,
-        acronym: 'UCM'
+    kpga: {
+        name: 'CN=connect_kpga_user',
+        siteCode: 327912200,
+        acronym: 'KPGA'
     }
+}
+
+const norcSSOConfig = {
+    group: 'http://schemas.xmlsoap.org/claims/Group',
+    email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+    helpDeskUser: 'connect-help-desk-user',
+    siteCode: 222222222,
+    acronym: 'NORC'
+}
+
+const mfcSSOConfig = {
+    siteCode: 303349821,
+    acronym: 'MFC'
+}
+
+const ucmSSOConfig = {
+    group: '1.3.6.1.4.1.9902.2.1.41',
+    firstName: 'urn:oid:0.9.2342.19200300.100.1.1',
+    email: 'urn:oid:1.3.6.1.4.1.5923.1.1.1.6',
+    siteManagerUser: 'uc:org:bsd:applications:connect:connect-study-manager-user:authorized',
+    biospecimenUser: 'uc:org:bsd:applications:connect:connect-biospecimen-user:authorized',
+    siteCode: 809703864,
+    acronym: 'UCM'
+}
+
+const SSOConfig = {
+    'NIH-SSO-qfszp': nihSSOConfig,
+    'NIH-SSO-9q2ao': nihSSOConfig,
+    'NIH-SSO-wthvn': nihSSOConfig,
+
+    'HP-SSO-wb1zb': hpSSOConfig,
+    'HP-SSO-1elez': hpSSOConfig,
+    'HP-SSO-252sf': hpSSOConfig,
+
+    'SFH-SSO-cgzpj': sfhSSOConfig,
+    'SFH-SSO-uetfo': sfhSSOConfig,
+    'SFH-SSO-pb390': sfhSSOConfig,
+
+    'HFHS-SSO-ay0iz': hfhsSSOConfig,
+    'HFHS-SSO-eq1f': hfhsSSOConfig,
+    'HFHS-SSO-lo99j': hfhsSSOConfig,
+
+    'KP-SSO-wulix': kpSSOConfig,
+    'KP-SSO-ssj7c': kpSSOConfig,
+    'KP-SSO-ii9sr': kpSSOConfig,
+
+    'NORC-SSO-dilvf': norcSSOConfig,
+    'NORC-SSO-l80az': norcSSOConfig,
+    'NORC-SSO-nwvau': norcSSOConfig,
+
+    'MFC-SSO-fljvd': mfcSSOConfig,
+    'MFC-SSO-6x4zy': mfcSSOConfig,
+    'MFC-SSO-tdj17': mfcSSOConfig,
+
+    'UCM-SSO-tovai': ucmSSOConfig,
+    'UCM-SSO-lrjsp': ucmSSOConfig,
+    'UCM-SSO-p4f5m': ucmSSOConfig
 }
 
 const decodingJWT = (token) => {
     if(token !== null || token !== undefined){
         const base64String = token.split('.')[1];
-        const decodedValue = JSON.parse(Buffer.from(base64String, 'base64').toString('ascii'));
+        const decodedValue = JSON.parse(Buffer.from(base64String, 'base64').toString());
         return decodedValue;
     }
     return null;
@@ -306,6 +348,7 @@ const decodingJWT = (token) => {
 
 const SSOValidation = async (dashboardType, idToken) => {
     try {
+        console.log(idToken)
         const decodedJWT = decodingJWT(idToken);
         const tenant = decodedJWT.firebase.tenant;
         const { validateMultiTenantIDToken } = require('./firestore');

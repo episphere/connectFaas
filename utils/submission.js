@@ -191,12 +191,9 @@ const identifyParticipant = async (req, res, site) => {
     }
     const verificationStatus = ['verified', 'cannotbeverified', 'duplicate', 'outreachtimedout'];
     if(req.method === 'GET') {
-        if(!req.query.type || req.query.type.trim() === ""){
-            return res.status(401).json(getResponseJSON('Type is missing!', 401));
-        }
-    
+
         if(!req.query.token || req.query.token.trim() === ""){
-            return res.status(401).json(getResponseJSON('Token is missing!', 401));
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
         let siteCode = '';
         if(site) {
@@ -215,6 +212,10 @@ const identifyParticipant = async (req, res, site) => {
             siteCode = authorized.siteCode;
         }
 
+        if(!req.query.type || req.query.type.trim() === ""){
+            return res.status(400).json(getResponseJSON('Type is missing!', 400));
+        }
+        
         const type = req.query.type;
         const token = req.query.token;
         console.log(`identifyParticipant type: - ${type} and participant token: - ${token}`);
