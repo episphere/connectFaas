@@ -229,6 +229,18 @@ const nihSSOConfig = {
     acronym: 'NIH'
 }
 
+const nihSSODevConfig = {
+    group: 'https://federation.nih.gov/person/DLGroups',
+    firstName: 'https://federation.nih.gov/person/FirstName',
+    lastName: 'https://federation.nih.gov/person/LastName',
+    email: 'https://federation.nih.gov/person/Mail',
+    siteManagerUser: 'CN=connect-study-manager-dev',
+    biospecimenUser: 'CN=connect-biospecimen-dev',
+    helpDeskUser: 'CN=connect-help-desk-user',
+    siteCode: 111111111,
+    acronym: 'NIH'
+}
+
 const hpSSOConfig = {
     group: 'AD_groups',
     email: 'email',
@@ -305,7 +317,7 @@ const ucmSSOConfig = {
 }
 
 const SSOConfig = {
-    'NIH-SSO-qfszp': nihSSOConfig,
+    'NIH-SSO-qfszp': nihSSODevConfig,
     'NIH-SSO-9q2ao': nihSSOConfig,
     'NIH-SSO-wthvn': nihSSOConfig,
 
