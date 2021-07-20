@@ -1146,7 +1146,6 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
 const notificationAlreadySent = async (token, notificationSpecificationsID) => {
     try {
         const snapshot = await db.collection('notifications').where('token', '==', token).where('notificationSpecificationsID', '==', notificationSpecificationsID).get()
-        console.log(snapshot)
         if(snapshot.size === 0) return false
         else true;
     } catch (error) {
