@@ -14,7 +14,7 @@ const dashboard = async (req, res) => {
     let dashboardType = 'siteManagerUser';
     if(access_token.includes('.')) {
         const decodedJWT = decodingJWT(access_token);
-        dashboardType = decodedJWT.firebase.sign_in_provider === 'saml.connect-norc' ? 'helpDeskUser' : 'siteManagerUser';
+        dashboardType = ['saml.connect-norc', 'saml.connect-norc-prod'].includes(decodedJWT.firebase.sign_in_provider) ? 'helpDeskUser' : 'siteManagerUser';
     }
     siteDetails = await SSOValidation(dashboardType, access_token);
     if(!siteDetails) { // Temporary allowing used of siteKey to validate
