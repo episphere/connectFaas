@@ -234,8 +234,8 @@ const nihSSODevConfig = {
     firstName: 'https://federation.nih.gov/person/FirstName',
     lastName: 'https://federation.nih.gov/person/LastName',
     email: 'https://federation.nih.gov/person/Mail',
-    siteManagerUser: 'CN=connect-study-manager-dev',
-    biospecimenUser: 'CN=connect-biospecimen-dev',
+    siteManagerUser: 'connect-study-manager-dev',
+    biospecimenUser: 'connect-biospecimen-dev',
     helpDeskUser: 'CN=connect-help-desk-user',
     siteCode: 111111111,
     acronym: 'NIH'
