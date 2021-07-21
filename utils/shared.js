@@ -318,7 +318,7 @@ const ucmSSOConfig = {
 
 const SSOConfig = {
     'NIH-SSO-qfszp': nihSSODevConfig,
-    'NIH-SSO-9q2ao': nihSSOConfig,
+    'NIH-SSO-9q2ao': nihSSODevConfig,
     'NIH-SSO-wthvn': nihSSOConfig,
 
     'HP-SSO-wb1zb': hpSSOConfig,
