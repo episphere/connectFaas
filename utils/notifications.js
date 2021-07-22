@@ -109,8 +109,8 @@ const sendEmail = async (emailTo, messageSubject, html) => {
     const msg = {
         to: emailTo,
         from: {
-            name: 'Connect for Cancer Prevention Study',
-            email: 'donotreply@myconnect.cancer.gov'
+            name: process.env.SG_FROM_NAME || 'Connect for Cancer Prevention Study',
+            email: process.env.SG_FROM_EMAIL || 'donotreply@myconnect.cancer.gov'
         },
         subject: messageSubject,
         html: html,
