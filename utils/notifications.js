@@ -133,6 +133,7 @@ const notificationHandler = async (message, context) => {
         const pubSubClient = new PubSub();
         const { getNotificationsCategories } = require('./firestore');
         const categories = await getNotificationsCategories();
+        console.log(categories)
         for(let category of categories) {
             const dataBuffer = Buffer.from(`${category}${splitCharacters}250${splitCharacters}0`);
             try {
