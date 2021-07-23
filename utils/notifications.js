@@ -126,6 +126,7 @@ const sendEmail = async (emailTo, messageSubject, html) => {
 const notificationHandler = async (message, context) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const messageArray = publishedMessage ? publishedMessage.split(',') : null;
+    console.log(messageArray)
     if(!messageArray) {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
