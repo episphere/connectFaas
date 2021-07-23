@@ -125,14 +125,16 @@ const sendEmail = async (emailTo, messageSubject, html) => {
 
 const notificationHandler = async (message, context) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
-    const messageArray = publishedMessage ? publishedMessage.split(',') : null;
+    const splitCharacters = '@#$'
+    const messageArray = publishedMessage ? publishedMessage.split(splitCharacters) : null;
+    console.log(messageArray)
     if(!messageArray) {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
         const { getNotificationsCategories } = require('./firestore');
         const categories = await getNotificationsCategories();
         for(let category of categories) {
-            const dataBuffer = Buffer.from(`${category},250,0`);
+            const dataBuffer = Buffer.from(`${category}${splitCharacters}250${splitCharacters}0`);
             try {
                 const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
                 console.log(`Message ${messageId} published.`);
@@ -209,7 +211,7 @@ const notificationHandler = async (message, context) => {
             if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
                 const {PubSub} = require('@google-cloud/pubsub');
                 const pubSubClient = new PubSub();
-                const dataBuffer = Buffer.from(`${notificationCategory},${limit},${offset+limit}`);
+                const dataBuffer = Buffer.from(`${notificationCategory}${splitCharacters}${limit}${splitCharacters}${offset+limit}`);
                 try {
                     const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
                     console.log(`Message ${messageId} published.`);
