@@ -449,7 +449,7 @@ const isParentEntity = async (authorized) => {
     let siteCodes = await getChildrens(ID);
     let isParent = siteCodes ? true : false;
     siteCodes = siteCodes ? siteCodes : authorized.siteCode;
-    return {isParent, siteCodes, coordinatingCenter};
+    return {isParent, siteCodes, coordinatingCenter: authorized.coordinatingCenter};
 }
 
 const logIPAdddress = (req) => {
