@@ -176,6 +176,7 @@ const notificationHandler = async (message, context) => {
         const { retrieveParticipantsByStatus } = require('./firestore');
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
         let participantCounter = 0;
+        if(participantData.length === 0) continue;
         for( let participant of participantData) {
             if(participant[emailField]) { // If email doesn't exists try sms.
                 let d = new Date(participant[primaryField]);
