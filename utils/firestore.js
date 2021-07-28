@@ -24,6 +24,7 @@ const verifyToken = async (token) => {
         return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -41,6 +42,7 @@ const verifyPin = async (pin) => {
         return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -51,6 +53,7 @@ const validateIDToken = async (idToken) => {
         return decodedToken;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -61,6 +64,7 @@ const validateMultiTenantIDToken = async (idToken, tenant) => {
         return decodedToken;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -74,6 +78,7 @@ const linkParticipanttoFirebaseUID = async (docID, uID) => {
         return true;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -89,6 +94,7 @@ const participantExists = async (uid) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -109,6 +115,7 @@ const storeResponse = async (data) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -124,6 +131,7 @@ const updateResponse = async (data, uid) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error)
     }
 }
@@ -148,6 +156,7 @@ const createRecord = async (data) => {
         return true;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -163,6 +172,7 @@ const recordExists = async (studyId, siteCode) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -180,6 +190,7 @@ const validateSiteUser = async (siteKey) => {
         };
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -197,6 +208,7 @@ const validateSiteSAEmail = async (saEmail) => {
         };
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -216,6 +228,7 @@ const getParticipantData = async (token, siteCode, isParent) => {
         };
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -314,6 +327,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
         });
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -341,6 +355,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
             return {firstName: data['399159511'], email: data['869588347'], token: data['token']}
         });
     } catch (error) {
+        console.error(error);
         return new Error(error)
     }
 }
@@ -364,6 +379,7 @@ const getChildrens = async (ID) => {
         };
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -398,6 +414,7 @@ const verifyIdentity = async (type, token, siteCode) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -419,7 +436,8 @@ const retrieveUserProfile = async (uid) => {
         }
     }
     catch(error){
-        return new Error(error)
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -444,6 +462,7 @@ const retrieveToken = async (access_token) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -455,6 +474,7 @@ const sanityCheckConnectID = async (ID) => {
         else return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -466,6 +486,7 @@ const sanityCheckPIN = async (pin) => {
         else return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -483,6 +504,7 @@ const individualParticipant = async (key, value, siteCode, isParent) => {
         else return false;
     }
     catch(error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -495,6 +517,7 @@ const updateParticipantRecord = async (key, value, siteCode, isParent, obj) => {
         await db.collection('participants').doc(docId).update(obj);
     }
     catch(error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -509,6 +532,7 @@ const deleteFirestoreDocuments = async (siteCode) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -567,6 +591,7 @@ const filterDB = async (queries, siteCode, isParent) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -583,6 +608,7 @@ const validateBiospecimenUser = async (email) => {
         }
         else return false;
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -610,6 +636,7 @@ const biospecimenUserExists = async (email) => {
         if(snapshot.size === 0) return false;
         else return true;
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -618,6 +645,7 @@ const addNewBiospecimenUser = async (data) => {
     try {
         await db.collection('biospecimenUsers').add(data);
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -635,6 +663,7 @@ const removeUser = async (userEmail, siteCode, email, manager) => {
         }
         else return false;
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -1110,7 +1139,8 @@ const getNotificationSpecifications = async (notificationType, notificationCateg
             return document.data();
         });
     } catch (error) {
-        return new Error(error)
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -1139,7 +1169,8 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
             return data;
         });
     } catch (error) {
-        return new Error(error)
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -1157,7 +1188,8 @@ const storeNotifications = async payload => {
     try {
         await db.collection('notifications').add(payload);
     } catch (error) {
-        return new Error(error)
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -1239,6 +1271,7 @@ const addKitAssemblyData = async (data) => {
         return true;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -1250,6 +1283,7 @@ const getKitAssemblyData = async () => {
         else return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
