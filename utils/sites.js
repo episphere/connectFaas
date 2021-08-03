@@ -133,6 +133,13 @@ const updateParticipantData = async (req, res, authObj) => {
             }
         }
         else updatedData[key] = dataObj[key];
+
+        // Handle Site Notifications
+        const siteNotificationsConcepts = ['773707518', '747006172', '831041022', '987563196'];
+        if(siteNotificationsConcepts.includes(key) && dataObj[key] === 353358909) {
+            const  { handleSiteNotifications } = require('./siteNotifications');
+            await handleSiteNotifications(docData['Connect_ID'], key, obj.email, obj.id, obj.acronym);
+        }
     }
     console.log(updatedData)
     const { updateParticipantData } = require('./firestore');

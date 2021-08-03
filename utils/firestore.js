@@ -1288,6 +1288,25 @@ const getKitAssemblyData = async () => {
     }
 }
 
+const storeSiteNotifications = async (reminder) => {
+    try {
+        await db.collection('siteNotifications').add(reminder);
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const getCoordinatingCenterEmail = async () => {
+    try {
+        const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+        if(snapshot.size > 0) return snapshot.docs[0].data().email;
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
 module.exports = {
     updateResponse,
     validateSiteUser,
@@ -1354,5 +1373,7 @@ module.exports = {
     getNotificationHistoryByParticipant,
     getNotificationsCategories,
     addKitAssemblyData,
-    getKitAssemblyData
+    getKitAssemblyData,
+    storeSiteNotifications,
+    getCoordinatingCenterEmail
 }
