@@ -575,12 +575,13 @@ const retrieveUserNotifications = async (uid) => {
     }
 }
 
-const retrieveSiteNotifications = async (siteId) => {
+const retrieveSiteNotifications = async (siteId, isParent) => {
     try {
-        const snapShot = await db.collection('siteNotifications')
-                            .where('siteId', '==', siteId)
-                            .orderBy('notification.time', 'desc')
-                            .get();
+        let query = db.collection('siteNotifications');
+        if(!isParent) query = query.where('siteId', '==', siteId);
+        const snapShot = await query.orderBy('notification.time', 'desc')
+                                    .get(); 
+                            
         if(snapShot.size > 0){
             return snapShot.docs.map(document => {
                 let data = document.data();

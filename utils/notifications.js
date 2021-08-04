@@ -341,7 +341,7 @@ const getSiteNotification = async (req, res, authObj) => {
     const isParent = obj.isParent;
     const siteId = obj.id;
     const { retrieveSiteNotifications } = require('./firestore');
-    const data = await retrieveSiteNotifications(siteId);
+    const data = await retrieveSiteNotifications(siteId, isParent);
     if(!data) return res.status(400).json(getResponseJSON('Invalid token or you are not authorized to access data for given token', 200));
 
     return res.status(200).json({data, code: 200})
