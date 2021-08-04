@@ -555,18 +555,44 @@ const notificationTokenExists = async (token) => {
 }
 
 const retrieveUserNotifications = async (uid) => {
-    const snapShot = await db.collection('notifications')
+    try {
+        const snapShot = await db.collection('notifications')
                             .where('uid', '==', uid)
                             .orderBy('notification.time', 'desc')
                             .get();
-    if(snapShot.size > 0){
-        return snapShot.docs.map(document => {
-            let data = document.data();
-            return data;
-        });
+        if(snapShot.size > 0){
+            return snapShot.docs.map(document => {
+                let data = document.data();
+                return data;
+            });
+        }
+        else {
+            return false;
+        }
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
     }
-    else {
-        return false;
+}
+
+const retrieveSiteNotifications = async (siteId) => {
+    try {
+        const snapShot = await db.collection('siteNotifications')
+                            .where('siteId', '==', siteId)
+                            .orderBy('notification.time', 'desc')
+                            .get();
+        if(snapShot.size > 0){
+            return snapShot.docs.map(document => {
+                let data = document.data();
+                return data;
+            });
+        }
+        else {
+            return [];
+        }
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -1386,5 +1412,6 @@ module.exports = {
     getKitAssemblyData,
     storeSiteNotifications,
     getCoordinatingCenterEmail,
-    getSiteEmail
+    getSiteEmail,
+    retrieveSiteNotifications
 }

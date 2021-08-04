@@ -313,6 +313,40 @@ const getParticipantNotification = async (req, res, authObj) => {
     return res.status(200).json({data, code: 200})
 }
 
+const getSiteNotification = async (req, res, authObj) => {
+    logIPAdddress(req);
+    setHeaders(res);
+
+    if (req.method === 'OPTIONS') return res.status(200).json({code: 200});
+        
+    if (req.method !== 'GET') return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    
+    let obj = {};
+    if (authObj) obj = authObj;
+    else {
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(500).json(getResponseJSON(authorized.message, 500));
+        }
+    
+        if(!authorized){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+    
+        const { isParentEntity } = require('./shared');
+        obj = await isParentEntity(authorized);
+    }
+
+    const isParent = obj.isParent;
+    const siteId = obj.id;
+    const { retrieveSiteNotifications } = require('./firestore');
+    const data = await retrieveSiteNotifications(siteId);
+    if(!data) return res.status(400).json(getResponseJSON('Invalid token or you are not authorized to access data for given token', 200));
+
+    return res.status(200).json({data, code: 200})
+}
+
 module.exports = {
     subscribeToNotification,
     retrieveNotifications,
@@ -320,5 +354,6 @@ module.exports = {
     storeNotificationSchema,
     retrieveNotificationSchema,
     getParticipantNotification,
-    sendEmail
+    sendEmail,
+    getSiteNotification
 }
