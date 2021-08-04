@@ -103,30 +103,25 @@ const getSecrets = async () => {
 }
 
 const sendEmail = async (emailTo, messageSubject, html, cc) => {
-    try {
-        const sgMail = require('@sendgrid/mail');
-        const apiKey = await getSecrets();
-        sgMail.setApiKey(apiKey);
-        const msg = {
-            to: emailTo,
-            from: {
-                name: process.env.SG_FROM_NAME || 'Connect for Cancer Prevention Study',
-                email: process.env.SG_FROM_EMAIL || 'donotreply@myconnect.cancer.gov'
-            },
-            subject: messageSubject,
-            html: html,
-        };
-        if(cc) msg.cc = cc;
-        sgMail.send(msg).then(() => {
-            console.log('Email sent to '+emailTo)
-        })
-        .catch((error) => {
-            console.error(error)
-        });
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
+    const sgMail = require('@sendgrid/mail');
+    const apiKey = await getSecrets();
+    sgMail.setApiKey(apiKey);
+    const msg = {
+        to: emailTo,
+        from: {
+            name: process.env.SG_FROM_NAME || 'Connect for Cancer Prevention Study',
+            email: process.env.SG_FROM_EMAIL || 'donotreply@myconnect.cancer.gov'
+        },
+        subject: messageSubject,
+        html: html,
+    };
+    if(cc) msg.cc = cc;
+    sgMail.send(msg).then(() => {
+        console.log('Email sent to '+emailTo)
+    })
+    .catch((error) => {
+        console.error(error)
+    });
 }
 
 const notificationHandler = async (message, context) => {

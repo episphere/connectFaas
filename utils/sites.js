@@ -137,8 +137,10 @@ const updateParticipantData = async (req, res, authObj) => {
         // Handle Site Notifications
         const siteNotificationsConcepts = ['773707518', '747006172', '831041022', '987563196'];
         if(siteNotificationsConcepts.includes(key) && dataObj[key] === 353358909) {
-            const  { handleSiteNotifications } = require('./siteNotifications');
-            await handleSiteNotifications(docData['Connect_ID'], key, obj.email, obj.id, obj.acronym);
+            const { handleSiteNotifications } = require('./siteNotifications');
+            const { getSiteEmail } = require('./firestore');
+            const siteEmail = await getSiteEmail(docData['827220437']);
+            await handleSiteNotifications(docData['Connect_ID'], key, siteEmail, obj.id, obj.acronym);
         }
     }
     console.log(updatedData)
