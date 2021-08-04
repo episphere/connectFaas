@@ -42,11 +42,11 @@ const dashboard = async (req, res) => {
         const { identifyParticipant } = require('./submission');
         return await identifyParticipant(req, res, siteCodes);
     }
-    else if (api === 'submitParticipantsData' && isParent === false) {
+    else if (api === 'submitParticipantsData') {
         const { submitParticipantsData } = require('./sites');
         return await submitParticipantsData(req, res, siteCodes);
     }
-    else if (api === 'updateParticipantData' && isParent === false) {
+    else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
         return await updateParticipantData(req, res, authObj);
     }
