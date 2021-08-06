@@ -40,6 +40,15 @@ const subscribeToNotification = async (req, res) => {
     res.status(200).json({message: 'Success!', code:200})
 }
 
+const markAllNotificationsAsAlreadyRead = (notification, collection) => {
+    for(let id of notification) {
+        if(id) {
+            const {markNotificationAsRead} = require('./firestore');
+            markNotificationAsRead(id, collection);
+        }
+    }
+}
+
 const retrieveNotifications = async (req, res) => {
     setHeadersDomainRestricted(req, res)
 
@@ -68,18 +77,9 @@ const retrieveNotifications = async (req, res) => {
     const { retrieveUserNotifications } = require('./firestore');
     const notifications = await retrieveUserNotifications(uid);
     if(notifications !== false){
-        markAllNotificationsAsAlreadyRead(notifications.map(dt => dt.id));
+        markAllNotificationsAsAlreadyRead(notifications.map(dt => dt.id), 'notifications');
     }
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
-}
-
-const markAllNotificationsAsAlreadyRead = (notification) => {
-    for(let id of notification) {
-        if(id) {
-            const {markNotificationAsRead} = require('./firestore');
-            markNotificationAsRead(id);
-        }
-    }
 }
 
 const sendSms = (phoneNo) => {
@@ -342,8 +342,9 @@ const getSiteNotification = async (req, res, authObj) => {
     const siteId = obj.id;
     const { retrieveSiteNotifications } = require('./firestore');
     const data = await retrieveSiteNotifications(siteId, isParent);
-    if(!data) return res.status(400).json(getResponseJSON('Invalid token or you are not authorized to access data for given token', 200));
-
+    if(notifications !== false){
+        markAllNotificationsAsAlreadyRead(data.map(dt => dt.id), 'siteNotifications');
+    }
     return res.status(200).json({data, code: 200})
 }
 

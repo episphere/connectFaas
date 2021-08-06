@@ -1220,8 +1220,8 @@ const storeNotifications = async payload => {
     }
 }
 
-const markNotificationAsRead = async (id) => {
-    const snapshot = await db.collection('notifications').where('id', '==', id).get();
+const markNotificationAsRead = async (id, collection) => {
+    const snapshot = await db.collection(collection).where('id', '==', id).get();
     const docId = snapshot.docs[0].id;
     await db.collection('notifications').doc(docId).update({read: true});
 }
