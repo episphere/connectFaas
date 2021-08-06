@@ -27,7 +27,7 @@ const templates = {
     }
 }
 
-const handleSiteNotifications = async (Connect_ID, concept, toEmail, siteId, acronym) => {
+const handleSiteNotifications = async (Connect_ID, concept, toEmail, siteId, acronym, siteCode) => {
     const showdown  = require('showdown');
     const converter = new showdown.Converter();
     const email = templates[concept].email;
@@ -48,6 +48,7 @@ const handleSiteNotifications = async (Connect_ID, concept, toEmail, siteId, acr
             time: new Date().toISOString()
         },
         siteAcronym: acronym,
+        siteCode,
         siteId,
         read: false
     }

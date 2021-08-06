@@ -79,11 +79,11 @@ const submitParticipantsData = async (req, res, site) => {
     else return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
-const handleSiteNotifications = async (Connect_ID, concept, siteCode, obj) => {
+const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
     const { handleSiteNotifications } = require('./siteNotifications');
     const { getSiteEmail } = require('./firestore');
     const siteEmail = await getSiteEmail(siteCode);
-    await handleSiteNotifications(Connect_ID, concept, siteEmail, obj.id, obj.acronym);
+    await handleSiteNotifications(Connect_ID, concept, siteEmail, obj.id, obj.acronym, obj.siteCode);
 }
 
 const updateParticipantData = async (req, res, authObj) => {
@@ -144,16 +144,16 @@ const updateParticipantData = async (req, res, authObj) => {
 
     // Handle Site Notifications
     if(dataObj['831041022'] && dataObj['747006172'] && dataObj['773707518'] && dataObj['831041022'] === 353358909 && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909){ // Data Destruction
-        await handleSiteNotifications(docData['Connect_ID'], '831041022', docData['827220437'], obj);
+        await siteNotificationsHandler(docData['Connect_ID'], '831041022', docData['827220437'], obj);
     }
     else if (dataObj['747006172'] && dataObj['773707518'] && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909) { // Withdraw Consent
-        await handleSiteNotifications(docData['Connect_ID'], '747006172', docData['827220437'], obj);
+        await siteNotificationsHandler(docData['Connect_ID'], '747006172', docData['827220437'], obj);
     }
     else if(dataObj['773707518'] && dataObj['773707518'] === 353358909) { // Revocation only email
-        await handleSiteNotifications(docData['Connect_ID'], '773707518', docData['827220437'], obj);
+        await siteNotificationsHandler(docData['Connect_ID'], '773707518', docData['827220437'], obj);
     }
     else if (dataObj['987563196'] && dataObj['987563196'] === 353358909) {
-        await handleSiteNotifications(docData['Connect_ID'], '987563196', docData['827220437'], obj);
+        await siteNotificationsHandler(docData['Connect_ID'], '987563196', docData['827220437'], obj);
     }
 
     console.log(updatedData)
