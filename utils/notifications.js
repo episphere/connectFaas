@@ -342,7 +342,7 @@ const getSiteNotification = async (req, res, authObj) => {
     const siteId = obj.id;
     const { retrieveSiteNotifications } = require('./firestore');
     const data = await retrieveSiteNotifications(siteId, isParent);
-    if(notifications !== false){
+    if(data !== false){
         markAllNotificationsAsAlreadyRead(data.map(dt => dt.id), 'siteNotifications');
     }
     return res.status(200).json({data, code: 200})
