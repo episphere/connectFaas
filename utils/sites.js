@@ -79,6 +79,13 @@ const submitParticipantsData = async (req, res, site) => {
     else return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
+const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
+    const { handleSiteNotifications } = require('./siteNotifications');
+    const { getSiteEmail } = require('./firestore');
+    const siteEmail = await getSiteEmail(siteCode);
+    await handleSiteNotifications(Connect_ID, concept, siteEmail, obj.id, obj.acronym, obj.siteCode);
+}
+
 const updateParticipantData = async (req, res, authObj) => {
     logIPAdddress(req);
     setHeaders(res);
@@ -134,6 +141,21 @@ const updateParticipantData = async (req, res, authObj) => {
         }
         else updatedData[key] = dataObj[key];
     }
+
+    // Handle Site Notifications
+    if(dataObj['831041022'] && dataObj['747006172'] && dataObj['773707518'] && dataObj['831041022'] === 353358909 && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909){ // Data Destruction
+        await siteNotificationsHandler(docData['Connect_ID'], '831041022', docData['827220437'], obj);
+    }
+    else if (dataObj['747006172'] && dataObj['773707518'] && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909) { // Withdraw Consent
+        await siteNotificationsHandler(docData['Connect_ID'], '747006172', docData['827220437'], obj);
+    }
+    else if(dataObj['773707518'] && dataObj['773707518'] === 353358909) { // Revocation only email
+        await siteNotificationsHandler(docData['Connect_ID'], '773707518', docData['827220437'], obj);
+    }
+    else if (dataObj['987563196'] && dataObj['987563196'] === 353358909) {
+        await siteNotificationsHandler(docData['Connect_ID'], '987563196', docData['827220437'], obj);
+    }
+
     console.log(updatedData)
     const { updateParticipantData } = require('./firestore');
     updateParticipantData(docID, updatedData);

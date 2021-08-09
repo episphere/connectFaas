@@ -62,7 +62,7 @@ const lockedAttributes = [
                         "914639140",
                         "311580100",
                         "948195369",
-                        "685002411", "906417725", "773707518", "153713899", "747006172", "831041022", "359404406", "987563196", "123868967", "764403541", // Withdrawal concepts
+                        "685002411", "906417725", "773707518", "747006172", "831041022", "359404406", "987563196", "123868967", "764403541", // Withdrawal concepts
                         "851245875", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "637147033", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "538619788", // Refusal concepts
                         "912301837",
                         "113579866",
@@ -449,7 +449,7 @@ const isParentEntity = async (authorized) => {
     let siteCodes = await getChildrens(ID);
     let isParent = siteCodes ? true : false;
     siteCodes = siteCodes ? siteCodes : authorized.siteCode;
-    return {isParent, siteCodes, coordinatingCenter: authorized.coordinatingCenter};
+    return {isParent, siteCodes, ...authorized};
 }
 
 const logIPAdddress = (req) => {

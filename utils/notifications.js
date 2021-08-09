@@ -40,6 +40,15 @@ const subscribeToNotification = async (req, res) => {
     res.status(200).json({message: 'Success!', code:200})
 }
 
+const markAllNotificationsAsAlreadyRead = (notification, collection) => {
+    for(let id of notification) {
+        if(id) {
+            const {markNotificationAsRead} = require('./firestore');
+            markNotificationAsRead(id, collection);
+        }
+    }
+}
+
 const retrieveNotifications = async (req, res) => {
     setHeadersDomainRestricted(req, res)
 
@@ -68,18 +77,9 @@ const retrieveNotifications = async (req, res) => {
     const { retrieveUserNotifications } = require('./firestore');
     const notifications = await retrieveUserNotifications(uid);
     if(notifications !== false){
-        markAllNotificationsAsAlreadyRead(notifications.map(dt => dt.id));
+        markAllNotificationsAsAlreadyRead(notifications.map(dt => dt.id), 'notifications');
     }
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
-}
-
-const markAllNotificationsAsAlreadyRead = (notification) => {
-    for(let id of notification) {
-        if(id) {
-            const {markNotificationAsRead} = require('./firestore');
-            markNotificationAsRead(id);
-        }
-    }
 }
 
 const sendSms = (phoneNo) => {
@@ -102,7 +102,7 @@ const getSecrets = async () => {
     return payload;
 }
 
-const sendEmail = async (emailTo, messageSubject, html) => {
+const sendEmail = async (emailTo, messageSubject, html, cc) => {
     const sgMail = require('@sendgrid/mail');
     const apiKey = await getSecrets();
     sgMail.setApiKey(apiKey);
@@ -115,6 +115,7 @@ const sendEmail = async (emailTo, messageSubject, html) => {
         subject: messageSubject,
         html: html,
     };
+    if(cc) msg.cc = cc;
     sgMail.send(msg).then(() => {
         console.log('Email sent to '+emailTo)
     })
@@ -312,11 +313,48 @@ const getParticipantNotification = async (req, res, authObj) => {
     return res.status(200).json({data, code: 200})
 }
 
+const getSiteNotification = async (req, res, authObj) => {
+    logIPAdddress(req);
+    setHeaders(res);
+
+    if (req.method === 'OPTIONS') return res.status(200).json({code: 200});
+        
+    if (req.method !== 'GET') return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    
+    let obj = {};
+    if (authObj) obj = authObj;
+    else {
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(500).json(getResponseJSON(authorized.message, 500));
+        }
+    
+        if(!authorized){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+    
+        const { isParentEntity } = require('./shared');
+        obj = await isParentEntity(authorized);
+    }
+
+    const isParent = obj.isParent;
+    const siteId = obj.id;
+    const { retrieveSiteNotifications } = require('./firestore');
+    const data = await retrieveSiteNotifications(siteId, isParent);
+    if(data !== false){
+        markAllNotificationsAsAlreadyRead(data.map(dt => dt.id), 'siteNotifications');
+    }
+    return res.status(200).json({data, code: 200})
+}
+
 module.exports = {
     subscribeToNotification,
     retrieveNotifications,
     notificationHandler,
     storeNotificationSchema,
     retrieveNotificationSchema,
-    getParticipantNotification
+    getParticipantNotification,
+    sendEmail,
+    getSiteNotification
 }

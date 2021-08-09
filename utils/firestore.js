@@ -555,18 +555,45 @@ const notificationTokenExists = async (token) => {
 }
 
 const retrieveUserNotifications = async (uid) => {
-    const snapShot = await db.collection('notifications')
+    try {
+        const snapShot = await db.collection('notifications')
                             .where('uid', '==', uid)
                             .orderBy('notification.time', 'desc')
                             .get();
-    if(snapShot.size > 0){
-        return snapShot.docs.map(document => {
-            let data = document.data();
-            return data;
-        });
+        if(snapShot.size > 0){
+            return snapShot.docs.map(document => {
+                let data = document.data();
+                return data;
+            });
+        }
+        else {
+            return false;
+        }
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
     }
-    else {
-        return false;
+}
+
+const retrieveSiteNotifications = async (siteId, isParent) => {
+    try {
+        let query = db.collection('siteNotifications');
+        if(!isParent) query = query.where('siteId', '==', siteId);
+        const snapShot = await query.orderBy('notification.time', 'desc')
+                                    .get(); 
+                            
+        if(snapShot.size > 0){
+            return snapShot.docs.map(document => {
+                let data = document.data();
+                return data;
+            });
+        }
+        else {
+            return [];
+        }
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -1193,8 +1220,8 @@ const storeNotifications = async payload => {
     }
 }
 
-const markNotificationAsRead = async (id) => {
-    const snapshot = await db.collection('notifications').where('id', '==', id).get();
+const markNotificationAsRead = async (id, collection) => {
+    const snapshot = await db.collection(collection).where('id', '==', id).get();
     const docId = snapshot.docs[0].id;
     await db.collection('notifications').doc(docId).update({read: true});
 }
@@ -1288,6 +1315,35 @@ const getKitAssemblyData = async () => {
     }
 }
 
+const storeSiteNotifications = async (reminder) => {
+    try {
+        await db.collection('siteNotifications').add(reminder);
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const getCoordinatingCenterEmail = async () => {
+    try {
+        const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+        if(snapshot.size > 0) return snapshot.docs[0].data().email;
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const getSiteEmail = async (siteCode) => {
+    try {
+        const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        if(snapshot.size > 0) return snapshot.docs[0].data().email;
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
 module.exports = {
     updateResponse,
     validateSiteUser,
@@ -1354,5 +1410,9 @@ module.exports = {
     getNotificationHistoryByParticipant,
     getNotificationsCategories,
     addKitAssemblyData,
-    getKitAssemblyData
+    getKitAssemblyData,
+    storeSiteNotifications,
+    getCoordinatingCenterEmail,
+    getSiteEmail,
+    retrieveSiteNotifications
 }

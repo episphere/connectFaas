@@ -144,7 +144,7 @@ const validateSiteUsers = async (req, res, authObj) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
     if(authObj) {
-        return res.status(200).json({message: 'Ok', code: 200, isParent: authObj.isParent, coordinatingCenter: authObj.coordinatingCenter});
+        return res.status(200).json({message: 'Ok', code: 200, isParent: authObj.isParent, coordinatingCenter: authObj.coordinatingCenter, helpDesk: authObj.helpDesk});
     }
     else {
         const { APIAuthorization } = require('./shared');

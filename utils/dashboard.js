@@ -26,6 +26,8 @@ const dashboard = async (req, res) => {
     const authObj = await isParentEntity(siteDetails);
     const isParent = authObj.isParent;
     const siteCodes = authObj.siteCodes;
+    const isCoordinatingCenter = authObj.coordinatingCenter;
+    const isHelpDesk = authObj.helpDesk;
     const query = req.query;
     if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
     const api = query.api;
@@ -58,13 +60,17 @@ const dashboard = async (req, res) => {
         const { getParticipantNotification } = require('./notifications');
         return await getParticipantNotification(req, res, authObj);
     }
-    else if (api === 'storeNotificationSchema' && isParent && siteDetails.acronym === 'NIH') {
+    else if (api === 'storeNotificationSchema' && isParent && isCoordinatingCenter) {
         const { storeNotificationSchema } = require('./notifications');
         return await storeNotificationSchema(req, res, authObj);
     }
-    else if (api === 'retrieveNotificationSchema' && isParent && siteDetails.acronym === 'NIH') {
+    else if (api === 'retrieveNotificationSchema' && isParent && isCoordinatingCenter) {
         const { retrieveNotificationSchema } = require('./notifications');
         return await retrieveNotificationSchema(req, res, authObj);
+    }
+    else if (api === 'getSiteNotification' && isHelpDesk === false) { // Everyone except HelpDesk
+        const { getSiteNotification } = require('./notifications');
+        return await getSiteNotification(req, res, authObj);
     }
     else return res.status(404).json(getResponseJSON('API not found!', 404));
 }
