@@ -1251,7 +1251,8 @@ const retrieveNotificationSchemaByID = async (id) => {
 const retrieveNotificationSchemaByCategory = async (category) => {
     let query = db.collection('notificationSpecifications')
     if(category !== 'all') query = query.where('category', '==', category)
-    const snapshot = await query.orderBy('category').orderBy('attempt').get();
+    else query = query.orderBy('category')
+    const snapshot = await query.orderBy('attempt').get();
     if(snapshot.size === 0) return false;
     return snapshot.docs.map(dt => dt.data());
 }
