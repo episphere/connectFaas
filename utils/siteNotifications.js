@@ -43,7 +43,7 @@ const handleSiteNotifications = async (Connect_ID, concept, toEmail, siteId, acr
         email: toEmail,
         cc,
         notification : {
-            title: messageSubject,
+            title: html,
             body: body,
             time: new Date().toISOString()
         },
