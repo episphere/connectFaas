@@ -83,7 +83,7 @@ const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
     const { handleSiteNotifications } = require('./siteNotifications');
     const { getSiteEmail } = require('./firestore');
     const siteEmail = await getSiteEmail(siteCode);
-    await handleSiteNotifications(Connect_ID, concept, siteEmail, obj.id, obj.acronym, obj.siteCode);
+    await handleSiteNotifications(Connect_ID, concept, siteEmail, obj.id, obj.acronym, siteCode);
 }
 
 const updateParticipantData = async (req, res, authObj) => {

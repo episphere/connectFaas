@@ -37,7 +37,7 @@ const handleSiteNotifications = async (Connect_ID, concept, toEmail, siteId, acr
     const uuid = require('uuid');
     const { getCoordinatingCenterEmail, storeSiteNotifications } = require('./firestore');
     const cc = await getCoordinatingCenterEmail();
-    let reminder = {
+    const reminder = {
         id: uuid(),
         notificationType: 'email',
         email: toEmail,
