@@ -180,6 +180,7 @@ const notificationHandler = async (message, context) => {
         if(participantData.length === 0) continue;
         for( let participant of participantData) {
             if(participant[emailField]) { // If email doesn't exists try sms.
+                if(!participant[primaryField]) continue;
                 let d = new Date(participant[primaryField]);
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
