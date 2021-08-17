@@ -1345,6 +1345,55 @@ const getSiteEmail = async (siteCode) => {
     }
 }
 
+const addPrintAddressesParticipants = async (data) => {
+    try {
+        const uuid = require('uuid');
+        const assignedUUID = uuid();
+        const currentDate = new Date().toISOString();
+        const batch = db.batch();
+        await data.map(async (i) => {
+           i.id = assignedUUID;
+           i.time_stamp = currentDate;
+           const docRef = await db.collection('participantSelection').doc(assignedUUID);
+           batch.set(docRef, i);
+         });
+        await batch.commit();
+        return true;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const getParticipantSelection = async (filter) => {
+    try {
+        const snapshot = await db.collection("participantSelection")
+                                 .where('kit_status', '==', filter)
+                                 .get();
+        return snapshot.docs.map(doc => doc.data()) 
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+
+const assignKitToParticipants = async (data) => {
+    try {
+        await db.collection("participantSelection").doc(data.id).update(
+            { 
+                kit_status: "assigned",
+                usps_trackingNum: data.usps_trackingNum,
+                supply_kitId: data.supply_kitId
+
+            })
+        return true;
+        }
+    catch(error){
+        return new Error(error);
+    }
+}
+
 module.exports = {
     updateResponse,
     validateSiteUser,
@@ -1415,5 +1464,8 @@ module.exports = {
     storeSiteNotifications,
     getCoordinatingCenterEmail,
     getSiteEmail,
-    retrieveSiteNotifications
+    retrieveSiteNotifications,
+    addPrintAddressesParticipants,
+    getParticipantSelection,
+    assignKitToParticipants
 }
