@@ -1351,10 +1351,11 @@ const addPrintAddressesParticipants = async (data) => {
         const assignedUUID = uuid();
         const currentDate = new Date().toISOString();
         const batch = db.batch();
+        console.log('data', data)
         await data.map(async (i) => {
            i.id = assignedUUID;
            i.time_stamp = currentDate;
-           const docRef = await db.collection('participantSelection').doc(assignedUUID);
+           const docRef = await db.collection('participantSelection').doc();
            batch.set(docRef, i);
          });
         await batch.commit();
