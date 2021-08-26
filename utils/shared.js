@@ -306,7 +306,13 @@ const norcSSOConfig = {
 
 const mfcSSOConfig = {
     siteCode: 303349821,
-    acronym: 'MFC'
+    acronym: 'MFC',
+    firstName: 'firstName',
+    lastName: 'lastName',
+    email: 'email',
+    group: '',
+    siteManagerUser: 'connect-study-manager-user',
+    biospecimenUser: 'connect-biospecimen-user'
 }
 
 const ucmSSOConfig = {
@@ -392,7 +398,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(acronym)
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
-        return siteDetails;
+        return {siteDetails, email};
     } catch (error) {
         return false;
     }

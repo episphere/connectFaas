@@ -248,12 +248,16 @@ const storeNotificationSchema = async (req, res, authObj) => {
         const docID = await retrieveNotificationSchemaByID(data.id);
         if(docID instanceof Error) return res.status(404).json(getResponseJSON(docID.message, 404));
         const { updateNotificationSchema } = require('./firestore');
+        data['modifiedAt'] = new Date().toISOString();
+        data['modifiedBy'] = authObj.userEmail;
         await updateNotificationSchema(docID, data);
     }
     else {
         const uuid = require('uuid')
         data['id'] = uuid();
         const { storeNewNotificationSchema } = require('./firestore');
+        data['createdAt'] = new Date().toISOString();
+        data['createdBy'] = authObj.userEmail;
         await storeNewNotificationSchema(data);
     }
     return res.status(200).json(getResponseJSON('Ok', 200));
