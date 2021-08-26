@@ -362,6 +362,19 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({message: `Success!`, code:200})
     }
 
+        // Shipped POST- BPTL
+    else if(api == 'shipped'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        let requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        const { shipKits } = require('./firestore');
+        const response = await shipKits(requestData);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({message: `Success!`, code:200})
+        }
+
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 

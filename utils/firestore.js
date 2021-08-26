@@ -1348,10 +1348,10 @@ const getSiteEmail = async (siteCode) => {
 const addPrintAddressesParticipants = async (data) => {
     try {
         const uuid = require('uuid');
-        const assignedUUID = uuid();
         const currentDate = new Date().toISOString();
         const batch = db.batch();
         await data.map(async (i) => {
+           let assignedUUID = uuid();
            i.id = assignedUUID;
            i.time_stamp = currentDate;
            const docRef = await db.collection('participantSelection').doc(assignedUUID);
@@ -1367,16 +1367,21 @@ const addPrintAddressesParticipants = async (data) => {
 
 const getParticipantSelection = async (filter) => {
     try {
-        const snapshot = await db.collection("participantSelection")
-                                 .where('kit_status', '==', filter)
-                                 .get();
-        return snapshot.docs.map(doc => doc.data()) 
+        if (filter === 'all') {
+            const snapshot = await db.collection("participantSelection").get();
+            return snapshot.docs.map(doc => doc.data())
+        }
+        else {
+            const snapshot = await db.collection("participantSelection")
+                                    .where('kit_status', '==', filter)
+                                    .get();
+            return snapshot.docs.map(doc => doc.data())
+        }
     }
     catch(error){
         return new Error(error);
     }
 }
-
 
 const assignKitToParticipants = async (data) => {
     try {
@@ -1385,6 +1390,22 @@ const assignKitToParticipants = async (data) => {
                 kit_status: "assigned",
                 usps_trackingNum: data.usps_trackingNum,
                 supply_kitId: data.supply_kitId
+
+            })
+        return true;
+        }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const shipKits = async (data) => {
+    try {
+        await db.collection("participantSelection").doc(data.id).update(
+            { 
+                kit_status: "shipped",
+                pickup_date: data.pickup_date,
+                confirm_pickup: data.confirm_pickup
 
             })
         return true;
@@ -1467,5 +1488,6 @@ module.exports = {
     retrieveSiteNotifications,
     addPrintAddressesParticipants,
     getParticipantSelection,
-    assignKitToParticipants
+    assignKitToParticipants,
+    shipKits
 }
