@@ -309,7 +309,7 @@ const mfcSSOConfig = {
     acronym: 'MFC',
     firstName: 'firstName',
     lastName: 'lastName',
-    email: 'email',
+    email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
     group: '',
     siteManagerUser: 'connect-study-manager-user',
     biospecimenUser: 'connect-biospecimen-user'
