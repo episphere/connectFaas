@@ -310,7 +310,7 @@ const mfcSSOConfig = {
     firstName: 'firstName',
     lastName: 'lastName',
     email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-    group: '',
+    group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role',
     siteManagerUser: 'connect-study-manager-user',
     biospecimenUser: 'connect-biospecimen-user'
 }
