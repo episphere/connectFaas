@@ -126,7 +126,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const docData = record.data;
     let updatedData = {}
     for(let key in dataObj) {
-        if(docData[key] === undefined) continue;
+        if(docData[key] === undefined && !authObj) continue;
         if(primaryIdentifiers.indexOf(key) !== -1) continue;
         if(key === '821247024') continue; // Don't allow updates to verification status.
         if(key === '399159511') updatedData[`query.firstName`] = dataObj[key]; // update first name
@@ -158,7 +158,7 @@ const updateParticipantData = async (req, res, authObj) => {
 
     console.log(updatedData)
     const { updateParticipantData } = require('./firestore');
-    updateParticipantData(docID, updatedData);
+    if(Object.keys(updatedData).length > 0) updateParticipantData(docID, updatedData);
     return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
 }
 
