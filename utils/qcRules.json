@@ -1,0 +1,18 @@
+{
+    "934298480": {
+        "values": [363147933, 771230670, 771230670],
+        "dataType": "number"
+    },
+    "706256705": {
+        "values": [536341288, 178420302],
+        "dataType": "number"
+    },
+    "site_1_sex": {
+        "values": [536341288],
+        "dataType": "number"
+    },
+    "site_2_sex": {
+        "values": [536341288, 178420302],
+        "dataType": "number"
+    }
+}

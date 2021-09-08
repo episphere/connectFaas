@@ -10,32 +10,35 @@ const { stats } = require('./utils/stats');
 const { dashboard } = require('./utils/dashboard');
 const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport } = require('./utils/events');
+const { qcChecks } = require('./utils/qcDataChecks');
 
 // For NORC Incentive
 
-exports.incentiveCompleted = incentiveCompleted; // new auth done
+exports.incentiveCompleted = incentiveCompleted;
 
-exports.participantsEligibleForIncentive = eligibleForIncentive; // new auth done
+exports.participantsEligibleForIncentive = eligibleForIncentive;
 
 // For Sites
 
-exports.getParticipantToken = getToken; // new auth done
+exports.getParticipantToken = getToken;
 
-exports.getParticipants = getParticipants; // new auth done
+exports.getParticipants = getParticipants;
 
-exports.validateSiteUsers = validateSiteUsers; // new auth done
+exports.validateSiteUsers = validateSiteUsers;
 
-exports.identifyParticipant = identifyParticipant; // new auth done
+exports.identifyParticipant = identifyParticipant;
 
-exports.submitParticipantsData = submitParticipantsData; // new auth done
+exports.submitParticipantsData = submitParticipantsData;
 
-exports.updateParticipantData = updateParticipantData; // new auth done
+exports.updateParticipantData = updateParticipantData;
 
-exports.stats = stats; // new auth done
+exports.stats = stats;
 
 exports.getParticipantNotification = getParticipantNotification;
 
 exports.dashboard = dashboard;
+
+exports.qcCheck = qcChecks
 
 // For Connect App
 
