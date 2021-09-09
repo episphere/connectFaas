@@ -1,6 +1,8 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
-const qcChecks = async (req, res) => {
+const consistencyCheck = async (req, res) => {
+    logIPAdddress(req);
+    setHeaders(res);
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
         
     if(req.method !== 'POST') {
@@ -53,5 +55,5 @@ const qcChecks = async (req, res) => {
 }
 
 module.exports = {
-    qcChecks
+    consistencyCheck
 }

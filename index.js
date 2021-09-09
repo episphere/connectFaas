@@ -10,7 +10,7 @@ const { stats } = require('./utils/stats');
 const { dashboard } = require('./utils/dashboard');
 const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport } = require('./utils/events');
-const { qcChecks } = require('./utils/qcDataChecks');
+const { consistencyCheck } = require('./utils/qcDataChecks');
 
 // For NORC Incentive
 
@@ -38,7 +38,7 @@ exports.getParticipantNotification = getParticipantNotification;
 
 exports.dashboard = dashboard;
 
-exports.qcCheck = qcChecks
+exports.consistencyCheck = consistencyCheck
 
 // For Connect App
 
