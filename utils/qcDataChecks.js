@@ -30,7 +30,7 @@ const consistencyCheck = async (req, res) => {
 }
 
 const qcHandler = async (data) => {
-    const qcRules = JSON.parse(await getData('https://episphere.github.io/qaqc/qcRules.json'));
+    const qcRules = JSON.parse(await getData('https://episphere.github.io/qaqc/consistencyRules.json'));
     let qcFailed = false;
     const errors = [];
     data.forEach(dt => {
