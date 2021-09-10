@@ -25,14 +25,14 @@ const consistencyCheck = async (req, res) => {
 
     if(req.body.data.length > 499) return res.status(400).json(getResponseJSON('More than acceptable limit of 500 records.', 400));
     const data = req.body.data;
-    const { errors, qcFailed } = qcHandler(data);
-    return res.status(200).json({errors, message: qcFailed ? 'Failed!' : 'Success!' , code: qcFailed ? 400 : 200});
+    const { errors, qcFailed } = await qcHandler(data);
+    return res.status(200).json({errors, message: qcFailed ? 'Consistency check failed!' : 'Success!' , code: qcFailed ? 400 : 200});
 }
 
-const qcHandler = (data) => {
+const qcHandler = async (data) => {
+    const qcRules = JSON.parse(await getData('https://episphere.github.io/qaqc/qcRules.json'));
     let qcFailed = false;
     const errors = [];
-    const qcRules = require('./qcRules.json');
     data.forEach(dt => {
         if(!dt['token']) return;
         let err = {};
@@ -57,6 +57,17 @@ const qcHandler = (data) => {
         if(invalidSubmission) errors.push(err);
     });
     return {errors, qcFailed};
+}
+
+const getData = (url) => {
+    const request = require('request');
+    return new Promise((resolve, reject) => {
+        request(url, (error, response, body) => {
+            if (error) reject(error);
+            if (response.statusCode != 200) reject('Invalid status code <' + response.statusCode + '>');
+            resolve(body);
+        });
+    });
 }
 
 module.exports = {
