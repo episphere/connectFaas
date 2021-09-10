@@ -35,13 +35,13 @@ const consistencyCheck = async (req, res) => {
         let invalidSubmission = false
         for(let key in dt) {
             if(qcRules[key]) {
-                if(!qcRules[key].values.toString().includes(dt[key])) {
+                if(qcRules[key].values && !qcRules[key].values.toString().includes(dt[key])) {
                     if(err[key] === undefined) err[key] = {}
                     err[key].value = `${dt[key]} is not a valid value!`
                     invalidSubmission = true;
                     qcFailed = true;
                 }
-                if(qcRules[key].dataType !== typeof dt[key]) {
+                if(qcRules[key].dataType && qcRules[key].dataType !== typeof dt[key]) {
                     if(err[key] === undefined) err[key] = {}
                     err[key].dataType = `Invalid data type, expected ${qcRules[key].dataType}`
                     invalidSubmission = true;
