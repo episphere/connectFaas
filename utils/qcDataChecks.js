@@ -25,6 +25,11 @@ const consistencyCheck = async (req, res) => {
 
     if(req.body.data.length > 499) return res.status(400).json(getResponseJSON('More than acceptable limit of 500 records.', 400));
     const data = req.body.data;
+    const { errors, qcFailed } = qcHandler(data);
+    return res.status(200).json({errors, message: qcFailed ? 'Failed!' : 'Success!' , code: qcFailed ? 400 : 200});
+}
+
+const qcHandler = (data) => {
     let qcFailed = false;
     const errors = [];
     const qcRules = require('./qcRules.json');
@@ -50,8 +55,8 @@ const consistencyCheck = async (req, res) => {
             }
         }
         if(invalidSubmission) errors.push(err);
-    })
-    return res.status(200).json({errors, message: qcFailed ? 'Failed!' : 'Success!' , code: qcFailed ? 400 : 200});
+    });
+    return {errors, qcFailed};
 }
 
 module.exports = {
