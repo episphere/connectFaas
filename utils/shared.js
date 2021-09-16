@@ -306,7 +306,13 @@ const norcSSOConfig = {
 
 const mfcSSOConfig = {
     siteCode: 303349821,
-    acronym: 'MFC'
+    acronym: 'MFC',
+    firstName: 'firstName',
+    lastName: 'lastName',
+    email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+    group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role',
+    siteManagerUser: 'connect-study-manager-user',
+    biospecimenUser: 'connect-biospecimen-user'
 }
 
 const ucmSSOConfig = {
@@ -392,7 +398,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(acronym)
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
-        return siteDetails;
+        return {siteDetails, email};
     } catch (error) {
         return false;
     }

@@ -180,6 +180,7 @@ const notificationHandler = async (message, context) => {
         if(participantData.length === 0) continue;
         for( let participant of participantData) {
             if(participant[emailField]) { // If email doesn't exists try sms.
+                if(!participant[primaryField]) continue;
                 let d = new Date(participant[primaryField]);
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
@@ -247,12 +248,16 @@ const storeNotificationSchema = async (req, res, authObj) => {
         const docID = await retrieveNotificationSchemaByID(data.id);
         if(docID instanceof Error) return res.status(404).json(getResponseJSON(docID.message, 404));
         const { updateNotificationSchema } = require('./firestore');
+        data['modifiedAt'] = new Date().toISOString();
+        if(authObj.userEmail) data['modifiedBy'] = authObj.userEmail;
         await updateNotificationSchema(docID, data);
     }
     else {
         const uuid = require('uuid')
         data['id'] = uuid();
         const { storeNewNotificationSchema } = require('./firestore');
+        data['createdAt'] = new Date().toISOString();
+        if(authObj.userEmail) data['createdBy'] = authObj.userEmail;
         await storeNewNotificationSchema(data);
     }
     return res.status(200).json(getResponseJSON('Ok', 200));

@@ -16,7 +16,9 @@ const dashboard = async (req, res) => {
         const decodedJWT = decodingJWT(access_token);
         dashboardType = ['saml.connect-norc', 'saml.connect-norc-prod'].includes(decodedJWT.firebase.sign_in_provider) ? 'helpDeskUser' : 'siteManagerUser';
     }
-    siteDetails = await SSOValidation(dashboardType, access_token);
+    const SSOObject = await SSOValidation(dashboardType, access_token);
+    const userEmail = SSOObject.email;
+    siteDetails = SSOObject.siteDetails;
     if(!siteDetails) { // Temporary allowing used of siteKey to validate
         const { APIAuthorization } = require('./shared');
         siteDetails = await APIAuthorization(req);
@@ -24,6 +26,7 @@ const dashboard = async (req, res) => {
     if(!siteDetails) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     const { isParentEntity } = require('./shared');
     const authObj = await isParentEntity(siteDetails);
+    if(userEmail) authObj['userEmail'] = userEmail;
     const isParent = authObj.isParent;
     const siteCodes = authObj.siteCodes;
     const isCoordinatingCenter = authObj.coordinatingCenter;

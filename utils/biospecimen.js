@@ -322,6 +322,59 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data: response, code:200})
     }
 
+     // Participant Selection with filter GET- BPTL 
+    else if(api === 'getParticipantSelection') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const query = req.query.type;
+        if(Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include parameter to filter data.', 400));
+        const { getParticipantSelection } = require('./firestore');
+        const response = await getParticipantSelection(query);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        console.log('res', response)
+        return res.status(200).json({data: response, code:200})
+    }
+
+     // Print Addresses POST- BPTL
+    else if(api == 'printAddresses'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        let requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        const { addPrintAddressesParticipants } = require('./firestore');
+        const response = await addPrintAddressesParticipants(requestData);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({message: `Success!`, code:200})
+    }
+
+    // Print Addresses POST- BPTL
+    else if(api == 'assignKit'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        let requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        const { assignKitToParticipants } = require('./firestore');
+        const response = await assignKitToParticipants(requestData);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({message: `Success!`, code:200})
+    }
+
+        // Shipped POST- BPTL
+    else if(api == 'shipped'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        let requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        const { shipKits } = require('./firestore');
+        const response = await shipKits(requestData);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({message: `Success!`, code:200})
+        }
+
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 
