@@ -1356,6 +1356,7 @@ const addPrintAddressesParticipants = async (data) => {
            i.time_stamp = currentDate;
            const docRef = await db.collection('participantSelection').doc(assignedUUID);
            batch.set(docRef, i);
+           await kitStatusCounterVariation('addressPrinted', 'pending');
          });
         await batch.commit();
         return true;
@@ -1385,15 +1386,33 @@ const getParticipantSelection = async (filter) => {
 
 const assignKitToParticipants = async (data) => {
     try {
-        await db.collection("participantSelection").doc(data.id).update(
+        const snapshot = await db.collection("kitAssembly").where('supplyKitId', '==', data.supply_kitId).where('used', '==', false).get();
+        if (Object.keys(snapshot.docs).length !== 0) {
+            snapshot.docs.map(doc => {
+                data['collection_cardId'] = doc.data().collectionCardId
+                data['collection_cupId'] = doc.data().collectionCupId
+                data['specimen_kitId'] = doc.data().specimenKitId
+                data['specimen_kit_usps_trackingNum'] = doc.data().uspsTrackingNumber
+            })
+            const docId = snapshot.docs[0].id;
+            await db.collection("kitAssembly").doc(docId).update(
+            { 
+                used: true
+            })
+            await db.collection("participantSelection").doc(data.id).update(
             { 
                 kit_status: "assigned",
                 usps_trackingNum: data.usps_trackingNum,
-                supply_kitId: data.supply_kitId
-
+                supply_kitId: data.supply_kitId,
+                collection_cardId: data.collection_cardId,
+                collection_cupId: data.collection_cupId,
+                specimen_kitId: data.specimen_kitId
             })
-        return true;
-        }
+            await kitStatusCounterVariation('assigned', 'addressPrinted');
+            return true;
+        } else {
+            return false;
+        } }
     catch(error){
         return new Error(error);
     }
@@ -1406,14 +1425,76 @@ const shipKits = async (data) => {
                 kit_status: "shipped",
                 pickup_date: data.pickup_date,
                 confirm_pickup: data.confirm_pickup
-
             })
+            await kitStatusCounterVariation('shipped', 'assigned');
         return true;
         }
     catch(error){
         return new Error(error);
     }
 }
+
+const storePackageReceipt =  (data) => {
+    if (data.scannedBarcode.length <= 12) {  
+        const response = setPackageReceiptFedex(data);
+        return response;
+    } else { 
+        const response = setPackageReceiptUSPS(data);
+        return response; 
+    }
+
+} 
+
+const setPackageReceiptUSPS = async (data) => {
+    try {
+        const snapshot = await db.collection("participantSelection").where('usps_trackingNum', '==', parseInt(data.scannedBarcode)).get();
+        const docId = snapshot.docs[0].id;
+        await db.collection("participantSelection").doc(docId).update(
+        { 
+            baseline: data
+        })
+            return true;
+        }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const setPackageReceiptFedex = async (data) => {
+    try {
+        const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get();
+        const docId = snapshot.docs[0].id;
+        await db.collection("boxes").doc(docId).update({ 
+             baseline: data
+        })
+            return true;
+         }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
+    try {
+        await db.collection("bptlMetrics").doc('--metrics--').update({ 
+            [currentkitStatus]: increment
+        })
+        await db.collection("bptlMetrics").doc('--metrics--').update({ 
+            [prevKitStatus]: decrement
+        })
+            return true;
+    }
+
+    catch (error) {
+        return new Error(error);
+    }
+};
+
+const getBptlMetrics = async () => {
+    const snapshot = await db.collection("bptlMetrics").get();
+    return snapshot.docs.map(doc => doc.data())
+}
+
 
 module.exports = {
     updateResponse,
@@ -1489,5 +1570,7 @@ module.exports = {
     addPrintAddressesParticipants,
     getParticipantSelection,
     assignKitToParticipants,
-    shipKits
+    shipKits,
+    storePackageReceipt,
+    getBptlMetrics
 }
