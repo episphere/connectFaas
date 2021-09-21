@@ -1407,7 +1407,8 @@ const assignKitToParticipants = async (data) => {
                 supply_kitId: data.supply_kitId,
                 collection_cardId: data.collection_cardId,
                 collection_cupId: data.collection_cupId,
-                specimen_kitId: data.specimen_kitId
+                specimen_kitId: data.specimen_kitId,
+                specimen_kit_usps_trackingNum: data.specimen_kit_usps_trackingNum
             })
             await kitStatusCounterVariation('assigned', 'addressPrinted');
             return true;
