@@ -1295,6 +1295,7 @@ const getNotificationsCategories = async () => {
 
 const addKitAssemblyData = async (data) => {
     try {
+        data['supplyKitIdUtilized'] = false
         await db.collection('kitAssembly').add(data);
         return true;
     }
@@ -1386,7 +1387,7 @@ const getParticipantSelection = async (filter) => {
 
 const assignKitToParticipants = async (data) => {
     try {
-        const snapshot = await db.collection("kitAssembly").where('supplyKitId', '==', data.supply_kitId).where('used', '==', false).get();
+        const snapshot = await db.collection("kitAssembly").where('supplyKitId', '==', data.supply_kitId).where('supplyKitIdUtilized', '==', false).get();
         if (Object.keys(snapshot.docs).length !== 0) {
             snapshot.docs.map(doc => {
                 data['collection_cardId'] = doc.data().collectionCardId
@@ -1397,7 +1398,7 @@ const assignKitToParticipants = async (data) => {
             const docId = snapshot.docs[0].id;
             await db.collection("kitAssembly").doc(docId).update(
             { 
-                used: true
+                supplyKitIdUtilized: true
             })
             await db.collection("participantSelection").doc(data.id).update(
             { 
@@ -1447,7 +1448,7 @@ const storePackageReceipt =  (data) => {
 
 const setPackageReceiptUSPS = async (data) => {
     try {
-        const snapshot = await db.collection("participantSelection").where('usps_trackingNum', '==', parseInt(data.scannedBarcode)).get();
+        const snapshot = await db.collection("participantSelection").where('usps_trackingNum', '==', data.scannedBarcode).get();
         const docId = snapshot.docs[0].id;
         await db.collection("participantSelection").doc(docId).update(
         { 
