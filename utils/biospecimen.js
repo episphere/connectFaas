@@ -382,6 +382,7 @@ const biospecimenAPIs = async (req, res) => {
             }
             let requestData = req.body;
             if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+            console.log('re', requestData)
             const { storePackageReceipt } = require('./firestore');
             const response = await storePackageReceipt(requestData);
             if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
