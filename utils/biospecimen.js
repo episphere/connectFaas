@@ -375,6 +375,30 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({message: `Success!`, code:200})
         }
 
+    // Store Receipt POST- BPTL 
+    else if(api === 'storeReceipt') {
+            if(req.method !== 'POST') {
+                return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+            }
+            let requestData = req.body;
+            if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+            const { storePackageReceipt } = require('./firestore');
+            const response = await storePackageReceipt(requestData);
+            if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+            return res.status(200).json({message: `Success!`, code:200});
+        }
+
+    // BPTL Metrics GET- BPTL 
+    else  if(api === 'bptlMetrics') {
+            if(req.method !== 'GET') {
+                return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+            }
+            const { getBptlMetrics } = require('./firestore');
+            const response = await getBptlMetrics();
+            if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+            return res.status(200).json({data: response, code:200})
+        }
+
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 

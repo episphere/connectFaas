@@ -65,6 +65,7 @@ exports.biospecimen = biospecimenAPIs;
 exports.sendEmailNotification = notificationHandler
 
 const getAccessTokenForSA = async () => {
+    const {google} = require("googleapis");
     const serviceAccount = require(process.env.GCP_SA);
 
     const scopes = ["https://www.googleapis.com/auth/userinfo.email"];
