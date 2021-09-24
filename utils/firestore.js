@@ -1497,6 +1497,26 @@ const getBptlMetrics = async () => {
     return snapshot.docs.map(doc => doc.data())
 }
 
+const getBptlMetricsForShipped = async () => {
+    try {
+        let response = []
+        const snapshot = await db.collection("participantSelection").where('kit_status', '==', 'shipped').get();
+        let shipedParticipants = snapshot.docs.map(doc =>  doc.data())
+        const keys = ['first_name', 'last_name', 'pickup_date', 'participation_status']
+        shipedParticipants.forEach( i => { response.push(pick(i, keys) )});
+        return response;
+        }
+
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const pick = (obj, arr) => {
+    return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
+} 
+
+
 
 module.exports = {
     updateResponse,
@@ -1574,5 +1594,6 @@ module.exports = {
     assignKitToParticipants,
     shipKits,
     storePackageReceipt,
-    getBptlMetrics
+    getBptlMetrics,
+    getBptlMetricsForShipped
 }
