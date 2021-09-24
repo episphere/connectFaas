@@ -417,10 +417,6 @@ const APIAuthorization = async (req, notAuthorized) => {
         authorized = await validateSiteUser(access_token);
         if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
         if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
-        if(authorized instanceof Error){
-            console.log(JSON.stringify(authorized))
-            return false;
-        }
         if(authorized) return authorized;
 
         const {google} = require("googleapis");
