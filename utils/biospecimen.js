@@ -399,7 +399,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(200).json({data: response, code:200})
         }
 
-    // BPTL Metrics Shipped KitGET- BPTL 
+    // BPTL Metrics Shipped Kit GET
     else  if(api === 'bptlMetricsShipped') {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
