@@ -399,6 +399,17 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(200).json({data: response, code:200})
         }
 
+    // BPTL Metrics Shipped Kit GET
+    else  if(api === 'bptlMetricsShipped') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const { getBptlMetricsForShipped } = require('./firestore');
+        const response = await getBptlMetricsForShipped();
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({data: response, code:200})
+    }
+
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 
