@@ -413,11 +413,11 @@ const APIAuthorization = async (req, notAuthorized) => {
         const access_token = req.headers.authorization.replace('Bearer ','').trim();
         
         // Remove this after SSO and SA authorization are implemented.
-        // const { validateSiteUser } = require(`./firestore`);
-        // authorized = await validateSiteUser(access_token);
-        // if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
-        // if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
-        // if(authorized) return authorized;
+        const { validateSiteUser } = require(`./firestore`);
+        authorized = await validateSiteUser(access_token);
+        if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
+        if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
+        if(authorized) return authorized;
 
         const {google} = require("googleapis");
         const OAuth2 = google.auth.OAuth2;
