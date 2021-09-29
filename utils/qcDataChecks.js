@@ -53,13 +53,13 @@ const qcHandler = async (data, handleObject) => {
                     invalidSubmission = true;
                     qcFailed = true;
                 }
+                if(!qcRules[key].values) continue;
                 const matches = qcRules[key].values.filter(e => e.toString() === data[key].toString());
-                if(qcRules[key].values && matches.length === 0) {
-                    if(err[key] === undefined) err[key] = {}
-                    err[key].value = `${data[key]} is not a valid value!`
-                    invalidSubmission = true;
-                    qcFailed = true;
-                }
+                if(matches.length !== 0) continue;
+                if(err[key] === undefined) err[key] = {}
+                err[key].value = `${data[key]} is not a valid value!`
+                invalidSubmission = true;
+                qcFailed = true;
             }
         }
         if(invalidSubmission) errors.push(err);
@@ -79,13 +79,13 @@ const qcHandler = async (data, handleObject) => {
                         qcFailed = true;
                     }
                     
+                    if(!qcRules[key].values) continue;
                     const matches = qcRules[key].values.filter(e => e.toString() === dt[key].toString());
-                    if(qcRules[key].values && matches.length === 0) {
-                        if(err[key] === undefined) err[key] = {}
-                        err[key].value = `${dt[key]} is not a valid value!`
-                        invalidSubmission = true;
-                        qcFailed = true;
-                    }
+                    if (matches.length !== 0) continue;
+                    if (err[key] === undefined) err[key] = {}
+                    err[key].value = `${dt[key]} is not a valid value!`
+                    invalidSubmission = true;
+                    qcFailed = true;
                 }
             }
             if(invalidSubmission) errors.push(err);
