@@ -47,15 +47,16 @@ const qcHandler = async (data, handleObject) => {
         let invalidSubmission = false
         for(let key in data) {
             if(qcRules[key]) {
-                if(qcRules[key].values && !qcRules[key].values.toString().includes(data[key])) {
-                    if(err[key] === undefined) err[key] = {}
-                    err[key].value = `${data[key]} is not a valid value!`
-                    invalidSubmission = true;
-                    qcFailed = true;
-                }
                 if(qcRules[key].dataType && qcRules[key].dataType !== typeof data[key]) {
                     if(err[key] === undefined) err[key] = {}
                     err[key].dataType = `Invalid data type, expected ${qcRules[key].dataType}`
+                    invalidSubmission = true;
+                    qcFailed = true;
+                }
+                const matches = qcRules[key].values.filter(e => e.toString() === data[key].toString());
+                if(qcRules[key].values && matches.length === 0) {
+                    if(err[key] === undefined) err[key] = {}
+                    err[key].value = `${data[key]} is not a valid value!`
                     invalidSubmission = true;
                     qcFailed = true;
                 }
@@ -71,15 +72,17 @@ const qcHandler = async (data, handleObject) => {
             let invalidSubmission = false
             for(let key in dt) {
                 if(qcRules[key]) {
-                    if(qcRules[key].values && !qcRules[key].values.toString().includes(dt[key])) {
-                        if(err[key] === undefined) err[key] = {}
-                        err[key].value = `${dt[key]} is not a valid value!`
-                        invalidSubmission = true;
-                        qcFailed = true;
-                    }
                     if(qcRules[key].dataType && qcRules[key].dataType !== typeof dt[key]) {
                         if(err[key] === undefined) err[key] = {}
                         err[key].dataType = `Invalid data type, expected ${qcRules[key].dataType}`
+                        invalidSubmission = true;
+                        qcFailed = true;
+                    }
+                    
+                    const matches = qcRules[key].values.filter(e => e.toString() === dt[key].toString());
+                    if(qcRules[key].values && matches.length === 0) {
+                        if(err[key] === undefined) err[key] = {}
+                        err[key].value = `${dt[key]} is not a valid value!`
                         invalidSubmission = true;
                         qcFailed = true;
                     }
