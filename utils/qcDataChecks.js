@@ -46,16 +46,40 @@ const qcHandler = async (data, handleObject) => {
         err['token'] = data['token'];
         let invalidSubmission = false
         for(let key in data) {
-            if(qcRules[key]) {
-                if(qcRules[key].values && !qcRules[key].values.toString().includes(data[key])) {
+            if(key === 'state') {
+                for(let stateKey in data[key]){
+                    if(qcRules[stateKey]) {
+                        if(qcRules[stateKey].dataType && qcRules[stateKey].dataType !== typeof data[key][stateKey]) {
+                            if(err['state'] === undefined) err['state'] = {};
+                            if(err['state'][stateKey] === undefined) err['state'][stateKey] = {}
+                            err['state'][stateKey].dataType = `Invalid data type, expected ${qcRules[stateKey].dataType}`
+                            invalidSubmission = true;
+                            qcFailed = true;
+                        }
+                        if(!qcRules[stateKey].values) continue;
+                        const matches = qcRules[stateKey].values.filter(e => e.toString() === data[key][stateKey].toString());
+                        if(matches.length !== 0) continue;
+                        if(err['state'] === undefined) err['state'] = {};
+                        if(err['state'][stateKey] === undefined) err['state'][stateKey] = {}
+                        err['state'][stateKey].value = `${data[key][stateKey]} is not a valid value!`
+                        invalidSubmission = true;
+                        qcFailed = true;
+                    }
+                }
+            }
+            else {
+                if(qcRules[key]) {
+                    if(qcRules[key].dataType && qcRules[key].dataType !== typeof data[key]) {
+                        if(err[key] === undefined) err[key] = {}
+                        err[key].dataType = `Invalid data type, expected ${qcRules[key].dataType}`
+                        invalidSubmission = true;
+                        qcFailed = true;
+                    }
+                    if(!qcRules[key].values) continue;
+                    const matches = qcRules[key].values.filter(e => e.toString() === data[key].toString());
+                    if(matches.length !== 0) continue;
                     if(err[key] === undefined) err[key] = {}
                     err[key].value = `${data[key]} is not a valid value!`
-                    invalidSubmission = true;
-                    qcFailed = true;
-                }
-                if(qcRules[key].dataType && qcRules[key].dataType !== typeof data[key]) {
-                    if(err[key] === undefined) err[key] = {}
-                    err[key].dataType = `Invalid data type, expected ${qcRules[key].dataType}`
                     invalidSubmission = true;
                     qcFailed = true;
                 }
@@ -71,18 +95,20 @@ const qcHandler = async (data, handleObject) => {
             let invalidSubmission = false
             for(let key in dt) {
                 if(qcRules[key]) {
-                    if(qcRules[key].values && !qcRules[key].values.toString().includes(dt[key])) {
-                        if(err[key] === undefined) err[key] = {}
-                        err[key].value = `${dt[key]} is not a valid value!`
-                        invalidSubmission = true;
-                        qcFailed = true;
-                    }
                     if(qcRules[key].dataType && qcRules[key].dataType !== typeof dt[key]) {
                         if(err[key] === undefined) err[key] = {}
                         err[key].dataType = `Invalid data type, expected ${qcRules[key].dataType}`
                         invalidSubmission = true;
                         qcFailed = true;
                     }
+                    
+                    if(!qcRules[key].values) continue;
+                    const matches = qcRules[key].values.filter(e => e.toString() === dt[key].toString());
+                    if (matches.length !== 0) continue;
+                    if (err[key] === undefined) err[key] = {}
+                    err[key].value = `${dt[key]} is not a valid value!`
+                    invalidSubmission = true;
+                    qcFailed = true;
                 }
             }
             if(invalidSubmission) errors.push(err);
