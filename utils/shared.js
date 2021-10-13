@@ -30,19 +30,11 @@ const randomString = () => {
     return pin;
 }
 
-const deleteDocuments = (req, res) => {
-    setHeaders(res);
-    
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
-    if(req.method !== 'GET') {
-        res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-
-    const siteCode = 809703864;
+const deleteDocuments = (siteCode) => {
+    if(!siteCode) return;
     const { deleteFirestoreDocuments } = require('./firestore')
     deleteFirestoreDocuments(siteCode)
-    res.status(200).json(getResponseJSON('Success!', 200))
+    return true;
 }
 
 const lockedAttributes = [
