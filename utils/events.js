@@ -55,7 +55,7 @@ const firestoreExport = async (event, context) => {
     await client.exportDocuments({
         name: databaseName,
         outputUriPrefix: bucket,
-        collectionIds: ['participants','biospecimen']
+        collectionIds: ['participants','biospecimen', 'boxes']
     });
 
     return true;
