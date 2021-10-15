@@ -4,6 +4,7 @@ const importToBigQuery = async (event, context) => {
     if(gcsEvent.name.indexOf('.export_metadata') === -1) return true;
     if(gcsEvent.name.includes('participants')) tableName = 'participants';
     if(gcsEvent.name.includes('biospecimen')) tableName = 'biospecimen';
+    if(gcsEvent.name.includes('boxes')) tableName = 'boxes';
     console.log(`Processing file: ${gcsEvent.name}`);
     const gcsBucket = process.env.GCLOUD_BUCKET;
     const url = `gs://${gcsBucket}/${gcsEvent.name}`;
