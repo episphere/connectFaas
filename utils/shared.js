@@ -205,13 +205,13 @@ const defaultFlags = {
     311580100: 104430631,
     914639140: 104430631,
     ...incentiveFlags,
-    ...withdrawalConcepts,
-    ...optOutReasons
+    ...withdrawalConcepts
 }
 
 const defaultStateFlags = {
     875549268: 104430631,
-    158291096: 104430631
+    158291096: 104430631,
+    ...optOutReasons
 }
 
 const moduleConcepts = {
