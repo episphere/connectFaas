@@ -125,21 +125,34 @@ const updateParticipantData = async (req, res, authObj) => {
     const docID = record.id;
     const docData = record.data;
     let updatedData = {}
+
+    let flattened = {
+        newData: {},
+        docData: {}
+    };
+
+    const flat = (obj, att, attribute) => {
+        for(let k in obj) {
+            if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
+            else {
+                if(att === 'newData' && flattened['docData'][attribute ? `${attribute}.${k}`: k] === undefined) continue;
+                if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
+                flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
+            }
+        }
+    }
+    flat(docData, 'docData');
+
     for(let key in dataObj) {
         if(docData[key] === undefined && !authObj) continue;
         if(primaryIdentifiers.indexOf(key) !== -1) continue;
         if(key === '821247024') continue; // Don't allow updates to verification status.
         if(key === '399159511') updatedData[`query.firstName`] = dataObj[key]; // update first name
         if(key === '996038075') updatedData[`query.lastName`] = dataObj[key]; // update last name
-        if (typeof(dataObj[key]) === 'object') { // Handle nested object updates.
-            for(let nestedKey in dataObj[key]) {
-                if(docData[key][nestedKey] === undefined) continue;
-                if(primaryIdentifiers.indexOf(`${key}.${nestedKey}`) !== -1) continue;
-                updatedData[`${key}.${nestedKey}`] = {}
-                updatedData[`${key}.${nestedKey}`] = dataObj[key][nestedKey];
-            }
-        }
-        else updatedData[key] = dataObj[key];
+
+        if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key)
+        else flattened['newData'][key] = dataObj[key]
+        updatedData = {...updatedData, ...flattened.newData}
     }
 
     // Handle Site Notifications
