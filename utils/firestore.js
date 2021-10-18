@@ -1516,7 +1516,15 @@ const pick = (obj, arr) => {
     return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
 } 
 
-
+const getSpecificFields = async () => {
+    const fields = ['Connect_ID', 'query', 'state.uid', 'lala'];
+    const snapshot = await db.collection('participants').select(...fields).get();
+    console.log(snapshot.size)
+    const data = snapshot.docs.map(dt => {
+        const d = dt.data();
+        return d;
+    })
+}
 
 module.exports = {
     updateResponse,
