@@ -79,6 +79,13 @@ const submitParticipantsData = async (req, res, site) => {
     else return res.status(200).json(getResponseJSON('Success!', 200));
 }
 
+const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
+    const { handleSiteNotifications } = require('./siteNotifications');
+    const { getSiteEmail } = require('./firestore');
+    const siteEmail = await getSiteEmail(siteCode);
+    await handleSiteNotifications(Connect_ID, concept, siteEmail, obj.id, obj.acronym, siteCode);
+}
+
 const updateParticipantData = async (req, res, authObj) => {
     logIPAdddress(req);
     setHeaders(res);
@@ -118,25 +125,53 @@ const updateParticipantData = async (req, res, authObj) => {
     const docID = record.id;
     const docData = record.data;
     let updatedData = {}
+
+    let flattened = {
+        newData: {},
+        docData: {}
+    };
+
+    const flat = (obj, att, attribute) => {
+        for(let k in obj) {
+            if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
+            else {
+                if(att === 'newData' && flattened['docData'][attribute ? `${attribute}.${k}`: k] === undefined) continue;
+                if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
+                flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
+            }
+        }
+    }
+    flat(docData, 'docData');
+
     for(let key in dataObj) {
-        if(docData[key] === undefined) continue;
+        if(docData[key] === undefined && !authObj) continue;
         if(primaryIdentifiers.indexOf(key) !== -1) continue;
         if(key === '821247024') continue; // Don't allow updates to verification status.
         if(key === '399159511') updatedData[`query.firstName`] = dataObj[key]; // update first name
         if(key === '996038075') updatedData[`query.lastName`] = dataObj[key]; // update last name
-        if (typeof(dataObj[key]) === 'object') { // Handle nested object updates.
-            for(let nestedKey in dataObj[key]) {
-                if(docData[key][nestedKey] === undefined) continue;
-                if(primaryIdentifiers.indexOf(`${key}.${nestedKey}`) !== -1) continue;
-                updatedData[`${key}.${nestedKey}`] = {}
-                updatedData[`${key}.${nestedKey}`] = dataObj[key][nestedKey];
-            }
-        }
-        else updatedData[key] = dataObj[key];
+
+        if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key)
+        else flattened['newData'][key] = dataObj[key]
+        updatedData = {...updatedData, ...flattened.newData}
     }
+
+    // Handle Site Notifications
+    if(dataObj['831041022'] && dataObj['747006172'] && dataObj['773707518'] && dataObj['831041022'] === 353358909 && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909){ // Data Destruction
+        await siteNotificationsHandler(docData['Connect_ID'], '831041022', docData['827220437'], obj);
+    }
+    else if (dataObj['747006172'] && dataObj['773707518'] && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909) { // Withdraw Consent
+        await siteNotificationsHandler(docData['Connect_ID'], '747006172', docData['827220437'], obj);
+    }
+    else if(dataObj['773707518'] && dataObj['773707518'] === 353358909) { // Revocation only email
+        await siteNotificationsHandler(docData['Connect_ID'], '773707518', docData['827220437'], obj);
+    }
+    else if (dataObj['987563196'] && dataObj['987563196'] === 353358909) {
+        await siteNotificationsHandler(docData['Connect_ID'], '987563196', docData['827220437'], obj);
+    }
+
     console.log(updatedData)
     const { updateParticipantData } = require('./firestore');
-    updateParticipantData(docID, updatedData);
+    if(Object.keys(updatedData).length > 0) updateParticipantData(docID, updatedData);
     return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
 }
 

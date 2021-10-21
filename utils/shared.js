@@ -62,7 +62,7 @@ const lockedAttributes = [
                         "914639140",
                         "311580100",
                         "948195369",
-                        "685002411", "906417725", "773707518", "153713899", "747006172", "831041022", "359404406", "987563196", "123868967", "764403541", // Withdrawal concepts
+                        "685002411", "906417725", "773707518", "747006172", "831041022", "269050420", "659990606", "664453818", "987563196", "123868967", "764403541", // Withdrawal concepts
                         "851245875", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "637147033", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "538619788", // Refusal concepts
                         "912301837",
                         "113579866",
@@ -151,7 +151,50 @@ const withdrawalConcepts = {
     123868967: '',
     764403541: '',
     113579866: '',
+    659990606: '',
+    269050420: '',
+    664453818: '',
     ...refusalConcepts
+}
+
+const optOutReasons = {
+    706283025: {
+        196038514: 104430631,
+        873405723: 104430631,
+        517101990: 104430631,
+        347614743: 104430631,
+        535928798: 104430631,
+        897366187: 104430631,
+        415693436: '',
+        719451909: 104430631,
+        377633816: 104430631,
+        211023960: 104430631,
+        209509101: 104430631,
+        363026564: 104430631,
+        405352246: 104430631,
+        755545718: 104430631,
+        831137710: 104430631,
+        496935183: 104430631,
+        491099823: 104430631,
+        836460125: 104430631,
+        163534562: 104430631,
+        331787113: 104430631,
+        705732561: 104430631,
+        381509125: 104430631,
+        497530905: 104430631,
+        627995442: 104430631,
+        208102461: 104430631,
+        579618065: 104430631,
+        702433259: 104430631,
+        771146804: 104430631,
+        163284008: 104430631,
+        387198193: 104430631,
+        566047367: 104430631,
+        400259098: 104430631,
+        260703126: 104430631,
+        744197145: 104430631,
+        950040334: 104430631
+    }
 }
 
 const defaultFlags = {
@@ -175,7 +218,8 @@ const defaultFlags = {
 
 const defaultStateFlags = {
     875549268: 104430631,
-    158291096: 104430631
+    158291096: 104430631,
+    ...optOutReasons
 }
 
 const moduleConcepts = {
@@ -303,7 +347,13 @@ const norcSSOConfig = {
 
 const mfcSSOConfig = {
     siteCode: 303349821,
-    acronym: 'MFC'
+    acronym: 'MFC',
+    firstName: 'firstName',
+    lastName: 'lastName',
+    email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+    group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role',
+    siteManagerUser: 'connect-study-manager-user',
+    biospecimenUser: 'connect-biospecimen-user'
 }
 
 const ucmSSOConfig = {
@@ -389,7 +439,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(acronym)
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
-        return siteDetails;
+        return {siteDetails, email};
     } catch (error) {
         return false;
     }
@@ -408,10 +458,6 @@ const APIAuthorization = async (req, notAuthorized) => {
         authorized = await validateSiteUser(access_token);
         if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
         if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
-        if(authorized instanceof Error){
-            console.log(JSON.stringify(authorized))
-            return false;
-        }
         if(authorized) return authorized;
 
         const {google} = require("googleapis");
@@ -449,7 +495,7 @@ const isParentEntity = async (authorized) => {
     let siteCodes = await getChildrens(ID);
     let isParent = siteCodes ? true : false;
     siteCodes = siteCodes ? siteCodes : authorized.siteCode;
-    return {isParent, siteCodes};
+    return {isParent, siteCodes, ...authorized};
 }
 
 const logIPAdddress = (req) => {

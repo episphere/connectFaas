@@ -24,6 +24,7 @@ const verifyToken = async (token) => {
         return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -41,6 +42,7 @@ const verifyPin = async (pin) => {
         return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -51,6 +53,7 @@ const validateIDToken = async (idToken) => {
         return decodedToken;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -61,6 +64,7 @@ const validateMultiTenantIDToken = async (idToken, tenant) => {
         return decodedToken;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -74,6 +78,7 @@ const linkParticipanttoFirebaseUID = async (docID, uID) => {
         return true;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -89,6 +94,7 @@ const participantExists = async (uid) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -109,6 +115,7 @@ const storeResponse = async (data) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -124,6 +131,7 @@ const updateResponse = async (data, uid) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error)
     }
 }
@@ -148,6 +156,7 @@ const createRecord = async (data) => {
         return true;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -163,6 +172,7 @@ const recordExists = async (studyId, siteCode) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -180,6 +190,7 @@ const validateSiteUser = async (siteKey) => {
         };
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -197,6 +208,7 @@ const validateSiteSAEmail = async (saEmail) => {
         };
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -216,6 +228,7 @@ const getParticipantData = async (token, siteCode, isParent) => {
         };
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -314,6 +327,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
         });
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -341,6 +355,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
             return {firstName: data['399159511'], email: data['869588347'], token: data['token']}
         });
     } catch (error) {
+        console.error(error);
         return new Error(error)
     }
 }
@@ -364,6 +379,7 @@ const getChildrens = async (ID) => {
         };
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -398,6 +414,7 @@ const verifyIdentity = async (type, token, siteCode) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -419,7 +436,8 @@ const retrieveUserProfile = async (uid) => {
         }
     }
     catch(error){
-        return new Error(error)
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -444,6 +462,7 @@ const retrieveToken = async (access_token) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -455,6 +474,7 @@ const sanityCheckConnectID = async (ID) => {
         else return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -466,6 +486,7 @@ const sanityCheckPIN = async (pin) => {
         else return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -483,6 +504,7 @@ const individualParticipant = async (key, value, siteCode, isParent) => {
         else return false;
     }
     catch(error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -495,6 +517,7 @@ const updateParticipantRecord = async (key, value, siteCode, isParent, obj) => {
         await db.collection('participants').doc(docId).update(obj);
     }
     catch(error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -509,6 +532,7 @@ const deleteFirestoreDocuments = async (siteCode) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -531,18 +555,45 @@ const notificationTokenExists = async (token) => {
 }
 
 const retrieveUserNotifications = async (uid) => {
-    const snapShot = await db.collection('notifications')
+    try {
+        const snapShot = await db.collection('notifications')
                             .where('uid', '==', uid)
                             .orderBy('notification.time', 'desc')
                             .get();
-    if(snapShot.size > 0){
-        return snapShot.docs.map(document => {
-            let data = document.data();
-            return data;
-        });
+        if(snapShot.size > 0){
+            return snapShot.docs.map(document => {
+                let data = document.data();
+                return data;
+            });
+        }
+        else {
+            return false;
+        }
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
     }
-    else {
-        return false;
+}
+
+const retrieveSiteNotifications = async (siteId, isParent) => {
+    try {
+        let query = db.collection('siteNotifications');
+        if(!isParent) query = query.where('siteId', '==', siteId);
+        const snapShot = await query.orderBy('notification.time', 'desc')
+                                    .get(); 
+                            
+        if(snapShot.size > 0){
+            return snapShot.docs.map(document => {
+                let data = document.data();
+                return data;
+            });
+        }
+        else {
+            return [];
+        }
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -567,6 +618,7 @@ const filterDB = async (queries, siteCode, isParent) => {
         }
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -583,6 +635,7 @@ const validateBiospecimenUser = async (email) => {
         }
         else return false;
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -610,6 +663,7 @@ const biospecimenUserExists = async (email) => {
         if(snapshot.size === 0) return false;
         else return true;
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -618,6 +672,7 @@ const addNewBiospecimenUser = async (data) => {
     try {
         await db.collection('biospecimenUsers').add(data);
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -635,6 +690,7 @@ const removeUser = async (userEmail, siteCode, email, manager) => {
         }
         else return false;
     } catch (error) {
+        console.error(error);
         return new Error(error);
     }
 }
@@ -1110,7 +1166,8 @@ const getNotificationSpecifications = async (notificationType, notificationCateg
             return document.data();
         });
     } catch (error) {
-        return new Error(error)
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -1139,7 +1196,8 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
             return data;
         });
     } catch (error) {
-        return new Error(error)
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -1157,14 +1215,15 @@ const storeNotifications = async payload => {
     try {
         await db.collection('notifications').add(payload);
     } catch (error) {
-        return new Error(error)
+        console.error(error);
+        return new Error(error);
     }
 }
 
-const markNotificationAsRead = async (id) => {
-    const snapshot = await db.collection('notifications').where('id', '==', id).get();
+const markNotificationAsRead = async (id, collection) => {
+    const snapshot = await db.collection(collection).where('id', '==', id).get();
     const docId = snapshot.docs[0].id;
-    await db.collection('notifications').doc(docId).update({read: true});
+    await db.collection(collection).doc(docId).update({read: true});
 }
 
 const storeSSN = async (data) => {
@@ -1192,6 +1251,7 @@ const retrieveNotificationSchemaByID = async (id) => {
 const retrieveNotificationSchemaByCategory = async (category) => {
     let query = db.collection('notificationSpecifications')
     if(category !== 'all') query = query.where('category', '==', category)
+    else query = query.orderBy('category')
     const snapshot = await query.orderBy('attempt').get();
     if(snapshot.size === 0) return false;
     return snapshot.docs.map(dt => dt.data());
@@ -1235,10 +1295,12 @@ const getNotificationsCategories = async () => {
 
 const addKitAssemblyData = async (data) => {
     try {
+        data['supplyKitIdUtilized'] = false
         await db.collection('kitAssembly').add(data);
         return true;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
@@ -1250,9 +1312,211 @@ const getKitAssemblyData = async () => {
         else return false;
     }
     catch(error){
+        console.error(error);
         return new Error(error);
     }
 }
+
+const storeSiteNotifications = async (reminder) => {
+    try {
+        await db.collection('siteNotifications').add(reminder);
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const getCoordinatingCenterEmail = async () => {
+    try {
+        const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+        if(snapshot.size > 0) return snapshot.docs[0].data().email;
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const getSiteEmail = async (siteCode) => {
+    try {
+        const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        if(snapshot.size > 0) return snapshot.docs[0].data().email;
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const addPrintAddressesParticipants = async (data) => {
+    try {
+        const uuid = require('uuid');
+        const currentDate = new Date().toISOString();
+        const batch = db.batch();
+        await data.map(async (i) => {
+           let assignedUUID = uuid();
+           i.id = assignedUUID;
+           i.time_stamp = currentDate;
+           const docRef = await db.collection('participantSelection').doc(assignedUUID);
+           batch.set(docRef, i);
+           await kitStatusCounterVariation('addressPrinted', 'pending');
+         });
+        await batch.commit();
+        return true;
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const getParticipantSelection = async (filter) => {
+    try {
+        if (filter === 'all') {
+            const snapshot = await db.collection("participantSelection").get();
+            return snapshot.docs.map(doc => doc.data())
+        }
+        else {
+            const snapshot = await db.collection("participantSelection")
+                                    .where('kit_status', '==', filter)
+                                    .get();
+            return snapshot.docs.map(doc => doc.data())
+        }
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const assignKitToParticipants = async (data) => {
+    try {
+        const snapshot = await db.collection("kitAssembly").where('supplyKitId', '==', data.supply_kitId).where('supplyKitIdUtilized', '==', false).get();
+        if (Object.keys(snapshot.docs).length !== 0) {
+            snapshot.docs.map(doc => {
+                data['collection_cardId'] = doc.data().collectionCardId
+                data['collection_cupId'] = doc.data().collectionCupId
+                data['specimen_kitId'] = doc.data().specimenKitId
+                data['specimen_kit_usps_trackingNum'] = doc.data().uspsTrackingNumber
+            })
+            const docId = snapshot.docs[0].id;
+            await db.collection("kitAssembly").doc(docId).update(
+            { 
+                supplyKitIdUtilized: true
+            })
+            await db.collection("participantSelection").doc(data.id).update(
+            { 
+                kit_status: "assigned",
+                usps_trackingNum: data.usps_trackingNum,
+                supply_kitId: data.supply_kitId,
+                collection_cardId: data.collection_cardId,
+                collection_cupId: data.collection_cupId,
+                specimen_kitId: data.specimen_kitId,
+                specimen_kit_usps_trackingNum: data.specimen_kit_usps_trackingNum
+            })
+            await kitStatusCounterVariation('assigned', 'addressPrinted');
+            return true;
+        } else {
+            return false;
+        } }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const shipKits = async (data) => {
+    try {
+        await db.collection("participantSelection").doc(data.id).update(
+            { 
+                kit_status: "shipped",
+                pickup_date: data.pickup_date,
+                confirm_pickup: data.confirm_pickup
+            })
+            await kitStatusCounterVariation('shipped', 'assigned');
+        return true;
+        }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const storePackageReceipt =  (data) => {
+    if (data.scannedBarcode.length <= 12) {  
+        const response = setPackageReceiptFedex(data);
+        return response;
+    } else { 
+        const response = setPackageReceiptUSPS(data);
+        return response; 
+    }
+
+} 
+
+const setPackageReceiptUSPS = async (data) => {
+    try {
+        const snapshot = await db.collection("participantSelection").where('usps_trackingNum', '==', data.scannedBarcode).get();
+        const docId = snapshot.docs[0].id;
+        await db.collection("participantSelection").doc(docId).update(
+        { 
+            baseline: data
+        })
+            return true;
+        }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const setPackageReceiptFedex = async (data) => {
+    try {
+        const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get();
+        const docId = snapshot.docs[0].id;
+        await db.collection("boxes").doc(docId).update({ 
+             baseline: data
+        })
+            return true;
+         }
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
+    try {
+        await db.collection("bptlMetrics").doc('--metrics--').update({ 
+            [currentkitStatus]: increment
+        })
+        await db.collection("bptlMetrics").doc('--metrics--').update({ 
+            [prevKitStatus]: decrement
+        })
+            return true;
+    }
+
+    catch (error) {
+        return new Error(error);
+    }
+};
+
+const getBptlMetrics = async () => {
+    const snapshot = await db.collection("bptlMetrics").get();
+    return snapshot.docs.map(doc => doc.data())
+}
+
+const getBptlMetricsForShipped = async () => {
+    try {
+        let response = []
+        const snapshot = await db.collection("participantSelection").where('kit_status', '==', 'shipped').get();
+        let shipedParticipants = snapshot.docs.map(doc =>  doc.data())
+        const keys = ['first_name', 'last_name', 'pickup_date', 'participation_status']
+        shipedParticipants.forEach( i => { response.push(pick(i, keys) )});
+        return response;
+        }
+
+    catch(error){
+        return new Error(error);
+    }
+}
+
+const pick = (obj, arr) => {
+    return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
+} 
+
+
 
 module.exports = {
     updateResponse,
@@ -1320,5 +1584,16 @@ module.exports = {
     getNotificationHistoryByParticipant,
     getNotificationsCategories,
     addKitAssemblyData,
-    getKitAssemblyData
+    getKitAssemblyData,
+    storeSiteNotifications,
+    getCoordinatingCenterEmail,
+    getSiteEmail,
+    retrieveSiteNotifications,
+    addPrintAddressesParticipants,
+    getParticipantSelection,
+    assignKitToParticipants,
+    shipKits,
+    storePackageReceipt,
+    getBptlMetrics,
+    getBptlMetricsForShipped
 }
