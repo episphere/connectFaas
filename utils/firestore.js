@@ -321,6 +321,36 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
             participants = await query.get();
         }
+        if(decider === 'active') {
+            let query = db.collection('participants')
+                                    .where("512820379", "==", 486306141) // Recruit type active
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
+        }
+        if(decider === 'notactive') {
+            let query = db.collection('participants')
+                                    .where("512820379", "==", 180583933) // Recruit type not active
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
+        }
+        if(decider === 'passive') {
+            let query = db.collection('participants')
+                                    .where("512820379", "==", 854703046) // Recruit type passive
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            participants = await query.get();
+        }
         return participants.docs.map(document => {
             let data = document.data();
             return data;

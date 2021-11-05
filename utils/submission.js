@@ -141,6 +141,9 @@ const getParticipants = async (req, res, authObj) => {
     else if (req.query.type === 'consentNotSubmitted') queryType = req.query.type;
     else if (req.query.type === 'notSignedIn') queryType = req.query.type;
     else if (req.query.type === 'all') queryType = req.query.type;
+    else if (req.query.type === 'active') queryType = req.query.type;
+    else if (req.query.type === 'notactive') queryType = req.query.type;
+    else if (req.query.type === 'passive') queryType = req.query.type;
     else if (req.query.type === 'individual'){
         if (req.query.token) {
             queryType = "individual";
