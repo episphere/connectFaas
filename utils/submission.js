@@ -173,8 +173,10 @@ const getParticipants = async (req, res, authObj) => {
     }
     const { retrieveParticipants } = require(`./firestore`);
     const site = isParent && req.query.siteCode && siteCodes.includes(parseInt(req.query.siteCode)) ? parseInt(req.query.siteCode) : null;
-    if(site) console.log(`Retrieving data for siteCode - ${site}`)
-    const data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page, site);
+    if(site) console.log(`Retrieving data for siteCode - ${site}`);
+    const from = req.query.from ? req.query.from : null; 
+    const to = req.query.to ? req.query.to : null; 
+    const data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page, site, from, to);
 
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
