@@ -495,6 +495,15 @@ const logIPAdddress = (req) => {
     console.log(ipAddress)
 }
 
+const initializeTimestamps = {
+    "state.158291096": {
+        value: 353358909,
+        initialize: {
+            697256759: new Date().toISOString()
+        }
+    }
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -515,5 +524,6 @@ module.exports = {
     SSOValidation,
     conceptMappings,
     logIPAdddress,
-    decodingJWT
+    decodingJWT,
+    initializeTimestamps
 }

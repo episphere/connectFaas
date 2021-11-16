@@ -152,6 +152,13 @@ const updateParticipantData = async (req, res, authObj) => {
 
         if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key)
         else flattened['newData'][key] = dataObj[key]
+        const { initializeTimestamps } = require('./shared')
+        for(let flattenedKey in flattened['newData']) {
+            if(initializeTimestamps[flattenedKey]) {
+                if(initializeTimestamps[flattenedKey].value && initializeTimestamps[flattenedKey].value !== flattened['newData'][flattenedKey]) continue;
+                flattened['newData'] = {...flattened['newData'], ...initializeTimestamps[flattenedKey].initialize}
+            }
+        }
         updatedData = {...updatedData, ...flattened.newData}
     }
 
