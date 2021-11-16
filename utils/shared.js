@@ -499,7 +499,7 @@ const initializeTimestamps = {
     "state.158291096": {
         value: 353358909,
         initialize: {
-            697256759: new Date().toISOString()
+            "state.697256759": new Date().toISOString()
         }
     }
 }
