@@ -460,7 +460,6 @@ const APIAuthorization = async (req, notAuthorized) => {
     try {
         let authorized = false;
         const access_token = req.headers.authorization.replace('Bearer ','').trim();
-        
         // Remove this after SSO and SA authorization are implemented.
         const { validateSiteUser } = require(`./firestore`);
         authorized = await validateSiteUser(access_token);
