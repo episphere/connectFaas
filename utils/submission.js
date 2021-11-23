@@ -166,6 +166,14 @@ const getParticipants = async (req, res, authObj) => {
         if(result instanceof Error){
             return res.status(500).json(getResponseJSON(result.message, 500));
         }
+        // Remove module data from participant records.
+        result.filter(dt => {
+            delete dt['D_726699695'];
+            delete dt['D_745268907'];
+            delete dt['D_965707586'];
+            delete dt['D_716117817'];
+            return dt;
+        })
         return res.status(200).json({data: result, code: 200})
     }
     else{
@@ -176,12 +184,18 @@ const getParticipants = async (req, res, authObj) => {
     if(site) console.log(`Retrieving data for siteCode - ${site}`);
     const from = req.query.from ? req.query.from : null; 
     const to = req.query.to ? req.query.to : null; 
-    const data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page, site, from, to);
-
+    let data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page, site, from, to);
+    // Remove module data from participant records.
+    data.filter(dt => {
+        delete dt['D_726699695'];
+        delete dt['D_745268907'];
+        delete dt['D_965707586'];
+        delete dt['D_716117817'];
+        return dt;
+    })
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
     }
-
     return res.status(200).json({data, code:200, limit, dataSize: data.length})
 }
 
