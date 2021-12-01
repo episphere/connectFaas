@@ -1,9 +1,5 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'getParticipantToken', '--trigger-http', '--runtime=${_RUNTIME}', '--timeout=120s', '--source=${_SOURCE}', '--env-vars-file=config/dev/.env.yaml']
-- name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'add-iam-policy-binding', 'getParticipantToken', '--member=allUsers', '--role=${_ROLE}']
-- name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'getParticipants', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=config/dev/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'add-iam-policy-binding', 'getParticipants', '--member=allUsers', '--role=${_ROLE}']
@@ -17,5 +13,5 @@ steps:
   args: ['functions', 'add-iam-policy-binding', 'app', '--member=allUsers', '--role=${_ROLE}']
 substitutions:
   _SOURCE: https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas/moveable-aliases/dev
-  _RUNTIME: nodejs12
+  _RUNTIME: nodejs14
   _ROLE: roles/cloudfunctions.invoker
