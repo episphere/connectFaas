@@ -149,6 +149,46 @@ const withdrawalConcepts = {
     ...refusalConcepts
 }
 
+const optOutReasons = {
+    706283025: {
+        196038514: 104430631,
+        873405723: 104430631,
+        517101990: 104430631,
+        347614743: 104430631,
+        535928798: 104430631,
+        897366187: 104430631,
+        415693436: '',
+        719451909: 104430631,
+        377633816: 104430631,
+        211023960: 104430631,
+        209509101: 104430631,
+        363026564: 104430631,
+        405352246: 104430631,
+        755545718: 104430631,
+        831137710: 104430631,
+        496935183: 104430631,
+        491099823: 104430631,
+        836460125: 104430631,
+        163534562: 104430631,
+        331787113: 104430631,
+        705732561: 104430631,
+        381509125: 104430631,
+        497530905: 104430631,
+        627995442: 104430631,
+        208102461: 104430631,
+        579618065: 104430631,
+        702433259: 104430631,
+        771146804: 104430631,
+        163284008: 104430631,
+        387198193: 104430631,
+        566047367: 104430631,
+        400259098: 104430631,
+        260703126: 104430631,
+        744197145: 104430631,
+        950040334: 104430631
+    }
+}
+
 const defaultFlags = {
     948195369: 104430631,
     919254129: 104430631,
@@ -170,7 +210,8 @@ const defaultFlags = {
 
 const defaultStateFlags = {
     875549268: 104430631,
-    158291096: 104430631
+    158291096: 104430631,
+    ...optOutReasons
 }
 
 const moduleConcepts = {
@@ -403,7 +444,6 @@ const APIAuthorization = async (req, notAuthorized) => {
     try {
         let authorized = false;
         const access_token = req.headers.authorization.replace('Bearer ','').trim();
-        
         // Remove this after SSO and SA authorization are implemented.
         const { validateSiteUser } = require(`./firestore`);
         authorized = await validateSiteUser(access_token);
@@ -454,6 +494,15 @@ const logIPAdddress = (req) => {
     console.log(ipAddress)
 }
 
+const initializeTimestamps = {
+    "state.158291096": {
+        value: 353358909,
+        initialize: {
+            "state.697256759": new Date().toISOString()
+        }
+    }
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -474,5 +523,6 @@ module.exports = {
     SSOValidation,
     conceptMappings,
     logIPAdddress,
-    decodingJWT
+    decodingJWT,
+    initializeTimestamps
 }
