@@ -410,6 +410,19 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data: response, code:200})
     }
 
+    else if (api === 'queryBsiData') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const query = req.query.type;
+        console.log('qqqq', query)
+        if(Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include parameter to filter data.', 400));
+        const { getQueryBsiData } = require('./firestore');
+        const response = await getQueryBsiData(query);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({data: response, code:200})
+    }
+
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 };
 

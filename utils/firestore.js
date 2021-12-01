@@ -1464,12 +1464,54 @@ const setPackageReceiptUSPS = async (data) => {
 
 const setPackageReceiptFedex = async (data) => {
     try {
-        const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get();
+        let conversion = {
+            "0007": "143615646",
+            "0009": "223999569",
+            "0012": "232343615",
+            "0001": "299553921",
+            "0011": "376960806",
+            "0004": "454453939",
+            "0021": "589588440",
+            "0005": "652357376",
+            "0032": "654812257",
+            "0014": "677469051",
+            "0024": "683613884",
+            "0002": "703954371",
+            "0022": "746999767",
+            "0008": "787237543",
+            "0003": "838567176",
+            "0031": "857757831",
+            "0013": "958646668",
+            "0006": "973670172"
+        }
+        const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get(); // find related box using barcode
         const docId = snapshot.docs[0].id;
         await db.collection("boxes").doc(docId).update({ 
              baseline: data
         })
-            return true;
+        if (Object.keys(snapshot.docs).length !== 0) {
+            snapshot.docs.map(doc => { 
+                let collectionIdKeys = Object.keys(doc.data().bags); // grab all the collection ids
+                collectionIdKeys.forEach (async (i) => {
+                    let storeCollectionId = i.split(' ')[0] 
+                    const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
+                    const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
+                    let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
+                    let biospecimenDataObj =  getBiospecimenDataObject.data()
+                  
+
+                    doc.data().bags[i].arrElements.forEach( async (i) => {
+                        let tubeId = i.split(' ')[1];
+                        let conceptTube = conversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                        biospecimenDataObj["259439191"] = new Date().toISOString();
+                        biospecimenDataObj[conceptTube]["259439191"] = new Date().toISOString();
+
+                        await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
+                        })
+                })
+            })
+        }
+        return true;
          }
     catch(error){
         return new Error(error);
@@ -1516,7 +1558,55 @@ const pick = (obj, arr) => {
     return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
 } 
 
+const getQueryBsiData = async (query) => {
+    try {
+        let storeResults = []
+        let holdBiospecimenMatches = []
+        const snapshot = await db.collection("biospecimen").where('259439191', '>=', query).get();
+        let tubeConceptIds = [
+            "143615646",
+            "223999569",
+            "232343615",
+            "299553921",
+            "376960806",
+            "454453939",
+            "589588440",
+            "652357376",
+            "654812257",
+            "677469051",
+            "683613884",
+            "703954371",
+            "746999767",
+            "787237543",
+            "838567176",
+            "857757831",
+            "958646668",
+            "973670172"
+        ]
+        snapshot.docs.map(doc => {
+            holdBiospecimenMatches.push(doc.data())
+        })
 
+        holdBiospecimenMatches.forEach( i => {
+            tubeConceptIds.forEach( id => {
+                if (id in i) {
+                    let collectionIdInfo = {}
+                    collectionIdInfo['825582494'] = i[id]['825582494']
+                    collectionIdInfo['259439191'] = i['259439191']
+                    collectionIdInfo['Connect_ID'] = i['Connect_ID']
+                    collectionIdInfo['siteAcronym'] = i['siteAcronym']
+                    storeResults.push(collectionIdInfo)
+                }
+
+            })
+
+        })
+        return storeResults
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
 
 module.exports = {
     updateResponse,
@@ -1595,5 +1685,6 @@ module.exports = {
     shipKits,
     storePackageReceipt,
     getBptlMetrics,
-    getBptlMetricsForShipped
+    getBptlMetricsForShipped,
+    getQueryBsiData
 }
