@@ -54,8 +54,6 @@ exports.subscribeToNotification = subscribeToNotification;
 
 exports.retrieveNotifications = retrieveNotifications;
 
-exports.deleteDocuments = deleteDocuments;
-
 exports.app = connectApp;
 
 // Biospecimen

@@ -239,7 +239,7 @@ const updateParticipantData = async (id, data) => {
             .update(data);
 }
 
-const retrieveParticipants = async (siteCode, decider, isParent, limit, page, site) => {
+const retrieveParticipants = async (siteCode, decider, isParent, limit, page, site, from, to) => {
     try{
         const operator = isParent ? 'in' : '==';
         let participants = {};
@@ -314,11 +314,53 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
         }
         if(decider === 'all') {
             let query = db.collection('participants')
+                                    .orderBy("471593703", "desc")
                                     .orderBy("821247024", "asc")
                                     .offset(offset)
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
-            else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent   
+            if(from) query = query.where('471593703', '>=', from)
+            if(to) query = query.where('471593703', '<=', to)
+            participants = await query.get();
+        }
+        if(decider === 'active') {
+            let query = db.collection('participants')
+                                    .where("512820379", "==", 486306141) // Recruit type active
+                                    .orderBy("471593703", "desc")
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent
+            if(from) query = query.where('471593703', '>=', from)
+            if(to) query = query.where('471593703', '<=', to)
+            participants = await query.get();
+        }
+        if(decider === 'notactive') {
+            let query = db.collection('participants')
+                                    .where("512820379", "==", 180583933) // Recruit type not active
+                                    .orderBy("471593703", "desc")
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent
+            if(from) query = query.where('471593703', '>=', from)
+            if(to) query = query.where('471593703', '<=', to)
+            participants = await query.get();
+        }
+        if(decider === 'passive') {
+            let query = db.collection('participants')
+                                    .where("512820379", "==", 854703046) // Recruit type passive
+                                    .orderBy("471593703", "desc")
+                                    .orderBy("821247024", "asc")
+                                    .offset(offset)
+                                    .limit(limit)
+            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+            else query = query.where('827220437', operator, siteCode) // Get for all site if parent
+            if(from) query = query.where('471593703', '>=', from)
+            if(to) query = query.where('471593703', '<=', to)
             participants = await query.get();
         }
         return participants.docs.map(document => {
@@ -1516,7 +1558,15 @@ const pick = (obj, arr) => {
     return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
 } 
 
-
+const getSpecificFields = async () => {
+    const fields = ['Connect_ID', 'query', 'state.uid', 'lala'];
+    const snapshot = await db.collection('participants').select(...fields).get();
+    console.log(snapshot.size)
+    const data = snapshot.docs.map(dt => {
+        const d = dt.data();
+        return d;
+    })
+}
 
 module.exports = {
     updateResponse,

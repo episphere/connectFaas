@@ -30,19 +30,11 @@ const randomString = () => {
     return pin;
 }
 
-const deleteDocuments = (req, res) => {
-    setHeaders(res);
-    
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
-    if(req.method !== 'GET') {
-        res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-
-    const siteCode = 809703864;
+const deleteDocuments = (siteCode) => {
+    if(!siteCode) return;
     const { deleteFirestoreDocuments } = require('./firestore')
     deleteFirestoreDocuments(siteCode)
-    res.status(200).json(getResponseJSON('Success!', 200))
+    return true;
 }
 
 const lockedAttributes = [
@@ -452,7 +444,6 @@ const APIAuthorization = async (req, notAuthorized) => {
     try {
         let authorized = false;
         const access_token = req.headers.authorization.replace('Bearer ','').trim();
-        
         // Remove this after SSO and SA authorization are implemented.
         const { validateSiteUser } = require(`./firestore`);
         authorized = await validateSiteUser(access_token);
@@ -503,6 +494,15 @@ const logIPAdddress = (req) => {
     console.log(ipAddress)
 }
 
+const initializeTimestamps = {
+    "state.158291096": {
+        value: 353358909,
+        initialize: {
+            "state.697256759": new Date().toISOString()
+        }
+    }
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -523,5 +523,6 @@ module.exports = {
     SSOValidation,
     conceptMappings,
     logIPAdddress,
-    decodingJWT
+    decodingJWT,
+    initializeTimestamps
 }
