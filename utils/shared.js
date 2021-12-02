@@ -403,7 +403,6 @@ const decodingJWT = (token) => {
 
 const SSOValidation = async (dashboardType, idToken) => {
     try {
-        console.log(idToken)
         const decodedJWT = decodingJWT(idToken);
         const tenant = decodedJWT.firebase.tenant;
         const { validateMultiTenantIDToken } = require('./firestore');
@@ -419,7 +418,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         const requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
         if(!requiredGroups) return false;
         let acronym = SSOConfig[tenant].acronym;
-        if(tenant === 'KP-SSO-wulix') {
+        if(tenant === 'KP-SSO-wulix' || tenant === 'KP-SSO-ssj7c' || tenant === 'KP-SSO-ii9sr') {
             const moreThanOneRegion = allGroups.toString().match(/CN=connect_kp(co|hi|nw|ga)_user/ig);
             if(moreThanOneRegion.length > 1) return false;
             if(new RegExp(SSOConfig[tenant]['kpco']['name'], 'g').test(allGroups.toString())) acronym = SSOConfig[tenant]['kpco']['acronym'];
