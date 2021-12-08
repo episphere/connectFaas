@@ -189,7 +189,7 @@ const getParticipants = async (req, res, authObj) => {
     }
     
     // Remove module data from participant records.
-    data = removeRestrictedFields(data, restriectedFields, isParent);
+    if(data.length > 0) data = removeRestrictedFields(data, restriectedFields, isParent);
     
     return res.status(200).json({data, code:200, limit, dataSize: data.length})
 }
