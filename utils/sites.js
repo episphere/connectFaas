@@ -135,7 +135,7 @@ const updateParticipantData = async (req, res, authObj) => {
         for(let k in obj) {
             if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
             else {
-                if(att === 'newData' && flattened['docData'][attribute ? `${attribute}.${k}`: k] === undefined) continue;
+                if(att === 'newData' && flattened['docData'][attribute ? `${attribute}.${k}`: k] === undefined && !authObj) continue;
                 if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
                 flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
             }
