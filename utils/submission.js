@@ -134,6 +134,10 @@ const getParticipants = async (req, res, authObj) => {
     let queryType = '';
     const limit = req.query.limit ? parseInt(req.query.limit) : 500;
     const page = req.query.page ? parseInt(req.query.page) : 1;
+
+    const { getRestrictedFields } = require('./firestore')
+    const restriectedFields = await getRestrictedFields();
+
     if (req.query.type === 'verified') queryType = req.query.type;
     else if (req.query.type === 'notyetverified') queryType = req.query.type;
     else if (req.query.type === 'cannotbeverified') queryType = req.query.type;
@@ -162,18 +166,13 @@ const getParticipants = async (req, res, authObj) => {
         delete queries.type;
         if(Object.keys(queries).length === 0) return res.status(400).json(getResponseJSON('Please include parameters to filter data.', 400));
         const { filterData } = require('./shared');
-        const result = await filterData(queries, siteCodes, isParent);
+        let result = await filterData(queries, siteCodes, isParent);
         if(result instanceof Error){
             return res.status(500).json(getResponseJSON(result.message, 500));
         }
         // Remove module data from participant records.
-        result.filter(dt => {
-            delete dt['D_726699695'];
-            delete dt['D_745268907'];
-            delete dt['D_965707586'];
-            delete dt['D_716117817'];
-            return dt;
-        })
+        result = removeRestrictedFields(result, restriectedFields, isParent);
+        
         return res.status(200).json({data: result, code: 200})
     }
     else{
@@ -185,18 +184,24 @@ const getParticipants = async (req, res, authObj) => {
     const from = req.query.from ? req.query.from : null; 
     const to = req.query.to ? req.query.to : null; 
     let data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page, site, from, to);
-    // Remove module data from participant records.
-    data.filter(dt => {
-        delete dt['D_726699695'];
-        delete dt['D_745268907'];
-        delete dt['D_965707586'];
-        delete dt['D_716117817'];
-        return dt;
-    })
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
     }
+    
+    // Remove module data from participant records.
+    data = removeRestrictedFields(data, restriectedFields, isParent);
+    
     return res.status(200).json({data, code:200, limit, dataSize: data.length})
+}
+
+const removeRestrictedFields = (data, restriectedFields, isParent) => {
+    if(restriectedFields && !isParent) {
+        return data.filter(dt => {
+            restriectedFields.forEach(field => delete dt[field]);
+            return dt;
+        })
+    }
+    else return data;
 }
 
 const identifyParticipant = async (req, res, site) => {
