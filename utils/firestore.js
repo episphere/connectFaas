@@ -10,6 +10,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
+const { collectionIdConversion  } = require('./shared');
 
 const verifyToken = async (token) => {
     try{
@@ -1506,12 +1507,34 @@ const setPackageReceiptUSPS = async (data) => {
 
 const setPackageReceiptFedex = async (data) => {
     try {
-        const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get();
+        const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get(); // find related box using barcode
         const docId = snapshot.docs[0].id;
         await db.collection("boxes").doc(docId).update({ 
              baseline: data
         })
-            return true;
+        if (Object.keys(snapshot.docs.length) !== 0) {
+            snapshot.docs.map(doc => { 
+                let collectionIdKeys = Object.keys(doc.data().bags); // grab all the collection ids
+                collectionIdKeys.forEach (async (i) => {
+                    let storeCollectionId = i.split(' ')[0] 
+                    const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
+                    const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
+                    let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
+                    let biospecimenDataObj =  getBiospecimenDataObject.data()
+                  
+
+                    for ( const element of doc.data().bags[i].arrElements) {
+                        let tubeId = element.split(' ')[1];
+                        let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                        biospecimenDataObj["259439191"] = new Date().toISOString();
+                        biospecimenDataObj[conceptTube]["259439191"] = new Date().toISOString();
+
+                        await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
+                        }
+                })
+            })
+        }
+        return true;
          }
     catch(error){
         return new Error(error);
@@ -1558,15 +1581,36 @@ const pick = (obj, arr) => {
     return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
 } 
 
-const getSpecificFields = async () => {
-    const fields = ['Connect_ID', 'query', 'state.uid', 'lala'];
-    const snapshot = await db.collection('participants').select(...fields).get();
-    const data = snapshot.docs.map(dt => {
-        const d = dt.data();
-        return d;
-    })
-}
+const getQueryBsiData = async (query) => {
+    try {
+        let storeResults = []
+        let holdBiospecimenMatches = []
+        const snapshot = await db.collection("biospecimen").where('259439191', '>=', query).get();
+        let tubeConceptIds = Object.values(collectionIdConversion);
+        snapshot.docs.map(doc => {
+            holdBiospecimenMatches.push(doc.data())
+        })
 
+        holdBiospecimenMatches.forEach( i => {
+            tubeConceptIds.forEach( id => {
+                if (id in i) {
+                    let collectionIdInfo = {}
+                    collectionIdInfo['825582494'] = i[id]['825582494']
+                    collectionIdInfo['259439191'] = i['259439191']
+                    collectionIdInfo['Connect_ID'] = i['Connect_ID']
+                    collectionIdInfo['siteAcronym'] = i['siteAcronym']
+                    storeResults.push(collectionIdInfo)
+                }
+
+            })
+
+        })
+        return storeResults
+    }
+    catch(error){
+        return new Error(error);
+    }
+}
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
     return snapshot.docs[0].data().restrictedFields;
@@ -1650,5 +1694,6 @@ module.exports = {
     storePackageReceipt,
     getBptlMetrics,
     getBptlMetricsForShipped,
+    getQueryBsiData,
     getRestrictedFields
 }
