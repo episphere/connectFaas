@@ -1561,11 +1561,15 @@ const pick = (obj, arr) => {
 const getSpecificFields = async () => {
     const fields = ['Connect_ID', 'query', 'state.uid', 'lala'];
     const snapshot = await db.collection('participants').select(...fields).get();
-    console.log(snapshot.size)
     const data = snapshot.docs.map(dt => {
         const d = dt.data();
         return d;
     })
+}
+
+const getRestrictedFields = async () => {
+    const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+    return snapshot.docs[0].data().restrictedFields;
 }
 
 module.exports = {
@@ -1645,5 +1649,6 @@ module.exports = {
     shipKits,
     storePackageReceipt,
     getBptlMetrics,
-    getBptlMetricsForShipped
+    getBptlMetricsForShipped,
+    getRestrictedFields
 }
