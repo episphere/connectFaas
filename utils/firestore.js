@@ -1611,6 +1611,10 @@ const getQueryBsiData = async (query) => {
         return new Error(error);
     }
 }
+const getRestrictedFields = async () => {
+    const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+    return snapshot.docs[0].data().restrictedFields;
+}
 
 module.exports = {
     updateResponse,
@@ -1690,5 +1694,6 @@ module.exports = {
     storePackageReceipt,
     getBptlMetrics,
     getBptlMetricsForShipped,
-    getQueryBsiData
+    getQueryBsiData,
+    getRestrictedFields
 }
