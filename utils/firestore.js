@@ -10,6 +10,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
+const { collectionIdConversion  } = require('./shared');
 
 const verifyToken = async (token) => {
     try{
@@ -1506,32 +1507,12 @@ const setPackageReceiptUSPS = async (data) => {
 
 const setPackageReceiptFedex = async (data) => {
     try {
-        let conversion = {
-            "0007": "143615646",
-            "0009": "223999569",
-            "0012": "232343615",
-            "0001": "299553921",
-            "0011": "376960806",
-            "0004": "454453939",
-            "0021": "589588440",
-            "0005": "652357376",
-            "0032": "654812257",
-            "0014": "677469051",
-            "0024": "683613884",
-            "0002": "703954371",
-            "0022": "746999767",
-            "0008": "787237543",
-            "0003": "838567176",
-            "0031": "857757831",
-            "0013": "958646668",
-            "0006": "973670172"
-        }
         const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get(); // find related box using barcode
         const docId = snapshot.docs[0].id;
         await db.collection("boxes").doc(docId).update({ 
              baseline: data
         })
-        if (Object.keys(snapshot.docs).length !== 0) {
+        if (Object.keys(snapshot.docs.length) !== 0) {
             snapshot.docs.map(doc => { 
                 let collectionIdKeys = Object.keys(doc.data().bags); // grab all the collection ids
                 collectionIdKeys.forEach (async (i) => {
@@ -1542,14 +1523,14 @@ const setPackageReceiptFedex = async (data) => {
                     let biospecimenDataObj =  getBiospecimenDataObject.data()
                   
 
-                    doc.data().bags[i].arrElements.forEach( async (i) => {
-                        let tubeId = i.split(' ')[1];
-                        let conceptTube = conversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                    for ( const element of doc.data().bags[i].arrElements) {
+                        let tubeId = element.split(' ')[1];
+                        let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
                         biospecimenDataObj["259439191"] = new Date().toISOString();
                         biospecimenDataObj[conceptTube]["259439191"] = new Date().toISOString();
 
                         await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
-                        })
+                        }
                 })
             })
         }
@@ -1605,26 +1586,7 @@ const getQueryBsiData = async (query) => {
         let storeResults = []
         let holdBiospecimenMatches = []
         const snapshot = await db.collection("biospecimen").where('259439191', '>=', query).get();
-        let tubeConceptIds = [
-            "143615646",
-            "223999569",
-            "232343615",
-            "299553921",
-            "376960806",
-            "454453939",
-            "589588440",
-            "652357376",
-            "654812257",
-            "677469051",
-            "683613884",
-            "703954371",
-            "746999767",
-            "787237543",
-            "838567176",
-            "857757831",
-            "958646668",
-            "973670172"
-        ]
+        let tubeConceptIds = Object.values(collectionIdConversion);
         snapshot.docs.map(doc => {
             holdBiospecimenMatches.push(doc.data())
         })

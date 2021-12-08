@@ -503,6 +503,28 @@ const initializeTimestamps = {
     }
 }
 
+const collectionIdConversion = {
+    "0007": "143615646",
+    "0009": "223999569",
+    "0012": "232343615",
+    "0001": "299553921",
+    "0011": "376960806",
+    "0004": "454453939",
+    "0021": "589588440",
+    "0005": "652357376",
+    "0032": "654812257",
+    "0014": "677469051",
+    "0024": "683613884",
+    "0002": "703954371",
+    "0022": "746999767",
+    "0008": "787237543",
+    "0003": "838567176",
+    "0031": "857757831",
+    "0013": "958646668",
+    "0006": "973670172"
+}
+
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -524,5 +546,6 @@ module.exports = {
     conceptMappings,
     logIPAdddress,
     decodingJWT,
-    initializeTimestamps
+    initializeTimestamps,
+    collectionIdConversion
 }
