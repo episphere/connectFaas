@@ -237,6 +237,22 @@ const biospecimenAPIs = async (req, res) => {
         const { updateParticipantData } = require('./sites');
         return updateParticipantData(req, res, siteCode)
     }
+    else if (api === 'updateParticipantDataNotSite') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        
+        //const { updateParticipantData } = require('./sites');
+        //return updateParticipantData(req, res, siteCode)
+        const {submit} = require('./submission');
+        let body = req.body;
+        if(!req.body.uid) {
+            return res.status(500).json(getResponseJSON('Missing UID!', 405));
+        }
+        let uid = req.body.uid;
+        delete data['uid']
+        return submit(res, req.body, req.body.uid)
+    }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
