@@ -251,6 +251,8 @@ const biospecimenAPIs = async (req, res) => {
         }
         let uid = req.body.uid;
         delete data['uid']
+        console.log(req.body);
+        console.log(req.body.uid);
         return submit(res, req.body, req.body.uid)
     }
     else if (api === 'removeBag') {
