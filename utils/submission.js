@@ -152,9 +152,10 @@ const getParticipants = async (req, res, authObj) => {
         if (req.query.token) {
             queryType = "individual";
             const { individualParticipant } = require(`./firestore`);
-            const response = await individualParticipant('token', req.query.token, siteCodes, isParent);
+            let response = await individualParticipant('token', req.query.token, siteCodes, isParent);
             if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
             if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+            if(response.length > 0) response = removeRestrictedFields(response, restriectedFields, isParent);
             if(response) return res.status(200).json({data: response, code: 200})
         }
         else{
@@ -171,7 +172,7 @@ const getParticipants = async (req, res, authObj) => {
             return res.status(500).json(getResponseJSON(result.message, 500));
         }
         // Remove module data from participant records.
-        result = removeRestrictedFields(result, restriectedFields, isParent);
+        if(result.length > 0) result = removeRestrictedFields(result, restriectedFields, isParent);
         
         return res.status(200).json({data: result, code: 200})
     }
@@ -189,9 +190,9 @@ const getParticipants = async (req, res, authObj) => {
     }
     
     // Remove module data from participant records.
-    data = removeRestrictedFields(data, restriectedFields, isParent);
+    if(data.length > 0) data = removeRestrictedFields(data, restriectedFields, isParent);
     
-    return res.status(200).json({data, code:200, limit, dataSize: data.length})
+    return res.status(200).json({data, code: 200, limit, dataSize: data.length})
 }
 
 const removeRestrictedFields = (data, restriectedFields, isParent) => {
