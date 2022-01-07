@@ -1,5 +1,5 @@
 const { getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress } = require('./shared');
-const { fieldMapping } = require('./fieldMapping.js')
+const { fieldMapping } = require('./fieldMapping.js');
 
 const subscribeToNotification = async (req, res) => {
     setHeadersDomainRestricted(req, res);
