@@ -186,7 +186,7 @@ const notificationHandler = async (message, context) => {
                 d.setHours(d.getHours() + hour);
                 d.setMinutes(d.getMinutes() + minute);
                 let body = html.replace('<firstName>', preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]);
-                body = html.replace('<Connect_ID>', participant['Connect_ID'])
+                body = body.replace('<Connect_ID>', participant['Connect_ID'])
                 let reminder = {
                     notificationSpecificationsID,
                     id: uuid(),
