@@ -1,5 +1,4 @@
 const { getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress } = require('./shared');
-const { fieldMapping } = require('./fieldMapping.js');
 
 const subscribeToNotification = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -187,7 +186,7 @@ const notificationHandler = async (message, context) => {
                 d.setHours(d.getHours() + hour);
                 d.setMinutes(d.getMinutes() + minute);
                 let body = html.replace('<firstName>', preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]);
-                (participant[fieldMapping.site] === fieldMapping.UofChiM && participant[fieldMapping.verifiedFlag] === fieldMapping.verified) ? (body += html.replace('<Connect_ID>', participant['Connect_ID'])) : ``
+                body = html.replace('<Connect_ID>', participant['Connect_ID'])
                 let reminder = {
                     notificationSpecificationsID,
                     id: uuid(),
