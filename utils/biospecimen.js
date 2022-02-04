@@ -16,7 +16,11 @@ const biospecimenAPIs = async (req, res) => {
     console.log(api)
     const idToken = req.headers.authorization.replace('Bearer','').trim();
     const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
+    let decodedToken = await validateIDToken(idToken);
+    if (!decodedToken) {
+        const { SSOValidation } = require('./shared');
+        decodedToken = await SSOValidation('biospecimenUser', idToken);
+    }
     if(decodedToken instanceof Error){
         return res.status(401).json(getResponseJSON(decodedToken.message, 401));
     }
@@ -27,7 +31,6 @@ const biospecimenAPIs = async (req, res) => {
     
     const { validateBiospecimenUser } = require('./firestore');
     const email = decodedToken.email;
-    console.log(email);
 
     const isValidUser = await validateBiospecimenUser(email);
     if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
