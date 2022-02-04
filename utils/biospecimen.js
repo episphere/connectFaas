@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -16,7 +16,8 @@ const biospecimenAPIs = async (req, res) => {
     console.log(api)
     const idToken = req.headers.authorization.replace('Bearer','').trim();
     const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
+    let decodedToken = await SSOValidation('biospecimenUser', idToken) || await validateIDToken(idToken);
+
     if(decodedToken instanceof Error){
         return res.status(401).json(getResponseJSON(decodedToken.message, 401));
     }
