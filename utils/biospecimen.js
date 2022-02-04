@@ -28,7 +28,6 @@ const biospecimenAPIs = async (req, res) => {
     
     const { validateBiospecimenUser } = require('./firestore');
     const email = decodedToken.email;
-    console.log(email);
 
     const isValidUser = await validateBiospecimenUser(email);
     if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
