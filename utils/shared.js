@@ -299,7 +299,9 @@ const hfhsSSOConfig = {
     lastName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
     email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
     siteCode: 548392715,
-    acronym: 'HFHS'
+    acronym: 'HFHS',
+    siteManagerUser: 'study-manager-user',
+    biospecimenUser: 'biospecimen-user'
 }
 
 const kpSSOConfig = {
