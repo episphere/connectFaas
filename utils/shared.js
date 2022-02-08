@@ -263,6 +263,7 @@ const nihSSOConfig = {
     email: 'https://federation.nih.gov/person/Mail',
     siteManagerUser: 'CN=connect-study-manager-user',
     biospecimenUser: 'CN=connect-biospecimen-user',
+    bptlUser: 'CN=connect-bptl-user',
     helpDeskUser: 'CN=connect-help-desk-user',
     siteCode: 111111111,
     acronym: 'NIH'
@@ -275,6 +276,7 @@ const nihSSODevConfig = {
     email: 'https://federation.nih.gov/person/Mail',
     siteManagerUser: 'connect-study-manager-dev',
     biospecimenUser: 'connect-biospecimen-dev',
+    bptlUser: 'connect-bptl-dev',
     helpDeskUser: 'CN=connect-help-desk-user',
     siteCode: 111111111,
     acronym: 'NIH'
