@@ -410,6 +410,7 @@ const decodingJWT = (token) => {
 
 const SSOValidation = async (dashboardType, idToken) => {
     try {
+        console.log(idToken)
         const decodedJWT = decodingJWT(idToken);
         const tenant = decodedJWT.firebase.tenant;
         const { validateMultiTenantIDToken } = require('./firestore');
@@ -418,6 +419,7 @@ const SSOValidation = async (dashboardType, idToken) => {
             return false;
         }
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
+        if(!allGroups) return;
         const email = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']];
         console.log(allGroups)
         console.log(email)
