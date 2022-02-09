@@ -952,8 +952,8 @@ const updateTempCheckDate = async (institute) => {
 const shipBox = async (boxId, institute, shippingData, trackingNumbers) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
     if(snapshot.size === 1) {
-        let currDate = new Date();
-        shippingData['656548982'] = Date.parse(currDate);
+        let currDate = new Date().toISOString();
+        shippingData['656548982'] = currDate;
         shippingData['145971562'] = '353358909';
         shippingData['959708259'] = trackingNumbers[boxId]
         const docId = snapshot.docs[0].id;
