@@ -44,10 +44,7 @@ const lockedAttributes = [
                         "Connect_ID", 
                         "821247024", 
                         "230663853", 
-                        "266600170", 
-                        "496823485", 
-                        "650465111", 
-                        "303552867", 
+                        "130371375",
                         "512820379",
                         "598680838",
                         "454067894",
@@ -69,29 +66,35 @@ const filterData = async (queries, siteCodes, isParent) => {
 }
 
 const incentiveFlags = {
-    266600170: { // Baseline
-		731498909: 104430631,
-		648936790: 104430631,
-		648228701: 104430631,
-		222373868: 104430631
-    },
-    496823485: { // Follow up 1
-		731498909: 104430631,
-		648936790: 104430631,
-		648228701: 104430631,
-		222373868: 104430631
-    },
-    650465111: { // Follow up 2
-		731498909: 104430631,
-		648936790: 104430631,
-		648228701: 104430631,
-		222373868: 104430631
-    },
-    303552867: { // Follow up 3
-		731498909: 104430631,
-		648936790: 104430631,
-		648228701: 104430631,
-		222373868: 104430631
+    130371375 : { // Payment Round
+        266600170: { // Baseline
+            731498909: 104430631,
+            648936790: 104430631,
+            648228701: 104430631,
+            222373868: 104430631,
+            862774033: 104430631 // University of Chicago
+        },
+        496823485: { // Follow up 1
+            731498909: 104430631,
+            648936790: 104430631,
+            648228701: 104430631,
+            222373868: 104430631,
+            862774033: 104430631 // University of Chicago
+        },
+        650465111: { // Follow up 2
+            731498909: 104430631,
+            648936790: 104430631,
+            648228701: 104430631,
+            222373868: 104430631,
+            862774033: 104430631 // University of Chicago
+        },
+        303552867: { // Follow up 3
+            731498909: 104430631,
+            648936790: 104430631,
+            648228701: 104430631,
+            222373868: 104430631,
+            862774033: 104430631 // University of Chicago
+        }
     }
 }
 
@@ -219,10 +222,10 @@ const moduleConcepts = {
 }
 
 const incentiveConcepts = {
-    'baseline': 266600170,
-    'followup1': 496823485,
-    'followup2': 650465111,
-    'followup3': 303552867,
+    'baseline': 130371375.266600170,
+    'followup1': 130371375.496823485,
+    'followup2': 130371375.650465111,
+    'followup3': 130371375.303552867,
     'incentiveIssued': 648936790,
     'incentiveIssuedAt': 297462035,
     'incentiveRefused': 648228701,
@@ -260,6 +263,7 @@ const nihSSOConfig = {
     email: 'https://federation.nih.gov/person/Mail',
     siteManagerUser: 'CN=connect-study-manager-user',
     biospecimenUser: 'CN=connect-biospecimen-user',
+    bptlUser: 'CN=connect-bptl-user',
     helpDeskUser: 'CN=connect-help-desk-user',
     siteCode: 111111111,
     acronym: 'NIH'
@@ -272,6 +276,7 @@ const nihSSODevConfig = {
     email: 'https://federation.nih.gov/person/Mail',
     siteManagerUser: 'connect-study-manager-dev',
     biospecimenUser: 'connect-biospecimen-dev',
+    bptlUser: 'connect-bptl-dev',
     helpDeskUser: 'CN=connect-help-desk-user',
     siteCode: 111111111,
     acronym: 'NIH'
@@ -299,7 +304,9 @@ const hfhsSSOConfig = {
     lastName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
     email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
     siteCode: 548392715,
-    acronym: 'HFHS'
+    acronym: 'HFHS',
+    siteManagerUser: 'study-manager-user',
+    biospecimenUser: 'biospecimen-user'
 }
 
 const kpSSOConfig = {
@@ -411,6 +418,7 @@ const SSOValidation = async (dashboardType, idToken) => {
             return false;
         }
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
+        if(!allGroups) return;
         const email = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']];
         console.log(allGroups)
         console.log(email)

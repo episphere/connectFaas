@@ -952,8 +952,8 @@ const updateTempCheckDate = async (institute) => {
 const shipBox = async (boxId, institute, shippingData, trackingNumbers) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
     if(snapshot.size === 1) {
-        let currDate = new Date();
-        shippingData['656548982'] = Date.parse(currDate);
+        let currDate = new Date().toISOString();
+        shippingData['656548982'] = currDate;
         shippingData['145971562'] = '353358909';
         shippingData['959708259'] = trackingNumbers[boxId]
         const docId = snapshot.docs[0].id;
@@ -1480,7 +1480,7 @@ const shipKits = async (data) => {
 }
 
 const storePackageReceipt =  (data) => {
-    if (data.scannedBarcode.length <= 12) {  
+    if (data.scannedBarcode.length === 12 || data.scannedBarcode.length === 34) {  
         const response = setPackageReceiptFedex(data);
         return response;
     } else { 
@@ -1508,10 +1508,11 @@ const setPackageReceiptUSPS = async (data) => {
 const setPackageReceiptFedex = async (data) => {
     try {
         const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get(); // find related box using barcode
+        if (snapshot.empty) {
+            return false
+        }
         const docId = snapshot.docs[0].id;
-        await db.collection("boxes").doc(docId).update({ 
-             baseline: data
-        })
+        await db.collection("boxes").doc(docId).update(data)
         if (Object.keys(snapshot.docs.length) !== 0) {
             snapshot.docs.map(doc => { 
                 let collectionIdKeys = Object.keys(doc.data().bags); // grab all the collection ids

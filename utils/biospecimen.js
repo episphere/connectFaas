@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -16,7 +16,8 @@ const biospecimenAPIs = async (req, res) => {
     console.log(api)
     const idToken = req.headers.authorization.replace('Bearer','').trim();
     const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
+    let decodedToken = await SSOValidation('biospecimenUser', idToken) || await validateIDToken(idToken);
+
     if(decodedToken instanceof Error){
         return res.status(401).json(getResponseJSON(decodedToken.message, 401));
     }
@@ -27,7 +28,6 @@ const biospecimenAPIs = async (req, res) => {
     
     const { validateBiospecimenUser } = require('./firestore');
     const email = decodedToken.email;
-    console.log(email);
 
     const isValidUser = await validateBiospecimenUser(email);
     if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
@@ -236,6 +236,22 @@ const biospecimenAPIs = async (req, res) => {
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
         return updateParticipantData(req, res, siteCode)
+    }
+    else if (api === 'updateParticipantDataNotSite') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        
+        //const { updateParticipantData } = require('./sites');
+        //return updateParticipantData(req, res, siteCode)
+        const {submit} = require('./submission');
+        let body = req.body;
+        if(!body.uid) {
+            return res.status(500).json(getResponseJSON('Missing UID!', 405));
+        }
+        let uid = body.uid;
+        delete body['uid']
+        return submit(res, body, uid)
     }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
