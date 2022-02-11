@@ -321,24 +321,25 @@ const kpSSOConfig = {
     group: 'memberOf',
     firstName: 'givenName',
     email: 'userPrincipalName',
-    siteManagerUser: 'CN=connect_study_manager_user',
+    siteManagerUser: 'connect_study_manager_user',
+    biospecimenUser: 'connect_biospecimen_user',
     kpco: {
-        name: 'CN=connect_kpco_user',
+        name: 'connect_kpco_user',
         siteCode: 125001209,
         acronym: 'KPCO'
     },
     kpnw: {
-        name: 'CN=connect_kpnw_user',
+        name: 'connect_kpnw_user',
         siteCode: 452412599,
         acronym: 'KPNW'
     },
     kphi: {
-        name: 'CN=connect_kphi_user',
+        name: 'connect_kphi_user',
         siteCode: 300267574,
         acronym: 'KPHI'
     },
     kpga: {
-        name: 'CN=connect_kpga_user',
+        name: 'connect_kpga_user',
         siteCode: 327912200,
         acronym: 'KPGA'
     }
