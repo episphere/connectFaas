@@ -1599,6 +1599,7 @@ const getQueryBsiData = async (query) => {
                     let collectionIdInfo = {}
                     collectionIdInfo['825582494'] = i[id]['825582494']
                     collectionIdInfo['259439191'] = i['259439191']
+                    collectionIdInfo['678166505'] = i['678166505']
                     collectionIdInfo['Connect_ID'] = i['Connect_ID']
                     collectionIdInfo['siteAcronym'] = i['siteAcronym']
                     storeResults.push(collectionIdInfo)
