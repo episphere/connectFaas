@@ -314,6 +314,7 @@ const kpSSOConfig = {
     firstName: 'givenName',
     email: 'userPrincipalName',
     siteManagerUser: 'CN=connect_study_manager_user',
+    biospecimenUser: 'CN=connect_biospecimen_user',
     kpco: {
         name: 'CN=connect_kpco_user',
         siteCode: 125001209,
