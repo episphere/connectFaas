@@ -127,6 +127,31 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(200).json({message: 'Success!', code:200})
         }
     }
+    else if (api === 'updateSpecimen') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const requestData = req.body;
+        if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        for(let specimen of requestData) {
+            if(specimen['820476880']){
+                const masterSpecimenId = specimen['820476880'];
+                const { specimenExists } = require('./firestore');
+                const exists = await specimenExists(masterSpecimenId, specimen)
+                if(exists === false) return res.status(400).json(getResponseJSON('Specimen does not exist!', 400));
+                if(exists === true){
+                    const uuid = require('uuid');
+                    specimen['id'] = uuid();
+                    const { storeSpecimen } = require('./firestore');
+                    await storeSpecimen(specimen);
+                    return res.status(200).json({message: 'Success!', code:200});
+                }
+            }
+            else {
+                return res.status(400).json({message: 'Collection ID does not exist in the request body!', code:400});
+            }
+        }
+    }
     else if (api === 'searchSpecimen') {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
