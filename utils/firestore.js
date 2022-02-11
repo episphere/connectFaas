@@ -742,6 +742,11 @@ const storeSpecimen = async (data) => {
     await db.collection('biospecimen').add(data);
 }
 
+const updateSpecimen = async (id, data) => {
+    const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
+    const docId = snapshot.docs[0].id;
+    await db.collection('biospecimen').doc(docId).update(data);
+}
 
 const storeBox = async (data) => {
     await db.collection('boxes').add(data);
@@ -1643,6 +1648,7 @@ module.exports = {
     addNewBiospecimenUser,
     removeUser,
     storeSpecimen,
+    updateSpecimen,
     searchSpecimen,
     searchShipments,
     specimenExists,
