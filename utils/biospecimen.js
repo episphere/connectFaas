@@ -462,7 +462,7 @@ const biospecimenAPIs = async (req, res) => {
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
         return res.status(200).json({data: response, code:200})
     }
-    else if (api === 'sendEmail') {
+    else if (api === 'sendBioEmail') {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
