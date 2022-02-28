@@ -411,6 +411,7 @@ const decodingJWT = (token) => {
 
 const SSOValidation = async (dashboardType, idToken) => {
     try {
+        console.log(idToken)
         const decodedJWT = decodingJWT(idToken);
         const tenant = decodedJWT.firebase.tenant;
         const { validateMultiTenantIDToken } = require('./firestore');
