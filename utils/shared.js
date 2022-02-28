@@ -380,7 +380,7 @@ const SSOConfig = {
     'SFH-SSO-pb390': sfhSSOConfig,
 
     'HFHS-SSO-ay0iz': hfhsSSOConfig,
-    'HFHS-SSO-eq1f': hfhsSSOConfig,
+    'HFHS-SSO-eq1fj': hfhsSSOConfig,
     'HFHS-SSO-lo99j': hfhsSSOConfig,
 
     'KP-SSO-wulix': kpSSOConfig,
