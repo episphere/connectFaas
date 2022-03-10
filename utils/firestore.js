@@ -383,20 +383,21 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     try {
         const operator = isParent ? 'in' : '==';
         const offset = (page-1)*limit;
-        let query = db.collection('participants')
+        const { incentiveConcepts } = require('./shared');
+        const object = incentiveConcepts[roundType]
+        
+        let participants = await db.collection('participants')
                                 .where('827220437', operator, siteCode)
                                 .where('821247024', '==', 197316935)
+                                .where(`${object}.222373868`, "==", 353358909)
+                                .where(`${object}.648936790`, '==', 104430631)
+                                .where(`${object}.648228701`, '==', 104430631)
                                 .orderBy('Connect_ID', 'asc')
                                 .offset(offset)
-                                .limit(limit);
-    
-        const { incentiveConcepts } = require('./shared');
-        const participants = await query
-                                .where(`${incentiveConcepts[roundType]}.222373868`, "==", 353358909)
-                                .where(`${incentiveConcepts[roundType]}.648936790`, '==', 104430631)
-                                .where(`${incentiveConcepts[roundType]}.648228701`, '==', 104430631)
+                                .limit(limit)
                                 .get();
-    
+                        
+
         return participants.docs.map(document => {
             let data = document.data();
             return {firstName: data['399159511'], email: data['869588347'], token: data['token']}

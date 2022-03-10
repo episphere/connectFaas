@@ -222,10 +222,10 @@ const moduleConcepts = {
 }
 
 const incentiveConcepts = {
-    'baseline': 130371375.266600170,
-    'followup1': 130371375.496823485,
-    'followup2': 130371375.650465111,
-    'followup3': 130371375.303552867,
+    'baseline': '130371375.266600170',
+    'followup1': '130371375.496823485',
+    'followup2': '130371375.650465111',
+    'followup3': '130371375.303552867',
     'incentiveIssued': 648936790,
     'incentiveIssuedAt': 297462035,
     'incentiveRefused': 648228701,
