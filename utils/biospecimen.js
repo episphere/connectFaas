@@ -467,6 +467,11 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
 
+        //const { storeNotifications } = require('./firestore');
+        //await storeNotifications(reminder);
+        //sendEmail(participant[emailField], messageSubject, body);
+        sendEmail("tony.petersen@nih.gov", "Test Email", "Test Body");
+
         return res.status(200).json(getResponseJSON('Good!', 200));
     }
 
