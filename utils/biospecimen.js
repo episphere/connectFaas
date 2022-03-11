@@ -470,8 +470,13 @@ const biospecimenAPIs = async (req, res) => {
         //const { storeNotifications } = require('./firestore');
         //await storeNotifications(reminder);
         //sendEmail(participant[emailField], messageSubject, body);
+
+        let body = req.body;
+
+        
+
         const { sendEmail } = require('./notifications');
-        sendEmail("tony.petersen@nih.gov", "Test Email", "Test Body");
+        sendEmail(body.email, body.subject, body.message);
 
         return res.status(200).json(getResponseJSON('Good!', 200));
     }
