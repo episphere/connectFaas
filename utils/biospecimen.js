@@ -462,23 +462,15 @@ const biospecimenAPIs = async (req, res) => {
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
         return res.status(200).json({data: response, code:200})
     }
-    else if (api === 'sendBioEmail') {
+    else if (api === 'sendClientEmail') {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
-
-        //const { storeNotifications } = require('./firestore');
-        //await storeNotifications(reminder);
-        //sendEmail(participant[emailField], messageSubject, body);
-
-        let body = req.body;
-
-        
-
-        const { sendEmail } = require('./notifications');
-        sendEmail(body.email, body.subject, body.message);
-
-        return res.status(200).json(getResponseJSON('Good!', 200));
+        let requestData = req.body;
+        const { sendClientEmail } = require('./firestore');
+        const response = await sendClientEmail(requestData);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json(getResponseJSON('Success!', 200));
     }
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));

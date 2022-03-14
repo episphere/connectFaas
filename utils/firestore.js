@@ -1260,6 +1260,15 @@ const notificationAlreadySent = async (token, notificationSpecificationsID) => {
     }
 }
 
+const sendClientEmail = async (data) => {
+
+    const { sendEmail } = require('./notifications');
+
+
+    sendEmail(data.email, data.subject, data.message);
+    return true;
+};
+
 const storeNotifications = async payload => {
     try {
         await db.collection('notifications').add(payload);
@@ -1704,5 +1713,6 @@ module.exports = {
     getBptlMetrics,
     getBptlMetricsForShipped,
     getQueryBsiData,
-    getRestrictedFields
+    getRestrictedFields,
+    sendClientEmail
 }
