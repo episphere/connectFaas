@@ -1263,7 +1263,7 @@ const notificationAlreadySent = async (token, notificationSpecificationsID) => {
 const sendClientEmail = async (data) => {
 
     const { sendEmail } = require('./notifications');
-    const { uuid } = require('uuid');
+    const uuid  = require('uuid');
 
     const reminder = {
         id: uuid(),
