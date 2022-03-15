@@ -1263,7 +1263,25 @@ const notificationAlreadySent = async (token, notificationSpecificationsID) => {
 const sendClientEmail = async (data) => {
 
     const { sendEmail } = require('./notifications');
+    const { uuid } = require('uuid');
 
+    const reminder = {
+        id: uuid(),
+        notificationType: data.notificationType,
+        email: data.email,
+        notification : {
+            title: data.subject,
+            body: data.message,
+            time: data.time
+        },
+        attempt: data.attempt,            
+        category: data.category,
+        token: data.token,
+        uid: data.uid,
+        read: data.read
+    }
+
+    await storeNotifications(reminder);
 
     sendEmail(data.email, data.subject, data.message);
     return true;
