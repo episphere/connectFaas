@@ -263,7 +263,7 @@ const nihSSOConfig = {
     email: 'https://federation.nih.gov/person/Mail',
     siteManagerUser: 'CN=connect-study-manager-user',
     biospecimenUser: 'CN=connect-biospecimen-user',
-    bptlUser: 'CN=connect-bptl-user',
+    bptlUser: 'connect-bptl-user',
     helpDeskUser: 'CN=connect-help-desk-user',
     siteCode: 111111111,
     acronym: 'NIH'
@@ -425,7 +425,12 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(allGroups)
         console.log(email)
         if(!SSOConfig[tenant][dashboardType]) return false;
-        const requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
+        let requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
+        let isBPTLUser = false;
+        if(SSOConfig[tenant].acronym === 'NIH') {
+            isBPTLUser = new RegExp(SSOConfig[tenant]['bptlUser'], 'g').test(allGroups.toString())
+            requiredGroups = requiredGroups || isBPTLUser;
+        }
         if(!requiredGroups) return false;
         let acronym = SSOConfig[tenant].acronym;
         if(tenant === 'KP-SSO-wulix' || tenant === 'KP-SSO-ssj7c' || tenant === 'KP-SSO-ii9sr') {
@@ -440,7 +445,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(acronym)
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
-        return {siteDetails, email};
+        return {siteDetails, email, isBPTLUser};
     } catch (error) {
         return false;
     }

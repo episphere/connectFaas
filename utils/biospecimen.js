@@ -28,6 +28,7 @@ const biospecimenAPIs = async (req, res) => {
     
     const { validateBiospecimenUser } = require('./firestore');
     const email = decodedToken.email;
+    const isBPTLUser = decodedToken.isBPTLUser !== undefined ? decodedToken.isBPTLUser : false;
 
     const isValidUser = await validateBiospecimenUser(email);
     if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
@@ -56,7 +57,7 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        return res.status(200).json({data: {role, siteAcronym, siteCode}, code:200});
+        return res.status(200).json({data: {role, siteAcronym, siteCode, isBPTLUser}, code:200});
     }
     else if(api === 'users' && (role === 'admin' || role === 'manager')) {
         if(req.method !== 'GET') {
