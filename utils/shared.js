@@ -426,6 +426,8 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(email)
         if(!SSOConfig[tenant][dashboardType]) return false;
         let requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
+        let isBiospecimenUser = false;
+        if(requiredGroups) isBiospecimenUser = true;
         let isBPTLUser = false;
         if(SSOConfig[tenant].acronym === 'NIH') {
             isBPTLUser = new RegExp(SSOConfig[tenant]['bptlUser'], 'g').test(allGroups.toString())
@@ -445,7 +447,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(acronym)
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
-        return {siteDetails, email, isBPTLUser};
+        return {siteDetails, email, isBPTLUser, isBiospecimenUser};
     } catch (error) {
         return false;
     }
