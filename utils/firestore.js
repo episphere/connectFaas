@@ -757,6 +757,13 @@ const storeBox = async (data) => {
     await db.collection('boxes').add(data);
 }
 
+const updateBox = async (id, data) => {
+    const snapshot = await db.collection('biospecimen').where('132929440', '==', id).get();
+    const docId = snapshot.docs[0].id;
+    await db.collection('biospecimen').doc(docId).update(data);
+}
+
+
 const removeBag = async (institute, requestData) => {
     let boxId = requestData.boxId;
     let bags = requestData.bags;
@@ -930,16 +937,10 @@ const specimenExists = async (id, data) => {
     else return false;
 }
 
-const boxExists = async (boxId, institute, data) => {
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
-    if(snapshot.size === 1) {
-        const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).set(data);
-        return true;
-    }
-    else{
-        return false;
-    }
+const boxExists = async (boxId, loginSite, data) => {
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
+    if(snapshot.size === 1) return true;
+    else return false;
 }
 
 const updateTempCheckDate = async (institute) => {
@@ -1687,6 +1688,7 @@ module.exports = {
     specimenExists,
     boxExists,
     storeBox,
+    updateBox,
     searchBoxes,
     shipBox,
     getLocations,

@@ -189,13 +189,13 @@ const biospecimenAPIs = async (req, res) => {
         }
         const requestData = req.body;
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
-        
+        console.log('1222')
         if(requestData['132929440']){
             const boxId = requestData['132929440'];
-            requestData['132929440'] = boxId;
-            requestData['siteAcronym'] = siteAcronym; 
+            const loginSite = requestData['789843387']
             const { boxExists } = require('./firestore');
-            const exists = await boxExists(boxId, siteAcronym, requestData)
+            console.log('re', requestData)
+            const exists = await boxExists(boxId, loginSite, requestData);
             if(exists === false){
                 const { storeBox } = require('./firestore');
                 
