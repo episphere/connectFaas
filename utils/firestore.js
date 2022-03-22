@@ -3,14 +3,13 @@
 // admin.initializeApp();
 // const db = admin.firestore();
 // const storage = admin.storage();
-
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion  } = require('./shared');
+const { collectionIdConversion, sites  } = require('./shared');
 
 const verifyToken = async (token) => {
     try{
@@ -1037,18 +1036,27 @@ const getLocations = async (institute) => {
 
 }
 
-const searchBoxes = async (institute) => {
-    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).get();
-    if(snapshot.size !== 0){
-        return snapshot.docs.map(document => document.data());
+const searchBoxes = async (siteAcronym) => {
+  let result = [];
+  let locations = sites[siteAcronym].locatoins;
+  for (let locationConceptID of locations) {
+    const snapshot = await db
+      .collection('boxes')
+      .where('560975149', '==', locationConceptID)
+      .get();
+    // const snapshot = await db.collection('boxes').where('siteAcronym', '==', siteCode).get();
+    if (snapshot.size !== 0) {
+      snapshot.docs.forEach((doc) => {
+        result.push(doc.data());
+      });
+      // return snapshot.docs.map(document => document.data());
     }
-    else{
-        return [];
-    }
-}
+  }
+  return result;
+};
 
 const searchBoxesByLocation = async (institute, location) => {
-    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('560975149','==',location).get();
+    const snapshot = await db.collection('boxes').where('560975149','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
         console.log(JSON.stringify(result));
