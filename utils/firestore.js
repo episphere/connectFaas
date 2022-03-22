@@ -760,30 +760,58 @@ const removeBag = async (institute, requestData) => {
     let boxId = requestData.boxId;
     let bags = requestData.bags;
     let currDate = requestData.date;    
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
-    if(snapshot.size === 1){
-        let box = snapshot.docs[0];
-        let data = box.data()
-        let currBags = data.bags;
-        let bagIds = Object.keys(currBags);
-        for(let i = 0; i < bags.length; i++){
-            if(currBags.hasOwnProperty(bags[i])){
-                delete currBags[bags[i]]
+    let locationList = sites[institute].locations;
+    let success = false;
+    for (let locationID of locationList) { 
+
+        const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('560975149', '==', locationID).get();
+        if(snapshot.size === 1){
+            let box = snapshot.docs[0];
+            let data = box.data()
+            let currBags = data.bags;
+            let bagIds = Object.keys(currBags);
+            for(let i = 0; i < bags.length; i++){
+                if(currBags.hasOwnProperty(bags[i])){
+                    delete currBags[bags[i]]
+                }
+                else{
+                    console.log(bags[i] + ' NOT FOUND')
+                }
+                
             }
-            else{
-                console.log(bags[i] + ' NOT FOUND')
-            }
-            
+            const docId = snapshot.docs[0].id;
+            await db.collection('boxes').doc(docId).set(data);
+            await db.collection('boxes').doc(docId).update({'lastUpdatedTiime':currDate})
+            success = true;
         }
-        const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).set(data);
-        await db.collection('boxes').doc(docId).update({'lastUpdatedTiime':currDate})
-        return 'Success!';
     }
-    else{
-        return 'Failure! Could not find box mentioned';
-    }
+    if (success) return "Success!";
+    else return 'Failure! Could not find box mentioned';
 }
+
+    // if(snapshot.size === 1){
+    //     let box = snapshot.docs[0];
+    //     let data = box.data()
+    //     let currBags = data.bags;
+    //     let bagIds = Object.keys(currBags);
+    //     for(let i = 0; i < bags.length; i++){
+    //         if(currBags.hasOwnProperty(bags[i])){
+    //             delete currBags[bags[i]]
+    //         }
+    //         else{
+    //             console.log(bags[i] + ' NOT FOUND')
+    //         }
+            
+    //     }
+    //     const docId = snapshot.docs[0].id;
+    //     await db.collection('boxes').doc(docId).set(data);
+    //     await db.collection('boxes').doc(docId).update({'lastUpdatedTiime':currDate})
+    //     return 'Success!';
+    // }
+    // else{
+    //     return 'Failure! Could not find box mentioned';
+    // }
+// }
 
 const reportMissingSpecimen = async (siteAcronym, requestData) => {
 
@@ -929,17 +957,23 @@ const specimenExists = async (id, data) => {
     else return false;
 }
 
-const boxExists = async (boxId, institute, data) => {
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
-    if(snapshot.size === 1) {
-        const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).set(data);
-        return true;
+const boxExists = async (boxId, siteAcronym, data) => {
+  const locationList = sites[siteAcronym].locations;
+  for (let locationConceptID of locationList) {
+    const snapshot = await db
+      .collection('boxes')
+      .where('132929440', '==', boxId)
+      .where('560975149', '==', locationConceptID)
+      .get();
+    if (snapshot.size === 1) {
+      const docId = snapshot.docs[0].id;
+      await db.collection('boxes').doc(docId).set(data);
+      return true;
+    } else {
+      return false;
     }
-    else{
-        return false;
-    }
-}
+  }
+};
 
 const updateTempCheckDate = async (institute) => {
     let currDate = new Date();
