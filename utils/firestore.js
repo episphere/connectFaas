@@ -1072,7 +1072,7 @@ const getLocations = async (institute) => {
 
 const searchBoxes = async (siteAcronym) => {
   let result = [];
-  let locations = sites[siteAcronym].locatoins;
+  let locations = sites[siteAcronym].locations;
   for (let locationConceptID of locations) {
     const snapshot = await db
       .collection('boxes')
