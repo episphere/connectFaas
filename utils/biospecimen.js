@@ -189,22 +189,40 @@ const biospecimenAPIs = async (req, res) => {
         }
         const requestData = req.body;
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
-        console.log('1222')
         if(requestData['132929440']){
             const boxId = requestData['132929440'];
             const loginSite = requestData['789843387']
             const { boxExists } = require('./firestore');
-            console.log('re', requestData)
             const exists = await boxExists(boxId, loginSite, requestData);
-            if(exists === false){
+            if (exists === true) return res.status(400).json(getResponseJSON('Box already exists!', 400));
+            if (exists === false) {
                 const { storeBox } = require('./firestore');
                 await storeBox(requestData);
             }
-            else {
-                console.log('test123')
-            }
         }
         return res.status(200).json({message: 'Addded!', code:200})
+    }
+    else if(api == 'updateBox'){
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        
+        if(requestData['132929440']){
+            const boxId = requestData['132929440'];
+            const loginSite = requestData['789843387']
+            const { boxExists } = require('./firestore');
+            const exists = await boxExists(boxId, loginSite, requestData);
+            if (exists === false) return res.status(400).json(getResponseJSON('Box does not exist!', 400));
+            if (exists === true) {
+                const { updateBox } = require('./firestore');
+                await updateBox(boxId, loginSite, requestData);
+                return res.status(200).json({message: 'Success!', code:200})
+            }
+        } else {
+            return res.status(400).json({message: 'Error!', code:400});
+        }
     }
     else if (api === 'searchBoxes') {
         if(req.method !== 'GET') {

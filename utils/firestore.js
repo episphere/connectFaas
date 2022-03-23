@@ -758,9 +758,9 @@ const storeBox = async (data) => {
 }
 
 const updateBox = async (id, data, loginSite) => {
-    const snapshot = await db.collection('biospecimen').where('132929440', '==', id).where('789843387', '==', loginSite).get();
+    const snapshot = await db.collection('boxes').where('132929440', '==', id).where('789843387', '==', loginSite).get();
     const docId = snapshot.docs[0].id;
-    await db.collection('biospecimen').doc(docId).update(data);
+    await db.collection('boxes').doc(docId).update(data);
 }
 
 
