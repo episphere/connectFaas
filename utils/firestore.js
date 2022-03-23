@@ -678,8 +678,8 @@ const validateBiospecimenUser = async (email) => {
             const role = snapshot.docs[0].data().role;
             const siteCode = snapshot.docs[0].data().siteCode;
             const response = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
-            const siteAcronym = response.docs[0].data().acronym;
-            return { role, siteCode, siteAcronym };
+            // const siteAcronym = response.docs[0].data().acronym;
+            return { role, siteCode };
         }
         else return false;
     } catch (error) {
@@ -757,8 +757,8 @@ const storeBox = async (data) => {
     await db.collection('boxes').add(data);
 }
 
-const updateBox = async (id, data) => {
-    const snapshot = await db.collection('biospecimen').where('132929440', '==', id).get();
+const updateBox = async (id, data, loginSite) => {
+    const snapshot = await db.collection('biospecimen').where('132929440', '==', id).where('789843387', '==', loginSite).get();
     const docId = snapshot.docs[0].id;
     await db.collection('biospecimen').doc(docId).update(data);
 }
@@ -937,7 +937,7 @@ const specimenExists = async (id, data) => {
     else return false;
 }
 
-const boxExists = async (boxId, loginSite, data) => {
+const boxExists = async (boxId, loginSite) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
     if(snapshot.size === 1) return true;
     else return false;
