@@ -195,14 +195,14 @@ const biospecimenAPIs = async (req, res) => {
             const boxId = requestData['132929440'];
             const loginSite = requestData['789843387']
             const { boxExists } = require('./firestore');
-            const exists = await boxExists(boxId, loginSite, requestData);
+            const exists = await boxExists(boxId, loginSite);
             if (exists === true) return res.status(400).json(getResponseJSON('Box already exists!', 400));
             if (exists === false) {
                 const { addBox } = require('./firestore');
                 await addBox(requestData);
             }
         }
-        return res.status(200).json({message: 'Addded!', code:200})
+        return res.status(200).json({message: 'Success!', code:200})
     }
     else if(api == 'updateBox'){
         if(req.method !== 'POST') {
@@ -219,7 +219,7 @@ const biospecimenAPIs = async (req, res) => {
             if (exists === false) return res.status(400).json(getResponseJSON('Box does not exist!', 400));
             if (exists === true) {
                 const { updateBox } = require('./firestore');
-                await updateBox(boxId, loginSite, requestData);
+                await updateBox(boxId, requestData, loginSite);
                 return res.status(200).json({message: 'Success!', code:200})
             }
         } else {
