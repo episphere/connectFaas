@@ -753,7 +753,7 @@ const updateSpecimen = async (id, data) => {
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
-const storeBox = async (data) => {
+const addBox = async (data) => {
     await db.collection('boxes').add(data);
 }
 
@@ -1688,7 +1688,7 @@ module.exports = {
     searchShipments,
     specimenExists,
     boxExists,
-    storeBox,
+    addBox,
     updateBox,
     searchBoxes,
     shipBox,

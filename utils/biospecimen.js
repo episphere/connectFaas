@@ -198,8 +198,8 @@ const biospecimenAPIs = async (req, res) => {
             const exists = await boxExists(boxId, loginSite, requestData);
             if (exists === true) return res.status(400).json(getResponseJSON('Box already exists!', 400));
             if (exists === false) {
-                const { storeBox } = require('./firestore');
-                await storeBox(requestData);
+                const { addBox } = require('./firestore');
+                await addBox(requestData);
             }
         }
         return res.status(200).json({message: 'Addded!', code:200})
