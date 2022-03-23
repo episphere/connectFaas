@@ -753,9 +753,16 @@ const updateSpecimen = async (id, data) => {
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
-const storeBox = async (data) => {
+const addBox = async (data) => {
     await db.collection('boxes').add(data);
 }
+
+const updateBox = async (id, data, loginSite) => {
+    const snapshot = await db.collection('boxes').where('132929440', '==', id).where('789843387', '==', loginSite).get();
+    const docId = snapshot.docs[0].id;
+    await db.collection('boxes').doc(docId).update(data);
+}
+
 
 const removeBag = async (institute, requestData) => {
     let boxId = requestData.boxId;
@@ -930,16 +937,10 @@ const specimenExists = async (id, data) => {
     else return false;
 }
 
-const boxExists = async (boxId, institute, data) => {
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
-    if(snapshot.size === 1) {
-        const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).set(data);
-        return true;
-    }
-    else{
-        return false;
-    }
+const boxExists = async (boxId, loginSite) => {
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
+    if(snapshot.size === 1) return true;
+    else return false;
 }
 
 const updateTempCheckDate = async (institute) => {
@@ -1687,7 +1688,8 @@ module.exports = {
     searchShipments,
     specimenExists,
     boxExists,
-    storeBox,
+    addBox,
+    updateBox,
     searchBoxes,
     shipBox,
     getLocations,
