@@ -678,8 +678,8 @@ const validateBiospecimenUser = async (email) => {
             const role = snapshot.docs[0].data().role;
             const siteCode = snapshot.docs[0].data().siteCode;
             const response = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
-            // const siteAcronym = response.docs[0].data().acronym;
-            return { role, siteCode };
+            const siteAcronym = response.docs[0].data().acronym;
+            return { role, siteCode, siteAcronym };
         }
         else return false;
     } catch (error) {
