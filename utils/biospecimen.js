@@ -231,9 +231,8 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         const { searchBoxes } = require('./firestore');
-        const response = await searchBoxes(siteAcronym);
+        const response = await searchBoxes(siteCode);
         return res.status(200).json({data: response, code:200});
-        
     }
     else if (api === 'searchBoxesByLocation'){
         if(req.method !== 'POST') {
@@ -241,7 +240,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         let location = req.body.location;
         const { searchBoxesByLocation } = require('./firestore');
-        const response = await searchBoxesByLocation(siteAcronym, location);
+        const response = await searchBoxesByLocation(siteCode, location);
         return res.status(200).json({data: response, code:200});
     }
     else if(api === 'ship'){
