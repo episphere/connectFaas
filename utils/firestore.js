@@ -1039,7 +1039,7 @@ const getLocations = async (institute) => {
 }
 
 const searchBoxes = async (institute) => {
-    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).get();
+    const snapshot = await db.collection('boxes').where('789843387', '==', institute).get();
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
@@ -1049,7 +1049,7 @@ const searchBoxes = async (institute) => {
 }
 
 const searchBoxesByLocation = async (institute, location) => {
-    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('560975149','==',location).get();
+    const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
         console.log(JSON.stringify(result));
