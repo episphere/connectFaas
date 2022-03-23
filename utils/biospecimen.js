@@ -197,7 +197,7 @@ const biospecimenAPIs = async (req, res) => {
             // requestData['132929440'] = boxId;
             // requestData['siteAcronym'] = siteAcronym; 
             const { boxExists } = require('./firestore');
-            const exists = await boxExists(boxId, siteAcronym, requestData)
+            const exists = await boxExists(boxId, siteCode, requestData)
             if(exists === false){
                 const { storeBox } = require('./firestore');
                 await storeBox(requestData);
@@ -210,7 +210,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         const { searchBoxes } = require('./firestore');
-        const response = await searchBoxes(siteAcronym);
+        const response = await searchBoxes(siteCode);
         return res.status(200).json({data: response, code:200});
         
     }
@@ -286,7 +286,7 @@ const biospecimenAPIs = async (req, res) => {
         const requestData = req.body;
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
 
-        await removeBag(siteAcronym, requestData);
+        await removeBag(siteCode, requestData);
         return res.status(200).json({message: 'Success!', code:200});
     }
     else if (api === 'reportMissingSpecimen'){

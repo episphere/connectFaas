@@ -756,62 +756,32 @@ const storeBox = async (data) => {
     await db.collection('boxes').add(data);
 }
 
-const removeBag = async (institute, requestData) => {
+const removeBag = async (siteCode, requestData) => {
     let boxId = requestData.boxId;
     let bags = requestData.bags;
-    let currDate = requestData.date;    
-    let locationList = sites[institute].locations;
-    let success = false;
-    for (let locationID of locationList) { 
-
-        const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('560975149', '==', locationID).get();
-        if(snapshot.size === 1){
-            let box = snapshot.docs[0];
-            let data = box.data()
-            let currBags = data.bags;
-            let bagIds = Object.keys(currBags);
-            for(let i = 0; i < bags.length; i++){
-                if(currBags.hasOwnProperty(bags[i])){
-                    delete currBags[bags[i]]
+    // let currDate = requestData.date;    
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
+    if(snapshot.size === 1){
+        let doc = snapshot.docs[0];
+        let box = doc.data()
+        let bagConceptIDs=["147157381", "147157382", "147157383", "147157384", "147157385", "147157386", "147157387", "147157388", "147157389", "147157390", "147157391", "147157392", "147157393", "147157394", "147157395"]
+        for (let conceptID in bagConceptIDs) { 
+            const currBag = box[conceptID];
+            if (!currBag) continue;
+            for (let bagID of bags) {               
+                if (currBag['309516145'] === bagID || currBag['787237543'] === bagID || currBag['223999569'] === bagID) {
+                    delete box[conceptID];                   
                 }
-                else{
-                    console.log(bags[i] + ' NOT FOUND')
-                }
-                
             }
-            const docId = snapshot.docs[0].id;
-            await db.collection('boxes').doc(docId).set(data);
-            await db.collection('boxes').doc(docId).update({'lastUpdatedTiime':currDate})
-            success = true;
         }
+        await db.collection('boxes').doc(doc.id).set(box);
+        // await db.collection('boxes').doc(docId).update({'lastUpdatedTime':currDate})
+        return 'Success!';
     }
-    if (success) return "Success!";
-    else return 'Failure! Could not find box mentioned';
+    else{
+        return 'Failure! Could not find box mentioned';
+    }   
 }
-
-    // if(snapshot.size === 1){
-    //     let box = snapshot.docs[0];
-    //     let data = box.data()
-    //     let currBags = data.bags;
-    //     let bagIds = Object.keys(currBags);
-    //     for(let i = 0; i < bags.length; i++){
-    //         if(currBags.hasOwnProperty(bags[i])){
-    //             delete currBags[bags[i]]
-    //         }
-    //         else{
-    //             console.log(bags[i] + ' NOT FOUND')
-    //         }
-            
-    //     }
-    //     const docId = snapshot.docs[0].id;
-    //     await db.collection('boxes').doc(docId).set(data);
-    //     await db.collection('boxes').doc(docId).update({'lastUpdatedTiime':currDate})
-    //     return 'Success!';
-    // }
-    // else{
-    //     return 'Failure! Could not find box mentioned';
-    // }
-// }
 
 const reportMissingSpecimen = async (siteAcronym, requestData) => {
 
@@ -957,22 +927,16 @@ const specimenExists = async (id, data) => {
     else return false;
 }
 
-const boxExists = async (boxId, siteAcronym, data) => {
-  const locationList = sites[siteAcronym].locations;
-  for (let locationConceptID of locationList) {
-    const snapshot = await db
-      .collection('boxes')
-      .where('132929440', '==', boxId)
-      .where('560975149', '==', locationConceptID)
-      .get();
-    if (snapshot.size === 1) {
-      const docId = snapshot.docs[0].id;
-      await db.collection('boxes').doc(docId).set(data);
-      return true;
-    } else {
-      return false;
-    }
-  }
+const boxExists = async (boxId, siteCode, data) => {
+  const locationList = sites[siteCode].locations;
+  const snapshot = await db
+    .collection('boxes')
+    .where('132929440', '==', boxId)
+    .where('789843387', '==', siteCode)
+    .get();
+
+  if (snapshot.size === 1) return true;
+  return false;
 };
 
 const updateTempCheckDate = async (institute) => {
@@ -1070,30 +1034,24 @@ const getLocations = async (institute) => {
 
 }
 
-const searchBoxes = async (siteAcronym) => {
-  let result = [];
-  let locations = sites[siteAcronym].locations;
-  for (let locationConceptID of locations) {
-    const snapshot = await db
-      .collection('boxes')
-      .where('560975149', '==', locationConceptID)
-      .get();
-    // const snapshot = await db.collection('boxes').where('siteAcronym', '==', siteCode).get();
-    if (snapshot.size !== 0) {
-      snapshot.docs.forEach((doc) => {
-        result.push(doc.data());
-      });
-      // return snapshot.docs.map(document => document.data());
-    }
+const searchBoxes = async (siteCode) => {
+  const snapshot = await db
+    .collection('boxes')
+    .where('789843387', '==', siteCode)
+    .get();
+
+  if (snapshot.size !== 0) {
+    return snapshot.docs.map((document) => document.data());
   }
-  return result;
+
+  return [];
 };
 
 const searchBoxesByLocation = async (institute, location) => {
     const snapshot = await db.collection('boxes').where('560975149','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
-        console.log(JSON.stringify(result));
+        // console.log(JSON.stringify(result));
         let toReturn = result.filter(data => (!data.hasOwnProperty('145971562')||data['145971562']!='353358909'))
         return toReturn;
     }
