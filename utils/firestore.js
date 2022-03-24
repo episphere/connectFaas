@@ -3,14 +3,13 @@
 // admin.initializeApp();
 // const db = admin.firestore();
 // const storage = admin.storage();
-
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion  } = require('./shared');
+const { collectionIdConversion, sites  } = require('./shared');
 
 const verifyToken = async (token) => {
     try{
@@ -764,33 +763,31 @@ const updateBox = async (id, data, loginSite) => {
 }
 
 
-const removeBag = async (institute, requestData) => {
+const removeBag = async (siteCode, requestData) => {
     let boxId = requestData.boxId;
     let bags = requestData.bags;
-    let currDate = requestData.date;    
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
+    // let currDate = requestData.date;    
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
     if(snapshot.size === 1){
-        let box = snapshot.docs[0];
-        let data = box.data()
-        let currBags = data.bags;
-        let bagIds = Object.keys(currBags);
-        for(let i = 0; i < bags.length; i++){
-            if(currBags.hasOwnProperty(bags[i])){
-                delete currBags[bags[i]]
+        let doc = snapshot.docs[0];
+        let box = doc.data()
+        let bagConceptIDs=["147157381", "147157382", "147157383", "147157384", "147157385", "147157386", "147157387", "147157388", "147157389", "147157390", "147157391", "147157392", "147157393", "147157394", "147157395"]
+        for (let conceptID in bagConceptIDs) { 
+            const currBag = box[conceptID];
+            if (!currBag) continue;
+            for (let bagID of bags) {               
+                if (currBag['309516145'] === bagID || currBag['787237543'] === bagID || currBag['223999569'] === bagID) {
+                    delete box[conceptID];                   
+                }
             }
-            else{
-                console.log(bags[i] + ' NOT FOUND')
-            }
-            
         }
-        const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).set(data);
-        await db.collection('boxes').doc(docId).update({'lastUpdatedTiime':currDate})
+        await db.collection('boxes').doc(doc.id).set(box);
+        // await db.collection('boxes').doc(docId).update({'lastUpdatedTime':currDate})
         return 'Success!';
     }
     else{
         return 'Failure! Could not find box mentioned';
-    }
+    }   
 }
 
 const reportMissingSpecimen = async (siteAcronym, requestData) => {
@@ -1052,7 +1049,7 @@ const searchBoxesByLocation = async (institute, location) => {
     const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
-        console.log(JSON.stringify(result));
+        // console.log(JSON.stringify(result));
         let toReturn = result.filter(data => (!data.hasOwnProperty('145971562')||data['145971562']!='353358909'))
         return toReturn;
     }
