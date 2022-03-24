@@ -752,7 +752,7 @@ const updateSpecimen = async (id, data) => {
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
-const storeBox = async (data) => {
+const addBox = async (data) => {
     await db.collection('boxes').add(data);
 }
 
@@ -927,17 +927,11 @@ const specimenExists = async (id, data) => {
     else return false;
 }
 
-const boxExists = async (boxId, siteCode, data) => {
-  const locationList = sites[siteCode].locations;
-  const snapshot = await db
-    .collection('boxes')
-    .where('132929440', '==', boxId)
-    .where('789843387', '==', siteCode)
-    .get();
-
-  if (snapshot.size === 1) return true;
-  return false;
-};
+const boxExists = async (boxId, loginSite) => {
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
+    if(snapshot.size === 1) return true;
+    else return false;
+}
 
 const updateTempCheckDate = async (institute) => {
     let currDate = new Date();
@@ -1034,21 +1028,18 @@ const getLocations = async (institute) => {
 
 }
 
-const searchBoxes = async (siteCode) => {
-  const snapshot = await db
-    .collection('boxes')
-    .where('789843387', '==', siteCode)
-    .get();
-
-  if (snapshot.size !== 0) {
-    return snapshot.docs.map((document) => document.data());
-  }
-
-  return [];
-};
+const searchBoxes = async (institute) => {
+    const snapshot = await db.collection('boxes').where('789843387', '==', institute).get();
+    if(snapshot.size !== 0){
+        return snapshot.docs.map(document => document.data());
+    }
+    else{
+        return [];
+    }
+}
 
 const searchBoxesByLocation = async (institute, location) => {
-    const snapshot = await db.collection('boxes').where('560975149','==',location).get();
+    const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
         // console.log(JSON.stringify(result));
@@ -1206,10 +1197,11 @@ const getNumBoxesShipped = async (institute, body) => {
     return result;
 }
 
-const getNotificationSpecifications = async (notificationType, notificationCategory) => {
+const getNotificationSpecifications = async (notificationType, notificationCategory, scheduleAt) => {
     try {
         let snapshot = db.collection('notificationSpecifications').where("notificationType", "array-contains", notificationType);
         if(notificationCategory) snapshot = snapshot.where('category', '==', notificationCategory);
+        snapshot = snapshot.where('scheduleAt', '==', scheduleAt);
         snapshot = await snapshot.get();
         return snapshot.docs.map(document => {
             return document.data();
@@ -1359,8 +1351,8 @@ const getNotificationHistoryByParticipant = async (token, siteCode, isParent) =>
     else return false;
 }
 
-const getNotificationsCategories = async () => {
-    const snapshot = await db.collection('notificationSpecifications').get();
+const getNotificationsCategories = async (scheduleAt) => {
+    const snapshot = await db.collection('notificationSpecifications').where('scheduleAt', '==', scheduleAt).get();
     const categories = [];
     snapshot.forEach(dt => {
         const category = dt.data().category;
@@ -1686,7 +1678,8 @@ module.exports = {
     searchShipments,
     specimenExists,
     boxExists,
-    storeBox,
+    addBox,
+    updateBox,
     searchBoxes,
     shipBox,
     getLocations,
