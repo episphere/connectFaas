@@ -183,12 +183,14 @@ const notificationHandler = async (message, context) => {
         if(participantData.length === 0) continue;
         for( let participant of participantData) {
             if(participant[emailField]) { // If email doesn't exists try sms.
-                if(!participant[primaryField]) continue;
-                let d = new Date(participant[primaryField]);
+                const primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
+                if(!primaryFieldValue) continue;
+                let d = new Date(primaryFieldValue);
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
                 d.setMinutes(d.getMinutes() + minute);
-                let body = html.replace('<firstName>', preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]);
+                const participantFirstName = preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]
+                let body = html.replace('<firstName>', participantFirstName);
                 body = body.replace('${Connect_ID}', participant['Connect_ID'])
                 let reminder = {
                     notificationSpecificationsID,
@@ -232,6 +234,16 @@ const notificationHandler = async (message, context) => {
         specCounter++;
     }
     return true;
+}
+
+const checkIfPrimaryFieldExists = (obj, primaryField) => {
+    if(primaryField.length === 0) {
+      return obj;
+    }
+    const key = primaryField[0];
+    if(!obj[key]) return null;
+    const response = checkIfPrimaryFieldExists(obj[key], primaryField.slice(1));
+    return response;
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
