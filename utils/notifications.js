@@ -49,31 +49,12 @@ const markAllNotificationsAsAlreadyRead = (notification, collection) => {
     }
 }
 
-const retrieveNotifications = async (req, res) => {
-    setHeadersDomainRestricted(req, res)
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+const retrieveNotifications = async (req, res, uid) => {
 
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    const idToken = req.headers.authorization.replace('Bearer','').trim();
-    const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
-
-    if(decodedToken instanceof Error){
-        return res.status(401).json(getResponseJSON(decodedToken.message, 401));
-    }
-
-    if(!decodedToken){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    const uid = decodedToken.uid;
     const { retrieveUserNotifications } = require('./firestore');
     const notifications = await retrieveUserNotifications(uid);
     if(notifications !== false){

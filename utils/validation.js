@@ -1,34 +1,13 @@
 const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress } = require('./shared');
 
-const generateToken = async (req, res) => {
-    setHeadersDomainRestricted(req, res);
+const generateToken = async (req, res, uid) => {
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-    console.log(req.method);
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    console.log(req.headers.authorization);
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    const idToken = req.headers.authorization.replace('Bearer','').trim();
-    const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
-
-    if(decodedToken instanceof Error){
-        return res.status(401).json(getResponseJSON(decodedToken.message, 401));
-    }
-
-    if(!decodedToken){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    console.log(decodedToken.uid);
     const { participantExists } = require('./firestore')
-    const userAlreadyExists = await participantExists(decodedToken.uid);
+    const userAlreadyExists = await participantExists(uid);
 
     if(userAlreadyExists){
         return res.status(401).json(getResponseJSON('Account already exists', 401));
@@ -37,7 +16,7 @@ const generateToken = async (req, res) => {
     const { defaultFlags, defaultStateFlags } = require('./shared');
     const obj = {
         state: { 
-            uid: decodedToken.uid, 
+            uid, 
             ...defaultStateFlags
         },
         230663853: 353358909,
@@ -52,35 +31,15 @@ const generateToken = async (req, res) => {
     return res.status(200).json(getResponseJSON('Ok', 200));
 }
 
-const validateToken = async (req, res) => {
-    setHeadersDomainRestricted(req, res);
+const validateToken = async (req, res, uid) => {
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-    console.log(req.method);
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    console.log(req.headers.authorization);
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    
-    const idToken = req.headers.authorization.replace('Bearer','').trim();
-    const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
-
-    if(decodedToken instanceof Error){
-        return res.status(401).json(getResponseJSON(decodedToken.message, 401));
-    }
-
-    if(!decodedToken){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    
-    console.log(decodedToken.uid+' '+JSON.stringify(req.query));
+    console.log(uid+' '+JSON.stringify(req.query));
     const { participantExists } = require('./firestore')
-    const userAlreadyExists = await participantExists(decodedToken.uid);
+    const userAlreadyExists = await participantExists(uid);
 
     if(userAlreadyExists){
         return res.status(401).json(getResponseJSON('Account already exists', 401));
@@ -98,7 +57,7 @@ const validateToken = async (req, res) => {
 
         if(isValid){ // add uid to participant record
             const { linkParticipanttoFirebaseUID } = require('./firestore');
-            linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
+            linkParticipanttoFirebaseUID(isValid , uid);
             return res.status(200).json(getResponseJSON('Ok', 200));
         }
         else{ // Invalid token
@@ -117,12 +76,12 @@ const validateToken = async (req, res) => {
 
         if(isValid){ // add uid to participant record
             const { linkParticipanttoFirebaseUID } = require('./firestore');
-            await linkParticipanttoFirebaseUID(isValid , decodedToken.uid);
+            await linkParticipanttoFirebaseUID(isValid , uid);
             const obj = {
                 948195369: 353358909
             }
             const { updateResponse } = require('./firestore');
-            updateResponse(obj, decodedToken.uid);
+            updateResponse(obj, uid);
             return res.status(200).json(getResponseJSON('Ok', 200));
         }
         else{ // Invalid pin
@@ -159,22 +118,6 @@ const validateSiteUsers = async (req, res, authObj) => {
     
         return res.status(200).json(getResponseJSON('Ok', 200));
     }
-}
-
-const validateUserSession = (req, res) => {
-    const admin = require('firebase-admin');
-    admin.initializeApp({
-            keyFilename: `${__dirname}/../nih-nci-dceg-episphere-dev-70e8e321d62d.json`
-        });
-    const idToken = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjI5NGNlMzNhNWQ3MmI0NjYyNzI3ZGFiYmRhNzVjZjg4Y2Y5OTg4MGUiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiQmhhdW1payBQYXRlbCIsImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9uaWgtbmNpLWRjZWctZXBpc3BoZXJlLWRldiIsImF1ZCI6Im5paC1uY2ktZGNlZy1lcGlzcGhlcmUtZGV2IiwiYXV0aF90aW1lIjoxNTY5OTUwMDY4LCJ1c2VyX2lkIjoicU9PM3p0UXpWRFhZRDZWWkt3Ulh5ZjF2ektoMiIsInN1YiI6InFPTzN6dFF6VkRYWUQ2VlpLd1JYeWYxdnpLaDIiLCJpYXQiOjE1Njk5NTExODMsImV4cCI6MTU2OTk1NDc4MywiZW1haWwiOiJiaGF1bWlrNzIzMEBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJiaGF1bWlrNzIzMEBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.0z9KNaWNJV3eEZ5DmSDNfVwlUfUWhMPSUIxvJk5eZXECbQV1qtnQvmSVHWJ2TOA5fX-Igx8Eb5viu4Ad5nb_Ew1ElDmDXXMpdDeWFjbqx5uh-UHC7kj1b2Xee8gKFA59ZS4f9tooUPZgpmZ_AiTJFu74V3Q5f8nw1tI38nrnqaECVfnCp7uXBoL-2AnMevdMz58P5sv_4abWTD76PIF0NYrX9xGPOUTTZPGpe9CJVWrBmKGp52eIqe6ix-v0yfeg2WSDpCwUiZmohN-coL41Abdasifw6UFsJzNdhQsrj1b9QLu7n-bjtjfprDq8UIGa2IC8IX3qQPpSjtWdKgkT7Q';
-    admin.auth().verifyIdToken(idToken)
-    .then(function(decodedToken) {
-        console.log(decodedToken)
-        let uid = decodedToken.uid;
-        // ...
-    }).catch(function(error) {
-        // Handle error
-    });
 }
 
 const getToken = async (req, res) => {
@@ -259,6 +202,5 @@ module.exports = {
     generateToken,
     validateToken,
     validateSiteUsers,
-    validateUserSession,
     getToken
 }
