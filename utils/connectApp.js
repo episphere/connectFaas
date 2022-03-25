@@ -3,7 +3,7 @@ const { recruitSubmit, getUserProfile } = require('./submission');
 const { retrieveNotifications } = require('./notifications');
 const { validateToken, generateToken } = require('./validation');
 
-const connectApp = (req, res) => {
+const connectApp = async (req, res) => {
     setHeadersDomainRestricted(req, res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
