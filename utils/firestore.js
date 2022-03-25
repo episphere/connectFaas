@@ -766,13 +766,14 @@ const updateBox = async (id, data, loginSite) => {
 const removeBag = async (siteCode, requestData) => {
     let boxId = requestData.boxId;
     let bags = requestData.bags;
-    // let currDate = requestData.date;    
+    let currDate = requestData.date;    
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
     if(snapshot.size === 1){
         let doc = snapshot.docs[0];
-        let box = doc.data()
-        let bagConceptIDs=["147157381", "147157382", "147157383", "147157384", "147157385", "147157386", "147157387", "147157388", "147157389", "147157390", "147157391", "147157392", "147157393", "147157394", "147157395"]
-        for (let conceptID in bagConceptIDs) { 
+        let box = doc.data();
+        let bagConceptIDs = ["147157381", "147157382", "147157383", "147157384", "147157385", "147157386", "147157387", "147157388", "147157389", "147157390", "147157391", "147157392", "147157393", "147157394", "147157395"];
+        
+        for (let conceptID of bagConceptIDs) { 
             const currBag = box[conceptID];
             if (!currBag) continue;
             for (let bagID of bags) {               
@@ -781,8 +782,18 @@ const removeBag = async (siteCode, requestData) => {
                 }
             }
         }
-        await db.collection('boxes').doc(doc.id).set(box);
-        // await db.collection('boxes').doc(docId).update({'lastUpdatedTime':currDate})
+
+        let bagConceptIDIndex = 0;
+        for (let k of Object.keys(box)) { 
+            if (bagConceptIDs.includes(k)) {
+                const currBagConceptID = bagConceptIDs[bagConceptIDIndex];
+                box[currBagConceptID] = box[k];
+                delete box[k];
+                bagConceptIDIndex++;
+            }
+        }
+        
+        await db.collection('boxes').doc(doc.id).set({ ...box, '555611076':currDate  });
         return 'Success!';
     }
     else{
