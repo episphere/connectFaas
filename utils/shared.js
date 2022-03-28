@@ -557,6 +557,23 @@ const sites = {
   NCI: { siteCode: '13', locations: ['111111111', '222222222'] },
 };
   
+const bagConceptIDs = [
+  '147157381',
+  '147157382',
+  '147157383',
+  '147157384',
+  '147157385',
+  '147157386',
+  '147157387',
+  '147157388',
+  '147157389',
+  '147157390',
+  '147157391',
+  '147157392',
+  '147157393',
+  '147157394',
+  '147157395',
+];
 
 module.exports = {
     getResponseJSON,
@@ -581,5 +598,6 @@ module.exports = {
     decodingJWT,
     initializeTimestamps,
     collectionIdConversion,
-    sites
+    sites, 
+    bagConceptIDs
 }

@@ -9,7 +9,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, sites  } = require('./shared');
+const { collectionIdConversion, bagConceptIDs  } = require('./shared');
 
 const verifyToken = async (token) => {
     try{
@@ -771,7 +771,6 @@ const removeBag = async (siteCode, requestData) => {
     if(snapshot.size === 1){
         let doc = snapshot.docs[0];
         let box = doc.data();
-        let bagConceptIDs = ["147157381", "147157382", "147157383", "147157384", "147157385", "147157386", "147157387", "147157388", "147157389", "147157390", "147157391", "147157392", "147157393", "147157394", "147157395"];
         
         for (let conceptID of bagConceptIDs) { 
             const currBag = box[conceptID];
