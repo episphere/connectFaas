@@ -541,6 +541,22 @@ const collectionIdConversion = {
     "0006": "973670172"
 }
 
+const sites = {
+  HP: { siteCode: '531629870', locations: ['834825425'] },
+  HFHS: {
+    siteCode: '548392715',
+    locations: ['752948709', '570271641', '838480167'],
+  },
+  KPCO: { siteCode: '125001209', locations: ['763273112'] },
+  KPGA: { siteCode: '327912200', locations: ['767775934'] },
+  KPHI: { siteCode: '300267574', locations: ['531313956'] },
+  KPNW: { siteCode: '452412599', locations: ['715632875'] },
+  MFC: { siteCode: '303349821', locations: ['692275326'] },
+  SFH: { siteCode: '657167265', locations: ['589224449'] },
+  UCM: { siteCode: '809703864', locations: ['333333333'] },
+  NCI: { siteCode: '13', locations: ['111111111', '222222222'] },
+};
+  
 
 module.exports = {
     getResponseJSON,
@@ -564,5 +580,6 @@ module.exports = {
     logIPAdddress,
     decodingJWT,
     initializeTimestamps,
-    collectionIdConversion
+    collectionIdConversion,
+    sites
 }
