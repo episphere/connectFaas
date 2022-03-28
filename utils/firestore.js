@@ -787,6 +787,7 @@ const removeBag = async (siteCode, requestData) => {
         for (let k of Object.keys(box)) { 
             if (bagConceptIDs.includes(k)) {
                 const currBagConceptID = bagConceptIDs[bagConceptIDIndex];
+                if (currBagConceptID === k) continue;
                 box[currBagConceptID] = box[k];
                 delete box[k];
                 bagConceptIDIndex++;
