@@ -964,68 +964,15 @@ const updateTempCheckDate = async (institute) => {
 
 }
 
-const shipBox = async (boxId, institute, shippingData, trackingNumbers) => {
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
+const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
     if(snapshot.size === 1) {
         let currDate = new Date().toISOString();
         shippingData['656548982'] = currDate;
-        shippingData['145971562'] = '353358909';
+        shippingData['145971562'] = 353358909;
         shippingData['959708259'] = trackingNumbers[boxId]
         const docId = snapshot.docs[0].id;
         await db.collection('boxes').doc(docId).update(shippingData);
-        
-
-        let data = snapshot.docs[0].data();
-        let bags = data.bags;
-        let bagIds = Object.keys(data.bags);
-
-        for(let i = 0; i < bagIds.length; i++){
-            //get tubes under current bag master specimen
-            let currBag = bagIds[i]
-            let currArr = bags[currBag]['arrElements'];
-            let currSpecimen = currBag.split(' ')[0];
-            let response = {}
-            //get currspecimen
-            const snapshot1 = await db.collection('biospecimen').where('820476880', '==', currSpecimen).get();
-            if(snapshot1.size === 1) {
-                let thisdata = snapshot1.docs[0].data();
-                if(thisdata['siteAcronym'] == institute){
-                    response = thisdata;
-                }
-            }
-
-            let conversion = {
-                "0007": "143615646",
-                "0009": "223999569",
-                "0012": "232343615",
-                "0001": "299553921",
-                "0011": "376960806",
-                "0004": "454453939",
-                "0021": "589588440",
-                "0005": "652357376",
-                "0032": "654812257",
-                "0014": "677469051",
-                "0024": "683613884",
-                "0002": "703954371",
-                "0022": "746999767",
-                "0008": "787237543",
-                "0003": "838567176",
-                "0031": "857757831",
-                "0013": "958646668",
-                "0006": "973670172"
-            }
-            for(let k = 0; k < currArr.length; k++){
-                let currElement = currArr[k];
-                let currId = currElement.split(' ')[1]
-                let conceptTube = conversion[currId];
-                if(response.hasOwnProperty(conceptTube)){
-                    let currObj = response[conceptTube];
-                    currObj['145971562'] = '353358909'
-                }
-
-            }
-            console.log(await specimenExists(currSpecimen, response));
-        }
         return true;
     }
     else{
