@@ -310,10 +310,27 @@ const getUserProfile = async (req, res, uid) => {
     }
 }
 
+const getUserCollections = async (req, res, uid) => {
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    const { getSpecimenCollections, getTokenForParticipant } = require('./firestore');
+    const siteAcronym = req.siteAcronym;
+    const token = getTokenForParticipant(uid);
+
+    const response = await getSpecimenCollections(token, siteAcronym);
+
+    if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
+    return res.status(200).json({data: response, code:200});
+}
+
 module.exports = {
     submit,
     recruitSubmit,
     getParticipants,
     identifyParticipant,
-    getUserProfile
+    getUserProfile,
+    getUserCollections
 }
