@@ -323,8 +323,8 @@ const getUserCollections = async (req, res, uid) => {
     console.log(participant);
 
     const siteCode = participant['827220437'];
-    const siteAcronym = getSiteAcronym(siteCode);
-    const token = getTokenForParticipant(uid);
+    const siteAcronym = await getSiteAcronym(siteCode);
+    const token = await getTokenForParticipant(uid);
 
     console.log(siteAcronym);
     console.log(token);
