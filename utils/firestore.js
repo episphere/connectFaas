@@ -1379,6 +1379,16 @@ const getSiteEmail = async (siteCode) => {
     }
 }
 
+const getSiteAcronym = async (siteCode) => {
+    try {
+        const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        if(snapshot.size > 0) return snapshot.docs[0].data().acronym;
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
 const addPrintAddressesParticipants = async (data) => {
     try {
         const uuid = require('uuid');
@@ -1680,6 +1690,7 @@ module.exports = {
     storeSiteNotifications,
     getCoordinatingCenterEmail,
     getSiteEmail,
+    getSiteAcronym,
     retrieveSiteNotifications,
     addPrintAddressesParticipants,
     getParticipantSelection,

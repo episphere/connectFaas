@@ -315,9 +315,13 @@ const getUserCollections = async (req, res, uid) => {
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
+    
+    const { getSpecimenCollections, getTokenForParticipant, getSiteAcronym, retrieveUserProfile } = require('./firestore');
 
-    const { getSpecimenCollections, getTokenForParticipant } = require('./firestore');
-    const siteAcronym = req.siteAcronym;
+    const participant = await retrieveUserProfile(uid);
+
+    const siteCode = participant['827220437'];
+    const siteAcronym = getSiteAcronym(siteCode);
     const token = getTokenForParticipant(uid);
 
     const response = await getSpecimenCollections(token, siteAcronym);
