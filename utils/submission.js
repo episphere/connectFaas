@@ -327,10 +327,6 @@ const getUserCollections = async (req, res, uid) => {
     if(response instanceof Error){
         return res.status(500).json(getResponseJSON(response.message, 500));
     }
-    
-    if(!response){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
 
     if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
     return res.status(200).json({data: response, code:200});
