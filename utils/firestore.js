@@ -776,7 +776,7 @@ const removeBag = async (siteCode, requestData) => {
             const currBag = box[conceptID];
             if (!currBag) continue;
             for (let bagID of bags) {               
-                if (currBag['309516145'] === bagID || currBag['787237543'] === bagID || currBag['223999569'] === bagID) {
+                if (currBag['522094118'] === bagID || currBag['787237543'] === bagID || currBag['223999569'] === bagID) {
                     delete box[conceptID];                   
                 }
             }
