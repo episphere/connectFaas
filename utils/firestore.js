@@ -764,41 +764,57 @@ const updateBox = async (id, data, loginSite) => {
 
 
 const removeBag = async (siteCode, requestData) => {
-    let boxId = requestData.boxId;
-    let bags = requestData.bags;
-    let currDate = requestData.date;    
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
-    if(snapshot.size === 1){
-        let doc = snapshot.docs[0];
-        let box = doc.data();
-        
-        for (let conceptID of bagConceptIDs) { 
-            const currBag = box[conceptID];
-            if (!currBag) continue;
-            for (let bagID of bags) {               
-                if (currBag['522094118'] === bagID || currBag['787237543'] === bagID || currBag['223999569'] === bagID) {
-                    delete box[conceptID];                   
-                }
-            }
-        }
+  let boxId = requestData.boxId;
+  let bags = requestData.bags;
+  let currDate = requestData.date;
+  let hasOrphanFlag = 104430631; 
+  const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
+  if(snapshot.size === 1){
+      let doc = snapshot.docs[0];
+      let box = doc.data();
+      
+      for (let conceptID of bagConceptIDs) { 
+          const currBag = box[conceptID];
+          if (!currBag) continue;
+          for (let bagID of bags) {               
+              if (currBag['522094118'] === bagID || currBag['787237543'] === bagID || currBag['223999569'] === bagID) {
+                  delete box[conceptID];                   
+              }
+          }
+      }
 
-        let bagConceptIDIndex = 0;
-        for (let k of Object.keys(box)) { 
-            if (bagConceptIDs.includes(k)) {
-                const currBagConceptID = bagConceptIDs[bagConceptIDIndex];
-                if (currBagConceptID === k) continue;
-                box[currBagConceptID] = box[k];
-                delete box[k];
-                bagConceptIDIndex++;
-            }
+      let bagConceptIDIndex = 0;
+      for (let k of Object.keys(box)) { 
+          if (bagConceptIDs.includes(k)) {
+              const currBagConceptID = bagConceptIDs[bagConceptIDIndex];
+              if (currBagConceptID === k) continue;
+              box[currBagConceptID] = box[k];
+              delete box[k];
+              bagConceptIDIndex++;
+          }
+      }
+
+      // iterate over all current bag concept Ids and change the value of hasOrphanFlag
+      for(let conceptID of bagConceptIDs) {
+        const currBag = box[conceptID];
+        if (!currBag) continue;
+        if(currBag['255283733'] == 104430631 ) {
+          hasOrphanFlag = 104430631;
         }
-        
-        await db.collection('boxes').doc(doc.id).set({ ...box, '555611076':currDate  });
-        return 'Success!';
-    }
-    else{
-        return 'Failure! Could not find box mentioned';
-    }   
+        else if (currBag['255283733'] == 353358909) {
+          hasOrphanFlag = 353358909;
+        }
+        else {
+          hasOrphanFlag = 104430631;
+        }
+      }
+      
+      await db.collection('boxes').doc(doc.id).set({ ...box, '555611076':currDate, '842312685':hasOrphanFlag  });
+      return 'Success!';
+  }
+  else{
+      return 'Failure! Could not find box mentioned';
+  }   
 }
 
 const reportMissingSpecimen = async (siteAcronym, requestData) => {
