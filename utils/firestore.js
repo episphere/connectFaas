@@ -764,12 +764,12 @@ const updateBox = async (id, data, loginSite) => {
 
 
 const removeBag = async (siteCode, requestData) => {
-  let boxId = requestData.boxId;
-  let bags = requestData.bags;
-  let currDate = requestData.date;
-  let hasOrphanFlag = 104430631; 
-  const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
-  if(snapshot.size === 1){
+    let boxId = requestData.boxId;
+    let bags = requestData.bags;
+    let currDate = requestData.date;
+    let hasOrphanFlag = 104430631; 
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
+    if(snapshot.size === 1){
       let doc = snapshot.docs[0];
       let box = doc.data();
       
@@ -811,8 +811,8 @@ const removeBag = async (siteCode, requestData) => {
       
       await db.collection('boxes').doc(doc.id).set({ ...box, '555611076':currDate, '842312685':hasOrphanFlag  });
       return 'Success!';
-  }
-  else{
+    }
+    else {
       return 'Failure! Could not find box mentioned';
   }   
 }
