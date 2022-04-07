@@ -26,14 +26,32 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
     
-    const { validateBiospecimenUser } = require('./firestore');
     const email = decodedToken.email;
     const isBPTLUser = decodedToken.isBPTLUser !== undefined ? decodedToken.isBPTLUser : false;
     const isBiospecimenUser = decodedToken.isBiospecimenUser !== undefined ? decodedToken.isBiospecimenUser : false;
 
-    const isValidUser = await validateBiospecimenUser(email);
-    if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    const {role, siteCode, siteAcronym} = isValidUser;
+    let obj = {};
+    let role = "";
+    let siteAcronym = "";
+    let siteCode = undefined;
+
+    if(!isBPTLUser && !isBiospecimenUser) {
+        const { validateBiospecimenUser } = require('./firestore');
+        const isValidUser = await validateBiospecimenUser(email);
+        if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        role = isValidUser.role;
+        siteCode = isValidUser.siteCode;
+        siteAcronym = isValidUser.siteAcronym;
+        obj = { role, siteCode,siteAcronym, isBPTLUser, isBiospecimenUser };
+    }
+    else {
+        role = 'user';
+        siteCode = decodedToken.siteDetails.siteCode ? decodedToken.siteDetails.siteCode : 13;
+        siteAcronym = decodedToken.siteDetails.acronym;
+        obj = { role, siteAcronym, isBPTLUser, isBiospecimenUser };
+        if(siteCode !== 0) obj['siteCode'] = siteCode;
+    }
+    
     
     if(api === 'getParticipants') {
         if(req.method !== 'GET') {
@@ -58,7 +76,7 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        return res.status(200).json({data: {role, siteAcronym, siteCode, isBPTLUser, isBiospecimenUser}, code:200});
+        return res.status(200).json({data: obj, code:200});
     }
     else if(api === 'users' && (role === 'admin' || role === 'manager')) {
         if(req.method !== 'GET') {
