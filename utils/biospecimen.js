@@ -184,7 +184,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         else {
             const { searchShipments } = require('./firestore');
-            const response = await searchShipments(siteAcronym);
+            const response = await searchShipments(siteCode);
             return res.status(200).json({data: response, code:200});
         }
         
@@ -197,7 +197,7 @@ const biospecimenAPIs = async (req, res) => {
             const token = req.query.token;
             if(!token) return res.status(400).json(getResponseJSON('Bad request!', 400));
             const { getSpecimenCollections } = require('./firestore');
-            const response = await getSpecimenCollections(token, siteAcronym);
+            const response = await getSpecimenCollections(token, siteCode);
             if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
             return res.status(200).json({data: response, code:200});
         }
