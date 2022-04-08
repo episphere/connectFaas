@@ -320,9 +320,9 @@ const getUserCollections = async (req, res, uid) => {
 
     const participant = (await retrieveUserProfile(uid))[0];
     const siteCode = participant['827220437'];
-    const siteAcronym = await getSiteAcronym(siteCode);
+    //const siteAcronym = await getSiteAcronym(siteCode);
     const token = await getTokenForParticipant(uid);
-    const response = await getSpecimenCollections(token, siteAcronym);
+    const response = await getSpecimenCollections(token, siteCode);
 
     if(response instanceof Error){
         return res.status(500).json(getResponseJSON(response.message, 500));
