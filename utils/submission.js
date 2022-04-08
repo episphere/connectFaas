@@ -320,8 +320,10 @@ const getUserCollections = async (req, res, uid) => {
 
     const participant = (await retrieveUserProfile(uid))[0];
     const siteCode = participant['827220437'];
+    console.log(siteCode);
     //const siteAcronym = await getSiteAcronym(siteCode);
     const token = await getTokenForParticipant(uid);
+    console.log(token);
     const response = await getSpecimenCollections(token, siteCode);
 
     if(response instanceof Error){
