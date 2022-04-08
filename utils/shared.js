@@ -287,6 +287,7 @@ const hpSSOConfig = {
     group: 'AD_groups',
     email: 'email',
     siteManagerUser: 'CN=connect-dshbrd-user',
+    biospecimenUser: 'connect-biodshbrd-user',
     siteCode: 531629870,
     acronym: 'HP'
 }
