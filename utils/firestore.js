@@ -891,8 +891,8 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
     else return false;
 }
 
-const searchShipments = async (siteAcronym) => {
-    const snapshot = await db.collection('biospecimen').where('siteAcronym', '==', siteAcronym).get();
+const searchShipments = async (siteCode) => {
+    const snapshot = await db.collection('biospecimen').where('827220437', '==', siteCode).get();
     if(snapshot.size !== 0){
         //
         return snapshot.docs.filter(document => {
@@ -1033,8 +1033,8 @@ const searchBoxesByLocation = async (institute, location) => {
     
 }
 
-const getSpecimenCollections = async (token, siteAcronym) => {
-    const snapshot = await db.collection('biospecimen').where('token', '==', token).where('siteAcronym', '==', siteAcronym).get();
+const getSpecimenCollections = async (token, siteCode) => {
+    const snapshot = await db.collection('biospecimen').where('token', '==', token).where('827220437', '==', siteCode).get();
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
