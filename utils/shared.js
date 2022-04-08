@@ -554,7 +554,7 @@ const sites = {
   MFC: { siteCode: '303349821', locations: ['692275326'] },
   SFH: { siteCode: '657167265', locations: ['589224449'] },
   UCM: { siteCode: '809703864', locations: ['333333333'] },
-  NCI: { siteCode: '13', locations: ['111111111', '222222222'] },
+  NIH: { siteCode: '13', locations: ['111111111', '222222222'] },
 };
   
 const bagConceptIDs = [
