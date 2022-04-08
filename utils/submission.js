@@ -317,7 +317,7 @@ const getUserCollections = async (req, res, uid) => {
     }
     
     const { getSpecimenCollections, getTokenForParticipant, getSiteAcronym, retrieveUserProfile } = require('./firestore');
-
+    console.log("uid " + uid);
     const participant = (await retrieveUserProfile(uid))[0];
     console.log("part " + participant);
     const siteCode = participant['827220437'];
