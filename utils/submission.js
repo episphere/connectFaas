@@ -319,11 +319,12 @@ const getUserCollections = async (req, res, uid) => {
     const { getSpecimenCollections, getTokenForParticipant, getSiteAcronym, retrieveUserProfile } = require('./firestore');
 
     const participant = (await retrieveUserProfile(uid))[0];
+    console.log("part " + participant);
     const siteCode = participant['827220437'];
-    console.log(siteCode);
+    console.log("code " + participant['827220437']);
     //const siteAcronym = await getSiteAcronym(siteCode);
     const token = await getTokenForParticipant(uid);
-    console.log(token);
+    console.log("token " + token);
     const response = await getSpecimenCollections(token, siteCode);
 
     if(response instanceof Error){
