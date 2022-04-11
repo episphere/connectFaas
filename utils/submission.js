@@ -316,15 +316,11 @@ const getUserCollections = async (req, res, uid) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
     
-    const { getSpecimenCollections, getTokenForParticipant, getSiteAcronym, retrieveUserProfile } = require('./firestore');
-    console.log("uid " + uid);
+    const { getSpecimenCollections, getTokenForParticipant, retrieveUserProfile } = require('./firestore');
+    
     const participant = (await retrieveUserProfile(uid))[0];
-    console.log("part " + participant);
     const siteCode = participant['827220437'];
-    console.log("code " + participant['827220437']);
-    //const siteAcronym = await getSiteAcronym(siteCode);
     const token = await getTokenForParticipant(uid);
-    console.log("token " + token);
     const response = await getSpecimenCollections(token, siteCode);
 
     if(response instanceof Error){
