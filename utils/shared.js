@@ -223,6 +223,7 @@ const defaultFlags = {
     878865966: 104430631,
     167958071: 104430631,
     684635302: 104430631,
+    100767870: 104430631,
     ...incentiveFlags,
     ...withdrawalConcepts
 }
