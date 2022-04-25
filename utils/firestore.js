@@ -1548,28 +1548,32 @@ const setPackageReceiptFedex = async (data) => {
         }
         const docId = snapshot.docs[0].id;
         await db.collection("boxes").doc(docId).update(data)
+        const bags = ["650224161", "136341211", "503046679", "313341808", "668816010", "754614551", "174264982", "550020510", 
+        "673090642", "492881559", "536728814", "309413330", "357218702", "945294744", "741697447", "255283733",
+        "842312685", "234868461", "522094118"]
         if (Object.keys(snapshot.docs.length) !== 0) {
-            snapshot.docs.map(doc => { 
-                let collectionIdKeys = Object.keys(doc.data().bags); // grab all the collection ids
-                collectionIdKeys.forEach (async (i) => {
-                    let storeCollectionId = i.split(' ')[0] 
-                    const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
-                    const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
-                    let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
-                    let biospecimenDataObj =  getBiospecimenDataObject.data()
-                  
-
-                    for ( const element of doc.data().bags[i].arrElements) {
-                        let tubeId = element.split(' ')[1];
-                        let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                        biospecimenDataObj["259439191"] = new Date().toISOString();
-                        biospecimenDataObj[conceptTube]["259439191"] = new Date().toISOString();
-
-                        await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
+             snapshot.docs.map(doc => { 
+                const collectionIdKeys = doc.data(); // grab all the collection ids
+                bags.forEach(async (bag) => {
+                    if (bag in collectionIdKeys){
+                        if (collectionIdKeys[bag]['787237543'] !== undefined) {
+                            let storeCollectionId =  collectionIdKeys[bag]['787237543'].split(' ')[0] 
+                            const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
+                            const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
+                            let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
+                            let biospecimenDataObj =  getBiospecimenDataObject.data()
+                            for (const element of collectionIdKeys[bag]['234868461']) {
+                                let tubeId = element.split(' ')[1];
+                                let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                                biospecimenDataObj["259439191"] = new Date().toISOString();
+                                biospecimenDataObj[conceptTube]["259439191"] = new Date().toISOString();
+                                await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
+                                }
                         }
+                    }
                 })
-            })
-        }
+              })
+         }
         return true;
          }
     catch(error){
