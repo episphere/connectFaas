@@ -1548,8 +1548,8 @@ const setPackageReceiptFedex = async (data) => {
                             for (const element of collectionIdKeys[bag]['234868461']) {
                                 let tubeId = element.split(' ')[1];
                                 let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                                biospecimenDataObj["259439191"] = new Date().toISOString();
-                                biospecimenDataObj[conceptTube]["259439191"] = new Date().toISOString();
+                                biospecimenDataObj["926457119"] = new Date().toISOString();
+                                biospecimenDataObj[conceptTube]["926457119"] = new Date().toISOString();
                                 await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
                                 }
                         }
