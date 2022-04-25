@@ -72,6 +72,9 @@ const incentiveFlags = {
             648936790: 104430631,
             648228701: 104430631,
             222373868: 104430631,
+            297462035: '',
+            438636757: '',
+            320023644: '',
             862774033: 104430631 // University of Chicago
         },
         496823485: { // Follow up 1
@@ -79,6 +82,9 @@ const incentiveFlags = {
             648936790: 104430631,
             648228701: 104430631,
             222373868: 104430631,
+            297462035: '',
+            438636757: '',
+            320023644: '',
             862774033: 104430631 // University of Chicago
         },
         650465111: { // Follow up 2
@@ -86,6 +92,9 @@ const incentiveFlags = {
             648936790: 104430631,
             648228701: 104430631,
             222373868: 104430631,
+            297462035: '',
+            438636757: '',
+            320023644: '',
             862774033: 104430631 // University of Chicago
         },
         303552867: { // Follow up 3
@@ -93,6 +102,9 @@ const incentiveFlags = {
             648936790: 104430631,
             648228701: 104430631,
             222373868: 104430631,
+            297462035: '',
+            438636757: '',
+            320023644: '',
             862774033: 104430631 // University of Chicago
         }
     }
@@ -208,6 +220,10 @@ const defaultFlags = {
     265193023: 972455046,
     311580100: 104430631,
     914639140: 104430631,
+    878865966: 104430631,
+    167958071: 104430631,
+    684635302: 104430631,
+    100767870: 104430631,
     ...incentiveFlags,
     ...withdrawalConcepts
 }
@@ -287,6 +303,7 @@ const hpSSOConfig = {
     group: 'AD_groups',
     email: 'email',
     siteManagerUser: 'CN=connect-dshbrd-user',
+    biospecimenUser: 'connect-biodshbrd-user',
     siteCode: 531629870,
     acronym: 'HP'
 }
@@ -541,6 +558,39 @@ const collectionIdConversion = {
     "0006": "973670172"
 }
 
+const sites = {
+  HP: { siteCode: '531629870', locations: ['834825425'] },
+  HFHS: {
+    siteCode: '548392715',
+    locations: ['752948709', '570271641', '838480167'],
+  },
+  KPCO: { siteCode: '125001209', locations: ['763273112'] },
+  KPGA: { siteCode: '327912200', locations: ['767775934'] },
+  KPHI: { siteCode: '300267574', locations: ['531313956'] },
+  KPNW: { siteCode: '452412599', locations: ['715632875'] },
+  MFC: { siteCode: '303349821', locations: ['692275326'] },
+  SFH: { siteCode: '657167265', locations: ['589224449'] },
+  UCM: { siteCode: '809703864', locations: ['333333333'] },
+  NIH: { siteCode: '13', locations: ['111111111', '222222222'] },
+};
+  
+const bagConceptIDs = [
+  '650224161', // bag1
+  '136341211', // bag2
+  '503046679', // bag3
+  '313341808', // bag4
+  '668816010', // bag5
+  '754614551', // bag6
+  '174264982', // bag7
+  '550020510', // bag8
+  '673090642', // bag9
+  '492881559', // bag10
+  '536728814', // bag11
+  '309413330', // bag12
+  '357218702', // bag13
+  '945294744', // bag14
+  '741697447', // bag15
+];
 
 module.exports = {
     getResponseJSON,
@@ -564,5 +614,7 @@ module.exports = {
     logIPAdddress,
     decodingJWT,
     initializeTimestamps,
-    collectionIdConversion
+    collectionIdConversion,
+    sites, 
+    bagConceptIDs
 }

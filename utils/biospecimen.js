@@ -26,14 +26,32 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
     
-    const { validateBiospecimenUser } = require('./firestore');
     const email = decodedToken.email;
     const isBPTLUser = decodedToken.isBPTLUser !== undefined ? decodedToken.isBPTLUser : false;
     const isBiospecimenUser = decodedToken.isBiospecimenUser !== undefined ? decodedToken.isBiospecimenUser : false;
 
-    const isValidUser = await validateBiospecimenUser(email);
-    if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    const {role, siteCode, siteAcronym} = isValidUser;
+    let obj = {};
+    let role = "";
+    let siteAcronym = "";
+    let siteCode = undefined;
+
+    if(!isBPTLUser && !isBiospecimenUser) {
+        const { validateBiospecimenUser } = require('./firestore');
+        const isValidUser = await validateBiospecimenUser(email);
+        if(!isValidUser) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        role = isValidUser.role;
+        siteCode = isValidUser.siteCode;
+        siteAcronym = isValidUser.siteAcronym;
+        obj = { role, siteCode,siteAcronym, isBPTLUser, isBiospecimenUser };
+    }
+    else {
+        role = 'user';
+        siteCode = decodedToken.siteDetails.siteCode ? decodedToken.siteDetails.siteCode : 13;
+        siteAcronym = decodedToken.siteDetails.acronym;
+        obj = { role, siteAcronym, isBPTLUser, isBiospecimenUser };
+        if(siteCode !== 0) obj['siteCode'] = siteCode;
+    }
+    
     
     if(api === 'getParticipants') {
         if(req.method !== 'GET') {
@@ -58,7 +76,7 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        return res.status(200).json({data: {role, siteAcronym, siteCode, isBPTLUser, isBiospecimenUser}, code:200});
+        return res.status(200).json({data: obj, code:200});
     }
     else if(api === 'users' && (role === 'admin' || role === 'manager')) {
         if(req.method !== 'GET') {
@@ -166,7 +184,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         else {
             const { searchShipments } = require('./firestore');
-            const response = await searchShipments(siteAcronym);
+            const response = await searchShipments(siteCode);
             return res.status(200).json({data: response, code:200});
         }
         
@@ -179,7 +197,7 @@ const biospecimenAPIs = async (req, res) => {
             const token = req.query.token;
             if(!token) return res.status(400).json(getResponseJSON('Bad request!', 400));
             const { getSpecimenCollections } = require('./firestore');
-            const response = await getSpecimenCollections(token, siteAcronym);
+            const response = await getSpecimenCollections(token, siteCode);
             if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
             return res.status(200).json({data: response, code:200});
         }
@@ -231,9 +249,8 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         const { searchBoxes } = require('./firestore');
-        const response = await searchBoxes(siteAcronym);
+        const response = await searchBoxes(siteCode);
         return res.status(200).json({data: response, code:200});
-        
     }
     else if (api === 'searchBoxesByLocation'){
         if(req.method !== 'POST') {
@@ -241,7 +258,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         let location = req.body.location;
         const { searchBoxesByLocation } = require('./firestore');
-        const response = await searchBoxesByLocation(siteAcronym, location);
+        const response = await searchBoxesByLocation(siteCode, location);
         return res.status(200).json({data: response, code:200});
     }
     else if(api === 'ship'){
@@ -262,16 +279,16 @@ const biospecimenAPIs = async (req, res) => {
             const { shipBox } = require('./firestore');
             if(tempMonitorShipped != false){
                 if(tempMonitorShipped == box){
-                    shippingData['105891443'] = '353358909';
+                    shippingData['105891443'] = 353358909;
                 }
                 else{
-                    shippingData['105891443'] = '104430631';
+                    shippingData['105891443'] = 104430631;
                 }
             }
             console.log('box: ' + box)
             console.log(JSON.stringify(requestData))
             
-            const exists = await shipBox(box, siteAcronym, shippingData, trackingNumbers)
+            const exists = await shipBox(box, siteCode, shippingData, trackingNumbers)
             if(exists === false){
                 return res.status(500).json({message: 'Box does not exist', code:500})
             }
@@ -307,7 +324,7 @@ const biospecimenAPIs = async (req, res) => {
         const requestData = req.body;
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
 
-        await removeBag(siteAcronym, requestData);
+        await removeBag(siteCode, requestData);
         return res.status(200).json({message: 'Success!', code:200});
     }
     else if (api === 'reportMissingSpecimen'){
