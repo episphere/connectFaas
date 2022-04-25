@@ -1528,6 +1528,8 @@ const setPackageReceiptFedex = async (data) => {
             return false
         }
         const docId = snapshot.docs[0].id;
+        data['959708259'] = data.scannedBarcode
+        delete data.scannedBarcode
         await db.collection("boxes").doc(docId).update(data)
         const bags = ["650224161", "136341211", "503046679", "313341808", "668816010", "754614551", "174264982", "550020510", 
         "673090642", "492881559", "536728814", "309413330", "357218702", "945294744", "741697447", "255283733",
