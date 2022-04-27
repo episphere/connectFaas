@@ -1611,24 +1611,25 @@ const getQueryBsiData = async (query) => {
     try {
         let storeResults = []
         let holdBiospecimenMatches = []
-        const snapshot = await db.collection("biospecimen").where('259439191', '>=', query).get();
-        let tubeConceptIds = Object.values(collectionIdConversion);
+        const snapshot = await db.collection("biospecimen").where('926457119', '>=', query).get();
+        let tubeConceptIds = Object.values(collectionIdConversion); // grab tube id
         snapshot.docs.map(doc => {
-            holdBiospecimenMatches.push(doc.data())
+            holdBiospecimenMatches.push(doc.data()) // push query results to holdBiospecimenMatches array
         })
 
-        holdBiospecimenMatches.forEach( i => {
+
+        holdBiospecimenMatches.forEach( i => { // if query results matches/exists in tubeconcepts ids then add them to below object
             tubeConceptIds.forEach( id => {
                 if (id in i) {
                     let collectionIdInfo = {}
                     collectionIdInfo['825582494'] = i[id]['825582494']
-                    collectionIdInfo['259439191'] = i['259439191']
+                    collectionIdInfo['926457119'] = i['926457119']
                     collectionIdInfo['678166505'] = i['678166505']
                     collectionIdInfo['Connect_ID'] = i['Connect_ID']
-                    collectionIdInfo['siteAcronym'] = i['siteAcronym']
+                    // collectionIdInfo['789843387'] = i['789843387']
+                    collectionIdInfo['827220437'] = i['827220437']
                     storeResults.push(collectionIdInfo)
                 }
-
             })
 
         })
@@ -1638,6 +1639,7 @@ const getQueryBsiData = async (query) => {
         return new Error(error);
     }
 }
+
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
     return snapshot.docs[0].data().restrictedFields;
