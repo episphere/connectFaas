@@ -1539,8 +1539,11 @@ const setPackageReceiptFedex = async (data) => {
                 const collectionIdKeys = doc.data(); // grab all the collection ids
                 bags.forEach(async (bag) => {
                     if (bag in collectionIdKeys){
-                        if (collectionIdKeys[bag]['787237543'] !== undefined) {
-                            let storeCollectionId =  collectionIdKeys[bag]['787237543'].split(' ')[0] 
+                        if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
+                            let storeCollectionId = ``
+                            if (collectionIdKeys[bag]['787237543']) storeCollectionId =  collectionIdKeys[bag]['787237543'].split(' ')[0]
+                            if (collectionIdKeys[bag]['223999569']) storeCollectionId =  collectionIdKeys[bag]['223999569'].split(' ')[0]
+                            if (collectionIdKeys[bag]['522094118']) storeCollectionId =  collectionIdKeys[bag]['522094118'].split(' ')[0]
                             const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
                             const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
                             let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
