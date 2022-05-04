@@ -1010,7 +1010,13 @@ const getLocations = async (institute) => {
 }
 
 const searchBoxes = async (institute) => {
-    const snapshot = await db.collection('boxes').where('789843387', '==', institute).get();
+    let snapshot = ``
+    if (institute === 13 || institute == `517700004`) {
+        snapshot = await db.collection('boxes').get()
+    } 
+    else { 
+        snapshot = await db.collection('boxes').where('789843387', '==', institute).get()
+    }
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
