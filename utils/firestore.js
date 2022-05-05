@@ -10,6 +10,8 @@ const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
 const { collectionIdConversion, bagConceptIDs  } = require('./shared');
+const nciCode = 13;
+const nciConceptId = `517700004`;
 
 const verifyToken = async (token) => {
     try{
@@ -1010,7 +1012,13 @@ const getLocations = async (institute) => {
 }
 
 const searchBoxes = async (institute) => {
-    const snapshot = await db.collection('boxes').where('789843387', '==', institute).get();
+    let snapshot = ``
+    if (institute === nciCode || institute == nciConceptId) {
+        snapshot = await db.collection('boxes').get()
+    } 
+    else { 
+        snapshot = await db.collection('boxes').where('789843387', '==', institute).get()
+    }
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
