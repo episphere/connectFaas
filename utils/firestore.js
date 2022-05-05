@@ -10,6 +10,8 @@ const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
 const { collectionIdConversion, bagConceptIDs  } = require('./shared');
+const nciCode = 13;
+const nciConceptId = `517700004`;
 
 const verifyToken = async (token) => {
     try{
@@ -1011,7 +1013,7 @@ const getLocations = async (institute) => {
 
 const searchBoxes = async (institute) => {
     let snapshot = ``
-    if (institute === 13 || institute == `517700004`) {
+    if (institute === nciCode || institute == nciConceptId) {
         snapshot = await db.collection('boxes').get()
     } 
     else { 
