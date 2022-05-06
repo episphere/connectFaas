@@ -1204,11 +1204,10 @@ const getNumBoxesShipped = async (institute, body) => {
     return result;
 }
 
-const getNotificationSpecifications = async (notificationType, notificationCategory, scheduleAt) => {
+const getNotificationSpecifications = async (notificationType, notificationCategory) => {
     try {
         let snapshot = db.collection('notificationSpecifications').where("notificationType", "array-contains", notificationType);
         if(notificationCategory) snapshot = snapshot.where('category', '==', notificationCategory);
-        snapshot = snapshot.where('scheduleAt', '==', scheduleAt);
         snapshot = await snapshot.get();
         return snapshot.docs.map(document => {
             return document.data();
@@ -1331,8 +1330,8 @@ const getNotificationHistoryByParticipant = async (token, siteCode, isParent) =>
     else return false;
 }
 
-const getNotificationsCategories = async (scheduleAt) => {
-    const snapshot = await db.collection('notificationSpecifications').where('scheduleAt', '==', scheduleAt).get();
+const getNotificationsCategories = async () => {
+    const snapshot = await db.collection('notificationSpecifications').get();
     const categories = [];
     snapshot.forEach(dt => {
         const category = dt.data().category;
