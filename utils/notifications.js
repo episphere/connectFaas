@@ -127,16 +127,16 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
 const notificationHandler = async (message, context) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const splitCharacters = '@#$'
-    const messageArray = publishedMessage ? publishedMessage.split(splitCharacters) : null;
-    console.log(messageArray)
-    if(!messageArray) {
+    
+    if(!/@#\$/.test(publishedMessage)) {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
+        const scheduleAt = publishedMessage;
         const { getNotificationsCategories } = require('./firestore');
-        const categories = await getNotificationsCategories();
+        const categories = await getNotificationsCategories(scheduleAt);
         console.log(categories)
         for(let category of categories) {
-            const dataBuffer = Buffer.from(`${category}${splitCharacters}250${splitCharacters}0`);
+            const dataBuffer = Buffer.from(`${category}${splitCharacters}250${splitCharacters}0${splitCharacters}${scheduleAt}`);
             try {
                 const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
                 console.log(`Message ${messageId} published.`);
@@ -146,14 +146,17 @@ const notificationHandler = async (message, context) => {
         }
         return;
     }
+    const messageArray = publishedMessage ? publishedMessage.split(splitCharacters) : null;
+    console.log(messageArray)
     const notificationCategory = messageArray[0];
     let limit = parseInt(messageArray[1]);
     let offset = parseInt(messageArray[2]);
+    const scheduleAt = messageArray[3];
     console.log(limit);
     console.log(offset);
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
-    const specifications = await getNotificationSpecifications(notificationType, notificationCategory);
+    const specifications = await getNotificationSpecifications(notificationType, notificationCategory, scheduleAt);
     let specCounter = 0;
     for(let obj of specifications) {
         console.log("Looping through specifications...");
@@ -221,7 +224,7 @@ const notificationHandler = async (message, context) => {
             if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
                 const {PubSub} = require('@google-cloud/pubsub');
                 const pubSubClient = new PubSub();
-                const dataBuffer = Buffer.from(`${notificationCategory}${splitCharacters}${limit}${splitCharacters}${offset+limit}`);
+                const dataBuffer = Buffer.from(`${notificationCategory}${splitCharacters}${limit}${splitCharacters}${offset+limit}${splitCharacters}${scheduleAt}`);
                 try {
                     const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
                     console.log(`Message ${messageId} published.`);
