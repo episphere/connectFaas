@@ -140,6 +140,7 @@ const notificationHandler = async (message, context) => {
     const specifications = await getNotificationSpecifications(notificationType, notificationCategory, scheduleAt);
     let specCounter = 0;
     for(let obj of specifications) {
+        console.log("Looping through specifications...");
         const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;
         const messageBody = obj[notificationType].body;
@@ -163,6 +164,7 @@ const notificationHandler = async (message, context) => {
         let participantCounter = 0;
         if(participantData.length === 0) continue;
         for( let participant of participantData) {
+            console.log("Looping through participants...");
             if(participant[emailField]) { // If email doesn't exists try sms.
                 const primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
                 if(!primaryFieldValue) continue;
@@ -193,6 +195,7 @@ const notificationHandler = async (message, context) => {
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
                 const currentDate = new Date();
+                console.log(sent);
                 if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
                     await storeNotifications(reminder);
