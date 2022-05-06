@@ -1236,8 +1236,8 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
                 operator = '!=';
             }
             query = query.where(obj, operator, values);
-            console.log(query);
         }
+        console.log(query);
         const participants = await query.get();
         return participants.docs.map(document => {
             let data = document.data();
