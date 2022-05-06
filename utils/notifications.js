@@ -176,7 +176,9 @@ const notificationHandler = async (message, context) => {
         const uuid = require('uuid');
 
         const { retrieveParticipantsByStatus } = require('./firestore');
+        console.log(conditions);
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
+        console.log("Count: " + participantData.length);
         let participantCounter = 0;
         if(participantData.length === 0) continue;
         for( let participant of participantData) {
