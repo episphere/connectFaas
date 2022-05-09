@@ -1223,13 +1223,15 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
         let query = db.collection('participants')
                                 .limit(limit)
                                 .offset(offset);
-
+        
         for(let obj in conditions) {
             let operator = '';
             let values = ''
             if(conditions[obj]['equals']) {
                 values = parseInt(conditions[obj]['equals']);
                 operator = '==';
+                console.log("Obj: " + obj);
+                console.log("Vals: " + values);
             }
             if(conditions[obj]['notequals']) {
                 values = parseInt(conditions[obj]['notequals']);
