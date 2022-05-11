@@ -1011,9 +1011,9 @@ const getLocations = async (institute) => {
 
 }
 
-const searchBoxes = async (institute) => {
+const searchBoxes = async (institute, flag) => {
     let snapshot = ``
-    if (institute === nciCode || institute == nciConceptId) {
+    if ((institute === nciCode || institute == nciConceptId) && flag === `bptl`) {
         snapshot = await db.collection('boxes').get()
     } 
     else { 
