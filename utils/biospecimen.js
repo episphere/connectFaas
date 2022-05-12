@@ -42,13 +42,13 @@ const biospecimenAPIs = async (req, res) => {
         role = isValidUser.role;
         siteCode = isValidUser.siteCode;
         siteAcronym = isValidUser.siteAcronym;
-        obj = { role, siteCode,siteAcronym, isBPTLUser, isBiospecimenUser };
+        obj = { role, siteCode,siteAcronym, isBPTLUser, isBiospecimenUser, email };
     }
     else {
         role = 'user';
         siteCode = decodedToken.siteDetails.siteCode ? decodedToken.siteDetails.siteCode : 13;
         siteAcronym = decodedToken.siteDetails.acronym;
-        obj = { role, siteAcronym, isBPTLUser, isBiospecimenUser };
+        obj = { role, siteAcronym, isBPTLUser, isBiospecimenUser, email };
         if(siteCode !== 0) obj['siteCode'] = siteCode;
     }
     
