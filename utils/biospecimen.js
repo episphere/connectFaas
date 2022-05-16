@@ -362,7 +362,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         const {getBoxesPagination} = require('./firestore');
         const requestData = req.body;
-        let toReturn = await getBoxesPagination(siteAcronym, requestData);
+        let toReturn = await getBoxesPagination(siteCode, requestData);
         return res.status(200).json({data: toReturn, code:200});
     }
     else if(api === 'getNumBoxesShipped'){
@@ -371,7 +371,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         const {getNumBoxesShipped} = require('./firestore');
         const requestData = req.body;
-        let response = await getNumBoxesShipped(siteAcronym, requestData);
+        let response = await getNumBoxesShipped(siteCode, requestData);
         return res.status(200).json({data:response, code:200});
     }
 
