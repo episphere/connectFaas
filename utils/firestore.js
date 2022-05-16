@@ -1105,7 +1105,7 @@ const getBoxesPagination = async (siteCode, body) => {
                 snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', ">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get()
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
     }
@@ -1164,7 +1164,7 @@ const getNumBoxesShipped = async (siteCode, body) => {
     else{
         if(endDate !== "0"){
             if(startDate !== "0"){
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==', 353358909).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get()
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==', 353358909).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
             }
             else{
                 snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', '<=', endDate).orderBy('656548982', 'desc').get();
