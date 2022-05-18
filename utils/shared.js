@@ -309,6 +309,7 @@ const sfhSSOConfig = {
     group: 'UserRole',
     email: 'UserEmail',
     siteManagerUser: 'Connect-Study-Manager-User',
+    biospecimenUser: 'Connect-Study-Manager-User',
     siteCode: 657167265,
     acronym: 'SFH'
 }
