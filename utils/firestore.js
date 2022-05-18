@@ -1557,8 +1557,9 @@ const setPackageReceiptFedex = async (data) => {
                             for (const element of collectionIdKeys[bag]['234868461']) {
                                 let tubeId = element.split(' ')[1];
                                 let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                                biospecimenDataObj["926457119"] = new Date().toISOString();
-                                biospecimenDataObj[conceptTube]["926457119"] = new Date().toISOString();
+                                const setCurrentDateReceived = new Date().toISOString().split('T')[0]+`T00:00:00.000Z`;
+                                biospecimenDataObj["926457119"] = setCurrentDateReceived;
+                                biospecimenDataObj[conceptTube]["926457119"] = setCurrentDateReceived;
                                 await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
                                 }
                         }
@@ -1634,6 +1635,10 @@ const getQueryBsiData = async (query) => {
                     collectionIdInfo['Connect_ID'] = i['Connect_ID']
                     // collectionIdInfo['789843387'] = i['789843387']
                     collectionIdInfo['827220437'] = i['827220437']
+                    collectionIdInfo['650516960'] = i['650516960']
+                    collectionIdInfo['762124027'] = i[id]['762124027'] === undefined ? ``  : i[id]['762124027']
+                    collectionIdInfo['982885431'] = i[id]['248868659'] === undefined ? `` : i[id]['248868659']['982885431']
+        
                     storeResults.push(collectionIdInfo)
                 }
             })
