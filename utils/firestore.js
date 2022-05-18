@@ -1618,7 +1618,7 @@ const getQueryBsiData = async (query) => {
     try {
         let storeResults = []
         let holdBiospecimenMatches = []
-        const snapshot = await db.collection("biospecimen").where('926457119', '>=', query).get();
+        const snapshot = await db.collection("biospecimen").where('926457119', '==', query).get();
         let tubeConceptIds = Object.values(collectionIdConversion); // grab tube id
         snapshot.docs.map(doc => {
             holdBiospecimenMatches.push(doc.data()) // push query results to holdBiospecimenMatches array
