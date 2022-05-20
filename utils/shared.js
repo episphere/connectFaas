@@ -72,34 +72,41 @@ const incentiveFlags = {
             648936790: 104430631,
             648228701: 104430631,
             222373868: 104430631,
-            862774033: 104430631 // University of Chicago
+            297462035: '',
+            438636757: '',
+            320023644: ''
         },
         496823485: { // Follow up 1
             731498909: 104430631,
             648936790: 104430631,
             648228701: 104430631,
             222373868: 104430631,
-            862774033: 104430631 // University of Chicago
+            297462035: '',
+            438636757: '',
+            320023644: ''
         },
         650465111: { // Follow up 2
             731498909: 104430631,
             648936790: 104430631,
             648228701: 104430631,
             222373868: 104430631,
-            862774033: 104430631 // University of Chicago
+            297462035: '',
+            438636757: '',
+            320023644: ''
         },
         303552867: { // Follow up 3
             731498909: 104430631,
             648936790: 104430631,
             648228701: 104430631,
             222373868: 104430631,
-            862774033: 104430631 // University of Chicago
+            297462035: '',
+            438636757: '',
+            320023644: ''
         }
     }
 }
 
 const refusalConcepts = {
-    851245875: 104430631,
 	919699172: 104430631,
 	141450621: 104430631,
 	576083042: 104430631,
@@ -205,8 +212,15 @@ const defaultFlags = {
     536735468: 972455046,
     976570371: 972455046,
     663265240: 972455046,
+    265193023: 972455046,
+    459098666: 972455046,
+    126331570: 972455046,
     311580100: 104430631,
     914639140: 104430631,
+    878865966: 104430631,
+    167958071: 104430631,
+    684635302: 104430631,
+    100767870: 104430631,
     ...incentiveFlags,
     ...withdrawalConcepts
 }
@@ -222,10 +236,10 @@ const moduleConcepts = {
 }
 
 const incentiveConcepts = {
-    'baseline': 130371375.266600170,
-    'followup1': 130371375.496823485,
-    'followup2': 130371375.650465111,
-    'followup3': 130371375.303552867,
+    'baseline': '130371375.266600170',
+    'followup1': '130371375.496823485',
+    'followup2': '130371375.650465111',
+    'followup3': '130371375.303552867',
     'incentiveIssued': 648936790,
     'incentiveIssuedAt': 297462035,
     'incentiveRefused': 648228701,
@@ -263,7 +277,7 @@ const nihSSOConfig = {
     email: 'https://federation.nih.gov/person/Mail',
     siteManagerUser: 'CN=connect-study-manager-user',
     biospecimenUser: 'CN=connect-biospecimen-user',
-    bptlUser: 'CN=connect-bptl-user',
+    bptlUser: 'connect-bptl-user',
     helpDeskUser: 'CN=connect-help-desk-user',
     siteCode: 111111111,
     acronym: 'NIH'
@@ -286,6 +300,7 @@ const hpSSOConfig = {
     group: 'AD_groups',
     email: 'email',
     siteManagerUser: 'CN=connect-dshbrd-user',
+    biospecimenUser: 'connect-biodshbrd-user',
     siteCode: 531629870,
     acronym: 'HP'
 }
@@ -294,6 +309,7 @@ const sfhSSOConfig = {
     group: 'UserRole',
     email: 'UserEmail',
     siteManagerUser: 'Connect-Study-Manager-User',
+    biospecimenUser: 'Connect-Study-Manager-User',
     siteCode: 657167265,
     acronym: 'SFH'
 }
@@ -411,6 +427,7 @@ const decodingJWT = (token) => {
 
 const SSOValidation = async (dashboardType, idToken) => {
     try {
+        console.log(idToken)
         const decodedJWT = decodingJWT(idToken);
         const tenant = decodedJWT.firebase.tenant;
         const { validateMultiTenantIDToken } = require('./firestore');
@@ -424,7 +441,14 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(allGroups)
         console.log(email)
         if(!SSOConfig[tenant][dashboardType]) return false;
-        const requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
+        let requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
+        let isBiospecimenUser = false;
+        if(requiredGroups) isBiospecimenUser = true;
+        let isBPTLUser = false;
+        if(SSOConfig[tenant].acronym === 'NIH') {
+            isBPTLUser = new RegExp(SSOConfig[tenant]['bptlUser'], 'g').test(allGroups.toString())
+            requiredGroups = requiredGroups || isBPTLUser;
+        }
         if(!requiredGroups) return false;
         let acronym = SSOConfig[tenant].acronym;
         if(tenant === 'KP-SSO-wulix' || tenant === 'KP-SSO-ssj7c' || tenant === 'KP-SSO-ii9sr') {
@@ -439,7 +463,7 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(acronym)
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
-        return {siteDetails, email};
+        return {siteDetails, email, isBPTLUser, isBiospecimenUser};
     } catch (error) {
         return false;
     }
@@ -532,6 +556,39 @@ const collectionIdConversion = {
     "0006": "973670172"
 }
 
+const sites = {
+  HP: { siteCode: '531629870', locations: ['834825425'] },
+  HFHS: {
+    siteCode: '548392715',
+    locations: ['752948709', '570271641', '838480167'],
+  },
+  KPCO: { siteCode: '125001209', locations: ['763273112'] },
+  KPGA: { siteCode: '327912200', locations: ['767775934'] },
+  KPHI: { siteCode: '300267574', locations: ['531313956'] },
+  KPNW: { siteCode: '452412599', locations: ['715632875'] },
+  MFC: { siteCode: '303349821', locations: ['692275326'] },
+  SFH: { siteCode: '657167265', locations: ['589224449'] },
+  UCM: { siteCode: '809703864', locations: ['333333333'] },
+  NIH: { siteCode: '13', locations: ['111111111', '222222222'] },
+};
+  
+const bagConceptIDs = [
+  '650224161', // bag1
+  '136341211', // bag2
+  '503046679', // bag3
+  '313341808', // bag4
+  '668816010', // bag5
+  '754614551', // bag6
+  '174264982', // bag7
+  '550020510', // bag8
+  '673090642', // bag9
+  '492881559', // bag10
+  '536728814', // bag11
+  '309413330', // bag12
+  '357218702', // bag13
+  '945294744', // bag14
+  '741697447', // bag15
+];
 
 module.exports = {
     getResponseJSON,
@@ -555,5 +612,7 @@ module.exports = {
     logIPAdddress,
     decodingJWT,
     initializeTimestamps,
-    collectionIdConversion
+    collectionIdConversion,
+    sites, 
+    bagConceptIDs
 }

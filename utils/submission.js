@@ -64,36 +64,16 @@ const submit = async (res, data, uid) => {
     return res.status(200).json(getResponseJSON('Data stored successfully!', 200));    
 };
 
-const recruitSubmit = async (req, res) => {
-    setHeadersDomainRestricted(req, res);
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
+const recruitSubmit = async (req, res, uid) => {
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-    }
-
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    const idToken = req.headers.authorization.replace('Bearer','').trim();
-    const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
-
-    if(decodedToken instanceof Error){
-        return res.status(401).json(getResponseJSON(decodedToken.message, 401));
-    }
-
-    if(!decodedToken){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
     const data = req.body;
     if(Object.keys(data).length <= 0){
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
-    return submit(res, data, decodedToken.uid);
+    return submit(res, data, uid);
 }
 
 const getParticipants = async (req, res, authObj) => {
@@ -308,33 +288,14 @@ const identifyParticipant = async (req, res, site) => {
     }
 }
 
-const getUserProfile = async (req, res) => {
-    setHeadersDomainRestricted(req, res);
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+const getUserProfile = async (req, res, uid) => {
 
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    const idToken = req.headers.authorization.replace('Bearer','').trim();
-    const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
-
-    if(decodedToken instanceof Error){
-        return res.status(401).json(getResponseJSON(decodedToken.message, 401));
-    }
-
-    if(!decodedToken){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
     const { retrieveUserProfile } = require('./firestore');
-    const response = await retrieveUserProfile(decodedToken.uid);
+    const response = await retrieveUserProfile(uid);
 
     if(response instanceof Error){
         return res.status(500).json(getResponseJSON(response.message, 500));
@@ -349,10 +310,32 @@ const getUserProfile = async (req, res) => {
     }
 }
 
+const getUserCollections = async (req, res, uid) => {
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+    
+    const { getSpecimenCollections, getTokenForParticipant, retrieveUserProfile } = require('./firestore');
+    console.log("uid " + uid);
+    const participant = (await retrieveUserProfile(uid))[0];
+    const siteCode = participant['827220437'];
+    const token = await getTokenForParticipant(uid);
+    const response = await getSpecimenCollections(token, siteCode);
+
+    if(response instanceof Error){
+        return res.status(500).json(getResponseJSON(response.message, 500));
+    }
+
+    if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
+    return res.status(200).json({data: response, code:200});
+}
+
 module.exports = {
     submit,
     recruitSubmit,
     getParticipants,
     identifyParticipant,
-    getUserProfile
+    getUserProfile,
+    getUserCollections
 }

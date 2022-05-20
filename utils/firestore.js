@@ -3,14 +3,15 @@
 // admin.initializeApp();
 // const db = admin.firestore();
 // const storage = admin.storage();
-
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion  } = require('./shared');
+const { collectionIdConversion, bagConceptIDs  } = require('./shared');
+const nciCode = 13;
+const nciConceptId = `517700004`;
 
 const verifyToken = async (token) => {
     try{
@@ -383,20 +384,21 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     try {
         const operator = isParent ? 'in' : '==';
         const offset = (page-1)*limit;
-        let query = db.collection('participants')
+        const { incentiveConcepts } = require('./shared');
+        const object = incentiveConcepts[roundType]
+        
+        let participants = await db.collection('participants')
                                 .where('827220437', operator, siteCode)
                                 .where('821247024', '==', 197316935)
+                                .where(`${object}.222373868`, "==", 353358909)
+                                .where(`${object}.648936790`, '==', 104430631)
+                                .where(`${object}.648228701`, '==', 104430631)
                                 .orderBy('Connect_ID', 'asc')
                                 .offset(offset)
-                                .limit(limit);
-    
-        const { incentiveConcepts } = require('./shared');
-        const participants = await query
-                                .where(`${incentiveConcepts[roundType]}.222373868`, "==", 353358909)
-                                .where(`${incentiveConcepts[roundType]}.648936790`, '==', 104430631)
-                                .where(`${incentiveConcepts[roundType]}.648228701`, '==', 104430631)
+                                .limit(limit)
                                 .get();
-    
+                        
+
         return participants.docs.map(document => {
             let data = document.data();
             return {firstName: data['399159511'], email: data['869588347'], token: data['token']}
@@ -746,38 +748,75 @@ const storeSpecimen = async (data) => {
     await db.collection('biospecimen').add(data);
 }
 
+const updateSpecimen = async (id, data) => {
+    const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
+    const docId = snapshot.docs[0].id;
+    await db.collection('biospecimen').doc(docId).update(data);
+}
 
-const storeBox = async (data) => {
+const addBox = async (data) => {
     await db.collection('boxes').add(data);
 }
 
-const removeBag = async (institute, requestData) => {
+const updateBox = async (id, data, loginSite) => {
+    const snapshot = await db.collection('boxes').where('132929440', '==', id).where('789843387', '==', loginSite).get();
+    const docId = snapshot.docs[0].id;
+    await db.collection('boxes').doc(docId).update(data);
+}
+
+
+const removeBag = async (siteCode, requestData) => {
     let boxId = requestData.boxId;
     let bags = requestData.bags;
-    let currDate = requestData.date;    
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
+    let currDate = requestData.date;
+    let hasOrphanFlag = 104430631; 
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
     if(snapshot.size === 1){
-        let box = snapshot.docs[0];
-        let data = box.data()
-        let currBags = data.bags;
-        let bagIds = Object.keys(currBags);
-        for(let i = 0; i < bags.length; i++){
-            if(currBags.hasOwnProperty(bags[i])){
-                delete currBags[bags[i]]
-            }
-            else{
-                console.log(bags[i] + ' NOT FOUND')
-            }
-            
+      let doc = snapshot.docs[0];
+      let box = doc.data();
+      
+      for (let conceptID of bagConceptIDs) { 
+          const currBag = box[conceptID];
+          if (!currBag) continue;
+          for (let bagID of bags) {               
+              if (currBag['522094118'] === bagID || currBag['787237543'] === bagID || currBag['223999569'] === bagID) {
+                  delete box[conceptID];                   
+              }
+          }
+      }
+
+      let bagConceptIDIndex = 0;
+      for (let k of Object.keys(box)) { 
+          if (bagConceptIDs.includes(k)) {
+              const currBagConceptID = bagConceptIDs[bagConceptIDIndex];
+              if (currBagConceptID === k) continue;
+              box[currBagConceptID] = box[k];
+              delete box[k];
+              bagConceptIDIndex++;
+          }
+      }
+
+      // iterate over all current bag concept Ids and change the value of hasOrphanFlag
+      for(let conceptID of bagConceptIDs) {
+        const currBag = box[conceptID];
+        if (!currBag) continue;
+        if(currBag['255283733'] == 104430631 ) {
+          hasOrphanFlag = 104430631;
         }
-        const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).set(data);
-        await db.collection('boxes').doc(docId).update({'lastUpdatedTiime':currDate})
-        return 'Success!';
+        else if (currBag['255283733'] == 353358909) {
+          hasOrphanFlag = 353358909;
+        }
+        else {
+          hasOrphanFlag = 104430631;
+        }
+      }
+      
+      await db.collection('boxes').doc(doc.id).set({ ...box, '555611076':currDate, '842312685':hasOrphanFlag  });
+      return 'Success!';
     }
-    else{
-        return 'Failure! Could not find box mentioned';
-    }
+    else {
+      return 'Failure! Could not find box mentioned';
+  }   
 }
 
 const reportMissingSpecimen = async (siteAcronym, requestData) => {
@@ -854,8 +893,8 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
     else return false;
 }
 
-const searchShipments = async (siteAcronym) => {
-    const snapshot = await db.collection('biospecimen').where('siteAcronym', '==', siteAcronym).get();
+const searchShipments = async (siteCode) => {
+    const snapshot = await db.collection('biospecimen').where('827220437', '==', siteCode).get();
     if(snapshot.size !== 0){
         //
         return snapshot.docs.filter(document => {
@@ -920,24 +959,14 @@ const searchShipments = async (siteAcronym) => {
 
 const specimenExists = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
-    if(snapshot.size === 1) {
-        const docId = snapshot.docs[0].id;
-        await db.collection('biospecimen').doc(docId).update(data);
-        return true;
-    }
+    if(snapshot.size === 1) return true;
     else return false;
 }
 
-const boxExists = async (boxId, institute, data) => {
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
-    if(snapshot.size === 1) {
-        const docId = snapshot.docs[0].id;
-        await db.collection('boxes').doc(docId).set(data);
-        return true;
-    }
-    else{
-        return false;
-    }
+const boxExists = async (boxId, loginSite) => {
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
+    if(snapshot.size === 1) return true;
+    else return false;
 }
 
 const updateTempCheckDate = async (institute) => {
@@ -953,68 +982,15 @@ const updateTempCheckDate = async (institute) => {
 
 }
 
-const shipBox = async (boxId, institute, shippingData, trackingNumbers) => {
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('siteAcronym', '==',institute).get();
+const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
     if(snapshot.size === 1) {
         let currDate = new Date().toISOString();
         shippingData['656548982'] = currDate;
-        shippingData['145971562'] = '353358909';
+        shippingData['145971562'] = 353358909;
         shippingData['959708259'] = trackingNumbers[boxId]
         const docId = snapshot.docs[0].id;
         await db.collection('boxes').doc(docId).update(shippingData);
-        
-
-        let data = snapshot.docs[0].data();
-        let bags = data.bags;
-        let bagIds = Object.keys(data.bags);
-
-        for(let i = 0; i < bagIds.length; i++){
-            //get tubes under current bag master specimen
-            let currBag = bagIds[i]
-            let currArr = bags[currBag]['arrElements'];
-            let currSpecimen = currBag.split(' ')[0];
-            let response = {}
-            //get currspecimen
-            const snapshot1 = await db.collection('biospecimen').where('820476880', '==', currSpecimen).get();
-            if(snapshot1.size === 1) {
-                let thisdata = snapshot1.docs[0].data();
-                if(thisdata['siteAcronym'] == institute){
-                    response = thisdata;
-                }
-            }
-
-            let conversion = {
-                "0007": "143615646",
-                "0009": "223999569",
-                "0012": "232343615",
-                "0001": "299553921",
-                "0011": "376960806",
-                "0004": "454453939",
-                "0021": "589588440",
-                "0005": "652357376",
-                "0032": "654812257",
-                "0014": "677469051",
-                "0024": "683613884",
-                "0002": "703954371",
-                "0022": "746999767",
-                "0008": "787237543",
-                "0003": "838567176",
-                "0031": "857757831",
-                "0013": "958646668",
-                "0006": "973670172"
-            }
-            for(let k = 0; k < currArr.length; k++){
-                let currElement = currArr[k];
-                let currId = currElement.split(' ')[1]
-                let conceptTube = conversion[currId];
-                if(response.hasOwnProperty(conceptTube)){
-                    let currObj = response[conceptTube];
-                    currObj['145971562'] = '353358909'
-                }
-
-            }
-            console.log(await specimenExists(currSpecimen, response));
-        }
         return true;
     }
     else{
@@ -1035,8 +1011,14 @@ const getLocations = async (institute) => {
 
 }
 
-const searchBoxes = async (institute) => {
-    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).get();
+const searchBoxes = async (institute, flag) => {
+    let snapshot = ``
+    if ((institute === nciCode || institute == nciConceptId) && flag === `bptl`) {
+        snapshot = await db.collection('boxes').get()
+    } 
+    else { 
+        snapshot = await db.collection('boxes').where('789843387', '==', institute).get()
+    }
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
@@ -1046,10 +1028,10 @@ const searchBoxes = async (institute) => {
 }
 
 const searchBoxesByLocation = async (institute, location) => {
-    const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('560975149','==',location).get();
+    const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149','==',location).get();
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
-        console.log(JSON.stringify(result));
+        // console.log(JSON.stringify(result));
         let toReturn = result.filter(data => (!data.hasOwnProperty('145971562')||data['145971562']!='353358909'))
         return toReturn;
     }
@@ -1059,8 +1041,8 @@ const searchBoxesByLocation = async (institute, location) => {
     
 }
 
-const getSpecimenCollections = async (token, siteAcronym) => {
-    const snapshot = await db.collection('biospecimen').where('token', '==', token).where('siteAcronym', '==', siteAcronym).get();
+const getSpecimenCollections = async (token, siteCode) => {
+    const snapshot = await db.collection('biospecimen').where('token', '==', token).where('827220437', '==', siteCode).get();
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
@@ -1069,15 +1051,16 @@ const getSpecimenCollections = async (token, siteAcronym) => {
     }
 }
 
-const getBoxesPagination = async (institute, body) => {
+const getBoxesPagination = async (siteCode, body) => {
     let currPage = body.pageNumber;
     let orderByField = body.orderBy;
     let elementsPerPage = body.elementsPerPage;
     let filters = body.filters;
 
-    let startDate = 0;
+    let startDate = "0";
     let trackingId = '';
-    let endDate = 0;
+    let endDate = "0";
+
     if(filters !== undefined){
         if(filters.hasOwnProperty('startDate')){
             startDate = filters['startDate']
@@ -1091,44 +1074,41 @@ const getBoxesPagination = async (institute, body) => {
     }
     let snapshot;
     if(trackingId !== ''){
-        if(endDate !== 0){
-            if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+        if(endDate !== "0"){
+            if(startDate !== "0"){
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
         else{
-            if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '>=', startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+            if(startDate !== "0"){
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '>=', startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
     }
     else{
-        if(endDate !== 0){
-            if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', "<=", endDate).where('656548982' ,">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+        if(endDate !== "0"){
+            if(startDate !== "0"){
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', "<=", endDate).where('656548982' ,">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', "<=", endDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', "<=", endDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
         else{
-            if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', ">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+            if(startDate !== "0"){
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', ">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
             }
         }
     }
-
-    
-    //const snapshot = await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
     let result = snapshot.docs.map(document => document.data());
     return result;
     /*if(snapshot.size !== 0){
@@ -1146,12 +1126,12 @@ const getBoxesPagination = async (institute, body) => {
     
 }
 
-const getNumBoxesShipped = async (institute, body) => {
+const getNumBoxesShipped = async (siteCode, body) => {
     let filters = body;
 
-    let startDate = 0;
+    let startDate = "0";
     let trackingId = '';
-    let endDate = 0;
+    let endDate = "0";
     if(filters.hasOwnProperty('startDate')){
         startDate = filters['startDate']
     }
@@ -1163,39 +1143,39 @@ const getNumBoxesShipped = async (institute, body) => {
         endDate = filters['endDate']
     }
     let snapshot = {'docs':[]};
-    if(trackingId !== ''){
-        if(endDate !== 0){
-            if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
+    if(trackingId !== ''){ 
+        if(endDate !== "0"){ 
+            if(startDate !== "0"){
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy('656548982', 'desc').get();
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy('656548982', 'desc').get();
             }
-        }
-        else{
-            if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
-            }
-            else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('959708259', '==', trackingId).orderBy('656548982', 'desc').get();
-            }
-        }
+      }
+      else{
+          if(startDate !== "0"){
+              snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
+          }
+          else{
+              snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).orderBy('656548982', 'desc').get();
+          }
+      }
     }
     else{
-        if(endDate !== 0){
-            if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
+        if(endDate !== "0"){
+            if(startDate !== "0"){
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', '<=', endDate).orderBy('656548982', 'desc').get();
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', '<=', endDate).orderBy('656548982', 'desc').get();
             }
         }
         else{
-            if(startDate !== 0){
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
+            if(startDate !== "0"){
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
             }
             else{
-                snapshot =  await db.collection('boxes').where('siteAcronym', '==', institute).where('145971562','==','353358909').orderBy('656548982', 'desc').get();
+                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).orderBy('656548982', 'desc').get();
             }
         }
     }
@@ -1204,10 +1184,11 @@ const getNumBoxesShipped = async (institute, body) => {
     return result;
 }
 
-const getNotificationSpecifications = async (notificationType, notificationCategory) => {
+const getNotificationSpecifications = async (notificationType, notificationCategory, scheduleAt) => {
     try {
         let snapshot = db.collection('notificationSpecifications').where("notificationType", "array-contains", notificationType);
         if(notificationCategory) snapshot = snapshot.where('category', '==', notificationCategory);
+        snapshot = snapshot.where('scheduleAt', '==', scheduleAt);
         snapshot = await snapshot.get();
         return snapshot.docs.map(document => {
             return document.data();
@@ -1257,6 +1238,33 @@ const notificationAlreadySent = async (token, notificationSpecificationsID) => {
         new Error(error)
     }
 }
+
+const sendClientEmail = async (data) => {
+
+    const { sendEmail } = require('./notifications');
+    const uuid  = require('uuid');
+
+    const reminder = {
+        id: uuid(),
+        notificationType: data.notificationType,
+        email: data.email,
+        notification : {
+            title: data.subject,
+            body: data.message,
+            time: data.time
+        },
+        attempt: data.attempt,            
+        category: data.category,
+        token: data.token,
+        uid: data.uid,
+        read: data.read
+    }
+
+    await storeNotifications(reminder);
+
+    sendEmail(data.email, data.subject, data.message);
+    return true;
+};
 
 const storeNotifications = async payload => {
     try {
@@ -1330,8 +1338,8 @@ const getNotificationHistoryByParticipant = async (token, siteCode, isParent) =>
     else return false;
 }
 
-const getNotificationsCategories = async () => {
-    const snapshot = await db.collection('notificationSpecifications').get();
+const getNotificationsCategories = async (scheduleAt) => {
+    const snapshot = await db.collection('notificationSpecifications').where('scheduleAt', '==', scheduleAt).get();
     const categories = [];
     snapshot.forEach(dt => {
         const category = dt.data().category;
@@ -1387,6 +1395,16 @@ const getSiteEmail = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
         if(snapshot.size > 0) return snapshot.docs[0].data().email;
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const getSiteAcronym = async (siteCode) => {
+    try {
+        const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        if(snapshot.size > 0) return snapshot.docs[0].data().acronym;
     } catch (error) {
         console.error(error);
         return new Error(error);
@@ -1516,29 +1534,39 @@ const setPackageReceiptFedex = async (data) => {
             return false
         }
         const docId = snapshot.docs[0].id;
+        data['959708259'] = data.scannedBarcode
+        delete data.scannedBarcode
         await db.collection("boxes").doc(docId).update(data)
+        const bags = ["650224161", "136341211", "503046679", "313341808", "668816010", "754614551", "174264982", "550020510", 
+        "673090642", "492881559", "536728814", "309413330", "357218702", "945294744", "741697447", "255283733",
+        "842312685", "234868461", "522094118"]
         if (Object.keys(snapshot.docs.length) !== 0) {
-            snapshot.docs.map(doc => { 
-                let collectionIdKeys = Object.keys(doc.data().bags); // grab all the collection ids
-                collectionIdKeys.forEach (async (i) => {
-                    let storeCollectionId = i.split(' ')[0] 
-                    const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
-                    const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
-                    let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
-                    let biospecimenDataObj =  getBiospecimenDataObject.data()
-                  
-
-                    for ( const element of doc.data().bags[i].arrElements) {
-                        let tubeId = element.split(' ')[1];
-                        let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                        biospecimenDataObj["259439191"] = new Date().toISOString();
-                        biospecimenDataObj[conceptTube]["259439191"] = new Date().toISOString();
-
-                        await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
+             snapshot.docs.map(doc => { 
+                const collectionIdKeys = doc.data(); // grab all the collection ids
+                bags.forEach(async (bag) => {
+                    if (bag in collectionIdKeys){
+                        if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
+                            let storeCollectionId = ``
+                            if (collectionIdKeys[bag]['787237543']) storeCollectionId =  storeCollectionId || collectionIdKeys[bag]['787237543'].split(' ')[0]
+                            if (collectionIdKeys[bag]['223999569']) storeCollectionId =  storeCollectionId || collectionIdKeys[bag]['223999569'].split(' ')[0]
+                            if (collectionIdKeys[bag]['522094118']) storeCollectionId =  storeCollectionId || collectionIdKeys[bag]['522094118'].split(' ')[0]
+                            const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
+                            const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
+                            let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
+                            let biospecimenDataObj =  getBiospecimenDataObject.data()
+                            for (const element of collectionIdKeys[bag]['234868461']) {
+                                let tubeId = element.split(' ')[1];
+                                let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                                const setCurrentDateReceived = new Date().toISOString().split('T')[0]+`T00:00:00.000Z`;
+                                biospecimenDataObj["926457119"] = setCurrentDateReceived;
+                                biospecimenDataObj[conceptTube]["926457119"] = setCurrentDateReceived;
+                                await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
+                                }
                         }
+                    }
                 })
-            })
-        }
+              })
+         }
         return true;
          }
     catch(error){
@@ -1590,23 +1618,29 @@ const getQueryBsiData = async (query) => {
     try {
         let storeResults = []
         let holdBiospecimenMatches = []
-        const snapshot = await db.collection("biospecimen").where('259439191', '>=', query).get();
-        let tubeConceptIds = Object.values(collectionIdConversion);
+        const snapshot = await db.collection("biospecimen").where('926457119', '==', query).get();
+        let tubeConceptIds = Object.values(collectionIdConversion); // grab tube id
         snapshot.docs.map(doc => {
-            holdBiospecimenMatches.push(doc.data())
+            holdBiospecimenMatches.push(doc.data()) // push query results to holdBiospecimenMatches array
         })
 
-        holdBiospecimenMatches.forEach( i => {
+
+        holdBiospecimenMatches.forEach( i => { // if query results matches/exists in tubeconcepts ids then add them to below object
             tubeConceptIds.forEach( id => {
                 if (id in i) {
                     let collectionIdInfo = {}
                     collectionIdInfo['825582494'] = i[id]['825582494']
-                    collectionIdInfo['259439191'] = i['259439191']
+                    collectionIdInfo['926457119'] = i['926457119']
+                    collectionIdInfo['678166505'] = i['678166505']
                     collectionIdInfo['Connect_ID'] = i['Connect_ID']
-                    collectionIdInfo['siteAcronym'] = i['siteAcronym']
+                    // collectionIdInfo['789843387'] = i['789843387']
+                    collectionIdInfo['827220437'] = i['827220437']
+                    collectionIdInfo['650516960'] = i['650516960']
+                    collectionIdInfo['762124027'] = i[id]['762124027'] === undefined ? ``  : i[id]['762124027']
+                    collectionIdInfo['982885431'] = i[id]['248868659'] === undefined ? `` : i[id]['248868659']['982885431']
+        
                     storeResults.push(collectionIdInfo)
                 }
-
             })
 
         })
@@ -1616,6 +1650,7 @@ const getQueryBsiData = async (query) => {
         return new Error(error);
     }
 }
+
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
     return snapshot.docs[0].data().restrictedFields;
@@ -1651,11 +1686,13 @@ module.exports = {
     addNewBiospecimenUser,
     removeUser,
     storeSpecimen,
+    updateSpecimen,
     searchSpecimen,
     searchShipments,
     specimenExists,
     boxExists,
-    storeBox,
+    addBox,
+    updateBox,
     searchBoxes,
     shipBox,
     getLocations,
@@ -1691,6 +1728,7 @@ module.exports = {
     storeSiteNotifications,
     getCoordinatingCenterEmail,
     getSiteEmail,
+    getSiteAcronym,
     retrieveSiteNotifications,
     addPrintAddressesParticipants,
     getParticipantSelection,
@@ -1700,5 +1738,6 @@ module.exports = {
     getBptlMetrics,
     getBptlMetricsForShipped,
     getQueryBsiData,
-    getRestrictedFields
+    getRestrictedFields,
+    sendClientEmail
 }
