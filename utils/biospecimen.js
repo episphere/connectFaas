@@ -2,7 +2,7 @@ const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress, 
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
-    setHeadersDomainRestricted(req, res);
+    setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
