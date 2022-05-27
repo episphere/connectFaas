@@ -1529,12 +1529,14 @@ const setPackageReceiptUSPS = async (data) => {
 
 const setPackageReceiptFedex = async (data) => {
     try {
-        const snapshot = await db.collection("boxes").where('959708259', '==', data.scannedBarcode).get(); // find related box using barcode
+        let token = data.scannedBarcode
+        if ((token).length === 34) token = data.scannedBarcode.slice((data.scannedBarcode).length - 22)
+        const snapshot = await db.collection("boxes").where('959708259', '==', token).get(); // find related box using barcode
         if (snapshot.empty) {
             return false
         }
         const docId = snapshot.docs[0].id;
-        data['959708259'] = data.scannedBarcode
+        data['959708259'] = token
         delete data.scannedBarcode
         await db.collection("boxes").doc(docId).update(data)
         const bags = ["650224161", "136341211", "503046679", "313341808", "668816010", "754614551", "174264982", "550020510", 
@@ -1547,9 +1549,9 @@ const setPackageReceiptFedex = async (data) => {
                     if (bag in collectionIdKeys){
                         if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
                             let storeCollectionId = ``
-                            if (collectionIdKeys[bag]['787237543']) storeCollectionId =  storeCollectionId || collectionIdKeys[bag]['787237543'].split(' ')[0]
-                            if (collectionIdKeys[bag]['223999569']) storeCollectionId =  storeCollectionId || collectionIdKeys[bag]['223999569'].split(' ')[0]
-                            if (collectionIdKeys[bag]['522094118']) storeCollectionId =  storeCollectionId || collectionIdKeys[bag]['522094118'].split(' ')[0]
+                            if (collectionIdKeys[bag]['787237543']) storeCollectionId =  collectionIdKeys[bag]['787237543'].split(' ')[0]
+                            if (collectionIdKeys[bag]['223999569']) storeCollectionId =  collectionIdKeys[bag]['223999569'].split(' ')[0]
+                            if (collectionIdKeys[bag]['522094118']) storeCollectionId =  collectionIdKeys[bag]['522094118'].split(' ')[0]
                             const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
                             const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
                             let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
@@ -1557,9 +1559,8 @@ const setPackageReceiptFedex = async (data) => {
                             for (const element of collectionIdKeys[bag]['234868461']) {
                                 let tubeId = element.split(' ')[1];
                                 let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                                const setCurrentDateReceived = new Date().toISOString().split('T')[0]+`T00:00:00.000Z`;
-                                biospecimenDataObj["926457119"] = setCurrentDateReceived;
-                                biospecimenDataObj[conceptTube]["926457119"] = setCurrentDateReceived;
+                                biospecimenDataObj["926457119"] = data['926457119'];
+                                biospecimenDataObj[conceptTube]["926457119"] = data['926457119'];
                                 await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
                                 }
                         }
