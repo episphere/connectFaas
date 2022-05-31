@@ -113,6 +113,7 @@ const notificationHandler = async (message, context) => {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
         const scheduleAt = publishedMessage;
+        console.log(publishedMessage);
         const { getNotificationsCategories } = require('./firestore');
         const categories = await getNotificationsCategories(scheduleAt);
         console.log(categories)
