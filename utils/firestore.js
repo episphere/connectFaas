@@ -1635,7 +1635,7 @@ const getQueryBsiData = async (query) => {
                     collectionIdInfo['678166505'] = i['678166505']
                     collectionIdInfo['Connect_ID'] = i['Connect_ID']
                     // collectionIdInfo['789843387'] = i['789843387']
-                    collectionIdInfo['827220437'] = i['827220437']
+                    collectionIdInfo['951355211'] = i['951355211']
                     collectionIdInfo['650516960'] = i['650516960']
                     collectionIdInfo['762124027'] = i[id]['762124027'] === undefined ? ``  : i[id]['762124027']
                     collectionIdInfo['982885431'] = i[id]['248868659'] === undefined ? `` : i[id]['248868659']['982885431']
