@@ -49,31 +49,12 @@ const markAllNotificationsAsAlreadyRead = (notification, collection) => {
     }
 }
 
-const retrieveNotifications = async (req, res) => {
-    setHeadersDomainRestricted(req, res)
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+const retrieveNotifications = async (req, res, uid) => {
 
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    if(!req.headers.authorization || req.headers.authorization.trim() === ""){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    const idToken = req.headers.authorization.replace('Bearer','').trim();
-    const { validateIDToken } = require('./firestore');
-    const decodedToken = await validateIDToken(idToken);
-
-    if(decodedToken instanceof Error){
-        return res.status(401).json(getResponseJSON(decodedToken.message, 401));
-    }
-
-    if(!decodedToken){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-    const uid = decodedToken.uid;
     const { retrieveUserNotifications } = require('./firestore');
     const notifications = await retrieveUserNotifications(uid);
     if(notifications !== false){
@@ -127,16 +108,17 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
 const notificationHandler = async (message, context) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const splitCharacters = '@#$'
-    const messageArray = publishedMessage ? publishedMessage.split(splitCharacters) : null;
-    console.log(messageArray)
-    if(!messageArray) {
+    
+    if(!/@#\$/.test(publishedMessage)) {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
+        const scheduleAt = publishedMessage;
+        console.log(publishedMessage);
         const { getNotificationsCategories } = require('./firestore');
-        const categories = await getNotificationsCategories();
+        const categories = await getNotificationsCategories(scheduleAt);
         console.log(categories)
         for(let category of categories) {
-            const dataBuffer = Buffer.from(`${category}${splitCharacters}250${splitCharacters}0`);
+            const dataBuffer = Buffer.from(`${category}${splitCharacters}250${splitCharacters}0${splitCharacters}${scheduleAt}`);
             try {
                 const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
                 console.log(`Message ${messageId} published.`);
@@ -146,16 +128,17 @@ const notificationHandler = async (message, context) => {
         }
         return;
     }
+    const messageArray = publishedMessage ? publishedMessage.split(splitCharacters) : null;
     const notificationCategory = messageArray[0];
     let limit = parseInt(messageArray[1]);
     let offset = parseInt(messageArray[2]);
-    console.log(limit);
-    console.log(offset);
+    const scheduleAt = messageArray[3];
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
-    const specifications = await getNotificationSpecifications(notificationType, notificationCategory);
+    const specifications = await getNotificationSpecifications(notificationType, notificationCategory, scheduleAt);
     let specCounter = 0;
     for(let obj of specifications) {
+        console.log("Looping through specifications...");
         const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;
         const messageBody = obj[notificationType].body;
@@ -175,17 +158,23 @@ const notificationHandler = async (message, context) => {
         const uuid = require('uuid');
 
         const { retrieveParticipantsByStatus } = require('./firestore');
+        console.log(conditions);
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
+        console.log("Count: " + participantData.length);
         let participantCounter = 0;
         if(participantData.length === 0) continue;
         for( let participant of participantData) {
+            console.log("Looping through participants...");
             if(participant[emailField]) { // If email doesn't exists try sms.
-                if(!participant[primaryField]) continue;
-                let d = new Date(participant[primaryField]);
+                const primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
+                if(!primaryFieldValue) continue;
+                let d = new Date(primaryFieldValue);
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
                 d.setMinutes(d.getMinutes() + minute);
-                const body = html.replace('<firstName>', preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]);
+                const participantFirstName = preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]
+                let body = html.replace('<firstName>', participantFirstName);
+                body = body.replace('${Connect_ID}', participant['Connect_ID'])
                 let reminder = {
                     notificationSpecificationsID,
                     id: uuid(),
@@ -206,6 +195,7 @@ const notificationHandler = async (message, context) => {
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
                 const currentDate = new Date();
+                console.log(sent);
                 if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
                     await storeNotifications(reminder);
@@ -215,7 +205,7 @@ const notificationHandler = async (message, context) => {
             if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
                 const {PubSub} = require('@google-cloud/pubsub');
                 const pubSubClient = new PubSub();
-                const dataBuffer = Buffer.from(`${notificationCategory}${splitCharacters}${limit}${splitCharacters}${offset+limit}`);
+                const dataBuffer = Buffer.from(`${notificationCategory}${splitCharacters}${limit}${splitCharacters}${offset+limit}${splitCharacters}${scheduleAt}`);
                 try {
                     const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
                     console.log(`Message ${messageId} published.`);
@@ -228,6 +218,16 @@ const notificationHandler = async (message, context) => {
         specCounter++;
     }
     return true;
+}
+
+const checkIfPrimaryFieldExists = (obj, primaryField) => {
+    if(primaryField.length === 0) {
+      return obj;
+    }
+    const key = primaryField[0];
+    if(!obj[key]) return null;
+    const response = checkIfPrimaryFieldExists(obj[key], primaryField.slice(1));
+    return response;
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {

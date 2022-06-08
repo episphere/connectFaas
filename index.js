@@ -1,8 +1,7 @@
-const { validateToken, validateSiteUsers, getToken, generateToken } = require('./utils/validation');
-const { recruitSubmit, getParticipants, identifyParticipant, getUserProfile } = require('./utils/submission');
+const { validateSiteUsers, getToken } = require('./utils/validation');
+const { getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
-const { deleteDocuments } = require('./utils/shared');
-const { subscribeToNotification, retrieveNotifications, notificationHandler, storeNotificationSchema } = require('./utils/notifications');
+const { notificationHandler } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive');
@@ -41,20 +40,6 @@ exports.dashboard = dashboard;
 exports.consistencyCheck = consistencyCheck
 
 // For Connect App
-
-exports.generateToken = generateToken;
-
-exports.validateToken = validateToken;
-
-exports.submit = recruitSubmit;
-
-exports.getUserProfile = getUserProfile;
-
-exports.subscribeToNotification = subscribeToNotification;
-
-exports.retrieveNotifications = retrieveNotifications;
-
-exports.deleteDocuments = deleteDocuments;
 
 exports.app = connectApp;
 

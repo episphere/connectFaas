@@ -4,8 +4,11 @@ nih-nci-dceg-episphere-dev-70e8e321d62d.json
 .vscode
 utils/notificationSpecifications.json
 functions
+tmp
 firebase.json
 .firebaserc
 .DS_Store
 firebase-debug.log
 ui-debug.log
+scratch.json
+scratch1.json

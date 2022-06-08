@@ -135,7 +135,7 @@ const updateParticipantData = async (req, res, authObj) => {
         for(let k in obj) {
             if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
             else {
-                if(att === 'newData' && flattened['docData'][attribute ? `${attribute}.${k}`: k] === undefined) continue;
+                if(att === 'newData' && flattened['docData'][attribute ? `${attribute}.${k}`: k] === undefined && !authObj) continue;
                 if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
                 flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
             }
@@ -152,6 +152,13 @@ const updateParticipantData = async (req, res, authObj) => {
 
         if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key)
         else flattened['newData'][key] = dataObj[key]
+        const { initializeTimestamps } = require('./shared')
+        for(let flattenedKey in flattened['newData']) {
+            if(initializeTimestamps[flattenedKey]) {
+                if(initializeTimestamps[flattenedKey].value && initializeTimestamps[flattenedKey].value !== flattened['newData'][flattenedKey]) continue;
+                flattened['newData'] = {...flattened['newData'], ...initializeTimestamps[flattenedKey].initialize}
+            }
+        }
         updatedData = {...updatedData, ...flattened.newData}
     }
 
