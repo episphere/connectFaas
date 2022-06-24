@@ -1220,6 +1220,18 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
                 values = parseInt(conditions[obj]['greater']);
                 operator = '>';
             }
+            if(conditions[obj]['greaterequals']) {
+                values = parseInt(conditions[obj]['greaterequals']);
+                operator = '>=';
+            }
+            if(conditions[obj]['less']) {
+                values = parseInt(conditions[obj]['less']);
+                operator = '<';
+            }
+            if(conditions[obj]['lessequals']) {
+                values = parseInt(conditions[obj]['lessequals']);
+                operator = '<=';
+            }
             query = query.where(obj, operator, values);
         }
         const participants = await query.get();
