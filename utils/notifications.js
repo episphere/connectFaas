@@ -105,7 +105,7 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
     });
 }
 
-const notificationHandler = async (message, context) => {
+const notificationHandler = async (message) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const splitCharacters = '@#$'
     
@@ -129,6 +129,7 @@ const notificationHandler = async (message, context) => {
     }
     const messageArray = publishedMessage ? publishedMessage.split(splitCharacters) : null;
     const notificationCategory = messageArray[0];
+    console.log(notificationCategory);
     let limit = parseInt(messageArray[1]);
     let offset = parseInt(messageArray[2]);
     const scheduleAt = messageArray[3];
@@ -156,6 +157,9 @@ const notificationHandler = async (message, context) => {
         const uuid = require('uuid');
 
         const { retrieveParticipantsByStatus } = require('./firestore');
+        console.log(conditions);
+        console.log(limit);
+        console.log(offset);
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
         let participantCounter = 0;
         if(participantData.length === 0) continue;
