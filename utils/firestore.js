@@ -1211,6 +1211,7 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
             let type = '';
             if(conditions[obj]['equals']) {
                 type = conditions[obj]['type'];
+                console.log(typeof conditions[obj]['equals']);
                 if(type == 'string') {
                     values = conditions[obj]['equals'];
                 }
