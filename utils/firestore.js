@@ -1207,9 +1207,16 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
 
         for(let obj in conditions) {
             let operator = '';
-            let values = ''
+            let values = '';
+            let type = '';
             if(conditions[obj]['equals']) {
-                values = parseInt(conditions[obj]['equals']);
+                type = conditions[obj]['type'];
+                if(type == 'string') {
+                    values = conditions[obj]['equals'];
+                }
+                else if(type == 'integer') {
+                    values = parseInt(conditions[obj]['equals']);
+                }
                 operator = '==';
             }
             if(conditions[obj]['notequals']) {
