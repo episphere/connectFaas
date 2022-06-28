@@ -181,7 +181,7 @@ const notificationHandler = async (message) => {
                     if(!primaryFieldValue) continue;
                 }
 
-
+                console.log(primaryFieldValue);
 
                 let d = new Date(primaryFieldValue);
                 d.setDate(d.getDate() + day);
