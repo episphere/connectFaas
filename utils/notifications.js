@@ -163,8 +163,17 @@ const notificationHandler = async (message) => {
         if(participantData.length === 0) continue;
         for( let participant of participantData) {
             if(participant[emailField]) { // If email doesn't exists try sms.
-                const primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
-                if(!primaryFieldValue) continue;
+
+                let primaryFieldValue;
+
+                if((/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(primaryField))) {
+                    primaryFieldValue = primaryField;
+                }
+                else {
+                    const primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
+                    if(!primaryFieldValue) continue;
+                }
+
                 let d = new Date(primaryFieldValue);
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
