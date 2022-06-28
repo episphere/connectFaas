@@ -160,7 +160,7 @@ const notificationHandler = async (message) => {
         const html = converter.makeHtml(messageBody);
         const uuid = require('uuid');
 
-        console.log("Conditions: " + conditions);
+        console.log("Conditions: " + JSON.stringify(conditions));
         console.log("Primary Field: " + primaryField);
 
         const { retrieveParticipantsByStatus } = require('./firestore');
