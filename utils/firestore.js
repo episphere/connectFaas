@@ -1661,7 +1661,7 @@ const getQueryBsiData = async (query) => {
             }) // asha profind
             
     })
-    console.log('test', storeResults)
+        console.log('test', storeResults)
         return storeResults
     }
     catch(error){
