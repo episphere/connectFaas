@@ -1632,7 +1632,7 @@ const pick = (obj, arr) => {
 } 
 
 const getQueryBsiData = async (query) => {
-    try {
+   
         let storeResults = []
         let holdBiospecimenMatches = []
         // let tubeConceptIds = ``; // grab tube id
@@ -1640,6 +1640,7 @@ const getQueryBsiData = async (query) => {
         const tubeConceptIds = [ "143615646", "223999569", "232343615",  "299553921", "376960806", "454453939", "589588440", "652357376", "654812257",
                  "677469051", "683613884", "703954371", "746999767", "787237543", "838567176", "857757831", "958646668", "973670172"]
         await tubeConceptIds.map( async (id) => {
+            try{
             const snapshot = await db.collection("biospecimen").where(`${id}.926457119`, '==', query).get();
             snapshot.docs.map(doc => {
                 holdBiospecimenMatches.push(doc.data()) // push query results to holdBiospecimenMatches array
@@ -1660,14 +1661,14 @@ const getQueryBsiData = async (query) => {
                 storeResults.push(collectionIdInfo)
             }) // asha profind
             
+        }
+        catch(error){
+            return new Error(error);
+        }
     })
-        console.log('test', storeResults)
+    console.log('test', storeResults)
         return storeResults
     }
-    catch(error){
-        return new Error(error);
-    }
-}
 
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
