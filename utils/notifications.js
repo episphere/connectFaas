@@ -129,15 +129,19 @@ const notificationHandler = async (message) => {
     }
     const messageArray = publishedMessage ? publishedMessage.split(splitCharacters) : null;
     const notificationCategory = messageArray[0];
-    console.log(notificationCategory);
     let limit = parseInt(messageArray[1]);
     let offset = parseInt(messageArray[2]);
     const scheduleAt = messageArray[3];
+
+    console.log("Category: " + notificationCategory);
+
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
     const specifications = await getNotificationSpecifications(notificationType, notificationCategory, scheduleAt);
+
     let specCounter = 0;
     for(let obj of specifications) {
+
         const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;
         const messageBody = obj[notificationType].body;
@@ -156,11 +160,14 @@ const notificationHandler = async (message) => {
         const html = converter.makeHtml(messageBody);
         const uuid = require('uuid');
 
+        console.log("Conditions: " + conditions);
+        console.log("Primary Field: " + primaryField);
+
         const { retrieveParticipantsByStatus } = require('./firestore');
-        console.log(conditions);
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
-        let participantCounter = 0;
         if(participantData.length === 0) continue;
+
+        let participantCounter = 0;
         for( let participant of participantData) {
             if(participant[emailField]) { // If email doesn't exists try sms.
 
@@ -173,6 +180,8 @@ const notificationHandler = async (message) => {
                     const primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
                     if(!primaryFieldValue) continue;
                 }
+
+
 
                 let d = new Date(primaryFieldValue);
                 d.setDate(d.getDate() + day);
