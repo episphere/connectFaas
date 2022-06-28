@@ -177,7 +177,7 @@ const notificationHandler = async (message) => {
                     primaryFieldValue = primaryField;
                 }
                 else {
-                    const primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
+                    primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
                     if(!primaryFieldValue) continue;
                 }
 
