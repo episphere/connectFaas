@@ -323,14 +323,11 @@ const biospecimenAPIs = async (req, res) => {
 
         const { getUserProfile } = require('./submission.js');
 
-        let body = req.body;
-        if(!body.uid) {
+        if(!req.body.uid) {
             return res.status(500).json(getResponseJSON('Missing UID!', 405));
         }
-        let uid = body.uid;
-        delete body['uid']
         
-        return getUserProfile(req, res, uid);
+        return getUserProfile(req, res, req.body.uid);
     }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
