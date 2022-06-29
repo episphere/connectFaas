@@ -1,8 +1,8 @@
 const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation, checkDefaultFlags } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
-    //logIPAdddress(req);
-    //setHeaders(res);
+    logIPAdddress(req);
+    setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
@@ -558,24 +558,6 @@ const addNewUser = async (person, email, siteCode) => {
     }
     else return new Error('User with this email already exists');
 }
-let token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk4OTdjZjk0NTllMjU0ZmYxYzY3YTRlYjZlZmVhNTJmMjFhOWJhMTQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vbmloLW5jaS1kY2VnLWNvbm5lY3QtZGV2IiwiYXVkIjoibmloLW5jaS1kY2VnLWNvbm5lY3QtZGV2IiwiYXV0aF90aW1lIjoxNjU2NTMyMzQwLCJ1c2VyX2lkIjoiZkJLa2FtUDE2d1Z5M2pCd3U0N3I0SjJUdFRuMiIsInN1YiI6ImZCS2thbVAxNndWeTNqQnd1NDdyNEoyVHRUbjIiLCJpYXQiOjE2NTY1MzIzNDAsImV4cCI6MTY1NjUzNTk0MCwiZW1haWwiOiJ0b255LnBldGVyc2VuQG5paC5nb3YiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJzYW1sLm5paC1zc28iOlsidG9ueS5wZXRlcnNlbkBuaWguZ292Il0sImVtYWlsIjpbInRvbnkucGV0ZXJzZW5AbmloLmdvdiJdfSwic2lnbl9pbl9wcm92aWRlciI6InNhbWwubmloLXNzbyIsInNpZ25faW5fYXR0cmlidXRlcyI6eyJodHRwczovL2ZlZGVyYXRpb24ubmloLmdvdi9wZXJzb24vTGFzdE5hbWUiOiJQZXRlcnNlbiIsImh0dHBzOi8vZmVkZXJhdGlvbi5uaWguZ292L3BlcnNvbi9NYWlsIjoidG9ueS5wZXRlcnNlbkBuaWguZ292IiwiaHR0cHM6Ly9mZWRlcmF0aW9uLm5paC5nb3YvcGVyc29uL0RMR3JvdXBzIjoiQ049TkNJY29ubmVjdC1icHRsLXVzZXIsT1U9RGlzdHJpYnV0aW9uIExpc3RzLE9VPU5DSSxPVT1OSUgsT1U9QUQsREM9bmloLERDPWdvdl5DTj1OQ0ljb25uZWN0LWJwdGwtZGV2LE9VPURpc3RyaWJ1dGlvbiBMaXN0cyxPVT1OQ0ksT1U9TklILE9VPUFELERDPW5paCxEQz1nb3ZeQ049TkNJIGNvbm5lY3QtYmlvc3BlY2ltZW4tZGV2LE9VPURpc3RyaWJ1dGlvbiBMaXN0cyxPVT1OQ0ksT1U9TklILE9VPUFELERDPW5paCxEQz1nb3ZeQ049TkNJIGNvbm5lY3Qtc3R1ZHktbWFuYWdlci1kZXYsT1U9RGlzdHJpYnV0aW9uIExpc3RzLE9VPU5DSSxPVT1OSUgsT1U9QUQsREM9bmloLERDPWdvdl5DTj1jb25uZWN0LXN0dWR5LW1hbmFnZXItdXNlcixPVT1EaXN0cmlidXRpb24gTGlzdHMsT1U9TkNJLE9VPU5JSCxPVT1BRCxEQz1uaWgsREM9Z292XkNOPWNvbm5lY3QtYmlvc3BlY2ltZW4tdXNlcixPVT1EaXN0cmlidXRpb24gTGlzdHMsT1U9TkNJLE9VPU5JSCxPVT1BRCxEQz1uaWgsREM9Z292XkNOPU5DSSBEQ0VHIFREUlAsT1U9RGlzdHJpYnV0aW9uIExpc3RzLE9VPU5DSSxPVT1OSUgsT1U9QUQsREM9bmloLERDPWdvdl5DTj1OQ0lBTExTdGFmZkxpc3QsT1U9RGlzdHJpYnV0aW9uIExpc3RzLE9VPU5DSSxPVT1OSUgsT1U9QUQsREM9bmloLERDPWdvdl5DTj1OQ0kgQUxMIFNUQUZGLE9VPURpc3RyaWJ1dGlvbiBMaXN0cyxPVT1OQ0ksT1U9TklILE9VPUFELERDPW5paCxEQz1nb3ZeQ049TkNJIENCSUlUIEFsbCBTdGFmZixPVT1EaXN0cmlidXRpb24gTGlzdHMsT1U9TkNJLE9VPU5JSCxPVT1BRCxEQz1uaWgsREM9Z292XkNOPU5DSSBEQ0VHTkVXUyxPVT1EaXN0cmlidXRpb24gTGlzdHMsT1U9TkNJLE9VPU5JSCxPVT1BRCxEQz1uaWgsREM9Z292IiwiaHR0cHM6Ly9mZWRlcmF0aW9uLm5paC5nb3YvcGVyc29uL0ZpcnN0TmFtZSI6IlRvbnkifSwidGVuYW50IjoiTklILVNTTy1xZnN6cCJ9fQ.aVQPD24gYJZr7N9kO3w40Pt5hBElfcETVjjdwzwKxVb7DlSv8xNUZqqyMMB79QuDyHDqdH470szO4YGDZvo3CYLBMV-VX_3KDt_4Mf7vraIviUXbYuNr6mhhVyPGH9pbBx0-X9eHXRunBOJDv1crNxQ7vGwS-cgqqa68d2qPgX02TsL5gS6pJIThmqVOF5YsoTDidAbAPlR--sunrZqQxenhVAV9zwhL5TSlG9pC-b0sWkZWBSx-6Hu31TFj7ECWs_XPHL5-U9rA2AdsROC8FvUzAj-hTY9_3NeCgubZZlCqLoCBG5FUBEFCI9_vg_-lkhHttClNZwEefnhu7EAsvg";
-
-let req = {
-    query: {
-        api: "getUserProfile"
-    },
-    method: "POST",
-    headers: {
-        Authorization: "Bearer " + token,
-        "Content-Type": "application/json"
-    },
-    body: "eyjekCU9H4V4crXpcRp95HINkXI2"
-};
-biospecimenAPIs(req);
-
-const query = req.query;
-    if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
-    const api = query.api;
 
 module.exports = {
     biospecimenAPIs
