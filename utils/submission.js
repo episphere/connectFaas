@@ -54,6 +54,8 @@ const submit = async (res, data, uid) => {
 
     //deleting things if they are undefined
     let keys = Object.keys(data);
+    console.log('starting key parsing')
+    console.log(keys)
     for(let k in keys){
         if (data[keys[k]] === undefined){
             console.log(keys[k])
