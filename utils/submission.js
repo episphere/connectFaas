@@ -313,14 +313,6 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     if(response){
-
-        let defaultConcepts = checkDefaultFlags(response[0]);
-        if(Object.entries(defaultConcepts).length != 0) {
-            // let await storeResponse(defaultConcepts);
-            // check status of 
-            response = await retrieveUserProfile(uid);
-        }
-
         return res.status(200).json({data: response[0], code:200});
     }
 }
