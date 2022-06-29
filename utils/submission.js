@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress, checkDefaultFlags } = require('./shared');
 const admin = require('firebase-admin');
 const submit = async (res, data, uid) => {
     // Remove locked attributes.
@@ -302,7 +302,7 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     const { retrieveUserProfile } = require('./firestore');
-    const response = await retrieveUserProfile(uid);
+    let response = await retrieveUserProfile(uid);
 
     if(response instanceof Error){
         return res.status(500).json(getResponseJSON(response.message, 500));
@@ -313,6 +313,14 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     if(response){
+
+        let defaultConcepts = checkDefaultFlags(response[0]);
+        if(Object.entries(defaultConcepts).length != 0) {
+            // let await storeResponse(defaultConcepts);
+            // check status of 
+            response = await retrieveUserProfile(uid);
+        }
+
         return res.status(200).json({data: response[0], code:200});
     }
 }

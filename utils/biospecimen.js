@@ -1,4 +1,5 @@
 const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
+const { getUserProfile } = require('./submission.js');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -315,6 +316,9 @@ const biospecimenAPIs = async (req, res) => {
         let uid = body.uid;
         delete body['uid']
         return submit(res, body, uid)
+    }
+    else if (api === 'getUserProfile') {
+        return getUserProfile(req, res, uid);
     }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
