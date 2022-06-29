@@ -340,9 +340,13 @@ const biospecimenAPIs = async (req, res) => {
 
             let defaultConcepts = checkDefaultFlags(response[0]);
             if(Object.entries(defaultConcepts).length != 0) {
-                // let await storeResponse(defaultConcepts);
-                // check status of 
-                response = await retrieveUserProfile(uid);
+                let update = await submit(res, defaultConcepts, req.body.uid);
+
+                if(update instanceof Error){
+                    return res.status(500).json(getResponseJSON(update.message, 500));
+                }
+
+                response = await retrieveUserProfile(req.body.uid);
             }
 
             return res.status(200).json({data: response[0], code:200});
