@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation, checkDefaultFlags } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -317,17 +317,36 @@ const biospecimenAPIs = async (req, res) => {
         return submit(res, body, uid)
     }
     else if (api === 'getUserProfile') {
-        if(req.method !== 'GET') {
+        if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-
-        const { getUserProfile } = require('./submission.js');
 
         if(!req.body.uid) {
             return res.status(500).json(getResponseJSON('Missing UID!', 405));
         }
         
-        return getUserProfile(req, res, req.body.uid);
+        const { retrieveUserProfile } = require('./firestore');
+        let response = await retrieveUserProfile(uid);
+
+        if(response instanceof Error){
+            return res.status(500).json(getResponseJSON(response.message, 500));
+        }
+
+        if(!response){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+
+        if(response){
+
+            let defaultConcepts = checkDefaultFlags(response[0]);
+            if(Object.entries(defaultConcepts).length != 0) {
+                // let await storeResponse(defaultConcepts);
+                // check status of 
+                response = await retrieveUserProfile(uid);
+            }
+
+            return res.status(200).json({data: response[0], code:200});
+        }
     }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
