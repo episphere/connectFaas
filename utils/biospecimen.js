@@ -1,5 +1,4 @@
 const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
-const { getUserProfile } = require('./submission.js');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -318,6 +317,19 @@ const biospecimenAPIs = async (req, res) => {
         return submit(res, body, uid)
     }
     else if (api === 'getUserProfile') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        const { getUserProfile } = require('./submission.js');
+
+        let body = req.body;
+        if(!body.uid) {
+            return res.status(500).json(getResponseJSON('Missing UID!', 405));
+        }
+        let uid = body.uid;
+        delete body['uid']
+        
         return getUserProfile(req, res, uid);
     }
     else if (api === 'removeBag') {
