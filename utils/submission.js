@@ -1,5 +1,5 @@
 const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress } = require('./shared');
-
+const admin = require('firebase-admin');
 const submit = async (res, data, uid) => {
     // Remove locked attributes.
     const { lockedAttributes } = require('./shared');
