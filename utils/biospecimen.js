@@ -316,6 +316,19 @@ const biospecimenAPIs = async (req, res) => {
         delete body['uid']
         return submit(res, body, uid)
     }
+    else if (api === 'getUserProfile') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        const { getUserProfile } = require('./submission.js');
+
+        if(!req.body.uid) {
+            return res.status(500).json(getResponseJSON('Missing UID!', 405));
+        }
+        
+        return getUserProfile(req, res, req.body.uid);
+    }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
