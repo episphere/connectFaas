@@ -339,6 +339,8 @@ const biospecimenAPIs = async (req, res) => {
         if(response){
             console.log(response);
             let defaultConcepts = checkDefaultFlags(response[0]);
+            const { lockedAttributes } = require('./shared');
+            lockedAttributes.forEach(atr => delete defaultConcepts[atr]);
             console.log(defaultConcepts);
             if(Object.entries(defaultConcepts).length != 0) {
                 const {submit} = require('./submission');
