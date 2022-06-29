@@ -340,6 +340,7 @@ const biospecimenAPIs = async (req, res) => {
 
             let defaultConcepts = checkDefaultFlags(response[0]);
             if(Object.entries(defaultConcepts).length != 0) {
+                const {submit} = require('./submission');
                 let update = await submit(res, defaultConcepts, req.body.uid);
 
                 if(update instanceof Error){
