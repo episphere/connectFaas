@@ -326,7 +326,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         
         const { retrieveUserProfile } = require('./firestore');
-        let response = await retrieveUserProfile(uid);
+        let response = await retrieveUserProfile(req.body.uid);
 
         if(response instanceof Error){
             return res.status(500).json(getResponseJSON(response.message, 500));
