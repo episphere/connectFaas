@@ -54,14 +54,9 @@ const submit = async (res, data, uid) => {
 
     //deleting things if they are undefined
     let keys = Object.keys(data);
-    console.log('starting key parsing')
-    console.log(keys)
     for(let k in keys){
         if (data[keys[k]] === null){
-            console.log(keys[k])
-            console.log(data[keys[k]])
             data[keys[k]] = admin.firestore.FieldValue.delete();
-            console.log(data[keys[k]])
         }
     }
     const { updateResponse } = require('./firestore');
