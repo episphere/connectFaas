@@ -332,6 +332,8 @@ const getUserProfile = async (req, res, uid) => {
             if(response instanceof Error){
                 return res.status(500).json(getResponseJSON(response.message, 500));
             }
+
+            return res.json({data: response[0], code:200});
         }
 
         return res.status(200).json({data: response[0], code:200});
