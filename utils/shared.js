@@ -602,6 +602,8 @@ const checkDefaultFlags = (data) => {
       }
     });
 
+    console.log("Missing Init:  " + JSON.stringify(missingDefaults));
+
     lockedAttributes.forEach(atr => delete missingDefaults[atr]);
   
     return missingDefaults;
