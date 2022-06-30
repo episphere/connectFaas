@@ -314,6 +314,9 @@ const getUserProfile = async (req, res, uid) => {
 
     if(response){
         let defaultConcepts = checkDefaultFlags(response[0]);
+        console.log("Missing Defaults: " + Object.entries(defaultConcepts).length);
+        console.log(defaultConcepts);
+        console.log("JSON: " + JSON.stringify(defaultConcepts));
             
         if(Object.entries(defaultConcepts).length != 0) {
             response = await submit(res, defaultConcepts, req.body.uid);
