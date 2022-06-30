@@ -590,7 +590,7 @@ const bagConceptIDs = [
   '741697447', // bag15
 ];
 
-const checkDefaultFlags = (data) => {
+const checkDefaultFlags = (data, uid) => {
   
     if(!data) return {};
   
@@ -602,11 +602,20 @@ const checkDefaultFlags = (data) => {
       }
     });
 
-    console.log("Missing Init:  " + JSON.stringify(missingDefaults));
-
     lockedAttributes.forEach(atr => delete missingDefaults[atr]);
+
+    if(Object.entries(missingDefaults).length != 0) {
+       
+        const { updateResponse } = require('./firestore');
+        const response = await updateResponse(missingDefaults, uid);
+        if(response instanceof Error){
+            return response;
+        }
+
+        return true;
+    }
   
-    return missingDefaults;
+    return false;
 }
 
 module.exports = {
