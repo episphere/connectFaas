@@ -315,7 +315,7 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     if(response){
-        response = checkDefaultFlags(response[0], uid);
+        response = await checkDefaultFlags(response[0], uid);
         
         if(response instanceof Error){
             return res.status(500).json(getResponseJSON(response.message, 500));
