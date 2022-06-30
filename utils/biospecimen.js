@@ -337,20 +337,21 @@ const biospecimenAPIs = async (req, res) => {
         }
 
         if(response){
-            console.log(response);
             let defaultConcepts = checkDefaultFlags(response[0]);
-            const { lockedAttributes } = require('./shared');
-            lockedAttributes.forEach(atr => delete defaultConcepts[atr]);
-            console.log(defaultConcepts);
+            
             if(Object.entries(defaultConcepts).length != 0) {
                 const {submit} = require('./submission');
-                let update = await submit(res, defaultConcepts, req.body.uid);
+                response = await submit(res, defaultConcepts, req.body.uid);
 
-                if(update instanceof Error){
-                    return res.status(500).json(getResponseJSON(update.message, 500));
+                if(response instanceof Error){
+                    return res.status(500).json(getResponseJSON(response.message, 500));
                 }
 
                 response = await retrieveUserProfile(req.body.uid);
+
+                if(response instanceof Error){
+                    return res.status(500).json(getResponseJSON(response.message, 500));
+                }
             }
 
             return res.status(200).json({data: response[0], code:200});

@@ -601,6 +601,8 @@ const checkDefaultFlags = (data) => {
         missingDefaults[item[0]] = item[1];
       }
     });
+
+    lockedAttributes.forEach(atr => delete missingDefaults[atr]);
   
     return missingDefaults;
 }
