@@ -590,7 +590,7 @@ const bagConceptIDs = [
   '741697447', // bag15
 ];
 
-const checkDefaultFlags = (data, uid) => {
+const checkDefaultFlags = async (data, uid) => {
   
     if(!data) return {};
   
