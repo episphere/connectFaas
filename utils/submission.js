@@ -323,7 +323,7 @@ const getUserProfile = async (req, res, uid) => {
         console.log("JSON: " + JSON.stringify(defaultConcepts));
             
         if(Object.entries(defaultConcepts).length != 0) {
-            let submitRes = res;
+            let submitRes = Object.create(res);
             response = await submit(submitRes, defaultConcepts, uid);
             console.log("Res3: " + res.body);
             if(response instanceof Error){
