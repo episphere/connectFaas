@@ -1577,7 +1577,6 @@ const setPackageReceiptFedex = async (data) => {
     try {
         let token = data.scannedBarcode
         let collectionIdHolder = {}
-        let result = ``
         if ((token).length === 34) token = data.scannedBarcode.slice((data.scannedBarcode).length - 22)
         const snapshot = await db.collection("boxes").where('959708259', '==', token).get(); // find related box using barcode
         if (snapshot.empty) {
