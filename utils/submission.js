@@ -299,7 +299,7 @@ const identifyParticipant = async (req, res, site) => {
 
 const getUserProfile = async (req, res, uid) => {
 
-    console.log("Res1: " + res.text());
+    console.log("Res1: " + res.detail);
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
@@ -316,7 +316,7 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     if(response){
-        console.log("Res2: " + res.text());
+        console.log("Res2: " + res.detail);
         let defaultConcepts = checkDefaultFlags(response[0]);
         console.log("Missing Defaults: " + Object.entries(defaultConcepts).length);
         console.log(defaultConcepts);
@@ -325,7 +325,7 @@ const getUserProfile = async (req, res, uid) => {
         if(Object.entries(defaultConcepts).length != 0) {
             let submitRes = res;
             response = await submit(submitRes, defaultConcepts, uid);
-            console.log("Res3: " + res.text());
+            console.log("Res3: " + res.detail);
             if(response instanceof Error){
                 return res.status(500).json(getResponseJSON(response.message, 500));
             }
@@ -336,7 +336,7 @@ const getUserProfile = async (req, res, uid) => {
                 return res.status(500).json(getResponseJSON(response.message, 500));
             }
         }
-        console.log("Res4: " + res.text());
+        console.log("Res4: " + res.detail);
         return res.status(200).json({data: response[0], code:200});
     }
 }
