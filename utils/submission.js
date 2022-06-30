@@ -321,13 +321,13 @@ const getUserProfile = async (req, res, uid) => {
         console.log("JSON: " + JSON.stringify(defaultConcepts));
             
         if(Object.entries(defaultConcepts).length != 0) {
-            response = await submit(res, defaultConcepts, req.body.uid);
+            response = await submit(res, defaultConcepts, uid);
 
             if(response instanceof Error){
                 return res.status(500).json(getResponseJSON(response.message, 500));
             }
 
-            response = await retrieveUserProfile(req.body.uid);
+            response = await retrieveUserProfile(uid);
 
             if(response instanceof Error){
                 return res.status(500).json(getResponseJSON(response.message, 500));
