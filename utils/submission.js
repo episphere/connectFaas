@@ -313,6 +313,22 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     if(response){
+        let defaultConcepts = checkDefaultFlags(response[0]);
+            
+        if(Object.entries(defaultConcepts).length != 0) {
+            response = await submit(res, defaultConcepts, req.body.uid);
+
+            if(response instanceof Error){
+                return res.status(500).json(getResponseJSON(response.message, 500));
+            }
+
+            response = await retrieveUserProfile(req.body.uid);
+
+            if(response instanceof Error){
+                return res.status(500).json(getResponseJSON(response.message, 500));
+            }
+        }
+
         return res.status(200).json({data: response[0], code:200});
     }
 }
