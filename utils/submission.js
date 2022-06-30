@@ -60,8 +60,6 @@ const submit = async (res, data, uid) => {
         }
     }
     const { updateResponse } = require('./firestore');
-    console.log("Data: " + data);
-    console.log("UID: " + uid);
     const response = await updateResponse(data, uid);
     
     if(response instanceof Error){
@@ -340,7 +338,7 @@ const getUserCollections = async (req, res, uid) => {
     }
     
     const { getSpecimenCollections, getTokenForParticipant, retrieveUserProfile } = require('./firestore');
-    console.log("uid " + uid);
+    
     const participant = (await retrieveUserProfile(uid))[0];
     const siteCode = participant['827220437'];
     const token = await getTokenForParticipant(uid);
