@@ -304,32 +304,32 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     const { retrieveUserProfile } = require('./firestore');
-    let response = await retrieveUserProfile(uid);
+    let responseProfile = await retrieveUserProfile(uid);
 
-    if(response instanceof Error){
-        return res.status(500).json(getResponseJSON(response.message, 500));
+    if(responseProfile instanceof Error){
+        return res.status(500).json(getResponseJSON(responseProfile.message, 500));
     }
 
-    if(!response){
+    if(!responseProfile){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    if(response){
-        response = await checkDefaultFlags(response[0], uid);
+    if(responseProfile){
+        let responseDefaults = await checkDefaultFlags(responseProfile[0], uid);
         
-        if(response instanceof Error){
-            return res.status(500).json(getResponseJSON(response.message, 500));
+        if(responseDefaults instanceof Error){
+            return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
         }
 
-        if(response) {
-            response = await retrieveUserProfile(uid);
+        if(responseDefaults) {
+            responseProfile = await retrieveUserProfile(uid);
 
-            if(response instanceof Error){
-                return res.status(500).json(getResponseJSON(response.message, 500));
+            if(responseProfile instanceof Error){
+                return res.status(500).json(getResponseJSON(responseProfile.message, 500));
             }
         }
 
-        return res.status(200).json({data: response[0], code:200});
+        return res.status(200).json({data: responseProfile[0], code:200});
     }
 }
 
