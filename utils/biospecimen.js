@@ -321,7 +321,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(500).json(getResponseJSON('Missing UID!', 405));
         }
         
-        const { getUserProfile } = require('.submission');
+        const { getUserProfile } = require('./submission');
         return getUserProfile(req, res, req.body.uid);
     }
     else if (api === 'removeBag') {
