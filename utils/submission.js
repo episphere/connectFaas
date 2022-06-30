@@ -60,6 +60,8 @@ const submit = async (res, data, uid) => {
         }
     }
     const { updateResponse } = require('./firestore');
+    console.log("Data: " + data);
+    console.log("UID: " + uid);
     const response = await updateResponse(data, uid);
     
     if(response instanceof Error){
