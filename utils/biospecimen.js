@@ -317,45 +317,12 @@ const biospecimenAPIs = async (req, res) => {
         return submit(res, body, uid)
     }
     else if (api === 'getUserProfile') {
-        if(req.method !== 'POST') {
-            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-        }
-
         if(!req.body.uid) {
             return res.status(500).json(getResponseJSON('Missing UID!', 405));
         }
         
-        const { retrieveUserProfile } = require('./firestore');
-        let response = await retrieveUserProfile(req.body.uid);
-
-        if(response instanceof Error){
-            return res.status(500).json(getResponseJSON(response.message, 500));
-        }
-
-        if(!response){
-            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        }
-
-        if(response){
-            let defaultConcepts = checkDefaultFlags(response[0]);
-            
-            if(Object.entries(defaultConcepts).length != 0) {
-                const {submit} = require('./submission');
-                response = await submit(res, defaultConcepts, req.body.uid);
-
-                if(response instanceof Error){
-                    return res.status(500).json(getResponseJSON(response.message, 500));
-                }
-
-                response = await retrieveUserProfile(req.body.uid);
-
-                if(response instanceof Error){
-                    return res.status(500).json(getResponseJSON(response.message, 500));
-                }
-            }
-
-            return res.status(200).json({data: response[0], code:200});
-        }
+        const { getUserProfile } = require('.submission');
+        return getUserProfile(req, res, req.body.uid);
     }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
