@@ -327,7 +327,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         
         const { retrieveUserProfile } = require('./firestore');
-        let responseProfile = await retrieveUserProfile(uid);
+        let responseProfile = await retrieveUserProfile(req.body.uid);
 
         if(responseProfile instanceof Error){
             return res.status(500).json(getResponseJSON(responseProfile.message, 500));
@@ -338,14 +338,14 @@ const biospecimenAPIs = async (req, res) => {
         }
 
         const { checkDefaultFlags } = require('./shared');
-        let responseDefaults = await checkDefaultFlags(responseProfile[0], uid);
+        let responseDefaults = await checkDefaultFlags(responseProfile[0], req.body.uid);
         
         if(responseDefaults instanceof Error){
             return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
         }
 
         if(responseDefaults) {
-            responseProfile = await retrieveUserProfile(uid);
+            responseProfile = await retrieveUserProfile(req.body.uid);
 
             if(responseProfile instanceof Error){
                 return res.status(500).json(getResponseJSON(responseProfile.message, 500));
