@@ -141,7 +141,6 @@ const notificationHandler = async (message) => {
 
     let specCounter = 0;
     for(let obj of specifications) {
-
         const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;
         const messageBody = obj[notificationType].body;
