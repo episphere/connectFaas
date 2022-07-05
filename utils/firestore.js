@@ -1028,7 +1028,10 @@ const searchBoxes = async (institute, flag) => {
 }
 
 const searchBoxesByLocation = async (institute, location) => {
+    console.log("institute" + institute);
+    console.log("location" + location);
     const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149','==',location).get();
+    console.log(snapshot);
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
         // console.log(JSON.stringify(result));
@@ -1036,6 +1039,7 @@ const searchBoxesByLocation = async (institute, location) => {
         return toReturn;
     }
     else{
+        console.log("nothing to return");
         return [];
     }
     
@@ -1204,7 +1208,7 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
         let query = db.collection('participants')
                                 .limit(limit)
                                 .offset(offset);
-
+        
         for(let obj in conditions) {
             let operator = '';
             let values = '';

@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
+const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress, SSOValidation } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -257,6 +257,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         let location = req.body.location;
+        console.log(location);
         const { searchBoxesByLocation } = require('./firestore');
         const response = await searchBoxesByLocation(siteCode, location);
         return res.status(200).json({data: response, code:200});

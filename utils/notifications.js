@@ -113,6 +113,7 @@ const notificationHandler = async (message) => {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
         const scheduleAt = publishedMessage;
+        console.log(publishedMessage);
         const { getNotificationsCategories } = require('./firestore');
         const categories = await getNotificationsCategories(scheduleAt);
         console.log(categories)
@@ -141,6 +142,7 @@ const notificationHandler = async (message) => {
 
     let specCounter = 0;
     for(let obj of specifications) {
+        console.log("Looping through specifications...");
         const notificationSpecificationsID = obj.id;
         const conditions = obj.conditions;
         const messageBody = obj[notificationType].body;
@@ -163,11 +165,13 @@ const notificationHandler = async (message) => {
         console.log("Primary Field: " + primaryField);
 
         const { retrieveParticipantsByStatus } = require('./firestore');
+        console.log(conditions);
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
         if(participantData.length === 0) continue;
 
         let participantCounter = 0;
         for( let participant of participantData) {
+            console.log("Looping through participants...");
             if(participant[emailField]) { // If email doesn't exists try sms.
 
                 let primaryFieldValue;
@@ -207,6 +211,7 @@ const notificationHandler = async (message) => {
                 const { notificationAlreadySent } = require('./firestore');
                 const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
                 const currentDate = new Date();
+                console.log(sent);
                 if(sent === false && d <= currentDate) {
                     const { storeNotifications } = require('./firestore');
                     await storeNotifications(reminder);
