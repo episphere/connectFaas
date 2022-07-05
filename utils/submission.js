@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress, checkDefaultFlags } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 const admin = require('firebase-admin');
 const submit = async (res, data, uid) => {
     // Remove locked attributes.
@@ -313,6 +313,7 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     if(responseProfile){
+        const { checkDefaultFlags } = require('./shared');
         let responseDefaults = await checkDefaultFlags(responseProfile[0], uid);
         
         if(responseDefaults instanceof Error){
