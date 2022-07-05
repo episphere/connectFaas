@@ -105,7 +105,7 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
     });
 }
 
-const notificationHandler = async (message, context) => {
+const notificationHandler = async (message) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const splitCharacters = '@#$'
     
@@ -133,9 +133,13 @@ const notificationHandler = async (message, context) => {
     let limit = parseInt(messageArray[1]);
     let offset = parseInt(messageArray[2]);
     const scheduleAt = messageArray[3];
+
+    console.log("Category: " + notificationCategory);
+
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
     const specifications = await getNotificationSpecifications(notificationType, notificationCategory, scheduleAt);
+
     let specCounter = 0;
     for(let obj of specifications) {
         console.log("Looping through specifications...");
@@ -157,17 +161,29 @@ const notificationHandler = async (message, context) => {
         const html = converter.makeHtml(messageBody);
         const uuid = require('uuid');
 
+        console.log("Conditions: " + JSON.stringify(conditions));
+        console.log("Primary Field: " + primaryField);
+
         const { retrieveParticipantsByStatus } = require('./firestore');
         console.log(conditions);
         const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
-        console.log("Count: " + participantData.length);
-        let participantCounter = 0;
         if(participantData.length === 0) continue;
+
+        let participantCounter = 0;
         for( let participant of participantData) {
             console.log("Looping through participants...");
             if(participant[emailField]) { // If email doesn't exists try sms.
-                const primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
-                if(!primaryFieldValue) continue;
+
+                let primaryFieldValue;
+
+                if((/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(primaryField))) {
+                    primaryFieldValue = primaryField;
+                }
+                else {
+                    primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
+                    if(!primaryFieldValue) continue;
+                }
+
                 let d = new Date(primaryFieldValue);
                 d.setDate(d.getDate() + day);
                 d.setHours(d.getHours() + hour);
