@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation, checkDefaultFlags } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
