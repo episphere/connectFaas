@@ -1632,7 +1632,7 @@ const pick = (obj, arr) => {
 } 
 
 const processBsiData = async (tubeConceptIds, query) => {
-    return await Promise.all(tubeConceptIds.map( async id => {
+    return await Promise.all(tubeConceptIds.map( async id => {  // using await promise.all waits until all the ele in a map are processed
         const snapshot = await db.collection("biospecimen").where(`${id}.926457119`, '==', query).get();
         return snapshot.docs.map(doc => doc.data()) // push query results to holdBiospecimenMatches array
     }));
