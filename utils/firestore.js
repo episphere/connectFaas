@@ -1631,45 +1631,41 @@ const pick = (obj, arr) => {
     return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
 } 
 
+const processBsiData = async (tubeConceptIds, query) => {
+    return await Promise.all(tubeConceptIds.map( async id => {
+        const snapshot = await db.collection("biospecimen").where(`${id}.926457119`, '==', query).get();
+        return snapshot.docs.map(doc => doc.data()) // push query results to holdBiospecimenMatches array
+    }));
+}
+
 const getQueryBsiData = async (query) => {
     try {
         let storeResults = []
-        let holdBiospecimenMatches = []
         let tubeConceptIds = Object.values(collectionIdConversion); // grab tube id
 
-        tubeConceptIds.map( async id => {
-            console.log('id', id)
-            const snapshot = await db.collection("biospecimen").where(`${id}.926457119`, '==', query).get();
-            snapshot.docs.map(doc => {
-                holdBiospecimenMatches.push(doc.data()) // push query results to holdBiospecimenMatches array
-            //    console.log('holdBiospecimenMatches', holdBiospecimenMatches)
+        const [holdBiospecimenMatches] = await processBsiData(tubeConceptIds, query)
+        
+        holdBiospecimenMatches.forEach( i => { // if query results matches/exists in tubeconcepts ids then add them to below object
+            tubeConceptIds.forEach( id => {
+                if (id in i) {
+                    let collectionIdInfo = {}
+                    collectionIdInfo['825582494'] = i[id]['825582494']
+                    collectionIdInfo['926457119'] = i['926457119']
+                    collectionIdInfo['678166505'] = i['678166505']
+                    collectionIdInfo['Connect_ID'] = i['Connect_ID']
+                    // collectionIdInfo['789843387'] = i['789843387']
+                    collectionIdInfo['827220437'] = i['827220437']
+                    collectionIdInfo['951355211'] = i['951355211']
+                    collectionIdInfo['650516960'] = i['650516960']
+                    collectionIdInfo['762124027'] = i[id]['762124027'] === undefined ? ``  : i[id]['762124027']
+                    collectionIdInfo['982885431'] = i[id]['248868659'] === undefined ? `` : i[id]['248868659']['982885431']
+        
+                    storeResults.push(collectionIdInfo)
+                }
             })
-        });
-        
-        console.log('holdMatches', holdBiospecimenMatches)
 
-    
-        // holdBiospecimenMatches.forEach( i => { // if query results matches/exists in tubeconcepts ids then add them to below object
-        //     tubeConceptIds.forEach( id => {
-        //         if (id in i) {
-        //             let collectionIdInfo = {}
-        //             collectionIdInfo['825582494'] = i[id]['825582494']
-        //             collectionIdInfo['926457119'] = i['926457119']
-        //             collectionIdInfo['678166505'] = i['678166505']
-        //             collectionIdInfo['Connect_ID'] = i['Connect_ID']
-        //             // collectionIdInfo['789843387'] = i['789843387']
-        //             collectionIdInfo['827220437'] = i['827220437']
-        //             collectionIdInfo['951355211'] = i['951355211']
-        //             collectionIdInfo['650516960'] = i['650516960']
-        //             collectionIdInfo['762124027'] = i[id]['762124027'] === undefined ? ``  : i[id]['762124027']
-        //             collectionIdInfo['982885431'] = i[id]['248868659'] === undefined ? `` : i[id]['248868659']['982885431']
-        
-        //             storeResults.push(collectionIdInfo)
-        //         }
-        //     })
-
-        // })
-        return holdBiospecimenMatches
+        })
+        return storeResults
     }
     catch(error){
         return new Error(error);
