@@ -82,11 +82,6 @@ const eligibleForIncentive = async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit) : 500;
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const { retrieveParticipantsEligibleForIncentives } = require('./firestore');
-    console.log("Site Code: " + siteCodes);
-    console.log("Round: " + round);
-    console.log("Parent: " + isParent);
-    console.log("Limit: " + limit);
-    console.log("Page: " + page);
     const data = await retrieveParticipantsEligibleForIncentives(siteCodes, round, isParent, limit, page);
 
     if(data instanceof Error){
