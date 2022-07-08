@@ -381,6 +381,12 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
 }
 
 const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, isParent, limit, page) => {
+    console.log("Site Code: " + siteCode);
+    console.log("Round: " + roundType);
+    console.log("Parent: " + isParent);
+    console.log("Limit: " + limit);
+    console.log("Page: " + page);
+    
     try {
         const operator = isParent ? 'in' : '==';
         const offset = (page-1)*limit;
