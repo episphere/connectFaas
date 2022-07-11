@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
+const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress, SSOValidation } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -257,6 +257,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         let location = req.body.location;
+        console.log(location);
         const { searchBoxesByLocation } = require('./firestore');
         const response = await searchBoxesByLocation(siteCode, location);
         return res.status(200).json({data: response, code:200});
@@ -315,6 +316,44 @@ const biospecimenAPIs = async (req, res) => {
         let uid = body.uid;
         delete body['uid']
         return submit(res, body, uid)
+    }
+    else if (api === 'getUserProfile') {
+        
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+
+        if(!req.body.uid) {
+            return res.status(500).json(getResponseJSON('Missing UID!', 405));
+        }
+        
+        const { retrieveUserProfile } = require('./firestore');
+        let responseProfile = await retrieveUserProfile(req.body.uid);
+
+        if(responseProfile instanceof Error){
+            return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+        }
+
+        if(!responseProfile){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+
+        const { checkDefaultFlags } = require('./shared');
+        let responseDefaults = await checkDefaultFlags(responseProfile[0], req.body.uid);
+        
+        if(responseDefaults instanceof Error){
+            return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
+        }
+
+        if(responseDefaults) {
+            responseProfile = await retrieveUserProfile(req.body.uid);
+
+            if(responseProfile instanceof Error){
+                return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+            }
+        }
+
+        return res.status(200).json({data: responseProfile[0], code:200});
     }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
