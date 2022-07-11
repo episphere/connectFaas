@@ -1,5 +1,5 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress } = require('./shared');
-
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const admin = require('firebase-admin');
 const submit = async (res, data, uid) => {
     // Remove locked attributes.
     const { lockedAttributes } = require('./shared');
@@ -52,6 +52,13 @@ const submit = async (res, data, uid) => {
         data = {...data, Connect_ID}
     }
 
+    //deleting things if they are undefined
+    let keys = Object.keys(data);
+    for(let k in keys){
+        if (data[keys[k]] === null){
+            data[keys[k]] = admin.firestore.FieldValue.delete();
+        }
+    }
     const { updateResponse } = require('./firestore');
     const response = await updateResponse(data, uid);
     
@@ -295,18 +302,33 @@ const getUserProfile = async (req, res, uid) => {
     }
 
     const { retrieveUserProfile } = require('./firestore');
-    const response = await retrieveUserProfile(uid);
+    let responseProfile = await retrieveUserProfile(uid);
 
-    if(response instanceof Error){
-        return res.status(500).json(getResponseJSON(response.message, 500));
+    if(responseProfile instanceof Error){
+        return res.status(500).json(getResponseJSON(responseProfile.message, 500));
     }
 
-    if(!response){
+    if(!responseProfile){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    if(response){
-        return res.status(200).json({data: response[0], code:200});
+    if(responseProfile){
+        const { checkDefaultFlags } = require('./shared');
+        let responseDefaults = await checkDefaultFlags(responseProfile[0], uid);
+        
+        if(responseDefaults instanceof Error){
+            return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
+        }
+
+        if(responseDefaults) {
+            responseProfile = await retrieveUserProfile(uid);
+
+            if(responseProfile instanceof Error){
+                return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+            }
+        }
+
+        return res.status(200).json({data: responseProfile[0], code:200});
     }
 }
 
@@ -317,7 +339,7 @@ const getUserCollections = async (req, res, uid) => {
     }
     
     const { getSpecimenCollections, getTokenForParticipant, retrieveUserProfile } = require('./firestore');
-    console.log("uid " + uid);
+    
     const participant = (await retrieveUserProfile(uid))[0];
     const siteCode = participant['827220437'];
     const token = await getTokenForParticipant(uid);

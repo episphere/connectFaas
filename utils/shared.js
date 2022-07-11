@@ -590,6 +590,34 @@ const bagConceptIDs = [
   '741697447', // bag15
 ];
 
+const checkDefaultFlags = async (data, uid) => {
+  
+    if(!data) return {};
+  
+    let missingDefaults = {};
+  
+    Object.entries(defaultFlags).forEach(item => {
+      if(!data[item[0]]) {
+        missingDefaults[item[0]] = item[1];
+      }
+    });
+
+    lockedAttributes.forEach(atr => delete missingDefaults[atr]);
+
+    if(Object.entries(missingDefaults).length != 0) {
+       
+        const { updateResponse } = require('./firestore');
+        const response = await updateResponse(missingDefaults, uid);
+        if(response instanceof Error){
+            return response;
+        }
+
+        return true;
+    }
+  
+    return false;
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -614,5 +642,6 @@ module.exports = {
     initializeTimestamps,
     collectionIdConversion,
     sites, 
-    bagConceptIDs
+    bagConceptIDs,
+    checkDefaultFlags
 }

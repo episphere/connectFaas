@@ -1211,14 +1211,60 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
         
         for(let obj in conditions) {
             let operator = '';
-            let values = ''
+            let values = '';
             if(conditions[obj]['equals']) {
-                values = parseInt(conditions[obj]['equals']);
+                if(typeof conditions[obj]['equals'] == 'string') {
+                    values = conditions[obj]['equals'];
+                }
+                else if(typeof conditions[obj]['equals'] == 'number') {
+                    values = parseInt(conditions[obj]['equals']);
+                }
                 operator = '==';
             }
             if(conditions[obj]['notequals']) {
-                values = parseInt(conditions[obj]['notequals']);
+                if(typeof conditions[obj]['notequals'] == 'string') {
+                    values = conditions[obj]['notequals'];
+                }
+                else if(typeof conditions[obj]['notequals'] == 'number') {
+                    values = parseInt(conditions[obj]['notequals']);
+                }
                 operator = '!=';
+            }
+            if(conditions[obj]['greater']) {
+                if(typeof conditions[obj]['greater'] == 'string') {
+                    values = conditions[obj]['greater'];
+                }
+                else if(typeof conditions[obj]['greater'] == 'number') {
+                    values = parseInt(conditions[obj]['greater']);
+                }
+                operator = '>';
+            }
+            if(conditions[obj]['greaterequals']) {
+                if(typeof conditions[obj]['greaterequals'] == 'string') {
+                    values = conditions[obj]['greaterequals'];
+                }
+                else if(typeof conditions[obj]['greaterequals'] == 'number') {
+                    values = parseInt(conditions[obj]['greaterequals']);
+                }
+                operator = '>=';
+            }
+            if(conditions[obj]['less']) {
+                if(typeof conditions[obj]['less'] == 'string') {
+                    values = conditions[obj]['less'];
+                }
+                else if(typeof conditions[obj]['less'] == 'number') {
+                    values = parseInt(conditions[obj]['less']);
+                }
+                operator = '<';
+            }
+            if(conditions[obj]['lessequals']) {
+                if(typeof conditions[obj]['lessequals'] == 'string') {
+                    values = conditions[obj]['lessequals'];
+                }
+                else if(typeof conditions[obj]['lessequals'] == 'number') {
+                    values = parseInt(conditions[obj]['lessequals']);
+                }
+                operator = '<=';
             }
             query = query.where(obj, operator, values);
         }
@@ -1534,6 +1580,7 @@ const setPackageReceiptUSPS = async (data) => {
 const setPackageReceiptFedex = async (data) => {
     try {
         let token = data.scannedBarcode
+        let collectionIdHolder = {}
         if ((token).length === 34) token = data.scannedBarcode.slice((data.scannedBarcode).length - 22)
         const snapshot = await db.collection("boxes").where('959708259', '==', token).get(); // find related box using barcode
         if (snapshot.empty) {
@@ -1545,31 +1592,26 @@ const setPackageReceiptFedex = async (data) => {
         await db.collection("boxes").doc(docId).update(data)
         const bags = ["650224161", "136341211", "503046679", "313341808", "668816010", "754614551", "174264982", "550020510", 
         "673090642", "492881559", "536728814", "309413330", "357218702", "945294744", "741697447", "255283733",
-        "842312685", "234868461", "522094118"]
+        "842312685", "234868461", "522094118"]                                                     
         if (Object.keys(snapshot.docs.length) !== 0) {
              snapshot.docs.map(doc => { 
                 const collectionIdKeys = doc.data(); // grab all the collection ids
                 bags.forEach(async (bag) => {
                     if (bag in collectionIdKeys){
                         if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
-                            let storeCollectionId = ``
-                            if (collectionIdKeys[bag]['787237543']) storeCollectionId =  collectionIdKeys[bag]['787237543'].split(' ')[0]
-                            if (collectionIdKeys[bag]['223999569']) storeCollectionId =  collectionIdKeys[bag]['223999569'].split(' ')[0]
-                            if (collectionIdKeys[bag]['522094118']) storeCollectionId =  collectionIdKeys[bag]['522094118'].split(' ')[0]
-                            const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', storeCollectionId).get(); // find related biospecimen using collection id
-                            const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
-                            let getBiospecimenDataObject = await db.collection("biospecimen").doc(docId).get();
-                            let biospecimenDataObj =  getBiospecimenDataObject.data()
-                            for (const element of collectionIdKeys[bag]['234868461']) {
-                                let tubeId = element.split(' ')[1];
-                                let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                                biospecimenDataObj["926457119"] = data['926457119'];
-                                biospecimenDataObj[conceptTube]["926457119"] = data['926457119'];
-                                await db.collection("biospecimen").doc(docId).update( biospecimenDataObj ) // using the docids update the biospecimen with the received date
-                                }
+                            if (collectionIdKeys[bag]['787237543'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
+                                collectionIdHolder[bag] = collectionIdKeys[bag]['787237543'].split(' ')[0]
+                            }
+                            if (collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
+                                collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0]
+                            }
+                            if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` ) {
+                                collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0]
+                            }
                         }
                     }
                 })
+                processReceiptData(collectionIdHolder, collectionIdKeys, data['926457119'])
               })
          }
         return true;
@@ -1579,6 +1621,26 @@ const setPackageReceiptFedex = async (data) => {
     }
 }
 
+const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
+    for (let key in collectionIdHolder) {
+        if (collectionIdHolder.hasOwnProperty(key)) {
+            try {
+                const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id change this
+                const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
+                for (const element of collectionIdKeys[key]['234868461']) {
+                    let tubeId = element.split(' ')[1];
+                    let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                    let conceptIdTubes = `${conceptTube}.926457119`
+                    await db.collection("biospecimen").doc(docId).update({ 
+                                                        "926457119": dateTimeStamp, 
+                                                        [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
+            }
+        }
+        catch(error){
+            return new Error(error);
+        }
+        }}
+    }
 const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
     try {
         await db.collection("bptlMetrics").doc('--metrics--').update({ 

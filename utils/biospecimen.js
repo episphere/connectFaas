@@ -317,6 +317,44 @@ const biospecimenAPIs = async (req, res) => {
         delete body['uid']
         return submit(res, body, uid)
     }
+    else if (api === 'getUserProfile') {
+        
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+
+        if(!req.body.uid) {
+            return res.status(500).json(getResponseJSON('Missing UID!', 405));
+        }
+        
+        const { retrieveUserProfile } = require('./firestore');
+        let responseProfile = await retrieveUserProfile(req.body.uid);
+
+        if(responseProfile instanceof Error){
+            return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+        }
+
+        if(!responseProfile){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+
+        const { checkDefaultFlags } = require('./shared');
+        let responseDefaults = await checkDefaultFlags(responseProfile[0], req.body.uid);
+        
+        if(responseDefaults instanceof Error){
+            return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
+        }
+
+        if(responseDefaults) {
+            responseProfile = await retrieveUserProfile(req.body.uid);
+
+            if(responseProfile instanceof Error){
+                return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+            }
+        }
+
+        return res.status(200).json({data: responseProfile[0], code:200});
+    }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
