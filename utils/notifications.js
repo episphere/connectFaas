@@ -205,7 +205,9 @@ const notificationHandler = async (message) => {
                     else continue;
                     
                     console.log(loginDetails);
+                    console.log("Body 1: " + body);
                     body.replace('<loginDetails>', loginDetails);
+                    console.log("Body 2: " + body);
                 }
 
                 let reminder = {
