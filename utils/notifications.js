@@ -190,6 +190,21 @@ const notificationHandler = async (message) => {
                 const participantFirstName = preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]
                 let body = html.replace('<firstName>', participantFirstName);
                 body = body.replace('${Connect_ID}', participant['Connect_ID'])
+
+                if(html.indexOf('<loginDetails>') !== -1) {
+                    let loginDetails;
+                    
+                    if(participant[995036844] === 'phone' && participant[348474836]) {
+                        loginDetails = participant[348474836];
+                    }
+                    else if(participant[995036844] === 'password' && participant[421823980]) {
+                        loginDetails = participant[421823980];
+                    }
+                    else continue;
+                    
+                    html.replace('<loginDetails>', loginDetails);
+                }
+
                 let reminder = {
                     notificationSpecificationsID,
                     id: uuid(),
