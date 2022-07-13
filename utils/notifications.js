@@ -191,7 +191,7 @@ const notificationHandler = async (message) => {
                 let body = html.replace('<firstName>', participantFirstName);
                 body = body.replace('${Connect_ID}', participant['Connect_ID'])
 
-                if(html.indexOf('<loginDetails>') !== -1) {
+                if(body.indexOf('<loginDetails>') !== -1) {
                     let loginDetails;
                     
                     if(participant[995036844] === 'phone' && participant[348474836]) {
@@ -202,7 +202,7 @@ const notificationHandler = async (message) => {
                     }
                     else continue;
                     
-                    html.replace('<loginDetails>', loginDetails);
+                    body.replace('<loginDetails>', loginDetails);
                 }
 
                 let reminder = {
