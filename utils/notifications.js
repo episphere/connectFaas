@@ -196,18 +196,13 @@ const notificationHandler = async (message) => {
                     
                     if(participant[995036844] === 'phone' && participant[348474836]) {
                         loginDetails = participant[348474836];
-                        console.log("Phone Details");
                     }
                     else if(participant[995036844] === 'password' && participant[421823980]) {
                         loginDetails = participant[421823980];
-                        console.log("Email Details");
                     }
                     else continue;
-                    
-                    console.log(loginDetails);
-                    console.log("Body 1: " + body);
-                    body.replace('<loginDetails>', loginDetails);
-                    console.log("Body 2: " + body);
+
+                    body = body.replace('<loginDetails>', loginDetails);
                 }
 
                 let reminder = {
