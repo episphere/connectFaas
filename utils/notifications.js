@@ -196,9 +196,18 @@ const notificationHandler = async (message) => {
                     
                     if(participant[995036844] === 'phone' && participant[348474836]) {
                         loginDetails = participant[348474836];
+                        loginDetails = "***-***-" + loginDetails.substring(loginDetails.length - 4);
                     }
                     else if(participant[995036844] === 'password' && participant[421823980]) {
                         loginDetails = participant[421823980];
+
+                        let amp = loginDetails.indexOf('@');    
+                        for(let i = 0; i < amp; i++) {
+                            if(i != 0 && i != 1 && i != amp - 1) {
+                                loginDetails = loginDetails.substring(0, i) + "*" + loginDetails.substring(i + 1);
+                            } 
+                        }
+                        
                     }
                     else continue;
 
