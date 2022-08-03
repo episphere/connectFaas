@@ -969,6 +969,12 @@ const boxExists = async (boxId, loginSite) => {
     else return false;
 }
 
+const accessionIdExists = async (accessionId, loginSite) => {
+    const snapshot = await db.collection('biospecimen').where('646899796', '==', accessionId).where('789843387', '==', loginSite).get();
+    if(snapshot.size === 1) return true;
+    else return false;
+}
+
 const updateTempCheckDate = async (institute) => {
     let currDate = new Date();
     let randomStart = Math.floor(Math.random()*5)+15 - currDate.getDay();
@@ -1752,6 +1758,7 @@ module.exports = {
     searchShipments,
     specimenExists,
     boxExists,
+    accessionIdExists,
     addBox,
     updateBox,
     searchBoxes,
