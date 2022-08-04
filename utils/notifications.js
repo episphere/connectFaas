@@ -108,7 +108,6 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
 const notificationHandler = async (message) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const splitCharacters = '@#$'
-    const html = ``
     
     if(!/@#\$/.test(publishedMessage)) {
         const {PubSub} = require('@google-cloud/pubsub');
@@ -155,14 +154,10 @@ const notificationHandler = async (message) => {
         const day = obj.time.day;
         const hour = obj.time.hour;
         const minute = obj.time.minute;
-        if(obj.category === `newsletterTest`) {
-            html = messageBody
-        }
-        else {
-            const showdown  = require('showdown');
-            const converter = new showdown.Converter();
-            html = converter.makeHtml(messageBody);
-        }
+   
+            // const showdown  = require('showdown');
+            // const converter = new showdown.Converter();
+        const html = messageBody;
         const uuid = require('uuid');
 
         console.log("Conditions: " + JSON.stringify(conditions));
