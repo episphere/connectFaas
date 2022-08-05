@@ -155,12 +155,11 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         if(requestData['646899796']){
             const boxId = requestData['646899796'];
-            const loginSite = requestData['789843387']
             const { accessionIdExists } = require('./firestore');
-            const exists = await accessionIdExists(accessionId, loginSite);
-            if (exists === true) return res.status(400).json(getResponseJSON('AccessionId already exists!', 400));
+            const existingData = await accessionIdExists(accessionId, siteCode);
+            if (!!existingData) return res.status(200).json({data: existingData, code:200})
         }
-        return res.status(200).json({message: 'Success!', code:200})
+        return res.status(400).json(getResponseJSON('AccessionId doesn\'t exist!', 400));
     }
     else if (api === 'updateSpecimen') {
         if(req.method !== 'POST') {
