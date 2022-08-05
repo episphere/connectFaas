@@ -969,8 +969,8 @@ const boxExists = async (boxId, loginSite) => {
     else return false;
 }
 
-const accessionIdExists = async (accessionId, siteCode) => {
-    const snapshot = await db.collection('biospecimen').where('646899796', '==', accessionId).get();
+const accessionIdExists = async (accessionId, accessionIdType, siteCode) => {
+    const snapshot = await db.collection('biospecimen').where(accessionIdType, '==', accessionId).get();
     if(snapshot.size === 1) {
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
