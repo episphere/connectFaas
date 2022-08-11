@@ -147,7 +147,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(200).json({message: 'Success!', code:200})
         }
     }
-    else if(api == 'accessIdExists'){
+    else if(api === 'accessionIdExists'){
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
