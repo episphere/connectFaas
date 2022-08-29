@@ -106,9 +106,11 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
 }
 
 const notificationHandler = async (message) => {
+    console.log("Message: " + message);
+
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const splitCharacters = '@#$'
-    let html = ``
+    let html = ``;
     if(!/@#\$/.test(publishedMessage)) {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
@@ -135,6 +137,8 @@ const notificationHandler = async (message) => {
     const scheduleAt = messageArray[3];
 
     console.log("Category: " + notificationCategory);
+    console.log("Limit: " + limit);
+    console.log("Offset: " + offset);
 
     const { getNotificationSpecifications } = require('./firestore');
     const notificationType = 'email';
