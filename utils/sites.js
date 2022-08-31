@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, getData } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
     logIPAdddress(req);
@@ -118,7 +118,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const siteCodes = obj.siteCodes;
     console.log(req.body);
 
-    const rules = require("https://episphere.github.io/connect/QC-updateParticipantData.json");
+    const rules = JSON.parse(await getData("https://episphere.github.io/connect/QC-updateParticipantData.json"));
 
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad request.', 400));
     
