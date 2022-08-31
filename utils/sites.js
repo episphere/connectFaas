@@ -117,7 +117,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
 
-    const rules = require("../../../../Desktop/dataCheck.json")
+    const rules = require("https://episphere.github.io/connect/QC%20-%20updateParticipantData.json");
 
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad request.', 400));
     
@@ -230,7 +230,7 @@ const updateParticipantData = async (req, res, authObj) => {
     if(!authObj) {
         const errors = qc(updatedData, docData, rules);
         if(errors.length !== 0) {
-            //return res.status(400).json(errors, message: 'Quality checks failed (see errors)', code: 400);
+            return res.status(400).json({errors, message: 'Quality checks failed (see errors)', code: 400});
         }
     }
 
