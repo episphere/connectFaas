@@ -225,7 +225,7 @@ const updateParticipantData = async (req, res, authObj) => {
     if(!authObj) {
         const errors = qc(updatedData, docData, rules);
         if(errors.length !== 0) {
-            return res.status(400).json(getResponseJSON('Quality checks failed! (see errors)', 400), errors);
+            return res.status(400).json(getResponseJSON('Quality checks failed! ' + errors, 400), errors);
         }
     }
 
