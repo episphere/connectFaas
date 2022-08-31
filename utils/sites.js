@@ -88,7 +88,6 @@ const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
 
 const updateParticipantData = async (req, res, authObj) => {
     
-    console.log("Start: "+ new Date().toISOString());
     logIPAdddress(req);
     setHeaders(res);
     
@@ -120,7 +119,7 @@ const updateParticipantData = async (req, res, authObj) => {
     console.log(req.body.data);
 
     const rules = JSON.parse(await getData("https://episphere.github.io/connect/QC-updateParticipantData.json"));
-    console.log("Post QC Load: "+ new Date().toISOString());
+    
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad request.', 400));
     
     // TO-DO -> for each participant record
@@ -188,7 +187,7 @@ const updateParticipantData = async (req, res, authObj) => {
     }
 
     flat(docData, 'docData');
-    console.log("Post Flat Doc Data: "+ new Date().toISOString());
+    
     for(let key in dataObj) {
         //both will be filtered out by qc
         //if(docData[key] === undefined && !authObj) continue;
@@ -229,8 +228,6 @@ const updateParticipantData = async (req, res, authObj) => {
             return res.status(400).json(getResponseJSON('Quality checks failed! ' + errors, 400));
         }
     }
-
-    console.log("Post QC: "+ new Date().toISOString());
 
     if(updatedData['399159511']) updatedData[`query.firstName`] = dataObj['399159511'].toLowerCase();
     if(updatedData['996038075']) updatedData[`query.firstName`] = dataObj['996038075'].toLowerCase();
