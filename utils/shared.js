@@ -30,6 +30,17 @@ const randomString = () => {
     return pin;
 }
 
+const getData = (url) => {
+    const request = require('request');
+    return new Promise((resolve, reject) => {
+        request(url, (error, response, body) => {
+            if (error) reject(error);
+            if (response.statusCode != 200) reject('Invalid status code <' + response.statusCode + '>');
+            resolve(body);
+        });
+    });
+}
+
 const deleteDocuments = (siteCode) => {
     if(!siteCode) return;
     const { deleteFirestoreDocuments } = require('./firestore')
@@ -642,5 +653,6 @@ module.exports = {
     collectionIdConversion,
     sites, 
     bagConceptIDs,
-    checkDefaultFlags
+    checkDefaultFlags,
+    getData
 }
