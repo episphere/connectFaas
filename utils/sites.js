@@ -121,7 +121,7 @@ const updateParticipantData = async (req, res, authObj) => {
 
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad request.', 400));
     
-    // for each 
+    // TO-DO -> for each participant record
 
     const dataObj = req.body.data;
     if(dataObj.token === undefined) return res.status(400).json(getResponseJSON('Invalid request, token missing.', 400));
@@ -145,6 +145,7 @@ const updateParticipantData = async (req, res, authObj) => {
         for(let k in obj) {
             if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
             else {
+                //allowing sites to add new fields if it is allowed in QC
                 //if(att === 'newData' && flattened['docData'][attribute ? `${attribute}.${k}`: k] === undefined && !authObj) continue;
                 if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
                 flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
@@ -220,19 +221,15 @@ const updateParticipantData = async (req, res, authObj) => {
         await siteNotificationsHandler(docData['Connect_ID'], '987563196', docData['827220437'], obj);
     }
     
-    //if(key === '399159511') updatedData[`query.firstName`] = dataObj[key].toLowerCase(); // update first name
-    if(updatedData['399159511']) updatedData[`query.firstName`] = dataObj['399159511'].toLowerCase();
-
-    //if(key === '996038075') updatedData[`query.lastName`] = dataObj[key].toLowerCase();// update last name
-    if(updatedData['996038075']) updatedData[`query.firstName`] = dataObj['996038075'].toLowerCase();
-
-
     if(!authObj) {
         const errors = qc(updatedData, docData, rules);
         if(errors.length !== 0) {
             return res.status(400).json({errors, message: 'Quality checks failed (see errors)', code: 400});
         }
     }
+
+    if(updatedData['399159511']) updatedData[`query.firstName`] = dataObj['399159511'].toLowerCase();
+    if(updatedData['996038075']) updatedData[`query.firstName`] = dataObj['996038075'].toLowerCase();
 
     const { updateParticipantData } = require('./firestore');
     if(Object.keys(updatedData).length > 0) updateParticipantData(docID, updatedData);
