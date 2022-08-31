@@ -116,7 +116,7 @@ const updateParticipantData = async (req, res, authObj) => {
     
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
-    console.log(req.body);
+    console.log(req.body.data);
 
     const rules = JSON.parse(await getData("https://episphere.github.io/connect/QC-updateParticipantData.json"));
 
