@@ -116,6 +116,7 @@ const updateParticipantData = async (req, res, authObj) => {
     
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
+    console.log(req.body);
 
     const rules = require("https://episphere.github.io/connect/QC%20-%20updateParticipantData.json");
 
@@ -231,6 +232,7 @@ const updateParticipantData = async (req, res, authObj) => {
     if(updatedData['399159511']) updatedData[`query.firstName`] = dataObj['399159511'].toLowerCase();
     if(updatedData['996038075']) updatedData[`query.firstName`] = dataObj['996038075'].toLowerCase();
 
+    console.log(updatedData);
     const { updateParticipantData } = require('./firestore');
     if(Object.keys(updatedData).length > 0) updateParticipantData(docID, updatedData);
     return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
