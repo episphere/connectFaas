@@ -162,25 +162,25 @@ const updateParticipantData = async (req, res, authObj) => {
             if(rules[key]) {
 
                 if(rules[key].mustExist && existingData[key] === undefined) {
-                    errors.push("Key (" + key + ") must exist before updating");
+                    errors.push("Key (" + key + ") must exist before updating\n");
                     continue;
                 }
 
                 if(rules[key].dataType) {
                     if(rules[key].dataType !== typeof newData[key]) {
-                        errors.push("Invalid data type for Key (" + key + ")");
+                        errors.push("Invalid data type for Key (" + key + ")\n");
                     }
                     else {
                         if(rules[key].values) {
                             if(rules[key].values.filter(value => value.toString() === newData[key].toString()).length == 0) {
-                                errors.push("Invalid value for Key (" + key + ")");
+                                errors.push("Invalid value for Key (" + key + ")\n");
                             }
                         }
                     }
                 }
             }
             else {
-                errors.push("Key (" + key + ") not found.");
+                errors.push("Key (" + key + ") not found\n");
             }
         }
         return errors;
@@ -225,7 +225,7 @@ const updateParticipantData = async (req, res, authObj) => {
     if(!authObj) {
         const errors = qc(updatedData, docData, rules);
         if(errors.length !== 0) {
-            return res.status(400).json(getResponseJSON('Quality checks failed! ' + errors, 400));
+            return res.status(400).json(getResponseJSON('Quality checks failed: \n\n' + errors, 400));
         }
     }
 
