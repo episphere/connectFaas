@@ -109,19 +109,26 @@ const notificationHandler = async (message) => {
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const splitCharacters = '@#$'
     let html = ``
+
     if(!/@#\$/.test(publishedMessage)) {
         const {PubSub} = require('@google-cloud/pubsub');
         const pubSubClient = new PubSub();
         const scheduleAt = publishedMessage;
+
         console.log(publishedMessage);
-        const { getNotificationsCategories } = require('./firestore');
-        const categories = await getNotificationsCategories(scheduleAt);
-        console.log(categories)
-        for(let category of categories) {
-            const dataBuffer = Buffer.from(`${category}${splitCharacters}250${splitCharacters}0${splitCharacters}${scheduleAt}`);
+
+        const { getEmailNotifications } = require('./firestore');
+        const notifications = await getEmailNotifications(scheduleAt);
+
+        console.log(notifications);
+
+        for(let notification of notifications) {
+            const dataBuffer = Buffer.from(`${notification.id}${splitCharacters}250${splitCharacters}0`);
             try {
                 const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
-                console.log(`Message ${messageId} published.`);
+
+                console.log(`Message ${messageId} published - ${notification.category} ${notification.attempt}`);
+
             } catch (error) {
                 console.error(`Received error while publishing: ${error.message}`);
             }
@@ -129,135 +136,140 @@ const notificationHandler = async (message) => {
         return;
     }
     const messageArray = publishedMessage ? publishedMessage.split(splitCharacters) : null;
-    const notificationCategory = messageArray[0];
-    let limit = parseInt(messageArray[1]);
-    let offset = parseInt(messageArray[2]);
-    const scheduleAt = messageArray[3];
 
-    console.log("Category: " + notificationCategory);
+    const notificationId = messageArray[0];
+    const limit = parseInt(messageArray[1]);
+    const offset = parseInt(messageArray[2]);
 
-    const { getNotificationSpecifications } = require('./firestore');
-    const notificationType = 'email';
-    const specifications = await getNotificationSpecifications(notificationType, notificationCategory, scheduleAt);
+    console.log("Notification ID: " + notificationId);
 
-    let specCounter = 0;
-    for(let obj of specifications) {
-        const notificationSpecificationsID = obj.id;
-        const conditions = obj.conditions;
-        const messageBody = obj[notificationType].body;
-        const messageSubject = obj[notificationType].subject;
-        const emailField = obj.emailField;
-        const firstNameField = obj.firstNameField;
-        const preferredNameField = obj.preferredNameField;
-        const phoneField = obj.phoneField;
-        const primaryField = obj.primaryField;
-        const day = obj.time.day;
-        const hour = obj.time.hour;
-        const minute = obj.time.minute;
+    const { getNotification } = require('./firestore');
+    const notification = await getNotification(notificationId);
 
-        if (obj.category === `newsletter`) {
-            html = messageBody;
-        }
-        else {
-            const showdown  = require('showdown');
-            const converter = new showdown.Converter();
-            html = converter.makeHtml(messageBody);
-        }  
-        const uuid = require('uuid');
-        console.log("Conditions: " + JSON.stringify(conditions));
-        console.log("Primary Field: " + primaryField);
+    const conditions = notification.conditions;
+    const messageBody = notification[notificationType].body;
+    const messageSubject = notification[notificationType].subject;
+    const emailField = notification.emailField;
+    const firstNameField = notification.firstNameField;
+    const preferredNameField = notification.preferredNameField;
+    const primaryField = notification.primaryField;
+    const day = notification.time.day;
+    const hour = notification.time.hour;
+    const minute = notification.time.minute;
 
-        const { retrieveParticipantsByStatus } = require('./firestore');
-        const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
-        if(participantData.length === 0) continue;
+    if (notification.category === `newsletter`) {
+        html = messageBody;
+    }
+    else {
+        const showdown  = require('showdown');
+        const converter = new showdown.Converter();
+        html = converter.makeHtml(messageBody);
+    }  
 
-        console.log("Participants: " + participantData.length);
+    console.log("Conditions: " + JSON.stringify(conditions));
+    console.log("Primary Field: " + primaryField);
 
-        let participantCounter = 0;
-        for( let participant of participantData) {
-            if(participant[emailField]) { // If email doesn't exists try sms.
+    const { retrieveParticipantsByStatus } = require('./firestore');
+    const participantData = await retrieveParticipantsByStatus(conditions, limit, offset);
+    if(participantData.length === 0) return;
 
-                let primaryFieldValue;
+    console.log("Participants: " + participantData.length);
 
-                if((/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(primaryField))) {
-                    primaryFieldValue = primaryField;
+    let participantCounter = 0;
+    for( let participant of participantData) {
+        if(participant[emailField]) { // If email doesn't exists try sms.
+
+            let primaryFieldValue;
+
+            if((/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(primaryField))) {
+                primaryFieldValue = primaryField;
+            }
+            else {
+                primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
+                if(!primaryFieldValue) continue;
+            }
+
+            let d = new Date(primaryFieldValue);
+
+            d.setDate(d.getDate() + day);
+            d.setHours(d.getHours() + hour);
+            d.setMinutes(d.getMinutes() + minute);
+
+            const participantFirstName = preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]
+
+            let body = html.replace('<firstName>', participantFirstName);
+            body = body.replace('${Connect_ID}', participant['Connect_ID'])
+
+            if(body.indexOf('<loginDetails>') !== -1) {
+                let loginDetails;
+                
+                if(participant[995036844] === 'phone' && participant[348474836]) {
+                    loginDetails = participant[348474836];
+                    loginDetails = "***-***-" + loginDetails.substring(loginDetails.length - 4);
                 }
-                else {
-                    primaryFieldValue = checkIfPrimaryFieldExists(participant, primaryField.split('.'));
-                    if(!primaryFieldValue) continue;
-                }
+                else if(participant[995036844] === 'password' && participant[421823980]) {
+                    loginDetails = participant[421823980];
 
-                let d = new Date(primaryFieldValue);
-                d.setDate(d.getDate() + day);
-                d.setHours(d.getHours() + hour);
-                d.setMinutes(d.getMinutes() + minute);
-                const participantFirstName = preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]
-                let body = html.replace('<firstName>', participantFirstName);
-                body = body.replace('${Connect_ID}', participant['Connect_ID'])
-
-                if(body.indexOf('<loginDetails>') !== -1) {
-                    let loginDetails;
+                    let amp = loginDetails.indexOf('@');    
+                    for(let i = 0; i < amp; i++) {
+                        if(i != 0 && i != 1 && i != amp - 1) {
+                            loginDetails = loginDetails.substring(0, i) + "*" + loginDetails.substring(i + 1);
+                        } 
+                    }
                     
-                    if(participant[995036844] === 'phone' && participant[348474836]) {
-                        loginDetails = participant[348474836];
-                        loginDetails = "***-***-" + loginDetails.substring(loginDetails.length - 4);
-                    }
-                    else if(participant[995036844] === 'password' && participant[421823980]) {
-                        loginDetails = participant[421823980];
-
-                        let amp = loginDetails.indexOf('@');    
-                        for(let i = 0; i < amp; i++) {
-                            if(i != 0 && i != 1 && i != amp - 1) {
-                                loginDetails = loginDetails.substring(0, i) + "*" + loginDetails.substring(i + 1);
-                            } 
-                        }
-                        
-                    }
-                    else continue;
-
-                    body = body.replace('<loginDetails>', loginDetails);
                 }
+                else continue;
 
-                let reminder = {
-                    notificationSpecificationsID,
-                    id: uuid(),
-                    notificationType,
-                    email: participant[emailField],
-                    notification : {
-                        title: messageSubject,
-                        body: body,
-                        time: new Date().toISOString()
-                    },
-                    attempt: obj.attempt,            
-                    category: obj.category,
-                    token: participant.token,
-                    uid: participant.state.uid,
-                    read: false
-                }
-                // Check if same notifications has already been sent
-                const { notificationAlreadySent } = require('./firestore');
-                const sent = await notificationAlreadySent(reminder.token, reminder.notificationSpecificationsID);
-                const currentDate = new Date();
-                if(sent === false && d <= currentDate) {
-                    const { storeNotifications } = require('./firestore');
-                    await storeNotifications(reminder);
-                    sendEmail(participant[emailField], messageSubject, body);
-                }
+                body = body.replace('<loginDetails>', loginDetails);
             }
-            if(participantCounter === participantData.length - 1 && specCounter === specifications.length - 1 && participantData.length === limit){ // paginate and publish message
-                const {PubSub} = require('@google-cloud/pubsub');
-                const pubSubClient = new PubSub();
-                const dataBuffer = Buffer.from(`${notificationCategory}${splitCharacters}${limit}${splitCharacters}${offset+limit}${splitCharacters}${scheduleAt}`);
-                try {
-                    const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
-                    console.log(`Message ${messageId} published.`);
-                } catch (error) {
-                    console.error(`Received error while publishing: ${error.message}`);
-                }
+
+            const uuid = require('uuid');
+
+            let reminder = {
+                notificationId,
+                id: uuid(),
+                notificationType,
+                email: participant[emailField],
+                notification : {
+                    title: messageSubject,
+                    body: body,
+                    time: new Date().toISOString()
+                },
+                attempt: notification.attempt,            
+                category: notification.category,
+                token: participant.token,
+                uid: participant.state.uid,
+                read: false
             }
-            participantCounter++;
+
+            // Check if same notifications has already been sent
+            const { notificationAlreadySent } = require('./firestore');
+            const sent = await notificationAlreadySent(reminder.token, reminder.notificationId);
+
+            const currentDate = new Date();
+
+            if(sent === false && d <= currentDate) {
+                const { storeNotifications } = require('./firestore');
+                await storeNotifications(reminder);
+
+                sendEmail(participant[emailField], messageSubject, body);
+            }
         }
-        specCounter++;
+        
+        if(participantCounter === participantData.length - 1  && participantData.length === limit){ // paginate and publish message
+            const {PubSub} = require('@google-cloud/pubsub');
+            const pubSubClient = new PubSub();
+            const dataBuffer = Buffer.from(`${notificationId}${splitCharacters}${limit}${splitCharacters}${offset+limit}`);
+            try {
+                const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
+
+                console.log(`Message ${messageId} published - ${notification.category} ${notification.attempt}`);
+
+            } catch (error) {
+                console.error(`Received error while publishing: ${error.message}`);
+            }
+        }
+        participantCounter++;
     }
     return true;
 }

@@ -1410,6 +1410,22 @@ const getNotificationsCategories = async (scheduleAt) => {
     return categories;
 }
 
+const getEmailNotifications = async (scheduleAt) => {
+    const snapshot = await db.collection('notificationSpecifications').where('scheduleAt', '==', scheduleAt).get();
+    const notifications = [];
+    snapshot.forEach(dt => {
+        const notification = dt.data();
+        if(!notifications.includes(notification.id) && notification.notificationType[0] == 'email') notifications.push(notification);
+    })
+    return notifications;
+}
+
+const getNotification = async (id) => {
+    const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
+
+    return snapshot.docs[0].data();
+}
+
 const addKitAssemblyData = async (data) => {
     try {
         data['supplyKitIdUtilized'] = false
@@ -1797,6 +1813,8 @@ module.exports = {
     updateNotificationSchema,
     getNotificationHistoryByParticipant,
     getNotificationsCategories,
+    getNotification,
+    getEmailNotifications,
     addKitAssemblyData,
     getKitAssemblyData,
     storeSiteNotifications,
