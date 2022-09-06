@@ -147,8 +147,8 @@ const notificationHandler = async (message) => {
     const notification = await getNotification(notificationId);
 
     const conditions = notification.conditions;
-    const messageBody = notification[notificationType].body;
-    const messageSubject = notification[notificationType].subject;
+    const messageBody = notification.email.body;
+    const messageSubject = notification.email.subject;
     const emailField = notification.emailField;
     const firstNameField = notification.firstNameField;
     const preferredNameField = notification.preferredNameField;
