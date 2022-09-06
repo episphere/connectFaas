@@ -228,7 +228,7 @@ const notificationHandler = async (message) => {
             let reminder = {
                 notificationId,
                 id: uuid(),
-                notificationType,
+                notificationType: notification.notificationType[0],
                 email: participant[emailField],
                 notification : {
                     title: messageSubject,
