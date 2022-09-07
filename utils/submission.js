@@ -125,8 +125,6 @@ const getParticipants = async (req, res, authObj) => {
     const { getRestrictedFields } = require('./firestore')
     const restriectedFields = await getRestrictedFields();
 
-    console.log(req.query.type);
-
     if (req.query.type === 'verified') queryType = req.query.type;
     else if (req.query.type === 'notyetverified') queryType = req.query.type;
     else if (req.query.type === 'cannotbeverified') queryType = req.query.type;
@@ -177,15 +175,9 @@ const getParticipants = async (req, res, authObj) => {
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
     }
-
-    console.log("DATA: " + data.length);
     
     // Remove module data from participant records.
-
-    console.log(restriectedFields);
-    console.log("PRE REMOVE");
     if(data.length > 0) data = await removeRestrictedFields(data, restriectedFields, isParent);
-    console.log("POST REMOVE");
     return res.status(200).json({data, code: 200, limit, dataSize: data.length})
 }
 
