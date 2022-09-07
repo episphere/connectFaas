@@ -242,6 +242,17 @@ const updateParticipantData = async (id, data) => {
 }
 
 const retrieveParticipants = async (siteCode, decider, isParent, limit, page, site, from, to) => {
+    
+    console.log("RETRIEVE PARTICIPANTS");
+    console.log("Site Code: " + siteCode);
+    console.log("Decider: " + decider);
+    console.log("Is Parent: " + isParent);
+    console.log("Limit: " + limit);
+    console.log("Page: " + page);
+    console.log("Site: " + site);
+    console.log("From: " + from);
+    console.log("To: " + to);
+    
     try{
         const operator = isParent ? 'in' : '==';
         let participants = {};
