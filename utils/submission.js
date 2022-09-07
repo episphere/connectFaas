@@ -177,6 +177,8 @@ const getParticipants = async (req, res, authObj) => {
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
     }
+
+    console.log("DATA: " + data.length);
     
     // Remove module data from participant records.
     if(data.length > 0) data = removeRestrictedFields(data, restriectedFields, isParent);
