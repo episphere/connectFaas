@@ -119,7 +119,7 @@ const getParticipants = async (req, res, authObj) => {
     if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
 
     let queryType = '';
-    const limit = req.query.limit ? parseInt(req.query.limit) : 500;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 100;
     const page = req.query.page ? parseInt(req.query.page) : 1;
 
     const { getRestrictedFields } = require('./firestore')
