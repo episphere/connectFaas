@@ -125,6 +125,8 @@ const getParticipants = async (req, res, authObj) => {
     const { getRestrictedFields } = require('./firestore')
     const restriectedFields = await getRestrictedFields();
 
+    console.log(req.query.type);
+
     if (req.query.type === 'verified') queryType = req.query.type;
     else if (req.query.type === 'notyetverified') queryType = req.query.type;
     else if (req.query.type === 'cannotbeverified') queryType = req.query.type;
