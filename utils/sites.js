@@ -1,3 +1,5 @@
+const rules = require("../updateParticipantData.json");
+
 const { getResponseJSON, setHeaders, logIPAdddress, getData } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
@@ -117,8 +119,6 @@ const updateParticipantData = async (req, res, authObj) => {
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
     console.log(req.body.data);
-
-    const rules = JSON.parse(require("../updateParticipantData.json"));
     
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad request.', 400));
     
@@ -237,6 +237,12 @@ const updateParticipantData = async (req, res, authObj) => {
     if(Object.keys(updatedData).length > 0) updateParticipantData(docID, updatedData);
     return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
 }
+
+const test = () => {
+    console.log(qc);
+}
+
+test();
 
 module.exports = {
     submitParticipantsData,
