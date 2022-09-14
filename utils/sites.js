@@ -1,6 +1,6 @@
 const rules = require("../updateParticipantData.json");
 
-const { getResponseJSON, setHeaders, logIPAdddress, getData } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
     logIPAdddress(req);
