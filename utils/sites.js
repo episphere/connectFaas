@@ -118,7 +118,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const siteCodes = obj.siteCodes;
     console.log(req.body.data);
 
-    const rules = JSON.parse(await getData("https://episphere.github.io/connect/QC-updateParticipantData.json"));
+    const rules = JSON.parse(require("../updateParticipantData.json"));
     
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad request.', 400));
     
