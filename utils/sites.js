@@ -167,13 +167,20 @@ const updateParticipantData = async (req, res, authObj) => {
                 }
 
                 if(rules[key].dataType) {
-                    if(rules[key].dataType !== typeof newData[key]) {
-                        errors.push(" Invalid data type for Key (" + key + ")");
+                    if(rules[key].dataType == 'ISO') {
+                        if(typeof newData[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(newData[key]))) {
+                            errors.push(" Invalid data type / format for Key (" + key + ")");
+                        }
                     }
                     else {
-                        if(rules[key].values) {
-                            if(rules[key].values.filter(value => value.toString() === newData[key].toString()).length == 0) {
-                                errors.push(" Invalid value for Key (" + key + ")");
+                        if(rules[key].dataType !== typeof newData[key]) {
+                            errors.push(" Invalid data type for Key (" + key + ")");
+                        }
+                        else {
+                            if(rules[key].values) {
+                                if(rules[key].values.filter(value => value.toString() === newData[key].toString()).length == 0) {
+                                    errors.push(" Invalid value for Key (" + key + ")");
+                                }
                             }
                         }
                     }
