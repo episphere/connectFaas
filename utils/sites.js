@@ -238,12 +238,6 @@ const updateParticipantData = async (req, res, authObj) => {
     return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
 }
 
-const test = () => {
-    console.log(qc);
-}
-
-test();
-
 module.exports = {
     submitParticipantsData,
     updateParticipantData
