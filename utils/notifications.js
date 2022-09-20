@@ -244,6 +244,8 @@ const notificationHandler = async (message) => {
 
             // Check if same notifications has already been sent
             const { notificationAlreadySent } = require('./firestore');
+            console.log("Token: " + reminder.token);
+            console.log("Reminder ID: " + reminder.notificationId);
             const sent = await notificationAlreadySent(reminder.token, reminder.notificationId);
 
             const currentDate = new Date();
