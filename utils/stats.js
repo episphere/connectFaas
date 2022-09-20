@@ -53,6 +53,7 @@ const stats = async (req, res, authObj) => {
     if(type === 'participants_moduleOne') response = await getTable('participants_moduleOne', isParent, siteCodes);
     if(type === 'participants_modulesTwoThree') response = await getTable('participants_modulesTwoThree', isParent, siteCodes);
     if(type === 'participants_allModulesAllSamples') response = await getTable('participants_allModulesAllSamples', isParent, siteCodes);
+    if(type === 'participants_modulesNone') response = await getTable('participants_modulesNone', isParent, siteCodes);
 
     if(type === 'participants_ssn') response = await getTable('participants_ssn', isParent, siteCodes);
     if(type === 'participants_biospecimen') response = await getTable('participants_biospecimen', isParent, siteCodes);
