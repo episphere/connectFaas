@@ -123,7 +123,7 @@ const notificationHandler = async (message) => {
         console.log(notifications);
 
         for(let notification of notifications) {
-            const dataBuffer = Buffer.from(`${notification.id}${splitCharacters}10${splitCharacters}0`);
+            const dataBuffer = Buffer.from(`${notification.id}${splitCharacters}250${splitCharacters}0`);
             try {
                 const messageId = await pubSubClient.topic('connect-notifications').publish(dataBuffer);
 
