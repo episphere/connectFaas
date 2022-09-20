@@ -1,4 +1,6 @@
-const { getResponseJSON, setHeaders, logIPAdddress, getData } = require('./shared');
+const rules = require("../updateParticipantData.json");
+
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
     logIPAdddress(req);
@@ -117,8 +119,6 @@ const updateParticipantData = async (req, res, authObj) => {
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
     console.log(req.body.data);
-
-    const rules = JSON.parse(await getData("https://episphere.github.io/connect/QC-updateParticipantData.json"));
     
     if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad request.', 400));
     
@@ -167,13 +167,20 @@ const updateParticipantData = async (req, res, authObj) => {
                 }
 
                 if(rules[key].dataType) {
-                    if(rules[key].dataType !== typeof newData[key]) {
-                        errors.push(" Invalid data type for Key (" + key + ")");
+                    if(rules[key].dataType == 'ISO') {
+                        if(typeof newData[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(newData[key]))) {
+                            errors.push(" Invalid data type / format for Key (" + key + ")");
+                        }
                     }
                     else {
-                        if(rules[key].values) {
-                            if(rules[key].values.filter(value => value.toString() === newData[key].toString()).length == 0) {
-                                errors.push(" Invalid value for Key (" + key + ")");
+                        if(rules[key].dataType !== typeof newData[key]) {
+                            errors.push(" Invalid data type for Key (" + key + ")");
+                        }
+                        else {
+                            if(rules[key].values) {
+                                if(rules[key].values.filter(value => value.toString() === newData[key].toString()).length == 0) {
+                                    errors.push(" Invalid value for Key (" + key + ")");
+                                }
                             }
                         }
                     }
