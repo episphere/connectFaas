@@ -142,11 +142,11 @@ const updateParticipantData = async (req, res, authObj) => {
     let responseArray = [];
     let error = false;
 
-    for(let dataObj of dataArray) {
+    await dataArray.forEach(async (dataObj) => {
+
         if(dataObj.token === undefined) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': 'UNDEFINED', 'Errors': 'Token not defined in data object.'}});
-            break;
         } 
 
         const participantToken = dataObj.token;
@@ -156,7 +156,6 @@ const updateParticipantData = async (req, res, authObj) => {
         if(!record) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Token does not exist.'}});
-            break;
         }
 
         const docID = record.id;
@@ -208,7 +207,6 @@ const updateParticipantData = async (req, res, authObj) => {
             if(errors.length !== 0) {
                 error = true;
                 responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': errors}});
-                break;
             }
         }
 
@@ -221,7 +219,7 @@ const updateParticipantData = async (req, res, authObj) => {
         if(Object.keys(updatedData).length > 0) updateParticipantData(docID, updatedData);
 
         responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
-    }
+    })
 
     return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
 }
