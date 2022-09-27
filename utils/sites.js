@@ -136,7 +136,7 @@ const updateParticipantData = async (req, res, authObj) => {
         if(dataObj.token === undefined) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': 'UNDEFINED', 'Errors': 'Token not defined in data object.'}});
-            break;
+            continue;
         } 
 
         const participantToken = dataObj.token;
@@ -146,7 +146,7 @@ const updateParticipantData = async (req, res, authObj) => {
         if(!record) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Token does not exist.'}});
-            break;
+            continue;
         }
 
         const docID = record.id;
@@ -208,7 +208,7 @@ const updateParticipantData = async (req, res, authObj) => {
             if(errors.length !== 0) {
                 error = true;
                 responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': errors}});
-                break;
+                continue;
             }
         }
 
