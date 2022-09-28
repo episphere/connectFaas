@@ -130,7 +130,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid'];
 
     let responseArray = [];
-    let error = false;
+    let error = false; 
 
     for(let dataObj of dataArray) {
         if(dataObj.token === undefined) {
