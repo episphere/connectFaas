@@ -1721,6 +1721,7 @@ const processBsiData = async (tubeConceptIds, query) => {
             // collectionIdInfo['789843387'] = i['789843387']
             collectionIdInfo['827220437'] = doc.data()['827220437']
             collectionIdInfo['951355211'] = doc.data()['951355211']
+            collectionIdInfo['915838974'] = doc.data()['915838974']
             collectionIdInfo['650516960'] = doc.data()['650516960']
             collectionIdInfo['762124027'] = doc.data()[tubeConceptId]['762124027'] === undefined ? ``  : doc.data()[tubeConceptId]['762124027']
             collectionIdInfo['982885431'] = doc.data()[tubeConceptId]['248868659'] === undefined ? `` : doc.data()[tubeConceptId]['248868659']['982885431']
@@ -1731,7 +1732,8 @@ const processBsiData = async (tubeConceptIds, query) => {
 
 const getQueryBsiData = async (query) => {
     try {
-        let tubeConceptIds = ['973670172', '838567176', '787237543', '703954371', '652357376', '454453939', '299553921','223999569', '143615646']  // grab tube id
+        let tubeConceptIds = ['973670172', '838567176', '787237543', '703954371', '652357376', '683613884', '677469051','958646668','454453939', '589588440',
+        '376960806', '232343615' ,'299553921','223999569', '143615646']  // grab tube id
         const holdBiospecimenMatches = await processBsiData(tubeConceptIds, query)
         return holdBiospecimenMatches
     }
