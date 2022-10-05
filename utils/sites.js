@@ -142,13 +142,13 @@ const updateParticipantData = async (req, res, authObj) => {
         }
     }
     flat(docData, 'docData');
-    
+
     for(let key in dataObj) {
         if(docData[key] === undefined && !authObj) continue;
         if(primaryIdentifiers.indexOf(key) !== -1) continue;
         if(key === '821247024') continue; // Don't allow updates to verification status.
-        if(key === '399159511') updatedData[`query.firstName`] = dataObj[key].toLowerCase();
-        if(key === '996038075') updatedData[`query.lastName`] = dataObj[key].toLowerCase();
+        if(key === '399159511') updatedData[`query.firstName`] = dataObj[key].toLowerCase(); // update first name
+        if(key === '996038075') updatedData[`query.lastName`] = dataObj[key].toLowerCase();// update last name
 
         if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key)
         else flattened['newData'][key] = dataObj[key]
@@ -175,8 +175,8 @@ const updateParticipantData = async (req, res, authObj) => {
     else if (dataObj['987563196'] && dataObj['987563196'] === 353358909) {
         await siteNotificationsHandler(docData['Connect_ID'], '987563196', docData['827220437'], obj);
     }
-    
-    console.log(updatedData);
+
+    console.log(updatedData)
     const { updateParticipantData } = require('./firestore');
     if(Object.keys(updatedData).length > 0) updateParticipantData(docID, updatedData);
     return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
