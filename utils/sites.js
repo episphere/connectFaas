@@ -152,6 +152,9 @@ const updateParticipantData = async (req, res, authObj) => {
         const docID = record.id;
         const docData = record.data;
 
+        console.log("DD")
+        console.log(docData);
+
         const flat = (obj, att, attribute) => {
             for(let k in obj) {
                 if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
