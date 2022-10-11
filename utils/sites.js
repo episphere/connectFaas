@@ -177,15 +177,6 @@ const updateParticipantData = async (req, res, authObj) => {
             if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key);
             else flattened['newData'][key] = dataObj[key];
 
-            const { initializeTimestamps } = require('./shared')
-
-            for(let flattenedKey in flattened['newData']) {
-                if(initializeTimestamps[flattenedKey]) {
-                    if(initializeTimestamps[flattenedKey].value && initializeTimestamps[flattenedKey].value !== flattened['newData'][flattenedKey]) continue;
-                    flattened['newData'] = {...flattened['newData'], ...initializeTimestamps[flattenedKey].initialize}
-                }
-            }
-
             updatedData = {...updatedData, ...flattened.newData}
         }
 
@@ -209,6 +200,16 @@ const updateParticipantData = async (req, res, authObj) => {
                 error = true;
                 responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': errors}});
                 continue;
+            }
+        }
+
+        const { initializeTimestamps } = require('./shared')
+
+        for(let key in updatedData) {
+            if(initializeTimestamps[key]) {
+                if(initializeTimestamps[key].value && initializeTimestamps[key].value === updatedData[key]) {
+                    updatedData = {...updatedData, ...initializeTimestamps[key].initialize}
+                }
             }
         }
 
