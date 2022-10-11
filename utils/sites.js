@@ -152,10 +152,6 @@ const updateParticipantData = async (req, res, authObj) => {
         const docID = record.id;
         const docData = record.data;
 
-        for(let key of Object.keys(docData)) {
-            console.log("KEY: " + key + " VALUE: " + docData[key])
-        }
-
         const flat = (obj, att, attribute) => {
             for(let k in obj) {
                 if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
@@ -199,7 +195,7 @@ const updateParticipantData = async (req, res, authObj) => {
         }
 
         if(!authObj) {
-            const errors = qc(updatedData, docData, rules);
+            const errors = qc(updatedData, flattened.docData, rules);
             if(errors.length !== 0) {
                 error = true;
                 responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': errors}});
