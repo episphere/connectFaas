@@ -228,6 +228,10 @@ const updateParticipantData = async (req, res, authObj) => {
 }
 
 const qc = (newData, existingData, rules) => {
+    console.log("ND");
+    console.log(newData);
+    console.log("ED");
+    console.log(existingData)
     let errors = [];
     for(key in newData) {
         if(key == 'token') continue;
