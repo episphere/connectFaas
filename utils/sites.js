@@ -152,8 +152,9 @@ const updateParticipantData = async (req, res, authObj) => {
         const docID = record.id;
         const docData = record.data;
 
-        console.log("DD")
-        console.log(docData);
+        for(let key of docData) {
+            console.log("KEY: " + key + " VALUE: " + docData[key])
+        }
 
         const flat = (obj, att, attribute) => {
             for(let k in obj) {
@@ -231,10 +232,6 @@ const updateParticipantData = async (req, res, authObj) => {
 }
 
 const qc = (newData, existingData, rules) => {
-    console.log("ND");
-    console.log(newData);
-    console.log("ED");
-    console.log(existingData)
     let errors = [];
     for(key in newData) {
         if(key == 'token') continue;
