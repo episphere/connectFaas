@@ -152,7 +152,7 @@ const updateParticipantData = async (req, res, authObj) => {
         const docID = record.id;
         const docData = record.data;
 
-        for(let key of docData) {
+        for(let key of Object.keys(docData)) {
             console.log("KEY: " + key + " VALUE: " + docData[key])
         }
 
