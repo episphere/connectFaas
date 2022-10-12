@@ -1633,7 +1633,7 @@ const setPackageReceiptFedex = async (data) => {
                             if (collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
                                 collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0]
                             }
-                            if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` ) {
+                            if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['787237543'] === `` ) {
                                 collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0]
                             }
                         }
