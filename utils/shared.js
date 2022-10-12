@@ -617,6 +617,12 @@ const checkDefaultFlags = async (data, uid) => {
     return false;
 }
 
+const checkDerivedVariables = async (data) => {
+    
+
+    
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
