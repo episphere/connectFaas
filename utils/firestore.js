@@ -1743,17 +1743,25 @@ const getQueryBsiData = async (query) => {
 }
 
 const verifyUsersEmailOrPhone = async (req) => {
-    let query = db.collection('participants');
-    const queries = req.query    
-    for(let key in queries) {
-            if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
+    const queries = req.query
+    if(queries.email) {
+        try {
+            const response = await admin.auth().getUserByEmail(queries.email)
+            return response ? true : false;
         }
-    const snapshot = await query.get();
-    if(snapshot.size !== 0){
-        return snapshot.docs.map(document => document.data());
+        catch(error) {
+            return false;
+        }
+        
     }
-    else{
-        return [];
+    if(queries.phone) {
+        try {
+            const response = await admin.auth().getUserByPhone(queries.phone)
+            return response ? true : false;
+        }
+        catch(error) {
+            return false;
+        }
     }
 }
 

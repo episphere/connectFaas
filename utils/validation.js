@@ -207,7 +207,7 @@ const validateUsersEmailPhone = async (req, res, authObj) => {
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
-    else { // this needs to change
+    else { // utilize token from anon signin
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){
