@@ -222,9 +222,6 @@ const validateUsersEmailPhone = async (req, res, authObj) => {
     if(!req.query) return res.status(404).json(getResponseJSON('Not valid', 404));
     const { verifyUsersEmailOrPhone } = require('./firestore');
     let result = await verifyUsersEmailOrPhone(req)
-    if(result instanceof Error){
-        return res.status(500).json(getResponseJSON(result.message, 500));
-    }
     if (result) return res.status(200).json({data: {accountExists: true}, code: 200})
     else return res.status(200).json({data: {accountExists: false}, code: 200})
     
