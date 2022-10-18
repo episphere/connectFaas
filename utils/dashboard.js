@@ -75,6 +75,10 @@ const dashboard = async (req, res) => {
         const { getSiteNotification } = require('./notifications');
         return await getSiteNotification(req, res, authObj);
     }
+    else if (api === 'validateEmailOrPhone') { 
+        const { validateUsersEmailPhone } = require('./validation');
+        return await validateUsersEmailPhone(req, res, authObj);
+    }
     else return res.status(404).json(getResponseJSON('API not found!', 404));
 }
 

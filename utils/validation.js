@@ -198,9 +198,43 @@ const getToken = async (req, res) => {
     }
 }
 
+const validateUsersEmailPhone = async (req, res, authObj) => {
+    logIPAdddress(req);
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+        
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+    else { // this needs to change
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(401).json(getResponseJSON(authorized.message, 500));
+        }
+    
+        if(!authorized){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+    }
+
+    if(!req.query) return res.status(404).json(getResponseJSON('Not valid', 404));
+    const { verifyUsersEmailOrPhone } = require('./firestore');
+    let result = await verifyUsersEmailOrPhone(req)
+    if(result instanceof Error){
+        return res.status(500).json(getResponseJSON(result.message, 500));
+    }
+    if(result.length > 0)  return res.status(200).json({data: {accountExists: true}, code: 200})
+    else return res.status(200).json({data: {accountExists: false}, code: 200})
+    
+   
+}
+
 module.exports = {
     generateToken,
     validateToken,
     validateSiteUsers,
-    getToken
+    getToken,
+    validateUsersEmailPhone
 }

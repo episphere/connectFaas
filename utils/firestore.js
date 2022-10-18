@@ -1742,6 +1742,21 @@ const getQueryBsiData = async (query) => {
     }
 }
 
+const verifyUsersEmailOrPhone = async (req) => {
+    let query = db.collection('participants');
+    const queries = req.query    
+    for(let key in queries) {
+            if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
+        }
+    const snapshot = await query.get();
+    if(snapshot.size !== 0){
+        return snapshot.docs.map(document => document.data());
+    }
+    else{
+        return [];
+    }
+}
+
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
     return snapshot.docs[0].data().restrictedFields;
@@ -1833,5 +1848,6 @@ module.exports = {
     getBptlMetricsForShipped,
     getQueryBsiData,
     getRestrictedFields,
-    sendClientEmail
+    sendClientEmail,
+    verifyUsersEmailOrPhone
 }
