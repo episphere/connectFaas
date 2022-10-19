@@ -198,9 +198,14 @@ const getToken = async (req, res) => {
     }
 }
 
+const checkDerivedVariables = async (req, res, uid) => {
+
+}
+
 module.exports = {
     generateToken,
     validateToken,
     validateSiteUsers,
-    getToken
+    getToken,
+    checkDerivedVariables
 }

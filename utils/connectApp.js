@@ -1,7 +1,7 @@
 const { getResponseJSON, setHeadersDomainRestricted } = require('./shared');
 const { recruitSubmit, getUserProfile, getUserCollections } = require('./submission');
 const { retrieveNotifications } = require('./notifications');
-const { validateToken, generateToken } = require('./validation');
+const { validateToken, generateToken, checkDerivedVariables } = require('./validation');
 
 const connectApp = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -43,6 +43,8 @@ const connectApp = async (req, res) => {
     else if (api === 'validateToken') return validateToken(req, res, uid);
     
     else if (api === 'generateToken') return generateToken(req, res, uid);
+
+    else if (api === 'deriveVariables') return checkDerivedVariables(req, res, uid);
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 }

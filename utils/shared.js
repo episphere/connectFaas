@@ -617,12 +617,6 @@ const checkDefaultFlags = async (data, uid) => {
     return false;
 }
 
-const checkDerivedVariables = async (data) => {
-    
-
-    
-}
-
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -647,6 +641,5 @@ module.exports = {
     initializeTimestamps,
     collectionIdConversion,
     sites, 
-    bagConceptIDs,
-    checkDefaultFlags
+    bagConceptIDs
 }
