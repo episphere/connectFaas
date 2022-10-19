@@ -44,7 +44,7 @@ const connectApp = async (req, res) => {
     
     else if (api === 'generateToken') return generateToken(req, res, uid);
 
-    else if (api === 'validateEmailOrPhone') return await validateUsersEmailPhone(req, res);
+    else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 }
