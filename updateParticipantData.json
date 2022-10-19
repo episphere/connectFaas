@@ -379,11 +379,11 @@
 	    	"mustExist": false
     	},
 	"173836415.266600170.185243482": {
-        	"dataType": "string",
+        	"dataType": "number",
 	    	"mustExist": false
     	},
 	"173836415.266600170.452847912": {
-        	"dataType": "string",
+        	"dataType": "number",
 	    	"mustExist": false
     	}
 }
