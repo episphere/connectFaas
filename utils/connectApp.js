@@ -32,6 +32,8 @@ const connectApp = async (req, res) => {
     
     const api = query.api;
 
+    console.log(api);
+
     if (api === 'submit') return recruitSubmit(req, res, uid);
 
     else if (api === 'getUserProfile') return getUserProfile(req, res, uid);
