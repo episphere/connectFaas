@@ -33,6 +33,7 @@ const connectApp = async (req, res) => {
     const api = query.api;
 
     console.log(api);
+    console.log(uid);
 
     if (api === 'submit') return recruitSubmit(req, res, uid);
 
