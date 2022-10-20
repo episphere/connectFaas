@@ -1756,9 +1756,8 @@ const verifyUsersEmailOrPhone = async (req) => {
     }
     if(queries.phone) {
         try {
-            const phoneNumber = queries.phone.replace(' ', '+')
-            console.log('phoneNumber', phoneNumber)
-            const response = await admin.auth().getUserByPhoneNumber(phoneNumber)
+            const phoneNumberStr = '+1' + queries.phone.slice(-10)
+            const response = await admin.auth().getUserByPhoneNumber(phoneNumberStr)
             return response ? true : false;
         }
         catch(error) {
