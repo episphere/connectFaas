@@ -641,5 +641,6 @@ module.exports = {
     initializeTimestamps,
     collectionIdConversion,
     sites, 
-    bagConceptIDs
+    bagConceptIDs,
+    checkDefaultFlags
 }
