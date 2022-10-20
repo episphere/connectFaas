@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const generateToken = async (req, res, uid) => {
 
@@ -198,6 +198,64 @@ const getToken = async (req, res) => {
     }
 }
 
+const checkDerivedVariables = async (token, siteCode) => {
+
+    const { getParticipantData, getSpecimenCollections } = require('./firestore');
+
+    const data = await getParticipantData(token, siteCode);
+    const collections = getSpecimenCollections(token, siteCode);
+
+    let incentiveEligible = false;
+
+
+    // incentiveEligible
+    if(data['130371375']['266600170']['731498909'] === 104430631) {
+        const baselineCollections = collections.data.filter(collection => collection['331584571'] === 266600170);
+
+        const module1 = (data['949302066'] === 231311385);
+        const module2 = (data['536735468'] === 231311385);
+        const module3 = (data['976570371'] === 231311385);
+        const module4 = (data['663265240'] === 231311385);
+        const bloodCollected = (data['878865966'] === 353358909) || (data['173836415']?.['266600170']?.['693370086'] === 353358909);    
+    
+        if(module1 && module2 && module3 && module4) {
+            if(bloodCollected) {
+                incentiveEligible = true;
+            }    
+            else {
+                /*
+                if(baselineCollections.length === 0) return false;
+
+                baselineCollections.forEach(collection => {
+                    if(collection[conceptIds.collection.collectionSetting] === conceptIds.research) {
+                        tubes.forEach(tube => {
+                            if(collection[tube.concept] && collection[tube.concept][conceptIds.REASON_NOT_COLLECTED] && collection[tube.concept][conceptIds.REASON_NOT_COLLECTED] != conceptIds.REASONS.PARTICIPANT_REFUSAL) {
+                                eligible = true;
+                            }
+                        });
+                    }
+                });
+                */
+            }
+        }
+    }
+
+
+
+
+    if(incentiveEligible) {
+        const updates = {
+            '130371375.266600170.731498909': 353358909,
+            '130371375.266600170.222373868': formData['827220437'] === 809703864 ? 104430631 : 353358909,
+            '130371375.266600170.787567527': new Date().toISOString(),
+            uid: data.state.uid
+        };
+    } 
+
+    const { updateParticipant } = require('./firestore');
+    updateParticipant(updates);
+}
+
 const validateUsersEmailPhone = async (req, res) => {
     logIPAdddress(req);
     setHeaders(res);
@@ -216,5 +274,6 @@ module.exports = {
     validateToken,
     validateSiteUsers,
     getToken,
+    checkDerivedVariables,
     validateUsersEmailPhone
 }
