@@ -256,10 +256,24 @@ const checkDerivedVariables = async (token, siteCode) => {
     updateParticipant(updates);
 }
 
+const validateUsersEmailPhone = async (req, res) => {
+    logIPAdddress(req);
+    setHeaders(res);
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+    if(!req.query) return res.status(404).json(getResponseJSON('Not valid', 404));
+    const { verifyUsersEmailOrPhone } = require('./firestore');
+    let result = await verifyUsersEmailOrPhone(req)
+    if (result) return res.status(200).json({data: {accountExists: true}, code: 200})
+    else return res.status(200).json({data: {accountExists: false}, code: 200})
+}
+
 module.exports = {
     generateToken,
     validateToken,
     validateSiteUsers,
     getToken,
-    checkDerivedVariables
+    checkDerivedVariables,
+    validateUsersEmailPhone
 }

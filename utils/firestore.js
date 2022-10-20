@@ -1633,7 +1633,7 @@ const setPackageReceiptFedex = async (data) => {
                             if (collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
                                 collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0]
                             }
-                            if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` ) {
+                            if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['787237543'] === `` ) {
                                 collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0]
                             }
                         }
@@ -1742,6 +1742,30 @@ const getQueryBsiData = async (query) => {
     }
 }
 
+const verifyUsersEmailOrPhone = async (req) => {
+    const queries = req.query
+    if(queries.email) {
+        try {
+            const response = await admin.auth().getUserByEmail(queries.email)
+            return response ? true : false;
+        }
+        catch(error) {
+            return false;
+        }
+        
+    }
+    if(queries.phone) {
+        try {
+            const phoneNumberStr = '+1' + queries.phone.slice(-10)
+            const response = await admin.auth().getUserByPhoneNumber(phoneNumberStr)
+            return response ? true : false;
+        }
+        catch(error) {
+            return false;
+        }
+    }
+}
+
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
     return snapshot.docs[0].data().restrictedFields;
@@ -1833,5 +1857,6 @@ module.exports = {
     getBptlMetricsForShipped,
     getQueryBsiData,
     getRestrictedFields,
-    sendClientEmail
+    sendClientEmail,
+    verifyUsersEmailOrPhone
 }
