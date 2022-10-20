@@ -207,7 +207,8 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     let incentiveEligible = false;
 
-    console.log(data);
+    
+    console.log(data['130371375']);
     // incentiveEligible
     if(data['130371375']['266600170']['731498909'] === 104430631) {
         const baselineCollections = collections.data.filter(collection => collection['331584571'] === 266600170);
