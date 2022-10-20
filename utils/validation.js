@@ -203,11 +203,11 @@ const checkDerivedVariables = async (token, siteCode) => {
     const { getParticipantData, getSpecimenCollections } = require('./firestore');
 
     const data = await getParticipantData(token, siteCode);
-    const collections = getSpecimenCollections(token, siteCode);
+    const collections = await getSpecimenCollections(token, siteCode);
 
     let incentiveEligible = false;
 
-
+    console.log(data);
     // incentiveEligible
     if(data['130371375']['266600170']['731498909'] === 104430631) {
         const baselineCollections = collections.data.filter(collection => collection['331584571'] === 266600170);
