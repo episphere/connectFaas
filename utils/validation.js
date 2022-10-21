@@ -204,7 +204,9 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     const response = await getParticipantData(token, siteCode);
     const collections = await getSpecimenCollections(token, siteCode);
+    
     const data = response.data;
+    const doc = response.id;
 
     let updates = {};
     let incentiveEligible = false;
@@ -251,8 +253,8 @@ const checkDerivedVariables = async (token, siteCode) => {
         };
     } 
 
-    const { updateParticipant } = require('./firestore');
-    updateParticipant(updates);
+    const { updateParticipantData } = require('./firestore');
+    updateParticipantData(doc, updates);
 }
 
 const validateUsersEmailPhone = async (req, res) => {
