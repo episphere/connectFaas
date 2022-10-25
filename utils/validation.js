@@ -204,6 +204,9 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     const response = await getParticipantData(token, siteCode);
     const collections = await getSpecimenCollections(token, siteCode);
+
+    console.log(collections);
+    console.log(collections.data);
     
     const data = response.data;
     const doc = response.id;
@@ -225,6 +228,7 @@ const checkDerivedVariables = async (token, siteCode) => {
                 incentiveEligible = true;
             }    
             else {
+                
                 const baselineResearchCollections = collections.data.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
                 
                 if(baselineResearchCollections.length != 0) {
