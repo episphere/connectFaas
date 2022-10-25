@@ -202,14 +202,8 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     const { getParticipantData, getSpecimenCollections } = require('./firestore');
 
-    console.log(token);
-    console.log(siteCode);
-
     const response = await getParticipantData(token, siteCode);
     const collections = await getSpecimenCollections(token, siteCode);
-
-    console.log(collections);
-    console.log(collections.data);
     
     const data = response.data;
     const doc = response.id;
@@ -232,7 +226,7 @@ const checkDerivedVariables = async (token, siteCode) => {
             }    
             else {
                 
-                const baselineResearchCollections = collections.data.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
+                const baselineResearchCollections = collections.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
                 
                 if(baselineResearchCollections.length != 0) {
                     baselineResearchCollections.forEach(collection => {
