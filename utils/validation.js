@@ -213,7 +213,6 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     // incentiveEligible
     if(data['130371375']['266600170']['731498909'] === 104430631) {
-        // const baselineCollections = collections.data.filter(collection => collection['331584571'] === 266600170);
 
         const module1 = (data['949302066'] === 231311385);
         const module2 = (data['536735468'] === 231311385);
@@ -226,19 +225,20 @@ const checkDerivedVariables = async (token, siteCode) => {
                 incentiveEligible = true;
             }    
             else {
-                /*
-                if(baselineCollections.length === 0) return false;
-
-                baselineCollections.forEach(collection => {
-                    if(collection[conceptIds.collection.collectionSetting] === conceptIds.research) {
-                        tubes.forEach(tube => {
-                            if(collection[tube.concept] && collection[tube.concept][conceptIds.REASON_NOT_COLLECTED] && collection[tube.concept][conceptIds.REASON_NOT_COLLECTED] != conceptIds.REASONS.PARTICIPANT_REFUSAL) {
-                                eligible = true;
+                const baselineResearchCollections = collections.data.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
+                
+                if(baselineResearchCollections.length != 0) {
+                    baselineResearchCollections.forEach(collection => {
+                        
+                        const researchBloodTubes = ['299553921', '703954371', '838567176', '454453939', '652357376'];
+                        
+                        researchBloodTubes.forEach(tube => {
+                            if(collection[tube] && collection[tube][883732523] && collection[tube][883732523] != 681745422) {
+                                incentiveEligible = true;
                             }
                         });
-                    }
-                });
-                */
+                    });
+                }
             }
         }
     }
