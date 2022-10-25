@@ -202,6 +202,9 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     const { getParticipantData, getSpecimenCollections } = require('./firestore');
 
+    console.log(token);
+    console.log(siteCode);
+
     const response = await getParticipantData(token, siteCode);
     const collections = await getSpecimenCollections(token, siteCode);
 
