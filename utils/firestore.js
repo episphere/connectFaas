@@ -316,7 +316,10 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
         }
         if(decider === 'all') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("914594314", "desc")
+            if(from || to) { 
+                console.log('trigger date/time', site)
+                query = query.orderBy("914594314", "desc")
+            }
             query = query.orderBy("821247024", "asc")
                             .offset(offset)
                             .limit(limit)
@@ -329,7 +332,10 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
         }
         if(decider === 'active') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("914594314", "desc")
+            if(from || to) { 
+                console.log('trigger date/time', site)
+                query = query.orderBy("914594314", "desc")
+            }
             query = query.where("512820379", "==", 486306141) // Recruit type active
                             .orderBy("821247024", "asc")
                             .offset(offset)
@@ -343,7 +349,10 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
         }
         if(decider === 'notactive') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("914594314", "desc")
+            if(from || to) { 
+                console.log('trigger date/time', site)
+                query = query.orderBy("914594314", "desc")
+            }
             query = query.where("512820379", "==", 180583933) // Recruit type not active
                             .orderBy("821247024", "asc")
                             .offset(offset)
@@ -357,7 +366,10 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
         }
         if(decider === 'passive') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("914594314", "desc")
+            if(from || to) { 
+                console.log('trigger date/time', site)
+                query = query.orderBy("914594314", "desc")
+            }
             query = query.where("512820379", "==", 854703046) // Recruit type passive
                             .orderBy("821247024", "asc")
                             .offset(offset)
