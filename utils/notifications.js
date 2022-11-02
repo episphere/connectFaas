@@ -106,9 +106,11 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
 }
 
 const notificationHandler = async (message) => {
+    console.log("Message: " + message);
+
     const publishedMessage = message.data ? Buffer.from(message.data, 'base64').toString().trim() : null;
     const splitCharacters = '@#$'
-    let html = ``
+    let html = ``;
 
     if(!/@#\$/.test(publishedMessage)) {
         const {PubSub} = require('@google-cloud/pubsub');

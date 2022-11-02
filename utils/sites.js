@@ -1,5 +1,3 @@
-const rules = require("../updateParticipantData.json");
-
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
@@ -89,7 +87,6 @@ const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
 }
 
 const updateParticipantData = async (req, res, authObj) => {
-    
     logIPAdddress(req);
     setHeaders(res);
     
@@ -98,7 +95,6 @@ const updateParticipantData = async (req, res, authObj) => {
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
-    
     let obj = {};
     if (authObj) obj = authObj;
     else {
@@ -115,7 +111,6 @@ const updateParticipantData = async (req, res, authObj) => {
         const { isParentEntity } = require('./shared');
         obj = await isParentEntity(authorized);
     }
-    
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
 
