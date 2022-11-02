@@ -316,20 +316,20 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
         }
         if(decider === 'all') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("471593703", "desc")
+            if(from || to) query = query.orderBy("914594314", "desc")
             query = query.orderBy("821247024", "asc")
                             .offset(offset)
                             .limit(limit)
             
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent   
-            if(from) query = query.where('471593703', '>=', from)
-            if(to) query = query.where('471593703', '<=', to)
+            if(from) query = query.where('914594314', '>=', from)
+            if(to) query = query.where('914594314', '<=', to)
             participants = await query.get();
         }
         if(decider === 'active') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("471593703", "desc")
+            if(from || to) query = query.orderBy("914594314", "desc")
             query = query.where("512820379", "==", 486306141) // Recruit type active
                             .orderBy("821247024", "asc")
                             .offset(offset)
@@ -337,13 +337,13 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
-            if(from) query = query.where('471593703', '>=', from)
-            if(to) query = query.where('471593703', '<=', to)
+            if(from) query = query.where('914594314', '>=', from)
+            if(to) query = query.where('914594314', '<=', to)
             participants = await query.get();
         }
         if(decider === 'notactive') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("471593703", "desc")
+            if(from || to) query = query.orderBy("914594314", "desc")
             query = query.where("512820379", "==", 180583933) // Recruit type not active
                             .orderBy("821247024", "asc")
                             .offset(offset)
@@ -351,13 +351,13 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
-            if(from) query = query.where('471593703', '>=', from)
-            if(to) query = query.where('471593703', '<=', to)
+            if(from) query = query.where('914594314', '>=', from)
+            if(to) query = query.where('914594314', '<=', to)
             participants = await query.get();
         }
         if(decider === 'passive') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("471593703", "desc")
+            if(from || to) query = query.orderBy("914594314", "desc")
             query = query.where("512820379", "==", 854703046) // Recruit type passive
                             .orderBy("821247024", "asc")
                             .offset(offset)
@@ -365,8 +365,8 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
-            if(from) query = query.where('471593703', '>=', from)
-            if(to) query = query.where('471593703', '<=', to)
+            if(from) query = query.where('914594314', '>=', from)
+            if(to) query = query.where('914594314', '<=', to)
             participants = await query.get();
         }
         return participants.docs.map(document => {
@@ -966,6 +966,18 @@ const specimenExists = async (id, data) => {
 const boxExists = async (boxId, loginSite) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
     if(snapshot.size === 1) return true;
+    else return false;
+}
+
+const accessionIdExists = async (accessionId, accessionIdType, siteCode) => {
+    const snapshot = await db.collection('biospecimen').where(accessionIdType, '==', accessionId).get();
+    if(snapshot.size === 1) {
+        const token = snapshot.docs[0].data().token;
+        const response = await db.collection('participants').where('token', '==', token).get();
+        const participantSiteCode = response.docs[0].data()['827220437'];
+        if(participantSiteCode === siteCode) return snapshot.docs[0].data();
+        else return false;
+    }
     else return false;
 }
 
@@ -1621,7 +1633,7 @@ const setPackageReceiptFedex = async (data) => {
                             if (collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
                                 collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0]
                             }
-                            if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` ) {
+                            if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['787237543'] === `` ) {
                                 collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0]
                             }
                         }
@@ -1709,6 +1721,7 @@ const processBsiData = async (tubeConceptIds, query) => {
             // collectionIdInfo['789843387'] = i['789843387']
             collectionIdInfo['827220437'] = doc.data()['827220437']
             collectionIdInfo['951355211'] = doc.data()['951355211']
+            collectionIdInfo['915838974'] = doc.data()['915838974']
             collectionIdInfo['650516960'] = doc.data()['650516960']
             collectionIdInfo['762124027'] = doc.data()[tubeConceptId]['762124027'] === undefined ? ``  : doc.data()[tubeConceptId]['762124027']
             collectionIdInfo['982885431'] = doc.data()[tubeConceptId]['248868659'] === undefined ? `` : doc.data()[tubeConceptId]['248868659']['982885431']
@@ -1719,12 +1732,37 @@ const processBsiData = async (tubeConceptIds, query) => {
 
 const getQueryBsiData = async (query) => {
     try {
-        let tubeConceptIds = ['973670172', '838567176', '787237543', '703954371', '652357376', '454453939', '299553921','223999569', '143615646']  // grab tube id
+        let tubeConceptIds = ['973670172', '838567176', '787237543', '703954371', '652357376', '683613884', '677469051','958646668','454453939', '589588440',
+        '376960806', '232343615' ,'299553921','223999569', '143615646']  // grab tube id
         const holdBiospecimenMatches = await processBsiData(tubeConceptIds, query)
         return holdBiospecimenMatches
     }
     catch(error){
         return new Error(error);
+    }
+}
+
+const verifyUsersEmailOrPhone = async (req) => {
+    const queries = req.query
+    if(queries.email) {
+        try {
+            const response = await admin.auth().getUserByEmail(queries.email)
+            return response ? true : false;
+        }
+        catch(error) {
+            return false;
+        }
+        
+    }
+    if(queries.phone) {
+        try {
+            const phoneNumberStr = '+1' + queries.phone.slice(-10)
+            const response = await admin.auth().getUserByPhoneNumber(phoneNumberStr)
+            return response ? true : false;
+        }
+        catch(error) {
+            return false;
+        }
     }
 }
 
@@ -1768,6 +1806,7 @@ module.exports = {
     searchShipments,
     specimenExists,
     boxExists,
+    accessionIdExists,
     addBox,
     updateBox,
     searchBoxes,
@@ -1818,5 +1857,6 @@ module.exports = {
     getBptlMetricsForShipped,
     getQueryBsiData,
     getRestrictedFields,
-    sendClientEmail
+    sendClientEmail,
+    verifyUsersEmailOrPhone
 }

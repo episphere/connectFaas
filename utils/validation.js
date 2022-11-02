@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const generateToken = async (req, res, uid) => {
 
@@ -198,9 +198,109 @@ const getToken = async (req, res) => {
     }
 }
 
+const checkDerivedVariables = async (token, siteCode) => {
+
+    const { getParticipantData, getSpecimenCollections } = require('./firestore');
+
+    const response = await getParticipantData(token, siteCode);
+    const collections = await getSpecimenCollections(token, siteCode);
+    
+    const data = response.data;
+    const doc = response.id;
+
+    let updates = {};
+    let incentiveEligible = false;
+    let anySpecimenCollected = false;
+
+    // incentiveEligible
+    if(data['130371375']['266600170']['731498909'] === 104430631) {
+
+        const module1 = (data['949302066'] === 231311385);
+        const module2 = (data['536735468'] === 231311385);
+        const module3 = (data['976570371'] === 231311385);
+        const module4 = (data['663265240'] === 231311385);
+        const bloodCollected = (data['878865966'] === 353358909) || (data['173836415']?.['266600170']?.['693370086'] === 353358909);    
+    
+        if(module1 && module2 && module3 && module4) {
+            if(bloodCollected) {
+                incentiveEligible = true;
+            }    
+            else {
+                
+                const baselineResearchCollections = collections.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
+                
+                if(baselineResearchCollections.length != 0) {
+                    baselineResearchCollections.forEach(collection => {
+                        
+                        const researchBloodTubes = ['299553921', '703954371', '838567176', '454453939', '652357376'];
+                        
+                        researchBloodTubes.forEach(tube => {
+                            if(collection[tube] && collection[tube][883732523] && collection[tube][883732523] != 681745422) {
+                                incentiveEligible = true;
+                            }
+                        });
+                    });
+                }
+            }
+        }
+    }
+
+    //anySpecimenCollected
+    if(data['173836415']?.['266600170']?.['ANY_SPECIMEN_COLLECTED'] != 353358909) {
+        const bloodReceived = (data['173836415']?.['266600170']?.['534041351'] === 353358909);
+        const urineReceived = (data['173836415']?.['266600170']?.['210921343'] === 353358909);
+
+        anySpecimenCollected = bloodReceived || urineReceived;
+    }
+
+
+    if(incentiveEligible) {
+
+        const incentiveUpdates = {
+            '130371375.266600170.731498909': 353358909,
+            '130371375.266600170.222373868': data['827220437'] === 809703864 ? 104430631 : 353358909,
+            '130371375.266600170.787567527': new Date().toISOString(),
+            uid: data.state.uid
+        };
+
+        updates = { ...updates, ...incentiveUpdates};
+    } 
+
+    if(anySpecimenCollected) {
+
+        const specimenUpdates = {
+            '173836415.266600170.ANY_SPECIMEN_COLLECTED': 353358909,
+            '173836415.266600170.ANY_SPECIMEN_COLLECTED_DATE': new Date().toISOString(),
+            uid: data.state.uid
+        }
+
+        updates = { ...updates, ...specimenUpdates};
+    }
+
+    console.log(updates);
+
+    const { updateParticipantData } = require('./firestore');
+    updateParticipantData(doc, updates);
+}
+
+const validateUsersEmailPhone = async (req, res) => {
+    logIPAdddress(req);
+    setHeaders(res);
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+    if(!req.query) return res.status(404).json(getResponseJSON('Not valid', 404));
+    const { verifyUsersEmailOrPhone } = require('./firestore');
+    let result = await verifyUsersEmailOrPhone(req)
+    if (result) return res.status(200).json({data: {accountExists: true}, code: 200})
+    else return res.status(200).json({data: {accountExists: false}, code: 200})
+}
+
 module.exports = {
     generateToken,
     validateToken,
     validateSiteUsers,
-    getToken
+    getToken,
+    checkDerivedVariables,
+    validateUsersEmailPhone
 }
