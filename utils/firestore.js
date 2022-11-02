@@ -969,6 +969,18 @@ const boxExists = async (boxId, loginSite) => {
     else return false;
 }
 
+const accessionIdExists = async (accessionId, accessionIdType, siteCode) => {
+    const snapshot = await db.collection('biospecimen').where(accessionIdType, '==', accessionId).get();
+    if(snapshot.size === 1) {
+        const token = snapshot.docs[0].data().token;
+        const response = await db.collection('participants').where('token', '==', token).get();
+        const participantSiteCode = response.docs[0].data()['827220437'];
+        if(participantSiteCode === siteCode) return snapshot.docs[0].data();
+        else return false;
+    }
+    else return false;
+}
+
 const updateTempCheckDate = async (institute) => {
     let currDate = new Date();
     let randomStart = Math.floor(Math.random()*5)+15 - currDate.getDay();
@@ -1794,6 +1806,7 @@ module.exports = {
     searchShipments,
     specimenExists,
     boxExists,
+    accessionIdExists,
     addBox,
     updateBox,
     searchBoxes,
