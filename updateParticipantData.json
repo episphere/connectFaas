@@ -385,5 +385,9 @@
 	"173836415.266600170.452847912": {
         	"dataType": "number",
 	    	"mustExist": false
-    	}
+    	},
+	"state.studyId": {
+		"dataType": "string",
+		"mustExist": true
+	}
 }
