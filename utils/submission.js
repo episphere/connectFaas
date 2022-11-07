@@ -114,6 +114,9 @@ const getParticipants = async (req, res, authObj) => {
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
 
+    console.log("PARENT: " + isParent);
+    console.log("SITE CODES: " + siteCodes);
+
     if(!req.query.type) return res.status(404).json(getResponseJSON('Resource not found', 404));
 
     if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
