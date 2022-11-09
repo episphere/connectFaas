@@ -235,6 +235,18 @@ const moduleConcepts = {
     "moduleSSN": 'D_166676176'
 }
 
+const moduleConceptsToCollections = {
+    "D_726699695" :     "module1_v1",
+    "D_726699695_V2" :  "module1_v2",
+    "D_745268907" :     "module2_v1",
+    "D_745268907_V2" :  "module2_v2",
+    "D_965707586" :     "module3_v1",
+    "D_716117817" :     "module4_v1",
+    "D_299215535" :     "bioSurvey_v1",
+    "D_912367929" :     "menstrualSurvey_v1",
+    "D_826163434" :     "clinicalBioSurvey_v1"
+}
+
 const incentiveConcepts = {
     'baseline': '130371375.266600170',
     'followup1': '130371375.496823485',
@@ -630,6 +642,7 @@ module.exports = {
     incentiveFlags,
     lockedAttributes,
     moduleConcepts,
+    moduleConceptsToCollections,
     incentiveConcepts,
     APIAuthorization,
     isParentEntity,
