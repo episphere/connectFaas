@@ -333,8 +333,8 @@ const getUserProfile = async (req, res, uid) => {
 
 const getUserSurveys = async (req, res, uid) => {
 
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
     // get req modules -> converter function
