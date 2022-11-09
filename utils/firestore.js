@@ -492,16 +492,17 @@ const retrieveUserProfile = async (uid) => {
 
 const retrieveUserSurveys = async (token, concepts) => {
     try {
+        let surveyData = {};
+
         const { moduleConceptsToCollections } = require('./shared');
 
-        const snapShot = await db.collection(moduleConceptsToCollections["D_726699695"]).where('token', '==', token).get();
+        const snapshot = await db.collection(moduleConceptsToCollections["D_726699695"]).where('token', '==', token).get();
         
-        if(snapShot.size > 0){
-            return snapShot.docs.map(document => {
-                let data = document.data();
-                return data;
-            });
+        if(snapshot.size > 0){
+            surveyData["D_726699695"] = snapshot.docs[0].data;
         }
+
+        return surveyData;
     }
     catch(error) {
         console.error(error);
