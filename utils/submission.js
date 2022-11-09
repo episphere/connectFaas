@@ -333,8 +333,8 @@ const getUserProfile = async (req, res, uid) => {
 
 const getUserSurveys = async (req, res, uid) => {
 
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
     // get req modules -> converter function
@@ -342,7 +342,9 @@ const getUserSurveys = async (req, res, uid) => {
     const { retrieveUserSurveys, getTokenForParticipant } = require('./firestore'); 
 
     const token = await getTokenForParticipant(uid);
-    const response = await retrieveUserSurveys(token); //add parameter for modules
+
+    const concepts = req.body;
+    const response = await retrieveUserSurveys(token, concepts); //add parameter for modules
 
     if(response instanceof Error){
         return res.status(500).json(getResponseJSON(response.message, 500));
