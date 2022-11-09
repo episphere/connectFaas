@@ -1,5 +1,5 @@
 const { getResponseJSON, setHeadersDomainRestricted } = require('./shared');
-const { recruitSubmit, getUserProfile, getUserCollections } = require('./submission');
+const { recruitSubmit, getUserProfile, getUserSurveys, getUserCollections } = require('./submission');
 const { retrieveNotifications } = require('./notifications');
 const { validateToken, generateToken, validateUsersEmailPhone } = require('./validation');
 
@@ -38,6 +38,8 @@ const connectApp = async (req, res) => {
     if (api === 'submit') return recruitSubmit(req, res, uid);
 
     else if (api === 'getUserProfile') return getUserProfile(req, res, uid);
+
+    else if (api === 'getUserSurveys') return getUserSurveys(req, res, uid);
 
     else if (api === 'getUserCollections') return getUserCollections(req, res, uid);
 

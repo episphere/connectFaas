@@ -331,6 +331,29 @@ const getUserProfile = async (req, res, uid) => {
     }
 }
 
+const getUserSurveys = async (req, res, uid) => {
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    // get req modules -> converter function
+
+    const { retrieveUserSurveys, getTokenForParticipant } = require('./firestore'); 
+
+    const token = await getTokenForParticipant(uid);
+    const response = await retrieveUserSurveys(token); //add parameter for modules
+
+    if(response instanceof Error){
+        return res.status(500).json(getResponseJSON(response.message, 500));
+    }
+
+    // build response object
+
+    return res.status(200).json({data: response, code:200});
+
+}
+
 const getUserCollections = async (req, res, uid) => {
 
     if(req.method !== 'GET') {
@@ -358,5 +381,6 @@ module.exports = {
     getParticipants,
     identifyParticipant,
     getUserProfile,
+    getUserSurveys,
     getUserCollections
 }
