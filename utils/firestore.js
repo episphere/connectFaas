@@ -490,6 +490,17 @@ const retrieveUserProfile = async (uid) => {
     }
 }
 
+const retrieveUserSurveys = async (token) => {
+    try {
+        console.log(token);
+        return token;
+    }
+    catch(error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
 const retrieveToken = async (access_token) => {
     try{
         const response = await db.collection('apiKeys')
@@ -1777,6 +1788,7 @@ module.exports = {
     retrieveParticipants,
     verifyIdentity,
     retrieveUserProfile,
+    retrieveUserSurveys,
     createRecord,
     recordExists,
     validateIDToken,

@@ -259,8 +259,7 @@ const checkDerivedVariables = async (token, siteCode) => {
         const incentiveUpdates = {
             '130371375.266600170.731498909': 353358909,
             '130371375.266600170.222373868': data['827220437'] === 809703864 ? 104430631 : 353358909,
-            '130371375.266600170.787567527': new Date().toISOString(),
-            uid: data.state.uid
+            '130371375.266600170.787567527': new Date().toISOString()
         };
 
         updates = { ...updates, ...incentiveUpdates};
@@ -270,8 +269,7 @@ const checkDerivedVariables = async (token, siteCode) => {
 
         const specimenUpdates = {
             '173836415.266600170.316824786': 353358909,
-            '173836415.266600170.740582332': new Date().toISOString(),
-            uid: data.state.uid
+            '173836415.266600170.740582332': new Date().toISOString()
         }
 
         updates = { ...updates, ...specimenUpdates};
