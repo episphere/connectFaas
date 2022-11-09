@@ -59,7 +59,6 @@ const lockedAttributes = [
                     ] // Read only access after initialization
 
 const filterData = async (queries, siteCodes, isParent) => {
-    console.log("QUERIES: " + queries);
     const { filterDB } = require('./firestore');
     const result = await filterDB(queries, siteCodes, isParent);
     return result;
