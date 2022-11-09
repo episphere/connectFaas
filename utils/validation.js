@@ -246,7 +246,7 @@ const checkDerivedVariables = async (token, siteCode) => {
     }
 
     //anySpecimenCollected
-    if(data['173836415']?.['266600170']?.['ANY_SPECIMEN_COLLECTED'] != 353358909) {
+    if(data['173836415']?.['266600170']?.['316824786'] != 353358909) {
         const bloodReceived = (data['173836415']?.['266600170']?.['534041351'] === 353358909);
         const urineReceived = (data['173836415']?.['266600170']?.['210921343'] === 353358909);
 
@@ -269,8 +269,8 @@ const checkDerivedVariables = async (token, siteCode) => {
     if(anySpecimenCollected) {
 
         const specimenUpdates = {
-            '173836415.266600170.ANY_SPECIMEN_COLLECTED': 353358909,
-            '173836415.266600170.ANY_SPECIMEN_COLLECTED_DATE': new Date().toISOString(),
+            '173836415.266600170.316824786': 353358909,
+            '173836415.266600170.740582332': new Date().toISOString(),
             uid: data.state.uid
         }
 
