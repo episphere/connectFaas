@@ -344,6 +344,7 @@ const getUserSurveys = async (req, res, uid) => {
     const token = await getTokenForParticipant(uid);
 
     const concepts = req.body;
+    console.log(concepts);
     const response = await retrieveUserSurveys(token, concepts); //add parameter for modules
 
     if(response instanceof Error){
