@@ -342,6 +342,8 @@ const getUserSurveys = async (req, res, uid) => {
     const { retrieveUserSurveys, getTokenForParticipant } = require('./firestore'); 
 
     const token = await getTokenForParticipant(uid);
+    console.log(req);
+    console.log(req.body);
     const concepts = req.body;
 
     const response = await retrieveUserSurveys(token, concepts); //add parameter for modules
