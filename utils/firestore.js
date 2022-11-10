@@ -503,7 +503,7 @@ const retrieveUserSurveys = async (token, concepts) => {
             console.log("MODULE: " + moduleConceptsToCollections[concept]);
             
             const snapshot = await db.collection(moduleConceptsToCollections[concept]).where('token', '==', token).get();
-        
+            console.log(snapshot.size);
             if(snapshot.size > 0){
                 surveyData[concept] = snapshot.docs[0].data();
             }
