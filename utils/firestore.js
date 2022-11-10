@@ -494,10 +494,12 @@ const retrieveUserSurveys = async (token, concepts) => {
     try {
         let surveyData = {};
 
+        console.log("CONCEPTS: " + concepts);
+
         const { moduleConceptsToCollections } = require('./shared');
 
         Object.keys(concepts).forEach(async (concept) => {
-            console.log(concept);
+            console.log("CONCEPT: " + concept);
             const snapshot = await db.collection(moduleConceptsToCollections[concept]).where('token', '==', token).get();
         
             if(snapshot.size > 0){
