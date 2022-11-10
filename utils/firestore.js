@@ -498,7 +498,7 @@ const retrieveUserSurveys = async (token, concepts) => {
 
         const { moduleConceptsToCollections } = require('./shared');
 
-        concepts.forEach(async (concept) => {
+        await concepts.forEach(async (concept) => {
             console.log("CONCEPT: " + concept);
             console.log("MODULE: " + moduleConceptsToCollections[concept]);
             
