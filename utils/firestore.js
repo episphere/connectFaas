@@ -500,6 +500,8 @@ const retrieveUserSurveys = async (token, concepts) => {
 
         Object.keys(concepts).forEach(async (concept) => {
             console.log("CONCEPT: " + concept);
+            console.log("MODULE: " + moduleConceptsToCollections[concept]);
+            
             const snapshot = await db.collection(moduleConceptsToCollections[concept]).where('token', '==', token).get();
         
             if(snapshot.size > 0){
