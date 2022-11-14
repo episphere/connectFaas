@@ -52,23 +52,6 @@ const submit = async (res, data, uid) => {
         data = {...data, Connect_ID}
     }
 
-    const { moduleConceptsToCollections } = require('./shared');
-    
-    let key = Object.keys(data)[0];
-    let collection = moduleConceptsToCollections[key];
-
-    if (Object.keys(data).length === 1 && collection) {
-
-        const { updateSurvey } = require('./firestore'); 
-        const response = updateSurvey(collection, data[key], uid);
-
-        if(response instanceof Error){
-            return res.status(500).json(getResponseJSON(response.message, 500));
-        }
-        
-        return res.status(200).json(getResponseJSON('Survey data stored successfully!', 200)); 
-    }
-
     //deleting things if they are undefined
     let keys = Object.keys(data);
     for(let k in keys){
