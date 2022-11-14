@@ -52,6 +52,23 @@ const submit = async (res, data, uid) => {
         data = {...data, Connect_ID}
     }
 
+    const { moduleConceptsToCollections } = require('./shared');
+    
+    let key = Object.keys(data)[0];
+    let collection = moduleConceptsToCollections[key];
+
+    if (Object.keys(data).length === 1 && collection) {
+
+        const { updateSurvey } = require('./firestore'); 
+        const response = updateSurvey(collection, data[key], uid);
+
+        if(response instanceof Error){
+            return res.status(500).json(getResponseJSON(response.message, 500));
+        }
+        
+        return res.status(200).json(getResponseJSON('Survey data stored successfully!', 200)); 
+    }
+
     //deleting things if they are undefined
     let keys = Object.keys(data);
     for(let k in keys){
@@ -337,14 +354,10 @@ const getUserSurveys = async (req, res, uid) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
-    // get req modules -> converter function
-
-    const { retrieveUserSurveys, getTokenForParticipant } = require('./firestore'); 
-
-    const token = await getTokenForParticipant(uid);
     const concepts = req.body;
 
-    const response = await retrieveUserSurveys(token, concepts); //add parameter for modules
+    const { retrieveUserSurveys } = require('./firestore'); 
+    const response = await retrieveUserSurveys(uid, concepts); //add parameter for modules
 
     if(response instanceof Error){
         return res.status(500).json(getResponseJSON(response.message, 500));

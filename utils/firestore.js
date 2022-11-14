@@ -490,7 +490,7 @@ const retrieveUserProfile = async (uid) => {
     }
 }
 
-const retrieveUserSurveys = async (token, concepts) => {
+const retrieveUserSurveys = async (uid, concepts) => {
     try {
         let surveyData = {};
 
@@ -498,10 +498,12 @@ const retrieveUserSurveys = async (token, concepts) => {
  
         for await (const concept of concepts) {
             
-            const snapshot = await db.collection(moduleConceptsToCollections[concept]).where('token', '==', token).get();
+            if (moduleConceptsToCollections[concept]) {
+                const snapshot = await db.collection(moduleConceptsToCollections[concept]).where('uid', '==', uid).get();
             
-            if(snapshot.size > 0){
-                surveyData[concept] = snapshot.docs[0].data();
+                if(snapshot.size > 0){
+                    surveyData[concept] = snapshot.docs[0].data();
+                }
             }
         };
 
@@ -510,6 +512,23 @@ const retrieveUserSurveys = async (token, concepts) => {
     catch(error) {
         console.error(error);
         return new Error(error);
+    }
+}
+
+const updateSurvey = async (collection, data, uid) => {
+    try{
+        const response = await db.collection(collection).where('uid', '==', uid).get();
+        if(response.size === 1) {
+            for(let doc of response.docs){
+                await db.collection(collection).doc(doc.id).update(data);
+                return true;
+            }
+        }
+        //else create?
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error)
     }
 }
 
@@ -1801,6 +1820,7 @@ module.exports = {
     verifyIdentity,
     retrieveUserProfile,
     retrieveUserSurveys,
+    updateSurvey,
     createRecord,
     recordExists,
     validateIDToken,
