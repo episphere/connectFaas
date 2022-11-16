@@ -1,6 +1,7 @@
+const collectionNameList = ['participants','biospecimen', 'boxes', 'module1_v1', 'module1_v2', 'module2_v1', 'module2_v2', 'module3_v1', 'module4_v1', 'bioSurvey_v1', 'menstrualSurvey_v1', 'clinicalBioSurvey_v1'];
+
 const importToBigQuery = async (event, context) => {
     const gcsEvent = event;
-    const collectionNameList = ['participants','biospecimen', 'boxes', 'module1_v1', 'module1_v2', 'module2_v1', 'module2_v2', 'module3_v1', 'module4_v1', 'bioSurvey_v1', 'menstrualSurvey_v1', 'clinicalBioSurvey_v1'];
     let tableName = ''
     if (gcsEvent.name.indexOf('.export_metadata') === -1) return true;
     for (const collectionName  of collectionNameList) {
