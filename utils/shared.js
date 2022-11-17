@@ -247,6 +247,18 @@ const moduleConceptsToCollections = {
     "D_826163434" :     "clinicalBioSurvey_v1"
 }
 
+const moduleStatusConcepts = {
+    "949302066" :       "module1_v1",
+    "949302066" :       "module1_v2",
+    "536735468" :       "module2_v1",
+    "536735468" :       "module2_v2",
+    "976570371" :       "module3_v1",
+    "663265240" :       "module4_v1",
+    "265193023" :       "bioSurvey_v1",
+    "459098666" :       "menstrualSurvey_v1",
+    "253883960" :       "clinicalBioSurvey_v1"
+}
+
 const incentiveConcepts = {
     'baseline': '130371375.266600170',
     'followup1': '130371375.496823485',
@@ -630,6 +642,19 @@ const checkDefaultFlags = async (data, uid) => {
     return false;
 }
 
+const cleanSurveyData = (data) => {
+
+    const admin = require('firebase-admin');
+    
+    Object.keys(data).forEach(key => {
+        if(data[key] === null) {
+            data[key] = admin.firestore.FieldValue.delete();
+        }
+    });
+
+    return data;
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -643,6 +668,7 @@ module.exports = {
     lockedAttributes,
     moduleConcepts,
     moduleConceptsToCollections,
+    moduleStatusConcepts,
     incentiveConcepts,
     APIAuthorization,
     isParentEntity,
@@ -656,5 +682,6 @@ module.exports = {
     collectionIdConversion,
     sites, 
     bagConceptIDs,
-    checkDefaultFlags
+    checkDefaultFlags,
+    cleanSurveyData
 }

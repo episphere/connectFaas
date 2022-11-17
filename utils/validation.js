@@ -199,8 +199,8 @@ const getToken = async (req, res) => {
 }
 
 const checkDerivedVariables = async (token, siteCode) => {
-
-    const { getParticipantData, getSpecimenCollections } = require('./firestore');
+    
+    const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
 
     const response = await getParticipantData(token, siteCode);
     const collections = await getSpecimenCollections(token, siteCode);
@@ -208,9 +208,13 @@ const checkDerivedVariables = async (token, siteCode) => {
     const data = response.data;
     const doc = response.id;
 
+    const uid = data.state.uid
+    const surveys = await retrieveUserSurveys(uid, ["D_299215535"]);
+
     let updates = {};
     let incentiveEligible = false;
     let anySpecimenCollected = false;
+    let menstrualCycleSurveyEligible = false;
 
     // incentiveEligible
     if(data['130371375']['266600170']['731498909'] === 104430631) {
@@ -253,6 +257,12 @@ const checkDerivedVariables = async (token, siteCode) => {
         anySpecimenCollected = bloodReceived || urineReceived;
     }
 
+    //menstrualCycleSurveyEligible
+    if(data['289750687'] != 353358909) {
+        if(data['265193023'] === 231311385) {
+            menstrualCycleSurveyEligible = (surveys['D_299215535']?.['D_112151599'] == 353358909);
+        }
+    }
 
     if(incentiveEligible) {
 
@@ -275,10 +285,21 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...specimenUpdates};
     }
 
+    if(menstrualCycleSurveyEligible) {
+        
+        const menstrualUpdates = {
+            '289750687': 353358909
+        }
+
+        updates = { ...updates, ...menstrualUpdates};
+    }
+
     console.log(updates);
 
-    const { updateParticipantData } = require('./firestore');
-    updateParticipantData(doc, updates);
+    if(Object.keys(updates).length > 0) {
+        const { updateParticipantData } = require('./firestore');
+        updateParticipantData(doc, updates);
+    }
 }
 
 const validateUsersEmailPhone = async (req, res) => {

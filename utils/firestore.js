@@ -490,6 +490,29 @@ const retrieveUserProfile = async (uid) => {
     }
 }
 
+const retrieveConnectID = async (uid) => {
+    try{
+        const snapshot = await db.collection('participants')
+                                .where('state.uid', '==', uid)
+                                .get();
+        if(snapshot.size === 1){
+            if(snapshot.docs[0].data()['Connect_ID']) {
+                return snapshot.docs[0].data()['Connect_ID'];
+            }
+            else {
+                return new Error('Connect ID not found on record!');
+            }
+        }
+        else{
+            return new Error('Error retrieving single Connect ID!');    
+        }
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error);
+    }
+}
+
 const retrieveUserSurveys = async (uid, concepts) => {
     try {
         let surveyData = {};
@@ -515,20 +538,35 @@ const retrieveUserSurveys = async (uid, concepts) => {
     }
 }
 
-const updateSurvey = async (collection, data, uid) => {
-    try{
-        const response = await db.collection(collection).where('uid', '==', uid).get();
-        if(response.size === 1) {
-            for(let doc of response.docs){
-                await db.collection(collection).doc(doc.id).update(data);
-                return true;
-            }
-        }
-        //else create?
+const surveyExists = async (collection, uid) => {
+    const snapshot = await db.collection(collection).where('uid', '==', uid).get();
+    if (snapshot.size === 1) {
+        return snapshot.docs[0];
     }
-    catch(error){
+    else {
+        return false;
+    }
+}
+
+const storeSurvey = async (data, collection) => {
+    try {
+        await db.collection(collection).add(data);
+        return true;
+    }
+    catch (error) {
         console.error(error);
-        return new Error(error)
+        return new Error(error);
+    }
+}
+
+const updateSurvey = async (data, collection, doc) => {
+    try {
+        await db.collection(collection).doc(doc.id).update(data);
+        return true;
+    }
+    catch (error) {
+        console.error(error);
+        return new Error(error);
     }
 }
 
@@ -1820,7 +1858,10 @@ module.exports = {
     verifyIdentity,
     retrieveUserProfile,
     retrieveUserSurveys,
+    retrieveConnectID,
+    surveyExists,
     updateSurvey,
+    storeSurvey,
     createRecord,
     recordExists,
     validateIDToken,
