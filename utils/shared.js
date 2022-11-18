@@ -248,15 +248,13 @@ const moduleConceptsToCollections = {
 }
 
 const moduleStatusConcepts = {
-    "949302066" :       "module1_v1",
-    "949302066" :       "module1_v2",
-    "536735468" :       "module2_v1",
-    "536735468" :       "module2_v2",
-    "976570371" :       "module3_v1",
-    "663265240" :       "module4_v1",
-    "265193023" :       "bioSurvey_v1",
-    "459098666" :       "menstrualSurvey_v1",
-    "253883960" :       "clinicalBioSurvey_v1"
+    "949302066" :       "module1",
+    "536735468" :       "module2",
+    "976570371" :       "module3",
+    "663265240" :       "module4",
+    "265193023" :       "bioSurvey",
+    "459098666" :       "menstrualSurvey",
+    "253883960" :       "clinicalBioSurvey"
 }
 
 const incentiveConcepts = {
