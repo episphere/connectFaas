@@ -219,7 +219,7 @@ const updateParticipantData = async (req, res, authObj) => {
             const { updateParticipantData } = require('./firestore');
             const { checkDerivedVariables } = require('./validation');
 
-            updateParticipantData(docID, updatedData).then(checkDerivedVariables(participantToken, siteCodes));
+            await updateParticipantData(docID, updatedData).then(await checkDerivedVariables(participantToken, siteCodes));
         } 
 
         responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
