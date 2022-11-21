@@ -249,11 +249,10 @@ const checkDerivedVariables = async (token, siteCode) => {
         }
     }
 
-    //anySpecimenCollected
-    if(data['173836415']?.['266600170']?.['316824786'] != 353358909) {
-        const bloodReceived = (data['173836415']?.['266600170']?.['534041351'] === 353358909);
-        const urineReceived = (data['173836415']?.['266600170']?.['210921343'] === 353358909);
-
+    // anySpecimenCollected
+    if((data['173836415'] && data['173836415']['266600170']) && (data['173836415']['266600170']['316824786'] === undefined || data['173836415']['266600170']['316824786'] != 353358909)) {
+        const bloodReceived = data['173836415']['266600170']['534041351'] === 353358909;
+        const urineReceived = data['173836415']['266600170']['210921343'] === 353358909;
         anySpecimenCollected = bloodReceived || urineReceived;
     }
 
