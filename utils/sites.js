@@ -1,3 +1,4 @@
+const rules = require("../updateParticipantData.json");
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
@@ -113,73 +114,157 @@ const updateParticipantData = async (req, res, authObj) => {
     }
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
-    console.log(req.body);
-    if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
-    const dataObj = req.body.data;
-    if(dataObj.token === undefined) return res.status(400).json(getResponseJSON('Invalid request, token missing.', 400));
-    const participantToken = dataObj.token;
-    const { getParticipantData } = require('./firestore');
-    const record = await getParticipantData(participantToken, siteCodes, isParent);
-    if(!record) return res.status(404).json(getResponseJSON(`Invalid token ${participantToken}`, 404));
-    const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid']
-    const docID = record.id;
-    const docData = record.data;
-    let updatedData = {}
 
-    let flattened = {
-        newData: {},
-        docData: {}
-    };
+    console.log(req.body.data);
 
-    const flat = (obj, att, attribute) => {
-        for(let k in obj) {
-            if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
-            else {
-                if(att === 'newData' && flattened['docData'][attribute ? `${attribute}.${k}`: k] === undefined && !authObj) continue;
-                if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
-                flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
+    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    if(!Array.isArray(req.body.data)) return res.status(400).json(getResponseJSON('Bad request. Data must be an array.', 400));
+    if(req.body.data.length === undefined || req.body.data.length < 1) return res.status(400).json(getResponseJSON('Bad request. Data array does not have any elements.', 400));
+    if(req.body.data.length > 100) return res.status(400).json(getResponseJSON('Bad request. Data contains more than acceptable limit of 100 records.', 400));
+
+    const dataArray = req.body.data;
+    const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid'];
+
+    let responseArray = [];
+    let error = false;
+
+    for(let dataObj of dataArray) {
+        if(dataObj.token === undefined) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': 'UNDEFINED', 'Errors': 'Token not defined in data object.'}});
+            continue;
+        } 
+
+        const participantToken = dataObj.token;
+        const { getParticipantData } = require('./firestore');
+        const record = await getParticipantData(participantToken, siteCodes, isParent);
+
+        if(!record) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Token does not exist.'}});
+            continue;
+        }
+
+        const docID = record.id;
+        const docData = record.data;
+
+        const flat = (obj, att, attribute) => {
+            for(let k in obj) {
+                if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
+                else {
+                    if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
+                    flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
+                }
             }
         }
-    }
-    flat(docData, 'docData');
 
-    for(let key in dataObj) {
-        if(docData[key] === undefined && !authObj) continue;
-        if(primaryIdentifiers.indexOf(key) !== -1) continue;
-        if(key === '821247024') continue; // Don't allow updates to verification status.
-        if(key === '399159511') updatedData[`query.firstName`] = dataObj[key].toLowerCase(); // update first name
-        if(key === '996038075') updatedData[`query.lastName`] = dataObj[key].toLowerCase();// update last name
+        let updatedData = {};
+        let flattened = {
+            newData: {},
+            docData: {}
+        };
 
-        if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key)
-        else flattened['newData'][key] = dataObj[key]
+        flat(docData, 'docData');
+
+        for(let key in dataObj) {
+        
+            if(primaryIdentifiers.indexOf(key) !== -1) continue;
+
+            if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key);
+            else flattened['newData'][key] = dataObj[key];
+
+            updatedData = {...updatedData, ...flattened.newData}
+        }
+
+        // Handle Site Notifications
+        if(dataObj['831041022'] && dataObj['747006172'] && dataObj['773707518'] && dataObj['831041022'] === 353358909 && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909){ // Data Destruction
+            await siteNotificationsHandler(docData['Connect_ID'], '831041022', docData['827220437'], obj);
+        }
+        else if (dataObj['747006172'] && dataObj['773707518'] && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909) { // Withdraw Consent
+            await siteNotificationsHandler(docData['Connect_ID'], '747006172', docData['827220437'], obj);
+        }
+        else if(dataObj['773707518'] && dataObj['773707518'] === 353358909) { // Revocation only email
+            await siteNotificationsHandler(docData['Connect_ID'], '773707518', docData['827220437'], obj);
+        }
+        else if (dataObj['987563196'] && dataObj['987563196'] === 353358909) {
+            await siteNotificationsHandler(docData['Connect_ID'], '987563196', docData['827220437'], obj);
+        }
+
+        if(!authObj) {
+            const errors = qc(updatedData, flattened.docData, rules);
+            if(errors.length !== 0) {
+                error = true;
+                responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': errors}});
+                continue;
+            }
+        }
+
         const { initializeTimestamps } = require('./shared')
-        for(let flattenedKey in flattened['newData']) {
-            if(initializeTimestamps[flattenedKey]) {
-                if(initializeTimestamps[flattenedKey].value && initializeTimestamps[flattenedKey].value !== flattened['newData'][flattenedKey]) continue;
-                flattened['newData'] = {...flattened['newData'], ...initializeTimestamps[flattenedKey].initialize}
+
+        for(let key in updatedData) {
+            if(initializeTimestamps[key]) {
+                if(initializeTimestamps[key].value && initializeTimestamps[key].value === updatedData[key]) {
+                    updatedData = {...updatedData, ...initializeTimestamps[key].initialize}
+                }
             }
         }
-        updatedData = {...updatedData, ...flattened.newData}
+
+        if(updatedData['399159511']) updatedData[`query.firstName`] = dataObj['399159511'].toLowerCase();
+        if(updatedData['996038075']) updatedData[`query.firstName`] = dataObj['996038075'].toLowerCase();
+
+        console.log(updatedData);
+
+        if(Object.keys(updatedData).length > 0) {
+
+            const { updateParticipantData } = require('./firestore');
+            const { checkDerivedVariables } = require('./validation');
+
+            updateParticipantData(docID, updatedData).then(checkDerivedVariables(participantToken, siteCodes));
+        } 
+
+        responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
     }
 
-    // Handle Site Notifications
-    if(dataObj['831041022'] && dataObj['747006172'] && dataObj['773707518'] && dataObj['831041022'] === 353358909 && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909){ // Data Destruction
-        await siteNotificationsHandler(docData['Connect_ID'], '831041022', docData['827220437'], obj);
-    }
-    else if (dataObj['747006172'] && dataObj['773707518'] && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909) { // Withdraw Consent
-        await siteNotificationsHandler(docData['Connect_ID'], '747006172', docData['827220437'], obj);
-    }
-    else if(dataObj['773707518'] && dataObj['773707518'] === 353358909) { // Revocation only email
-        await siteNotificationsHandler(docData['Connect_ID'], '773707518', docData['827220437'], obj);
-    }
-    else if (dataObj['987563196'] && dataObj['987563196'] === 353358909) {
-        await siteNotificationsHandler(docData['Connect_ID'], '987563196', docData['827220437'], obj);
-    }
+    return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
+}
 
-    console.log(updatedData)
-    const { updateParticipantData } = require('./firestore');
-    if(Object.keys(updatedData).length > 0) updateParticipantData(docID, updatedData);
-    return res.status(200).json({...getResponseJSON('Success!', 200), token: participantToken});
+const qc = (newData, existingData, rules) => {
+    let errors = [];
+    for(key in newData) {
+        if(key == 'token') continue;
+
+        if(rules[key]) {
+
+            if(rules[key].mustExist && existingData[key] === undefined) {
+                errors.push(" Key (" + key + ") must exist before updating");
+                continue;
+            }
+
+            if(rules[key].dataType) {
+                if(rules[key].dataType == 'ISO') {
+                    if(typeof newData[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(newData[key]))) {
+                        errors.push(" Invalid data type / format for Key (" + key + ")");
+                    }
+                }
+                else {
+                    if(rules[key].dataType !== typeof newData[key]) {
+                        errors.push(" Invalid data type for Key (" + key + ")");
+                    }
+                    else {
+                        if(rules[key].values) {
+                            if(rules[key].values.filter(value => value.toString() === newData[key].toString()).length == 0) {
+                                errors.push(" Invalid value for Key (" + key + ")");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            errors.push(" Key (" + key + ") not found");
+        }
+    }
+    return errors;
 }
 
 module.exports = {
