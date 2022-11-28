@@ -209,7 +209,7 @@ const checkDerivedVariables = async (token, siteCode) => {
     const doc = response.id;
 
     const uid = data.state.uid
-    const surveys = await retrieveUserSurveys(uid, ["D_299215535"]);
+    const surveys = await retrieveUserSurveys(uid, ["D_299215535", "D_826163434"]);
 
     let updates = {};
     let incentiveEligible = false;
@@ -260,6 +260,9 @@ const checkDerivedVariables = async (token, siteCode) => {
     if(data['289750687'] != 353358909) {
         if(data['265193023'] === 231311385) {
             menstrualCycleSurveyEligible = (surveys['D_299215535']?.['D_112151599'] == 353358909);
+        }
+        else if(data['253883960'] === 231311385) {
+            menstrualCycleSurveyEligible = (surveys['D_826163434']?.['D_112151599'] == 353358909);
         }
     }
 
