@@ -200,7 +200,7 @@ const notificationHandler = async (message) => {
             const participantFirstName = preferredNameField && participant[preferredNameField] ? participant[preferredNameField] : participant[firstNameField]
 
             let body = html.replace('<firstName>', participantFirstName);
-            body = body.replace('${Connect_ID}', participant['Connect_ID'])
+            body = body.replace('${token}', participant['token'])
 
             if(body.indexOf('<loginDetails>') !== -1) {
                 let loginDetails;

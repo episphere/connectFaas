@@ -1,10 +1,16 @@
+const collectionNameList = ['participants','biospecimen', 'boxes', 'module1_v1', 'module1_v2', 'module2_v1', 'module2_v2', 'module3_v1', 'module4_v1', 'bioSurvey_v1', 'menstrualSurvey_v1', 'clinicalBioSurvey_v1'];
+
 const importToBigQuery = async (event, context) => {
     const gcsEvent = event;
     let tableName = ''
-    if(gcsEvent.name.indexOf('.export_metadata') === -1) return true;
-    if(gcsEvent.name.includes('participants')) tableName = 'participants';
-    if(gcsEvent.name.includes('biospecimen')) tableName = 'biospecimen';
-    if(gcsEvent.name.includes('boxes')) tableName = 'boxes';
+    if (gcsEvent.name.indexOf('.export_metadata') === -1) return true;
+    for (const collectionName  of collectionNameList) {
+        if (gcsEvent.name.includes(collectionName)) {
+            tableName = collectionName;
+            break;
+        }
+    }
+
     console.log(`Processing file: ${gcsEvent.name}`);
     const gcsBucket = process.env.GCLOUD_BUCKET;
     const url = `gs://${gcsBucket}/${gcsEvent.name}`;
@@ -55,7 +61,7 @@ const firestoreExport = async (event, context) => {
     await client.exportDocuments({
         name: databaseName,
         outputUriPrefix: bucket,
-        collectionIds: ['participants','biospecimen', 'boxes']
+        collectionIds: collectionNameList,
     });
 
     return true;
