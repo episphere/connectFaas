@@ -209,6 +209,9 @@ const checkDerivedVariables = async (token, siteCode) => {
     const doc = response.id;
 
     const uid = data.state.uid
+
+    if(!uid) return;
+
     const surveys = await retrieveUserSurveys(uid, ["D_299215535", "D_826163434"]);
 
     let updates = {};
