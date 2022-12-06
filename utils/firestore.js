@@ -236,6 +236,9 @@ const getParticipantData = async (token, siteCode, isParent) => {
 }
 
 const updateParticipantData = async (id, data) => {
+
+    console.log(data);
+    
     await db.collection('participants')
             .doc(id)
             .update(data);
