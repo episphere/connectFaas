@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress, SSOValidation } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -142,6 +142,9 @@ const biospecimenAPIs = async (req, res) => {
                     specimen['id'] = uuid();
                     const { storeSpecimen } = require('./firestore');
                     await storeSpecimen(specimen);
+
+                    const { checkDerivedVariables } = require ('./validation');
+                    await checkDerivedVariables(requestData["token"], siteCode);
                 }
             }
             return res.status(200).json({message: 'Success!', code:200})
@@ -177,6 +180,10 @@ const biospecimenAPIs = async (req, res) => {
                 if(exists === true){
                     const { updateSpecimen } = require('./firestore');
                     await updateSpecimen(masterSpecimenId, specimen);
+
+                    const { checkDerivedVariables } = require ('./validation');
+                    await checkDerivedVariables(requestData["token"], siteCode);
+                    
                     return res.status(200).json({message: 'Success!', code:200});
                 }
             }
@@ -321,8 +328,6 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         
-        //const { updateParticipantData } = require('./sites');
-        //return updateParticipantData(req, res, siteCode)
         const {submit} = require('./submission');
         let body = req.body;
         if(!body.uid) {

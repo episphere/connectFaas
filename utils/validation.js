@@ -213,8 +213,8 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     let updates = {};
     let incentiveEligible = false;
-    let anySpecimenCollected = false;
     let menstrualCycleSurveyEligible = false;
+    let allBaselineComplete = false;
 
     // incentiveEligible
     if(data['130371375']['266600170']['731498909'] === 104430631) {
@@ -249,20 +249,20 @@ const checkDerivedVariables = async (token, siteCode) => {
         }
     }
 
-    // anySpecimenCollected
-    if((data['173836415'] && data['173836415']['266600170']) && (data['173836415']['266600170']['316824786'] === undefined || data['173836415']['266600170']['316824786'] != 353358909)) {
-        const bloodReceived = data['173836415']['266600170']['534041351'] === 353358909;
-        const urineReceived = data['173836415']['266600170']['210921343'] === 353358909;
-        anySpecimenCollected = bloodReceived || urineReceived;
-    }
-
-    //menstrualCycleSurveyEligible
+    // menstrualCycleSurveyEligible
     if(data['289750687'] != 353358909) {
         if(data['265193023'] === 231311385) {
             menstrualCycleSurveyEligible = (surveys['D_299215535']?.['D_112151599'] == 353358909);
         }
         else if(data['253883960'] === 231311385) {
             menstrualCycleSurveyEligible = (surveys['D_826163434']?.['D_112151599'] == 353358909);
+        }
+    }
+
+    // allBaselineComplete
+    if(data['100767870'] === 104430631) {
+        if (data['949302066'] === 231311385 && data['536735468'] === 231311385 && data['976570371'] === 231311385 && data['663265240'] === 231311385) {
+            allBaselineComplete = true;
         }
     }
 
@@ -277,16 +277,6 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...incentiveUpdates};
     } 
 
-    if(anySpecimenCollected) {
-
-        const specimenUpdates = {
-            '173836415.266600170.316824786': 353358909,
-            '173836415.266600170.740582332': new Date().toISOString()
-        }
-
-        updates = { ...updates, ...specimenUpdates};
-    }
-
     if(menstrualCycleSurveyEligible) {
         
         const menstrualUpdates = {
@@ -294,6 +284,14 @@ const checkDerivedVariables = async (token, siteCode) => {
         }
 
         updates = { ...updates, ...menstrualUpdates};
+    }
+
+    if(allBaselineComplete) {
+        const baselineUpdates = {
+            '100767870': 353358909
+        }
+
+        updates = { ...updates, ...baselineUpdates};
     }
 
     console.log(updates);
