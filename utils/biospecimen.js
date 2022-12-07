@@ -144,11 +144,11 @@ const biospecimenAPIs = async (req, res) => {
                     await storeSpecimen(specimen);
 
                     console.log(requestData);
-                    console.log("TOKEN: " + req.body.token);
+                    console.log("TOKEN: " + specimen.token);
                     console.log("CODE: " + siteCode);
 
                     const { checkDerivedVariables } = require ('./validation');
-                    await checkDerivedVariables(requestData["token"], siteCode);
+                    await checkDerivedVariables(specimen.token, siteCode);
                 }
             }
             return res.status(200).json({message: 'Success!', code:200})
