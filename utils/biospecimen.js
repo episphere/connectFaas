@@ -143,6 +143,9 @@ const biospecimenAPIs = async (req, res) => {
                     const { storeSpecimen } = require('./firestore');
                     await storeSpecimen(specimen);
 
+                    console.log("TOKEN: " + requestData["token"]);
+                    console.log("CODE: " + siteCode);
+
                     const { checkDerivedVariables } = require ('./validation');
                     await checkDerivedVariables(requestData["token"], siteCode);
                 }
