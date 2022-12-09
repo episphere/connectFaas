@@ -236,6 +236,7 @@ const getParticipantData = async (token, siteCode, isParent) => {
 }
 
 const updateParticipantData = async (id, data) => {
+
     await db.collection('participants')
             .doc(id)
             .update(data);
@@ -485,6 +486,86 @@ const retrieveUserProfile = async (uid) => {
         }
     }
     catch(error){
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const retrieveConnectID = async (uid) => {
+    try{
+        const snapshot = await db.collection('participants')
+                                .where('state.uid', '==', uid)
+                                .get();
+        if(snapshot.size === 1){
+            if(snapshot.docs[0].data()['Connect_ID']) {
+                return snapshot.docs[0].data()['Connect_ID'];
+            }
+            else {
+                return new Error('Connect ID not found on record!');
+            }
+        }
+        else{
+            return new Error('Error retrieving single Connect ID!');    
+        }
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const retrieveUserSurveys = async (uid, concepts) => {
+    try {
+        let surveyData = {};
+
+        const { moduleConceptsToCollections } = require('./shared');
+ 
+        for await (const concept of concepts) {
+            
+            if (moduleConceptsToCollections[concept]) {
+                const snapshot = await db.collection(moduleConceptsToCollections[concept]).where('uid', '==', uid).get();
+            
+                if(snapshot.size > 0){
+                    surveyData[concept] = snapshot.docs[0].data();
+                }
+            }
+        };
+
+        return surveyData;
+    }
+    catch(error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const surveyExists = async (collection, uid) => {
+    const snapshot = await db.collection(collection).where('uid', '==', uid).get();
+    if (snapshot.size === 1) {
+        return snapshot.docs[0];
+    }
+    else {
+        return false;
+    }
+}
+
+const storeSurvey = async (data, collection) => {
+    try {
+        await db.collection(collection).add(data);
+        return true;
+    }
+    catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const updateSurvey = async (data, collection, doc) => {
+    try {
+        await db.collection(collection).doc(doc.id).update(data);
+        return true;
+    }
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -1777,6 +1858,11 @@ module.exports = {
     retrieveParticipants,
     verifyIdentity,
     retrieveUserProfile,
+    retrieveUserSurveys,
+    retrieveConnectID,
+    surveyExists,
+    updateSurvey,
+    storeSurvey,
     createRecord,
     recordExists,
     validateIDToken,

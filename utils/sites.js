@@ -210,7 +210,7 @@ const updateParticipantData = async (req, res, authObj) => {
         }
 
         if(updatedData['399159511']) updatedData[`query.firstName`] = dataObj['399159511'].toLowerCase();
-        if(updatedData['996038075']) updatedData[`query.firstName`] = dataObj['996038075'].toLowerCase();
+        if(updatedData['996038075']) updatedData[`query.lastName`] = dataObj['996038075'].toLowerCase();
 
         console.log(updatedData);
 
@@ -219,7 +219,7 @@ const updateParticipantData = async (req, res, authObj) => {
             const { updateParticipantData } = require('./firestore');
             const { checkDerivedVariables } = require('./validation');
 
-            updateParticipantData(docID, updatedData).then(checkDerivedVariables(participantToken, siteCodes));
+            await updateParticipantData(docID, updatedData).then(await checkDerivedVariables(participantToken, docData['827220437']));
         } 
 
         responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
