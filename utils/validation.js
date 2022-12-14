@@ -209,12 +209,19 @@ const checkDerivedVariables = async (token, siteCode) => {
     const doc = response.id;
 
     const uid = data.state.uid
+
+    if(!uid) return;
+
     const surveys = await retrieveUserSurveys(uid, ["D_299215535", "D_826163434"]);
 
     let updates = {};
+
     let incentiveEligible = false;
     let menstrualCycleSurveyEligible = false;
     let allBaselineComplete = false;
+    let bloodUrineNotRefused = false;
+    let baselineOrderPlaced = false;
+    let clinicalSampleDonated = false;
 
     // incentiveEligible
     if(data['130371375']['266600170']['731498909'] === 104430631) {
@@ -266,6 +273,48 @@ const checkDerivedVariables = async (token, siteCode) => {
         }
     }
 
+    // bloodUrineNotRefused
+    if(data['526455436']) {
+        if(data['526455436'] === 353358909) {
+            bloodUrineNotRefused = (data['685002411']['194410742'] === 353358909 && data['685002411']['949501163'] === 353358909);
+        }
+    }
+    else {
+        bloodUrineNotRefused = true;
+    }
+
+    // baselineOrderPlaced
+    if(data['173836415'] && data['173836415']['266600170']) {
+        if(data['173836415']['266600170']['880794013']) {
+            if(data['173836415']['266600170']['880794013'] === 104430631) {
+                baselineOrderPlaced = (data['173836415']['266600170']['530173840'] === 353358909 || data['173836415']['266600170']['860477844'] === 353358909);
+            }
+        }
+        else {
+            baselineOrderPlaced = true;
+        }
+    }
+
+    // clinicalSampleDonated
+    if(data['173836415'] && data['173836415']['266600170']) {
+        if(data['173836415']['266600170']['156605577']) {
+            if(data['173836415']['266600170']['156605577'] === 104430631) {
+                clinicalSampleDonated = (
+                    data['173836415']['266600170']['693370086'] === 353358909 || 
+                    data['173836415']['266600170']['786930107'] === 353358909 ||
+                    data['173836415']['266600170']['728696253'] === 353358909 ||
+                    data['173836415']['266600170']['453452655'] === 353358909 ||
+                    data['173836415']['266600170']['534041351'] === 353358909 ||
+                    data['173836415']['266600170']['210921343'] === 353358909
+                );
+            }
+        }
+        else {
+            clinicalSampleDonated = true;
+        }
+    }
+
+
     if(incentiveEligible) {
 
         const incentiveUpdates = {
@@ -287,11 +336,82 @@ const checkDerivedVariables = async (token, siteCode) => {
     }
 
     if(allBaselineComplete) {
+        
         const baselineUpdates = {
             '100767870': 353358909
         }
 
         updates = { ...updates, ...baselineUpdates};
+    }
+
+    if(bloodUrineNotRefused) {
+        
+        const refusalUpdates = {
+            '526455436': data['685002411']['194410742'] === 104430631 || data['685002411']['949501163'] === 104430631 ? 353358909 : 104430631
+        }
+
+        updates = { ...updates, ...refusalUpdates};
+    }
+
+    if(baselineOrderPlaced) {
+
+        const bloodOrder = data['173836415']['266600170']['530173840'] === 353358909;
+        const urineOrder = data['173836415']['266600170']['860477844'] === 353358909;
+
+        const bloodTime = data['173836415']['266600170']['769615780'];
+        const urineTime = data['173836415']['266600170']['939818935'];
+        let earliestTime = false;
+
+        if(bloodTime) {
+            if(urineTime) {
+                if(bloodTime < urineTime) {
+                    earliestTime = bloodTime;
+                }
+                else {
+                    earliestTime = urineTime;
+                }
+            }
+            else {
+                earliestTime = bloodTime;
+            }
+        }
+        else {
+            if(urineTime) {
+                earliestTime = urineTime;
+            }
+        }
+
+        let orderUpdates = {};
+
+        if(earliestTime) {
+            orderUpdates = {
+                '173836415.266600170.880794013': bloodOrder || urineOrder ? 353358909 : 104430631,
+                '173836415.266600170.184451682': earliestTime
+            }
+        }
+        else {
+            orderUpdates = {
+                '173836415.266600170.880794013': bloodOrder || urineOrder ? 353358909 : 104430631
+            }
+        }
+
+        updates = { ...updates, ...orderUpdates};
+    }
+
+    if(clinicalSampleDonated) {
+
+        const siteBlood = data['173836415']['266600170']['693370086'] === 353358909;
+        const siteUrine = data['173836415']['266600170']['786930107'] === 353358909;
+        const rrlBlood = data['173836415']['266600170']['728696253'] === 353358909;
+        const rrlUrine = data['173836415']['266600170']['453452655'] === 353358909;
+        const dbBlood = data['173836415']['266600170']['534041351'] === 353358909;
+        const dbUrine = data['173836415']['266600170']['210921343'] === 353358909;
+
+        const sampleUpdates = {
+            '173836415.266600170.156605577': siteBlood || siteUrine || rrlBlood || rrlUrine || dbBlood || dbUrine ? 353358909 : 104430631
+        }
+
+        updates = { ...updates, ...sampleUpdates};
     }
 
     console.log(updates);
