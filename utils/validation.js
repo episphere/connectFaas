@@ -348,6 +348,11 @@ const checkDerivedVariables = async (token, siteCode) => {
 
         const bloodRefused = data['685002411']['194410742'] === 353358909;
         const urineRefused = data['685002411']['949501163'] === 353358909;
+
+        console.log(bloodRefused);
+        console.log(data['685002411']['194410742']);
+        console.log(urineRefused);
+        console.log(data['685002411']['194410742']);
         
         const refusalUpdates = {
             '526455436': (bloodRefused && urineRefused) ? 104430631 : 353358909
