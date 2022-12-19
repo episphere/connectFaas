@@ -275,7 +275,7 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     // bloodUrineNotRefused
     if(data['526455436']) {
-        if(data['526455436'] === 353358909) {
+        if(data['526455436'] === 104430631) {
             bloodUrineNotRefused = (data['685002411']['194410742'] === 353358909 && data['685002411']['949501163'] === 353358909);
         }
     }
@@ -350,7 +350,7 @@ const checkDerivedVariables = async (token, siteCode) => {
         const urineRefused = data['685002411']['949501163'] === 353358909;
         
         const refusalUpdates = {
-            '526455436': (bloodRefused && urineRefused) ? 104430631 : 353358909
+            '526455436': (bloodRefused && urineRefused) ? 353358909 : 104430631
         }
 
         updates = { ...updates, ...refusalUpdates};
