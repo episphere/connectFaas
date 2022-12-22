@@ -438,6 +438,12 @@ const getUserCollections = async (req, res, uid) => {
     const { getSpecimenCollections, getTokenForParticipant, retrieveUserProfile } = require('./firestore');
     
     const participant = (await retrieveUserProfile(uid))[0];
+
+    // handle errors and undefined siteCode
+    if (participant instanceof Error || typeof participant['827220437'] === 'undefined') {
+        return res.status(404).json(getResponseJSON('Data not found!', 404));
+    }
+
     const siteCode = participant['827220437'];
     const token = await getTokenForParticipant(uid);
     const response = await getSpecimenCollections(token, siteCode);
