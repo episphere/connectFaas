@@ -143,8 +143,6 @@ const biospecimenAPIs = async (req, res) => {
                     const { storeSpecimen } = require('./firestore');
                     await storeSpecimen(specimen);
 
-                    const { checkDerivedVariables } = require ('./validation');
-                    await checkDerivedVariables(specimen.token, siteCode);
                 }
             }
             return res.status(200).json({message: 'Success!', code:200})
@@ -180,9 +178,6 @@ const biospecimenAPIs = async (req, res) => {
                 if(exists === true){
                     const { updateSpecimen } = require('./firestore');
                     await updateSpecimen(masterSpecimenId, specimen);
-
-                    const { checkDerivedVariables } = require ('./validation');
-                    await checkDerivedVariables(specimen.token, siteCode);
                     
                     return res.status(200).json({message: 'Success!', code:200});
                 }
@@ -191,6 +186,26 @@ const biospecimenAPIs = async (req, res) => {
                 return res.status(400).json({message: 'Collection ID does not exist in the request body!', code:400});
             }
         }
+    }
+    else if (api === 'checkDerivedVariables') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+
+        const requestData = req.body;
+        if(requestData.length === 0 ) {
+            return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        }
+
+        const token = requestData["token"];
+        if(!token) {
+            return res.status(400).json(getResponseJSON('Request body does not include token!', 400));
+        }
+
+        const { checkDerivedVariables } = require ('./validation');
+        await checkDerivedVariables(token, siteCode);
+
+        return res.status(200).json({message: 'Success!', code:200});
     }
     else if (api === 'searchSpecimen') {
         if(req.method !== 'GET') {
