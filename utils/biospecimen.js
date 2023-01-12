@@ -197,7 +197,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         }
 
-        const token = requestData["token"];
+        const token = requestData.token;
         if(!token) {
             return res.status(400).json(getResponseJSON('Request body does not include token!', 400));
         }
