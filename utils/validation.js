@@ -409,17 +409,8 @@ const checkDerivedVariables = async (token, siteCode) => {
         const siteUrine = data['173836415']['266600170']['786930107'] === 353358909;
         const rrlBlood = data['173836415']['266600170']['728696253'] === 353358909;
         const rrlUrine = data['173836415']['266600170']['453452655'] === 353358909;
-
-        console.log("BLOOD");
-        console.log(data['173836415']['266600170']['534041351']);
-        console.log("URINE");
-        console.log(data['173836415']['266600170']['210921343']);
-
         const dbBlood = data['173836415']['266600170']['534041351'] === 353358909;
         const dbUrine = data['173836415']['266600170']['210921343'] === 353358909;
-
-        console.log(dbBlood);
-        console.log(dbUrine);
 
         const sampleUpdates = {
             '173836415.266600170.156605577': siteBlood || siteUrine || rrlBlood || rrlUrine || dbBlood || dbUrine ? 353358909 : 104430631
