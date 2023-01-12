@@ -419,6 +419,7 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...sampleUpdates};
     }
 
+    console.log("UPDATES");
     console.log(updates);
 
     if(Object.keys(updates).length > 0) {
