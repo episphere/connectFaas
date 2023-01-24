@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, setHeadersDomainRestricted, logIPAdddress, SSOValidation } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -142,6 +142,7 @@ const biospecimenAPIs = async (req, res) => {
                     specimen['id'] = uuid();
                     const { storeSpecimen } = require('./firestore');
                     await storeSpecimen(specimen);
+
                 }
             }
             return res.status(200).json({message: 'Success!', code:200})
@@ -158,9 +159,9 @@ const biospecimenAPIs = async (req, res) => {
             const accessionIdType = requestData['accessionIdType'];
             const { accessionIdExists } = require('./firestore');
             const existingData = await accessionIdExists(accessionId, accessionIdType, siteCode);
-            if (!!existingData) return res.status(200).json({data: existingData, code:200})
+            if (!!existingData) return res.status(200).json({message: 'AccessionId exists!', data: existingData, code:200})
         }
-        return res.status(400).json(getResponseJSON('AccessionId doesn\'t exist!', 400));
+        return res.status(200).json(getResponseJSON('AccessionId doesn\'t exist!', 200));
     }
     else if (api === 'updateSpecimen') {
         if(req.method !== 'POST') {
@@ -177,6 +178,7 @@ const biospecimenAPIs = async (req, res) => {
                 if(exists === true){
                     const { updateSpecimen } = require('./firestore');
                     await updateSpecimen(masterSpecimenId, specimen);
+                    
                     return res.status(200).json({message: 'Success!', code:200});
                 }
             }
@@ -184,6 +186,26 @@ const biospecimenAPIs = async (req, res) => {
                 return res.status(400).json({message: 'Collection ID does not exist in the request body!', code:400});
             }
         }
+    }
+    else if (api === 'checkDerivedVariables') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+
+        const requestData = req.body;
+        if(requestData.length === 0 ) {
+            return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        }
+
+        const token = requestData.token;
+        if(!token) {
+            return res.status(400).json(getResponseJSON('Request body does not include token!', 400));
+        }
+
+        const { checkDerivedVariables } = require ('./validation');
+        await checkDerivedVariables(token, siteCode);
+
+        return res.status(200).json({message: 'Success!', code:200});
     }
     else if (api === 'searchSpecimen') {
         if(req.method !== 'GET') {
@@ -229,7 +251,7 @@ const biospecimenAPIs = async (req, res) => {
             const loginSite = requestData['789843387']
             const { boxExists } = require('./firestore');
             const exists = await boxExists(boxId, loginSite);
-            if (exists === true) return res.status(400).json(getResponseJSON('Box already exists!', 400));
+            if (exists === true) return res.status(200).json(getResponseJSON('Box already exists!', 200));
             if (exists === false) {
                 const { addBox } = require('./firestore');
                 await addBox(requestData);
@@ -321,8 +343,6 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         
-        //const { updateParticipantData } = require('./sites');
-        //return updateParticipantData(req, res, siteCode)
         const {submit} = require('./submission');
         let body = req.body;
         if(!body.uid) {
