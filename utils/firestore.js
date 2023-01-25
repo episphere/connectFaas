@@ -369,6 +369,24 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             if(to) query = query.where('914594314', '<=', to)
             participants = await query.get();
         }
+        if(decider === 'refusalswithdrawals') {
+            let query = db.collection('participants');
+            
+            //if(from || to) query = query.orderBy("", "desc");
+
+            query = query.where("512820379", "==", 854703046)
+                            .orderBy("821247024", "asc")
+                            .offset(offset)
+                            .limit(limit)
+            
+            if(site) query = query.where('827220437', '==', site);
+            else query = query.where('827220437', operator, siteCode);
+
+            //if(from) query = query.where('TBD', '>=', from);
+            //if(to) query = query.where('TBD', '<=', to);
+            
+            participants = await query.get();
+        }
         return participants.docs.map(document => {
             let data = document.data();
             return data;
