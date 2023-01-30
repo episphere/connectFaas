@@ -212,6 +212,7 @@ const updateParticipantData = async (req, res, authObj) => {
         if(updatedData['399159511']) updatedData[`query.firstName`] = dataObj['399159511'].toLowerCase();
         if(updatedData['996038075']) updatedData[`query.lastName`] = dataObj['996038075'].toLowerCase();
 
+        console.log("UPDATED DATA");
         console.log(updatedData);
 
         if(Object.keys(updatedData).length > 0) {
@@ -219,7 +220,8 @@ const updateParticipantData = async (req, res, authObj) => {
             const { updateParticipantData } = require('./firestore');
             const { checkDerivedVariables } = require('./validation');
 
-            await updateParticipantData(docID, updatedData).then(await checkDerivedVariables(participantToken, docData['827220437']));
+            await updateParticipantData(docID, updatedData);
+            await checkDerivedVariables(participantToken, docData['827220437']);
         } 
 
         responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
