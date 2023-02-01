@@ -369,24 +369,6 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             if(to) query = query.where('914594314', '<=', to)
             participants = await query.get();
         }
-        if(decider === 'refusalswithdrawals') {
-            let query = db.collection('participants');
-            
-            //if(from || to) query = query.orderBy("", "desc");
-
-            query = query.where("512820379", "==", 854703046)
-                            .orderBy("821247024", "asc")
-                            .offset(offset)
-                            .limit(limit)
-            
-            if(site) query = query.where('827220437', '==', site);
-            else query = query.where('827220437', operator, siteCode);
-
-            //if(from) query = query.where('TBD', '>=', from);
-            //if(to) query = query.where('TBD', '<=', to);
-            
-            participants = await query.get();
-        }
         return participants.docs.map(document => {
             let data = document.data();
             return data;
@@ -395,6 +377,28 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
     catch(error){
         console.error(error);
         return new Error(error);
+    }
+}
+
+const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept, limit, page) => {
+    try {
+        const operator = isParent ? 'in' : '==';
+        const offset = (page - 1) * limit;
+        
+        let participants = await db.collection('participants')
+                                .where('827220437', operator, siteCode)
+                                .where(concept, '==', 353358909)
+                                .orderBy('Connect_ID', 'asc')
+                                .offset(offset)
+                                .limit(limit)
+                                .get();                 
+
+        return participants.docs.map(document => {
+            return document.data();
+        });
+    } catch (error) {
+        console.error(error);
+        return new Error(error)
     }
 }
 
@@ -1961,5 +1965,6 @@ module.exports = {
     getQueryBsiData,
     getRestrictedFields,
     sendClientEmail,
-    verifyUsersEmailOrPhone
+    verifyUsersEmailOrPhone,
+    retrieveRefusalWithdrawalParticipants
 }
