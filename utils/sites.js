@@ -27,10 +27,10 @@ const submitParticipantsData = async (req, res, site) => {
         siteCode = authorized.siteCode;
     }
 
-    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('data is undefined in request body.', 400));
-    if(req.body.data.length === undefined || req.body.data.length < 1) return res.status(400).json(getResponseJSON('data array doesn\'t have any element.', 400));
-
-    if(req.body.data.length > 499) return res.status(400).json(getResponseJSON('More than acceptable limit of 500 records.', 400));
+    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    if(!Array.isArray(req.body.data)) return res.status(400).json(getResponseJSON('Bad request. Data must be an array.', 400));
+    if(req.body.data.length === undefined || req.body.data.length < 1) return res.status(400).json(getResponseJSON('Bad request. Data array does not have any elements.', 400));
+    if(req.body.data.length > 499) return res.status(400).json(getResponseJSON('Bad request. Data contains more than acceptable limit of 500 records.', 400));
 
     const data = req.body.data;
     console.log(`${JSON.stringify(data)}`);
