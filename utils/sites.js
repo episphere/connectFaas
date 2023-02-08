@@ -1,4 +1,5 @@
 const rules = require("../updateParticipantData.json");
+const submitRules = require("../submitParticipantData.json");
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
 const submitParticipantsData = async (req, res, site) => {
@@ -11,9 +12,7 @@ const submitParticipantsData = async (req, res, site) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
     let siteCode = '';
-    if(site) {
-        siteCode = site;
-    }
+    if(site) siteCode = site;
     else {
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
@@ -24,6 +23,7 @@ const submitParticipantsData = async (req, res, site) => {
         if(!authorized){
             return res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
+
         siteCode = authorized.siteCode;
     }
 
@@ -32,52 +32,99 @@ const submitParticipantsData = async (req, res, site) => {
     if(req.body.data.length === undefined || req.body.data.length < 1) return res.status(400).json(getResponseJSON('Bad request. Data array does not have any elements.', 400));
     if(req.body.data.length > 499) return res.status(400).json(getResponseJSON('Bad request. Data contains more than acceptable limit of 500 records.', 400));
 
-    const data = req.body.data;
-    console.log(`${JSON.stringify(data)}`);
-    let error = false;
-    let errorMsgs = [];
-    for(let obj of data){
-        if(obj.token){
-            const participantToken = obj.token;
-            const { getParticipantData } = require('./firestore');
-            const record = await getParticipantData(participantToken, siteCode);
-            if(record){
-                const docID = record.id;
-                delete obj.token;
-                let newStateElements = {}
-                for(let key in obj) {
-                    if(record.data.state[key] === undefined){
-                        newStateElements[`state.${key}`] = obj[key];
-                    }
-                    // Make participant active if Study invitaion is sent.
-                    if(key === '934298480' && record.data['512820379'] !== 854703046) { // If age deidentified data is provided and participant is not passive then make this participant Active
-                        newStateElements['512820379'] = 486306141;
-                        newStateElements['471593703'] = new Date().toISOString();
-                    }
-                    // If Update recruit type is non-zero
-                    // Passive to Active
-                    if(key === '793822265' && obj['793822265'] === 854903954 && record.data['512820379'] === 854703046) newStateElements['512820379'] = 486306141;
-                    // Active to Passive
-                    if(key === '793822265' && obj['793822265'] === 965707001 && record.data['512820379'] === 486306141) newStateElements['512820379'] = 854703046;
+    console.log(req.body.data);
+    
+    const dataArray = req.body.data;
 
+    let responseArray = [];
+    let error = false;
+
+    //let errorMsgs = [];
+
+    for(let dataObj of dataArray){
+        if(dataObj.token === undefined) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': 'UNDEFINED', 'Errors': 'Token not defined in data object.'}});
+            continue;
+        }
+        
+        const participantToken = dataObj.token;
+        const { getParticipantData } = require('./firestore');
+        const record = await getParticipantData(participantToken, siteCodes);
+
+        if(!record) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Token does not exist.'}});
+            continue;
+        }
+
+        const docID = record.id;
+        const docData = record.data;
+
+        let errors = [];
+        
+        for(let key in dataObj) {
+
+            if(key == 'token') continue;
+
+            if(docData[key]) {
+                errors.push(" Key (" + key + ") cannot exist before updating");
+                continue;
+            }
+
+            if(submitRules[key]) {
+                if(submitRules[key].dataType) {
+                    if(submitRules[key].dataType == 'ISO') {
+                        if(typeof dataObj[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(dataObj[key]))) {
+                            errors.push(" Invalid data type / format for Key (" + key + ")");
+                        }
+                    }
+                    else {
+                        if(submitRules[key].dataType !== typeof dataObj[key]) {
+                            errors.push(" Invalid data type for Key (" + key + ")");
+                        }
+                        else {
+                            if(submitRules[key].values) {
+                                if(submitRules[key].values.filter(value => value.toString() === dataObj[key].toString()).length == 0) {
+                                    errors.push(" Invalid value for Key (" + key + ")");
+                                }
+                            }
+                        }
+                    }
                 }
-                const { updateParticipantData } = require('./firestore');
-                if(Object.keys(newStateElements).length > 0) updateParticipantData(docID, newStateElements);
             }
             else {
-                console.log(`Invalid token ${obj.token}`)
-                error = true;
-                errorMsgs.push({token: participantToken, message: 'Invalid token!', code: 404});
+                errors.push(" Key (" + key + ") not found");
             }
         }
-        else {
-            console.log(`Record doesn't contain any token ${JSON.stringify(obj)}`)
+
+        if(errors.length !== 0) {
             error = true;
-            errorMsgs.push({...obj, message: 'token missing!', code: 400});
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': errors}});
+            continue;
+        }
+
+        // TODO - "condition stacking" logic
+
+        // If age deidentified data is provided and participant is not passive then make this participant Active
+        if(dataObj['934298480'] && record.data['512820379'] !== 854703046) { 
+            dataObj['512820379'] = 486306141;
+            dataObj['471593703'] = new Date().toISOString();
+        }
+
+        // If Update recruit type is non-zero
+        // Passive to Active
+        if(dataObj['793822265'] && dataObj['793822265'] === 854903954 && record.data['512820379'] === 854703046) dataObj['512820379'] = 486306141;
+        // Active to Passive
+        if(dataObj['793822265'] && dataObj['793822265'] === 965707001 && record.data['512820379'] === 486306141) dataObj['512820379'] = 854703046;
+
+        if(Object.keys(dataObj).length > 0) {
+            const { updateParticipantData } = require('./firestore');
+            await updateParticipantData(docID, dataObj);
         }
     }
-    if(error) return res.status(206).json({code: 206, errorMsgs})
-    else return res.status(200).json(getResponseJSON('Success!', 200));
+
+    return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
 }
 
 const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
