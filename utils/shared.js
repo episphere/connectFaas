@@ -308,7 +308,7 @@ const refusalWithdrawalConcepts = {
     "refusedFutureActivities": "906417725",
     "deceased": "987563196",
 
-    "anyRefusalWithdrawal": "123456789"
+    "anyRefusalWithdrawal": "451953807"
 }
 
 const nihSSOConfig = {
