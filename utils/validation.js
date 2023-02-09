@@ -201,6 +201,8 @@ const getToken = async (req, res) => {
 const checkDerivedVariables = async (token, siteCode) => {
     
     const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
+    const { refusalWithdrawalConcepts } = require('./shared');
+
 
     const response = await getParticipantData(token, siteCode);
     const collections = await getSpecimenCollections(token, siteCode);
@@ -222,6 +224,7 @@ const checkDerivedVariables = async (token, siteCode) => {
     let bloodUrineNotRefused = false;
     let baselineOrderPlaced = false;
     let clinicalSampleDonated = false;
+    let anyRefusalWithdrawal = false;
 
     // incentiveEligible
     if(data['130371375']['266600170']['731498909'] === 104430631) {
@@ -314,6 +317,30 @@ const checkDerivedVariables = async (token, siteCode) => {
         else {
             clinicalSampleDonated = true;
         }
+    }
+
+    // anyRefusalWithdrawal
+    if(data['451953807']) {
+        if(data['451953807'] === 104430631) {
+            anyRefusalWithdrawal = (
+                data[refusalWithdrawalConcepts.refusedBaselineBlood] === 353358909 ||
+                data[refusalWithdrawalConcepts.refusedBaselineSpecimenSurvey] === 353358909 ||
+                data[refusalWithdrawalConcepts.refusedBaselineSaliva] === 353358909 ||
+                data[refusalWithdrawalConcepts.refusedrefusedFutureSamplesBaselineBlood] === 353358909 ||
+                data[refusalWithdrawalConcepts.refusedFutureSurveys] === 353358909 ||
+                data[refusalWithdrawalConcepts.refusedBaselineUrine] === 353358909 ||
+                data[refusalWithdrawalConcepts.refusedBaselineSurveys] === 353358909 ||
+                data[refusalWithdrawalConcepts.suspendedContact] === 353358909 ||
+                data[refusalWithdrawalConcepts.withdrewConsent] === 353358909 ||
+                data[refusalWithdrawalConcepts.revokeHIPAA] === 353358909 ||
+                data[refusalWithdrawalConcepts.dataDestroyed] === 353358909 ||
+                data[refusalWithdrawalConcepts.refusedFutureActivities] === 353358909 ||
+                data[refusalWithdrawalConcepts.deceased] === 353358909
+            );
+        }
+    }
+    else {
+        anyRefusalWithdrawal = true;
     }
 
 
@@ -417,6 +444,32 @@ const checkDerivedVariables = async (token, siteCode) => {
         }
 
         updates = { ...updates, ...sampleUpdates};
+    }
+
+    if(anyRefusalWithdrawal) {
+
+        const refusedBaselineBlood = data[refusalWithdrawalConcepts.refusedBaselineBlood] === 353358909;
+        const refusedBaselineSpecimenSurvey = data[refusalWithdrawalConcepts.refusedBaselineSpecimenSurvey] === 353358909;
+        const refusedBaselineSaliva = data[refusalWithdrawalConcepts.refusedBaselineSaliva] === 353358909;
+        const refusedFutureSamples = data[refusalWithdrawalConcepts.refusedrefusedFutureSamplesBaselineBlood] === 353358909;
+        const refusedFutureSurveys = data[refusalWithdrawalConcepts.refusedFutureSurveys] === 353358909;
+        const refusedBaselineUrine = data[refusalWithdrawalConcepts.refusedBaselineUrine] === 353358909;
+        const refusedBaselineSurveys = data[refusalWithdrawalConcepts.refusedBaselineSurveys] === 353358909;
+        const suspendedContact = data[refusalWithdrawalConcepts.suspendedContact] === 353358909;
+        const withdrewConsent = data[refusalWithdrawalConcepts.withdrewConsent] === 353358909;
+        const revokeHIPAA = data[refusalWithdrawalConcepts.revokeHIPAA] === 353358909;
+        const dataDestroyed = data[refusalWithdrawalConcepts.dataDestroyed] === 353358909;
+        const refusedFutureActivities = data[refusalWithdrawalConcepts.refusedFutureActivities] === 353358909;
+        const deceased = data[refusalWithdrawalConcepts.deceased] === 353358909;
+
+        const refusalUpdates = {
+            '451953807':    refusedBaselineBlood || refusedBaselineSpecimenSurvey || refusedBaselineSaliva || refusedFutureSamples ||
+                            refusedFutureSurveys || refusedBaselineUrine || refusedBaselineSurveys || suspendedContact ||
+                            withdrewConsent || revokeHIPAA || dataDestroyed || refusedFutureActivities ||
+                            deceased ? 353358909 : 104430631
+        }
+
+        updates = { ...updates, ...refusalUpdates};
     }
 
     console.log("UPDATES");
