@@ -201,8 +201,6 @@ const getToken = async (req, res) => {
 const checkDerivedVariables = async (token, siteCode) => {
     
     const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
-    const { refusalWithdrawalConcepts } = require('./shared');
-
 
     const response = await getParticipantData(token, siteCode);
     const collections = await getSpecimenCollections(token, siteCode);
@@ -320,27 +318,11 @@ const checkDerivedVariables = async (token, siteCode) => {
     }
 
     // anyRefusalWithdrawal
-    if(data['451953807']) {
-        if(data['451953807'] === 104430631) {
-            anyRefusalWithdrawal = (
-                data[refusalWithdrawalConcepts.refusedBaselineBlood] === 353358909 ||
-                data[refusalWithdrawalConcepts.refusedBaselineSpecimenSurvey] === 353358909 ||
-                data[refusalWithdrawalConcepts.refusedBaselineSaliva] === 353358909 ||
-                data[refusalWithdrawalConcepts.refusedrefusedFutureSamplesBaselineBlood] === 353358909 ||
-                data[refusalWithdrawalConcepts.refusedFutureSurveys] === 353358909 ||
-                data[refusalWithdrawalConcepts.refusedBaselineUrine] === 353358909 ||
-                data[refusalWithdrawalConcepts.refusedBaselineSurveys] === 353358909 ||
-                data[refusalWithdrawalConcepts.suspendedContact] === 353358909 ||
-                data[refusalWithdrawalConcepts.withdrewConsent] === 353358909 ||
-                data[refusalWithdrawalConcepts.revokeHIPAA] === 353358909 ||
-                data[refusalWithdrawalConcepts.dataDestroyed] === 353358909 ||
-                data[refusalWithdrawalConcepts.refusedFutureActivities] === 353358909 ||
-                data[refusalWithdrawalConcepts.deceased] === 353358909
-            );
-        }
-    }
-    else {
+    if(typeof data['451953807'] === 'undefined') {
         anyRefusalWithdrawal = true;
+    }
+    else if(data['451953807'] === 104430631) {
+        anyRefusalWithdrawal = checkRefusalWithdrawals(data);
     }
 
 
@@ -448,25 +430,8 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     if(anyRefusalWithdrawal) {
 
-        const refusedBaselineBlood = data[refusalWithdrawalConcepts.refusedBaselineBlood] === 353358909;
-        const refusedBaselineSpecimenSurvey = data[refusalWithdrawalConcepts.refusedBaselineSpecimenSurvey] === 353358909;
-        const refusedBaselineSaliva = data[refusalWithdrawalConcepts.refusedBaselineSaliva] === 353358909;
-        const refusedFutureSamples = data[refusalWithdrawalConcepts.refusedrefusedFutureSamplesBaselineBlood] === 353358909;
-        const refusedFutureSurveys = data[refusalWithdrawalConcepts.refusedFutureSurveys] === 353358909;
-        const refusedBaselineUrine = data[refusalWithdrawalConcepts.refusedBaselineUrine] === 353358909;
-        const refusedBaselineSurveys = data[refusalWithdrawalConcepts.refusedBaselineSurveys] === 353358909;
-        const suspendedContact = data[refusalWithdrawalConcepts.suspendedContact] === 353358909;
-        const withdrewConsent = data[refusalWithdrawalConcepts.withdrewConsent] === 353358909;
-        const revokeHIPAA = data[refusalWithdrawalConcepts.revokeHIPAA] === 353358909;
-        const dataDestroyed = data[refusalWithdrawalConcepts.dataDestroyed] === 353358909;
-        const refusedFutureActivities = data[refusalWithdrawalConcepts.refusedFutureActivities] === 353358909;
-        const deceased = data[refusalWithdrawalConcepts.deceased] === 353358909;
-
         const refusalUpdates = {
-            '451953807':    refusedBaselineBlood || refusedBaselineSpecimenSurvey || refusedBaselineSaliva || refusedFutureSamples ||
-                            refusedFutureSurveys || refusedBaselineUrine || refusedBaselineSurveys || suspendedContact ||
-                            withdrewConsent || revokeHIPAA || dataDestroyed || refusedFutureActivities ||
-                            deceased ? 353358909 : 104430631
+            '451953807': checkRefusalWithdrawals(data) ? 353358909 : 104430631
         }
 
         updates = { ...updates, ...refusalUpdates};
@@ -479,6 +444,27 @@ const checkDerivedVariables = async (token, siteCode) => {
         const { updateParticipantData } = require('./firestore');
         updateParticipantData(doc, updates);
     }
+}
+
+const checkRefusalWithdrawals = (data) => {
+
+    const anyRefusalWithdrawal = (
+        data['685002411']['194410742'] === 353358909 ||
+        data['685002411']['217367618'] === 353358909 ||
+        data['685002411']['277479354'] === 353358909 ||
+        data['685002411']['352996056'] === 353358909 ||
+        data['685002411']['867203506'] === 353358909 ||
+        data['685002411']['949501163'] === 353358909 ||
+        data['685002411']['994064239'] === 353358909 ||
+        data['726389747'] === 353358909 ||
+        data['747006172'] === 353358909 ||
+        data['773707518'] === 353358909 ||
+        data['831041022'] === 353358909 ||
+        data['906417725'] === 353358909 ||
+        data['987563196'] === 353358909
+    ); 
+
+    return anyRefusalWithdrawal;
 }
 
 const validateUsersEmailPhone = async (req, res) => {
