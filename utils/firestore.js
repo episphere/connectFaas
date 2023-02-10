@@ -380,6 +380,28 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
     }
 }
 
+const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept, limit, page) => {
+    try {
+        const operator = isParent ? 'in' : '==';
+        const offset = (page - 1) * limit;
+        
+        let participants = await db.collection('participants')
+                                .where('827220437', operator, siteCode)
+                                .where(concept, '==', 353358909)
+                                .orderBy('Connect_ID', 'asc')
+                                .offset(offset)
+                                .limit(limit)
+                                .get();                 
+
+        return participants.docs.map(document => {
+            return document.data();
+        });
+    } catch (error) {
+        console.error(error);
+        return new Error(error)
+    }
+}
+
 const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, isParent, limit, page) => {
     try {
         const operator = isParent ? 'in' : '==';
@@ -1943,5 +1965,6 @@ module.exports = {
     getQueryBsiData,
     getRestrictedFields,
     sendClientEmail,
-    verifyUsersEmailOrPhone
+    verifyUsersEmailOrPhone,
+    retrieveRefusalWithdrawalParticipants
 }

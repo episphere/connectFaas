@@ -222,6 +222,7 @@ const checkDerivedVariables = async (token, siteCode) => {
     let bloodUrineNotRefused = false;
     let baselineOrderPlaced = false;
     let clinicalSampleDonated = false;
+    let anyRefusalWithdrawal = false;
 
     // incentiveEligible
     if(data['130371375']['266600170']['731498909'] === 104430631) {
@@ -314,6 +315,14 @@ const checkDerivedVariables = async (token, siteCode) => {
         else {
             clinicalSampleDonated = true;
         }
+    }
+
+    // anyRefusalWithdrawal
+    if(typeof data['451953807'] === 'undefined') {
+        anyRefusalWithdrawal = true;
+    }
+    else if(data['451953807'] === 104430631) {
+        anyRefusalWithdrawal = checkRefusalWithdrawals(data);
     }
 
 
@@ -419,6 +428,15 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...sampleUpdates};
     }
 
+    if(anyRefusalWithdrawal) {
+
+        const refusalUpdates = {
+            '451953807': checkRefusalWithdrawals(data) ? 353358909 : 104430631
+        }
+
+        updates = { ...updates, ...refusalUpdates};
+    }
+
     console.log("UPDATES");
     console.log(updates);
 
@@ -426,6 +444,27 @@ const checkDerivedVariables = async (token, siteCode) => {
         const { updateParticipantData } = require('./firestore');
         updateParticipantData(doc, updates);
     }
+}
+
+const checkRefusalWithdrawals = (data) => {
+
+    const anyRefusalWithdrawal = (
+        data['685002411']['194410742'] === 353358909 ||
+        data['685002411']['217367618'] === 353358909 ||
+        data['685002411']['277479354'] === 353358909 ||
+        data['685002411']['352996056'] === 353358909 ||
+        data['685002411']['867203506'] === 353358909 ||
+        data['685002411']['949501163'] === 353358909 ||
+        data['685002411']['994064239'] === 353358909 ||
+        data['726389747'] === 353358909 ||
+        data['747006172'] === 353358909 ||
+        data['773707518'] === 353358909 ||
+        data['831041022'] === 353358909 ||
+        data['906417725'] === 353358909 ||
+        data['987563196'] === 353358909
+    ); 
+
+    return anyRefusalWithdrawal;
 }
 
 const validateUsersEmailPhone = async (req, res) => {

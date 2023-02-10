@@ -240,6 +240,33 @@ const getParticipants = async (req, res, authObj) => {
         
         return res.status(200).json({data: result, code: 200})
     }
+    else if (req.query.type === 'refusalswithdrawals') {
+        
+        const { refusalWithdrawalConcepts } = require('./shared');
+
+        let concept;
+
+        if(req.query.option) {
+            if(refusalWithdrawalConcepts[req.query.option]) {
+                concept = refusalWithdrawalConcepts[req.query.option];
+            }
+            else {
+                return res.status(400).json(getResponseJSON('Bad request', 400));
+            }
+        }
+        else {
+            concept = refusalWithdrawalConcepts.anyRefusalWithdrawal;
+        }
+
+        const { retrieveRefusalWithdrawalParticipants } = require('./firestore');
+        let result = await retrieveRefusalWithdrawalParticipants(siteCodes, isParent, concept, limit, page);
+
+        if(result instanceof Error){
+            return res.status(400).json(getResponseJSON(result.message, 400));
+        }
+
+        return res.status(200).json({data: result, code: 200});
+    }
     else{
         return res.status(404).json(getResponseJSON('Resource not found', 404));
     }
