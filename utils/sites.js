@@ -29,7 +29,7 @@ const submitParticipantsData = async (req, res, site) => {
 
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
     if(!Array.isArray(req.body.data)) return res.status(400).json(getResponseJSON('Bad request. Data must be an array.', 400));
-    if(req.body.data.length === undefined || req.body.data.length < 1) return res.status(400).json(getResponseJSON('Bad request. Data array does not have any elements.', 400));
+    if(req.body.data.length === 0) return res.status(400).json(getResponseJSON('Bad request. Data array does not have any elements.', 400));
     if(req.body.data.length > 499) return res.status(400).json(getResponseJSON('Bad request. Data contains more than acceptable limit of 500 records.', 400));
 
     console.log(req.body.data);
@@ -39,7 +39,12 @@ const submitParticipantsData = async (req, res, site) => {
     let responseArray = [];
     let error = false;
 
-    //let errorMsgs = [];
+    const flat = (obj, att, attribute) => {
+        for(let k in obj) {
+            if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
+            else flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
+        }
+    }
 
     for(let dataObj of dataArray){
         if(dataObj.token === undefined) {
@@ -60,13 +65,6 @@ const submitParticipantsData = async (req, res, site) => {
 
         const docID = record.id;
         const docData = record.data;
-
-        const flat = (obj, att, attribute) => {
-            for(let k in obj) {
-                if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
-                else flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
-            }
-        }
 
         let flattened = {
             docData: {}
