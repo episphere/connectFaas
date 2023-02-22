@@ -287,29 +287,25 @@ const checkDerivedVariables = async (token, siteCode) => {
     }
 
     // baselineOrderPlaced
-    if(data['173836415'] && data['173836415']['266600170']) {
+    if(data['173836415']?.['266600170']) {
+
+        // baselineOrderPlaced
         if(data['173836415']['266600170']['880794013']) {
             if(data['173836415']['266600170']['880794013'] === 104430631) {
                 baselineOrderPlaced = (data['173836415']['266600170']['530173840'] === 353358909 || data['173836415']['266600170']['860477844'] === 353358909);
+            }
+            else if(data['173836415']['266600170']['880794013'] === 353358909) {
+                baselineOrderPlaced = (data['173836415']['266600170']['530173840'] === 104430631 && data['173836415']['266600170']['860477844'] === 104430631);
             }
         }
         else {
             baselineOrderPlaced = true;
         }
-    }
 
-    // clinicalSampleDonated
-    if(data['173836415'] && data['173836415']['266600170']) {
+        // clinicalSampleDonated
         if(data['173836415']['266600170']['156605577']) {
             if(data['173836415']['266600170']['156605577'] === 104430631) {
-                clinicalSampleDonated = (
-                    data['173836415']['266600170']['693370086'] === 353358909 || 
-                    data['173836415']['266600170']['786930107'] === 353358909 ||
-                    data['173836415']['266600170']['728696253'] === 353358909 ||
-                    data['173836415']['266600170']['453452655'] === 353358909 ||
-                    data['173836415']['266600170']['534041351'] === 353358909 ||
-                    data['173836415']['266600170']['210921343'] === 353358909
-                );
+                clinicalSampleDonated = checkSamplesDonated(data);
             }
         }
         else {
@@ -414,15 +410,8 @@ const checkDerivedVariables = async (token, siteCode) => {
 
     if(clinicalSampleDonated) {
 
-        const siteBlood = data['173836415']['266600170']['693370086'] === 353358909;
-        const siteUrine = data['173836415']['266600170']['786930107'] === 353358909;
-        const rrlBlood = data['173836415']['266600170']['728696253'] === 353358909;
-        const rrlUrine = data['173836415']['266600170']['453452655'] === 353358909;
-        const dbBlood = data['173836415']['266600170']['534041351'] === 353358909;
-        const dbUrine = data['173836415']['266600170']['210921343'] === 353358909;
-
         const sampleUpdates = {
-            '173836415.266600170.156605577': siteBlood || siteUrine || rrlBlood || rrlUrine || dbBlood || dbUrine ? 353358909 : 104430631
+            '173836415.266600170.156605577': checkSamplesDonated(data) ? 353358909 : 104430631
         }
 
         updates = { ...updates, ...sampleUpdates};
@@ -444,6 +433,20 @@ const checkDerivedVariables = async (token, siteCode) => {
         const { updateParticipantData } = require('./firestore');
         updateParticipantData(doc, updates);
     }
+}
+
+const checkSamplesDonated = (data) => {
+    
+    const samplesDonated = (
+        data['173836415']['266600170']['693370086'] === 353358909 || 
+        data['173836415']['266600170']['786930107'] === 353358909 ||
+        data['173836415']['266600170']['728696253'] === 353358909 ||
+        data['173836415']['266600170']['453452655'] === 353358909 ||
+        data['173836415']['266600170']['534041351'] === 353358909 ||
+        data['173836415']['266600170']['210921343'] === 353358909
+    ); 
+
+    return samplesDonated;
 }
 
 const checkRefusalWithdrawals = (data) => {
