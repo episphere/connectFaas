@@ -48,7 +48,7 @@ const submitParticipantsData = async (req, res, site) => {
         
         const participantToken = dataObj.token;
         delete dataObj.token;
-        
+
         const { getParticipantData } = require('./firestore');
         const record = await getParticipantData(participantToken, siteCode);
 
@@ -78,10 +78,7 @@ const submitParticipantsData = async (req, res, site) => {
         
         for(let key in dataObj) {
 
-            if(key == 'token') {
-                dataObj.remove(key);
-                continue;
-            }
+            if(key == 'token') continue;
             
             if(flattened.docData[key]) {
                 errors.push(" Key (" + key + ") cannot exist before updating");
