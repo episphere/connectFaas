@@ -77,8 +77,6 @@ const submitParticipantsData = async (req, res, site) => {
         let errors = [];
         
         for(let key in dataObj) {
-
-            if(key == 'token') continue;
             
             if(flattened.docData[key]) {
                 errors.push(" Key (" + key + ") cannot exist before updating");
