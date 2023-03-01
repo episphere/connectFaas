@@ -39,13 +39,6 @@ const submitParticipantsData = async (req, res, site) => {
     let responseArray = [];
     let error = false;
 
-    const flat = (obj, att, attribute) => {
-        for(let k in obj) {
-            if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
-            else flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
-        }
-    }
-
     for(let dataObj of dataArray){
         if(dataObj.token === undefined) {
             error = true;
@@ -54,8 +47,17 @@ const submitParticipantsData = async (req, res, site) => {
         }
         
         const participantToken = dataObj.token;
+        delete dataObj.token;
+
         const { getParticipantData } = require('./firestore');
         const record = await getParticipantData(participantToken, siteCode);
+
+        const flat = (obj, att, attribute) => {
+            for(let k in obj) {
+                if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
+                else flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
+            }
+        }
 
         if(!record) {
             error = true;
@@ -75,8 +77,6 @@ const submitParticipantsData = async (req, res, site) => {
         let errors = [];
         
         for(let key in dataObj) {
-
-            if(key == 'token') continue;
             
             if(flattened.docData[key]) {
                 errors.push(" Key (" + key + ") cannot exist before updating");
@@ -130,6 +130,10 @@ const submitParticipantsData = async (req, res, site) => {
         if(dataObj['793822265'] && dataObj['793822265'] === 965707001 && record.data['512820379'] === 486306141) dataObj['512820379'] = 854703046;
 
         if(Object.keys(dataObj).length > 0) {
+
+            console.log("SUBMITTED DATA");
+            console.log(dataObj);
+
             const { updateParticipantData } = require('./firestore');
             await updateParticipantData(docID, dataObj);
         }
