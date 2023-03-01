@@ -47,6 +47,8 @@ const submitParticipantsData = async (req, res, site) => {
         }
         
         const participantToken = dataObj.token;
+        delete dataObj.token;
+        
         const { getParticipantData } = require('./firestore');
         const record = await getParticipantData(participantToken, siteCode);
 
