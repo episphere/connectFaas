@@ -265,7 +265,7 @@ const getParticipants = async (req, res, authObj) => {
             return res.status(400).json(getResponseJSON(result.message, 400));
         }
 
-        return res.status(200).json({data: result, code: 200});
+        return res.status(200).json({data: result, code: 200, limit, dataSize: result.length});
     }
     else{
         return res.status(404).json(getResponseJSON('Resource not found', 404));
