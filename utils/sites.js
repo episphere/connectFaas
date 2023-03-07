@@ -77,13 +77,24 @@ const submitParticipantsData = async (req, res, site) => {
         let errors = [];
         
         for(let key in dataObj) {
-            
-            if(flattened.docData[key]) {
-                errors.push(" Key (" + key + ") cannot exist before updating");
-                continue;
-            }
 
-            if(submitRules[key]) {
+            if(submitRules[key] || submitRules['state.' + key]) {
+
+                if(!submitRules[key]) {
+                    let oldKey = key;
+                    let newKey = 'state.' + key;
+
+                    dataObj[newKey] = dataObj[oldKey];
+                    delete dataObj[oldKey];
+
+                    key = 'state.' + key;
+                }
+
+                if(flattened.docData[key]) {
+                    errors.push(" Key (" + key + ") cannot exist before updating");
+                    continue;
+                }
+
                 if(submitRules[key].dataType) {
                     if(submitRules[key].dataType == 'ISO') {
                         if(typeof dataObj[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(dataObj[key]))) {
