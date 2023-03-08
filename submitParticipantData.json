@@ -104,5 +104,8 @@
     "state.547895941": {
         "values": [539025306, 427405444],
         "dataType": "number"
+    },
+    "state.studyId": {
+        "dataType": "string"
     }
 }
