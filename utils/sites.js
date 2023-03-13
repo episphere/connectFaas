@@ -129,16 +129,16 @@ const submitParticipantsData = async (req, res, site) => {
         // TODO - "condition stacking" logic
 
         // If age deidentified data is provided and participant is not passive then make this participant Active
-        if(dataObj['934298480'] && record.data['512820379'] !== 854703046) { 
+        if(dataObj['state.934298480'] && record.data['512820379'] !== 854703046) { 
             dataObj['512820379'] = 486306141;
             dataObj['471593703'] = new Date().toISOString();
         }
 
         // If Update recruit type is non-zero
         // Passive to Active
-        if(dataObj['793822265'] && dataObj['793822265'] === 854903954 && record.data['512820379'] === 854703046) dataObj['512820379'] = 486306141;
+        if(dataObj['state.793822265'] && dataObj['state.793822265'] === 854903954 && record.data['512820379'] === 854703046) dataObj['512820379'] = 486306141;
         // Active to Passive
-        if(dataObj['793822265'] && dataObj['793822265'] === 965707001 && record.data['512820379'] === 486306141) dataObj['512820379'] = 854703046;
+        if(dataObj['state.793822265'] && dataObj['state.793822265'] === 965707001 && record.data['512820379'] === 486306141) dataObj['512820379'] = 854703046;
 
         if(Object.keys(dataObj).length > 0) {
 
@@ -148,6 +148,8 @@ const submitParticipantsData = async (req, res, site) => {
             const { updateParticipantData } = require('./firestore');
             await updateParticipantData(docID, dataObj);
         }
+
+        responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
     }
 
     return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
