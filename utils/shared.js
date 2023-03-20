@@ -485,6 +485,12 @@ const SSOValidation = async (dashboardType, idToken) => {
         console.log(acronym)
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
+
+        console.log("SSO Validation Results");
+        console.log("Site Details: " + siteDetails);
+        console.log("Email " + email);
+        console.log("BPTL User: " + isBPTLUser);
+        console.log("BSD User: " + isBiospecimenUser);
         return {siteDetails, email, isBPTLUser, isBiospecimenUser};
     } catch (error) {
         return false;
