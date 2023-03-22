@@ -292,6 +292,25 @@ const retentionConcepts = [
     '454445267', // consent datetime
 ]
 
+const refusalWithdrawalConcepts = {
+    "refusedBaselineBlood": "685002411.194410742",
+    "refusedBaselineSpecimenSurvey": "685002411.217367618",
+    "refusedBaselineSaliva": "685002411.277479354",
+    "refusedFutureSamples": "685002411.352996056",
+    "refusedFutureSurveys": "685002411.867203506",
+    "refusedBaselineUrine": "685002411.949501163",
+    "refusedBaselineSurveys": "685002411.994064239",
+
+    "suspendedContact": "726389747",
+    "withdrewConsent": "747006172",
+    "revokeHIPAA": "773707518",
+    "dataDestroyed": "831041022",
+    "refusedFutureActivities": "906417725",
+    "deceased": "987563196",
+
+    "anyRefusalWithdrawal": "451953807"
+}
+
 const nihSSOConfig = {
     group: 'https://federation.nih.gov/person/DLGroups',
     firstName: 'https://federation.nih.gov/person/FirstName',
@@ -687,5 +706,6 @@ module.exports = {
     sites, 
     bagConceptIDs,
     checkDefaultFlags,
-    cleanSurveyData
+    cleanSurveyData,
+    refusalWithdrawalConcepts
 }
