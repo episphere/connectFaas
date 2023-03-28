@@ -220,7 +220,7 @@ const checkDerivedVariables = async (token, siteCode) => {
     let menstrualCycleSurveyEligible = false;
     let allBaselineComplete = false;
     let bloodUrineNotRefused = false;
-    let baselineOrderPlaced = false;
+    let calculateBaselineOrderPlaced = false;
     let clinicalSampleDonated = false;
     let anyRefusalWithdrawal = false;
 
@@ -286,13 +286,13 @@ const checkDerivedVariables = async (token, siteCode) => {
         bloodUrineNotRefused = true;
     }
 
-    // baselineOrderPlaced
+    // calculateBaselineOrderPlaced
     if(data['173836415']?.['266600170']) {
 
-        // baselineOrderPlaced
+        // calculateBaselineOrderPlaced
         if(data['173836415']['266600170']['880794013']) {
             if(data['173836415']['266600170']['880794013'] === 104430631) {
-                baselineOrderPlaced = (data['173836415']['266600170']['530173840'] === 353358909 || data['173836415']['266600170']['860477844'] === 353358909);
+                calculateBaselineOrderPlaced = (data['173836415']['266600170']['530173840'] === 353358909 || data['173836415']['266600170']['860477844'] === 353358909);
             }
             else if(data['173836415']['266600170']['880794013'] === 353358909) {
                 
@@ -300,11 +300,11 @@ const checkDerivedVariables = async (token, siteCode) => {
                 let scenario2 = (data['173836415']['266600170']['530173840'] === 104430631 && typeof data['173836415']['266600170']['860477844'] === 'undefined');
                 let scenario3 = (typeof data['173836415']['266600170']['530173840'] === 'undefined' && data['173836415']['266600170']['860477844'] === 104430631);
                 
-                baselineOrderPlaced = scenario1 || scenario2 || scenario3;
+                calculateBaselineOrderPlaced = scenario1 || scenario2 || scenario3;
             }
         }
         else {
-            baselineOrderPlaced = true;
+            calculateBaselineOrderPlaced = true;
         }
 
         // clinicalSampleDonated
@@ -368,7 +368,7 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...refusalUpdates};
     }
 
-    if(baselineOrderPlaced) {
+    if(calculateBaselineOrderPlaced) {
 
         const bloodOrder = data['173836415']['266600170']['530173840'] === 353358909;
         const urineOrder = data['173836415']['266600170']['860477844'] === 353358909;
@@ -439,8 +439,6 @@ const checkDerivedVariables = async (token, siteCode) => {
         updateParticipantData(doc, updates);
     }
 }
-
-checkDerivedVariables("6a2f5550-5cdf-4ff0-a6e8-ca7c51db2d8e", 13);
 
 const checkSamplesDonated = (data) => {
     
