@@ -303,35 +303,81 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
-        const requestData = req.body.boxes;
-        const shippingData = req.body.shippingData;
-        const trackingNumbers = req.body.trackingNumbers;
-        console.log('this is the shippingData: ' + JSON.stringify(shippingData))
 
-        if(requestData.length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
-        let tempMonitorShipped = false;
-        if(shippingData['105891443'] != '104430631'){
-            tempMonitorShipped = shippingData['105891443'];
+        const boxIdToTrackingNumberMap = req.body.boxIdToTrackingNumberMap;
+        const boxIdArray = Object.keys(boxIdToTrackingNumberMap);
+
+        if (boxIdArray.length === 0 ) {
+            return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         }
-        for(let box of requestData) {
-            const { shipBox } = require('./firestore');
-            if(tempMonitorShipped != false){
-                if(tempMonitorShipped == box){
-                    shippingData['105891443'] = 353358909;
-                }
-                else{
-                    shippingData['105891443'] = 104430631;
-                }
-            }
-            console.log('box: ' + box)
-            console.log(JSON.stringify(requestData))
+        
+        const { shipBatchBoxes} = require('./firestore');
+        
+        let {boxWithTempMonitor, ...sharedShipmentData} = req.body.shippingData;
+        sharedShipmentData = {
+          ...sharedShipmentData,
+          656548982: new Date().toISOString(),
+          145971562: 353358909,
+          105891443: 104430631,
+        };
+        // console.log('this is the shippingData: ' + JSON.stringify(shippingData))
+        // let tempMonitorShipped = false;
+        // if(shippingData['105891443'] != '104430631'){
+        //     tempMonitorShipped = shippingData['105891443'];
+        // }
+
+        let boxIdAndShipmentDataArray = [];
+
+        for (const boxId of boxIdArray) {
+          let shipmentData = {
+            ...sharedShipmentData,
+            959708259: boxIdToTrackingNumberMap[boxId],
+          };
+
+          if (boxWithTempMonitor === boxId) {
+            shipmentData['105891443'] = 353358909;
+          }
+
+          boxIdAndShipmentDataArray.push({boxId, shipmentData});
+        }
+
+        try {
+          const isShipmentSuccessful = await shipBatchBoxes(boxIdAndShipmentDataArray, siteCode);
+          if (!isShipmentSuccessful) {
+            return res.status(500).json({ message: 'Failed to save box data', code: 500 });
+          }
+          return res.status(200).json({ message: 'Success!', code: 200 });
+        } catch (error) {
+          console.log(error);
+          return res.status(500).json({ message: 'Internal Server Error', code: 500 });
+        }
+
+        // const isShipmentSuccessful = await shipBatchBoxes(boxIdAndShipmentDataArray, siteCode);
+        // if(!isShipmentSuccessful) {
+        //     return res.status(500).json({message: 'Failed to save box data', code:500});
+        // }
+        // return res.status(200).json({message: 'Success!', code:200});
+
+
+
+        // for (const boxId of boxIdArray) {
+        //     if(tempMonitorShipped != false){
+        //         if(tempMonitorShipped == boxId){
+        //             shippingData['105891443'] = 353358909;
+        //         }
+        //         else{
+        //             shippingData['105891443'] = 104430631;
+        //         }
+        //     }
+        //     console.log('box: ' + boxId)
+        //     console.log(JSON.stringify(boxIdArray))
             
-            const exists = await shipBox(box, siteCode, shippingData, trackingNumbers)
-            if(exists === false){
-                return res.status(500).json({message: 'Box does not exist', code:500})
-            }
-        }
-        return res.status(200).json({message: 'Success!', code:200})
+        //     const exists = await shipBox(boxId, siteCode, shippingData, boxIdToTrackingNumberMap)
+        //     if(exists === false){
+        //         return res.status(500).json({message: 'Box does not exist', code:500})
+        //     }
+        // }
+        // return res.status(200).json({message: 'Success!', code:200})
 
     }
     else if (api === 'updateParticipantData') {
