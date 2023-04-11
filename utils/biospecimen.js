@@ -314,17 +314,13 @@ const biospecimenAPIs = async (req, res) => {
         const { shipBatchBoxes} = require('./firestore');
         
         let {boxWithTempMonitor, ...sharedShipmentData} = req.body.shippingData;
+        
         sharedShipmentData = {
           ...sharedShipmentData,
           656548982: new Date().toISOString(),
           145971562: 353358909,
           105891443: 104430631,
         };
-        // console.log('this is the shippingData: ' + JSON.stringify(shippingData))
-        // let tempMonitorShipped = false;
-        // if(shippingData['105891443'] != '104430631'){
-        //     tempMonitorShipped = shippingData['105891443'];
-        // }
 
         let boxIdAndShipmentDataArray = [];
 
@@ -348,37 +344,9 @@ const biospecimenAPIs = async (req, res) => {
           }
           return res.status(200).json({ message: 'Success!', code: 200 });
         } catch (error) {
-          console.log(error);
           return res.status(500).json({ message: 'Internal Server Error', code: 500 });
         }
-
-        // const isShipmentSuccessful = await shipBatchBoxes(boxIdAndShipmentDataArray, siteCode);
-        // if(!isShipmentSuccessful) {
-        //     return res.status(500).json({message: 'Failed to save box data', code:500});
-        // }
-        // return res.status(200).json({message: 'Success!', code:200});
-
-
-
-        // for (const boxId of boxIdArray) {
-        //     if(tempMonitorShipped != false){
-        //         if(tempMonitorShipped == boxId){
-        //             shippingData['105891443'] = 353358909;
-        //         }
-        //         else{
-        //             shippingData['105891443'] = 104430631;
-        //         }
-        //     }
-        //     console.log('box: ' + boxId)
-        //     console.log(JSON.stringify(boxIdArray))
-            
-        //     const exists = await shipBox(boxId, siteCode, shippingData, boxIdToTrackingNumberMap)
-        //     if(exists === false){
-        //         return res.status(500).json({message: 'Box does not exist', code:500})
-        //     }
-        // }
-        // return res.status(200).json({message: 'Success!', code:200})
-
+        
     }
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');

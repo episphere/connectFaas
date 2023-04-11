@@ -1097,7 +1097,7 @@ const updateTempCheckDate = async (institute) => {
 }
 
 /**
- * 
+ * Ship a batch of boxes
  * @param {Array} boxIdAndShipmentDataArray
  * @param {number} siteCode 
  */
