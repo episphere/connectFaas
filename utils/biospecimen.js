@@ -305,15 +305,30 @@ const biospecimenAPIs = async (req, res) => {
         }
 
         const boxIdToTrackingNumberMap = req.body.boxIdToTrackingNumberMap;
-        const boxIdArray = Object.keys(boxIdToTrackingNumberMap);
+        const shippingData = req.body.shippingData;
+        if (!boxIdToTrackingNumberMap || !shippingData) {
+          return res
+            .status(400)
+            .json(getResponseJSON('Request data is incomplete!', 400));
+        }
 
+        const requiredKeysInShippingdData = ['666553960', '948887825'];
+        for (const key of requiredKeysInShippingdData) {
+          if (!shippingData[key]) {
+            return res
+              .status(400)
+              .json(getResponseJSON(`Required key ${key} is missing in shipping data!`,400));
+          }
+        }
+
+        const boxIdArray = Object.keys(boxIdToTrackingNumberMap);
         if (boxIdArray.length === 0 ) {
-            return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+          return res.status(400).json(getResponseJSON('No box data found in request!', 400));
         }
         
         const { shipBatchBoxes} = require('./firestore');
         
-        let {boxWithTempMonitor, ...sharedShipmentData} = req.body.shippingData;
+        let {boxWithTempMonitor, ...sharedShipmentData} = shippingData;
         
         sharedShipmentData = {
           ...sharedShipmentData,
@@ -344,6 +359,7 @@ const biospecimenAPIs = async (req, res) => {
           }
           return res.status(200).json({ message: 'Success!', code: 200 });
         } catch (error) {
+          console.log("Error occurred when running shipBatchBoxes():\n", error);
           return res.status(500).json({ message: 'Internal Server Error', code: 500 });
         }
         
