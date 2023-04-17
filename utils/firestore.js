@@ -1898,6 +1898,76 @@ const verifyUsersEmailOrPhone = async (req) => {
     }
 }
 
+const updateUsersCurrentLogin = async (req, uid) => {   
+    const queries = req
+    if (queries.email) {
+        try {
+            await admin.auth().updateUser(uid,
+                {       email: queries.email,
+                })
+            return true
+        }
+        catch(error) {
+            return error.errorInfo.code
+        }
+    }
+    if (queries.phone) {
+        try {
+            const newPhone = `+1`+queries.phone.toString().trim();
+            await admin.auth().updateUser(uid, 
+            {       phoneNumber: newPhone,
+            })
+            return true
+        }
+        catch(error) {
+                return error.errorInfo.code
+        }  
+    }
+    
+}
+
+
+const updateUserEmailSigninMethod = async (email, uid) => {
+    let newEmail = email
+    newEmail = newEmail.toString().trim();
+    try {
+        await admin.auth().updateUser(uid, {
+            password: "password",
+            providerToLink: {
+            email: newEmail,
+            uid: newEmail,
+            providerId: 'email',
+            },
+            deleteProvider: ['phone']
+        })
+        return true
+    }
+    catch(error) {
+        return error.errorInfo.code
+    }    
+}
+
+const updateUserPhoneSigninMethod = async (phone, uid) => {
+    let newPhone = phone
+    newPhone = newPhone.toString().trim();
+    newPhone = `+1`+newPhone
+    try {
+        await admin.auth().updateUser(uid, {
+            providerToLink: {
+                phoneNumber: newPhone,
+                uid: newPhone,
+                providerId: 'phone',
+            },
+            providersToUnlink: ['email'],
+            deleteProvider: ['password', 'email']
+        })
+        return true
+    }
+    catch(error) {
+        return error.errorInfo.code
+    }
+}
+
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
     return snapshot.docs[0].data().restrictedFields;
@@ -1997,5 +2067,8 @@ module.exports = {
     getRestrictedFields,
     sendClientEmail,
     verifyUsersEmailOrPhone,
-    retrieveRefusalWithdrawalParticipants
+    retrieveRefusalWithdrawalParticipants,
+    updateUserPhoneSigninMethod,
+    updateUserEmailSigninMethod,
+    updateUsersCurrentLogin
 }
