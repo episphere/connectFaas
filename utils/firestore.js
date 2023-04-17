@@ -1866,11 +1866,14 @@ const verifyUsersEmailOrPhone = async (req) => {
             return false;
         }
     }
+}
 
-    const updateUsersCurrentEmail = async (email, uid) => {    
+const updateUsersCurrentLogin = async (req, uid) => {   
+    const queries = req
+    if (queries.email) {
         try {
             await admin.auth().updateUser(uid,
-                {       email: email, 
+                {       email: queries.email,
                 })
             return true
         }
@@ -1878,61 +1881,62 @@ const verifyUsersEmailOrPhone = async (req) => {
             return error.errorInfo.code
         }
     }
-    
-    const updateUsersCurrentPhone = async (phone, uid) => {    
-        let newPhone = phone
-        newPhone = `+1`+newPhone.toString().trim();
-        try{
+    if (queries.phone) {
+        try {
+            const newPhone = `+1`+queries.phone.toString().trim();
             await admin.auth().updateUser(uid, 
-            {       phoneNumber: newPhone, 
+            {       phoneNumber: newPhone,
             })
             return true
         }
         catch(error) {
                 return error.errorInfo.code
-            }    
+        }  
     }
     
-    const updateUserEmailSigninMethod = async (email, uid) => {
-        let newEmail = email
-        newEmail = newEmail.toString().trim();
-        try {
-            await admin.auth().updateUser(uid, {
-                password: "password",
-                providerToLink: {
-                email: newEmail,
-                uid: newEmail,
-                providerId: 'email',
-                },
-                deleteProvider: ['phone']
-            })
-            return true
-        }
-        catch(error) {
-            return error.errorInfo.code
-        }    
+}
+
+
+const updateUserEmailSigninMethod = async (email, uid) => {
+    let newEmail = email
+    newEmail = newEmail.toString().trim();
+    try {
+        await admin.auth().updateUser(uid, {
+            password: "password",
+            providerToLink: {
+            email: newEmail,
+            uid: newEmail,
+            providerId: 'email',
+            },
+            deleteProvider: ['phone']
+        })
+        return true
     }
-    
-    const updateUserPhoneSigninMethod = async (phone, uid) => {
-        let newPhone = phone
-        newPhone = newPhone.toString().trim();
-        newPhone = `+1`+newPhone
-        try {
-            await admin.auth().updateUser(uid, {
-                providerToLink: {
-                    phoneNumber: newPhone,
-                    uid: newPhone,
-                    providerId: 'phone',
-                },
-                providersToUnlink: ['email'],
-                deleteProvider: ['password', 'email']
-            })
-            return true
-        }
-        catch(error) {
-            return error.errorInfo.code
-        }
-    }}
+    catch(error) {
+        return error.errorInfo.code
+    }    
+}
+
+const updateUserPhoneSigninMethod = async (phone, uid) => {
+    let newPhone = phone
+    newPhone = newPhone.toString().trim();
+    newPhone = `+1`+newPhone
+    try {
+        await admin.auth().updateUser(uid, {
+            providerToLink: {
+                phoneNumber: newPhone,
+                uid: newPhone,
+                providerId: 'phone',
+            },
+            providersToUnlink: ['email'],
+            deleteProvider: ['password', 'email']
+        })
+        return true
+    }
+    catch(error) {
+        return error.errorInfo.code
+    }
+}
 
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
@@ -2035,6 +2039,5 @@ module.exports = {
     retrieveRefusalWithdrawalParticipants,
     updateUserPhoneSigninMethod,
     updateUserEmailSigninMethod,
-    updateUsersCurrentEmail,
-    updateUsersCurrentPhone
+    updateUsersCurrentLogin
 }

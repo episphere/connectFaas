@@ -152,7 +152,7 @@ const submitParticipantsData = async (req, res, site) => {
         responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
     }
 
-    return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray}); // 206 one or more pt error
+    return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
 }
 
 const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
@@ -344,7 +344,7 @@ const qc = (newData, existingData, rules) => {
     return errors;
 }
 
-const updateSignMechanism = async (req, res) => {
+const updateUserAuthentication = async (req, res) => {
     logIPAdddress(req);
     setHeaders(res);
     
@@ -353,26 +353,25 @@ const updateSignMechanism = async (req, res) => {
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
-        const { APIAuthorization } = require('./shared');
-        const authorized = await APIAuthorization(req);
-        if(authorized instanceof Error) return res.status(500).json(getResponseJSON(authorized.message, 500));
-        if(!authorized) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
-        const { updateUserPhoneSigninMethod, updateUserEmailSigninMethod, updateUsersCurrentEmail, updateUsersCurrentPhone } = require('./firestore');
-        let status = ``
-        if (req.body.data.hasOwnProperty('phone') && req.body.data.flag === `replaceSignin`) status = await updateUserPhoneSigninMethod(req.body.data.phone, req.body.data.uid);
-        if (req.body.data.hasOwnProperty('email') && req.body.data.flag === `replaceSignin`) status = await updateUserEmailSigninMethod(req.body.data.email, req.body.data.uid);
-        if (req.body.data.hasOwnProperty('email') && req.body.data.flag === `updateEmail`) status = await updateUsersCurrentEmail(req.body.data.email, req.body.data.uid);
-        if (req.body.data.hasOwnProperty('phone') && req.body.data.flag === `updatePhone`) status = await updateUsersCurrentPhone(req.body.data.phone, req.body.data.uid);
-        if (status === true) return res.status(200).json({code: 200});
-        else if (status === (`auth/phone-number-already-exists` || `auth/email-already-exists`)) return res.status(409).json(getResponseJSON('The user with the provided phone number/email already exists.', 409))
-        else if (status === (`auth/invalid-phone-number` || `auth/invalid-email`)) return res.status(403).json(getResponseJSON('Invalid Phone number/Email', 403));
-        else return res.status(400).json(getResponseJSON('Operation Unsuccessful', 400));
+    const { APIAuthorization } = require('./shared');
+    const authorized = await APIAuthorization(req);
+    if(authorized instanceof Error) return res.status(500).json(getResponseJSON(authorized.message, 500));
+    if(!authorized) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    const { updateUserPhoneSigninMethod, updateUserEmailSigninMethod, updateUsersCurrentLogin } = require('./firestore');
+    let status = ``
+    if (req.body.data['phone'] && req.body.data.flag === `replaceSignin`) status = await updateUserPhoneSigninMethod(req.body.data.phone, req.body.data.uid);
+    if (req.body.data['email'] && req.body.data.flag === `replaceSignin`) status = await updateUserEmailSigninMethod(req.body.data.email, req.body.data.uid);
+    if (req.body.data.flag === `updateEmail` || req.body.data.flag === `updatePhone`) status = await updateUsersCurrentLogin(req.body.data, req.body.data.uid);
+    if (status === true) return res.status(200).json({code: 200});
+    else if (status === (`auth/phone-number-already-exists` || `auth/email-already-exists`)) return res.status(409).json(getResponseJSON('The user with the provided phone number/email already exists.', 409))
+    else if (status === (`auth/invalid-phone-number` || `auth/invalid-email`)) return res.status(403).json(getResponseJSON('Invalid Phone number/Email', 403));
+    else return res.status(400).json(getResponseJSON('Operation Unsuccessful', 400));
 }
 
 
 module.exports = {
     submitParticipantsData,
     updateParticipantData,
-    updateSignMechanism
+    updateUserAuthentication
 }
