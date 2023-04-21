@@ -1876,6 +1876,7 @@ const getQueryBsiData = async (query) => {
 
 const verifyUsersEmailOrPhone = async (req) => {
     const queries = req.query
+    console.log('queries', queries)
     if(queries.email) {
         try {
             const response = await admin.auth().getUserByEmail(queries.email)
