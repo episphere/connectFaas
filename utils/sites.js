@@ -152,7 +152,7 @@ const submitParticipantsData = async (req, res, site) => {
         responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
     }
 
-    return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
+    return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray}); // 206 one or more pt error
 }
 
 const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {

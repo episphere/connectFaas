@@ -55,10 +55,6 @@ const dashboard = async (req, res) => {
         const { updateParticipantData } = require('./sites');
         return await updateParticipantData(req, res, authObj);
     }
-    else if (api === 'updateUserAuthentication') {
-        const { updateUserAuthentication } = require('./sites');
-        return await updateUserAuthentication(req, res, authObj);
-    }
     else if (api === 'stats') {
         const { stats } = require('./stats');
         return await stats(req, res, authObj);
