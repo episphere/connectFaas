@@ -1097,6 +1097,36 @@ const updateTempCheckDate = async (institute) => {
 
 }
 
+/**
+ * Ship a batch of boxes
+ * @param {Array} boxIdAndShipmentDataArray
+ * @param {number} siteCode 
+ */
+const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
+  const batch = db.batch();
+
+  for (const { boxId, shipmentData } of boxIdAndShipmentDataArray) {
+    const snapshot = await db
+      .collection('boxes')
+      .where('132929440', '==', boxId)
+      .where('789843387', '==', siteCode)
+      .get();
+
+    if (snapshot.size !== 1) {
+      return false;
+    }
+
+    batch.update(snapshot.docs[0].ref, shipmentData);
+  }
+
+  await batch.commit().catch((err) => {
+    console.log('Error occurred when commiting box data:\n', err);
+    return false;
+  });
+
+  return true;
+};
+
 const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
     if(snapshot.size === 1) {
@@ -1918,6 +1948,7 @@ module.exports = {
     addBox,
     updateBox,
     searchBoxes,
+    shipBatchBoxes,
     shipBox,
     getLocations,
     searchBoxesByLocation,
