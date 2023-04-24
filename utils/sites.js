@@ -347,7 +347,7 @@ const qc = (newData, existingData, rules) => {
 const updateUserAuthentication = async (req, res) => {
     logIPAdddress(req);
     setHeaders(res);
-    
+
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
     if(req.method !== 'POST') {
@@ -368,7 +368,6 @@ const updateUserAuthentication = async (req, res) => {
     else if (status === (`auth/invalid-phone-number` || `auth/invalid-email`)) return res.status(403).json(getResponseJSON('Invalid Phone number/Email', 403));
     else return res.status(400).json(getResponseJSON('Operation Unsuccessful', 400));
 }
-
 
 module.exports = {
     submitParticipantsData,

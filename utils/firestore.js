@@ -1898,12 +1898,12 @@ const verifyUsersEmailOrPhone = async (req) => {
     }
 }
 
-const updateUsersCurrentLogin = async (req, uid) => {   
+const updateUsersCurrentLogin = async (req, uid) => {   
     const queries = req
     if (queries.email) {
         try {
             await admin.auth().updateUser(uid,
-                {       email: queries.email,
+                {       email: queries.email,
                 })
             return true
         }
@@ -1921,11 +1921,10 @@ const updateUsersCurrentLogin = async (req, uid) => {   
         }
         catch(error) {
                 return error.errorInfo.code
-        }  
+        }  
     }
-    
-}
 
+}
 
 const updateUserEmailSigninMethod = async (email, uid) => {
     let newEmail = email
@@ -1944,7 +1943,7 @@ const updateUserEmailSigninMethod = async (email, uid) => {
     }
     catch(error) {
         return error.errorInfo.code
-    }    
+    }    
 }
 
 const updateUserPhoneSigninMethod = async (phone, uid) => {
