@@ -57,6 +57,7 @@ const dashboard = async (req, res) => {
     }
     else if (api === 'updateUserAuthentication') {
         const { updateUserAuthentication } = require('./sites');
+        console.log('updateUserAuthentication')
         return await updateUserAuthentication(req, res, authObj);
     }
     else if (api === 'stats') {
