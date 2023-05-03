@@ -1931,7 +1931,6 @@ const updateUserEmailSigninMethod = async (email, uid) => {
     newEmail = newEmail.toString().trim();
     try {
         await admin.auth().updateUser(uid, {
-            password: "password",
             providerToLink: {
             email: newEmail,
             uid: newEmail,
