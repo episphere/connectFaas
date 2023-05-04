@@ -347,7 +347,6 @@ const qc = (newData, existingData, rules) => {
 const updateUserAuthentication = async (req, res) => {
     logIPAdddress(req);
     setHeaders(res);
-
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
     if(req.method !== 'POST') {
