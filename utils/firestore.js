@@ -9,9 +9,11 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, bagConceptIDs  } = require('./shared');
+const { collectionIdConversion, bagConceptIDs } = require('./shared');
+const fieldMapping = require('./fieldToConceptIdMapping');
 const nciCode = 13;
 const nciConceptId = `517700004`;
+const conversionTubesBags = fieldMapping.conversionTubesBags;
 
 const verifyToken = async (token) => {
     try{
@@ -996,61 +998,33 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
 }
 
 const searchShipments = async (siteCode) => {
-    const snapshot = await db.collection('biospecimen').where('827220437', '==', siteCode).get();
+    const { reportMissingTube, submitShipmentFlag, healthCareProvider} = fieldMapping;
+    const snapshot = await db.collection('biospecimen').where(healthCareProvider, '==', siteCode).get();
+
     if(snapshot.size !== 0){
-        //
         return snapshot.docs.filter(document => {
-            
-            let data = document.data();
+            let data = document.data(); 
             let keys = Object.keys(data);
-            let found = false;
-            const conversion = {
-                "299553921":"0001",
-                "703954371":"0002",
-                "838567176":"0003",
-                "454453939":"0004",
-                "652357376":"0005",
-                "973670172":"0006",
-                "143615646":"0007",
-                "787237543":"0008",
-                "223999569":"0009",
-                "376960806":"0011",
-                "232343615":"0012",
-                "589588440":"0021",
-                "746999767":"0022",
-                "857757831":"0031",
-                "654812257":"0032",
-                "958646668":"0013",
-                "677469051":"0014",
-                "683613884":"0024"
-            }
-            for(let i = 0; i < keys.length; i++){
-                if(conversion.hasOwnProperty(keys[i])){
-                   
-                    let currJSON = data[keys[i]]; 
-                    if(currJSON.hasOwnProperty('258745303')){
-                        if(currJSON['258745303'] == '104430631'){
+            let isFound = false;
+
+            for (let key of keys) {
+                if (conversionTubesBags.hasOwnProperty(key)) {
+                    let currJSON = data[key]; 
+                    if (currJSON[reportMissingTube]) {
+                        if (currJSON[reportMissingTube] === no) {
                             return true;
                         }
-                        found = true;
+                        isFound = true;
                     }
-                    else if(currJSON.hasOwnProperty('145971562')){
-                        if(currJSON['145971562'] == '104430631'){
-                            found = true;
-                        }
-                        found = true;
+                    else if (currJSON[submitShipmentFlag]) {
+                        isFound = true;
                     }
-                    else{
+                    else {
                         return true;
                     }
                 }
             }
-            if(found == false){
-                return true;
-            }
-            else{
-                return false;
-            }
+            return (isFound === false) ? true : false;
         }).map(document => document.data());
     }
     else{
