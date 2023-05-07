@@ -1008,8 +1008,9 @@ const searchShipments = async (siteCode) => {
             let isFound = false;
 
             for (let key of keys) {
-                if (conversionTubesBags.hasOwnProperty(key)) {
-                    let currJSON = data[key]; 
+                if (conversionTubesBags[key]) {
+                    let currJSON = data[key];
+                    
                     if (currJSON[reportMissingTube]) {
                         if (currJSON[reportMissingTube] === no) {
                             return true;
