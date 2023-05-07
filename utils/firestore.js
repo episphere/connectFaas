@@ -1010,7 +1010,7 @@ const searchShipments = async (siteCode) => {
             for (let key of keys) {
                 if (conversionTubesBags[key]) {
                     let currJSON = data[key];
-                    
+
                     if (currJSON[reportMissingTube]) {
                         if (currJSON[reportMissingTube] === no) {
                             return true;
