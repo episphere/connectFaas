@@ -318,12 +318,12 @@ const qc = (newData, existingData, rules) => {
             }
 
             if(rules[key].dataType) {
-                if(rules[key].dataType == 'ISO') {
+                if(rules[key].dataType === 'ISO') {
                     if(typeof newData[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(newData[key]))) {
                         errors.push(" Invalid data type / format for Key (" + key + ")");
                     }
                 }
-                else if(rules[key].dataType == 'array') {
+                else if(rules[key].dataType === 'array') {
                     if(Array.isArray(newData[key])) {
                         for(const element of newData[key]) {
                             if(typeof element !== 'string') {
