@@ -245,7 +245,7 @@ const updateParticipantData = async (req, res, authObj) => {
         
             if(primaryIdentifiers.indexOf(key) !== -1) continue;
 
-            if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key);
+            if(typeof(dataObj[key]) === 'object' && !Array.isArray(dataObj[key])) flat(dataObj[key], 'newData', key);
             else flattened['newData'][key] = dataObj[key];
 
             updatedData = {...updatedData, ...flattened.newData}
@@ -320,6 +320,19 @@ const qc = (newData, existingData, rules) => {
             if(rules[key].dataType) {
                 if(rules[key].dataType == 'ISO') {
                     if(typeof newData[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(newData[key]))) {
+                        errors.push(" Invalid data type / format for Key (" + key + ")");
+                    }
+                }
+                else if(rules[key].dataType == 'array') {
+                    if(Array.isArray(newData[key])) {
+                        for(const element of newData[key]) {
+                            if(typeof element !== 'string') {
+                                errors.push(" Invalid data type / format in array element for Key (" + key + ")");
+                                break;
+                            }
+                        }
+                    }
+                    else {
                         errors.push(" Invalid data type / format for Key (" + key + ")");
                     }
                 }
