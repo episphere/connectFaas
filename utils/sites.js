@@ -251,8 +251,6 @@ const updateParticipantData = async (req, res, authObj) => {
             updatedData = {...updatedData, ...flattened.newData}
         }
 
-        console.log(flattened.newData);
-
         // Handle Site Notifications
         if(dataObj['831041022'] && dataObj['747006172'] && dataObj['773707518'] && dataObj['831041022'] === 353358909 && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909){ // Data Destruction
             await siteNotificationsHandler(docData['Connect_ID'], '831041022', docData['827220437'], obj);
