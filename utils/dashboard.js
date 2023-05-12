@@ -7,8 +7,11 @@ const dashboard = async (req, res) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
+    if(!req.query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
+
     const access_token = req.headers.authorization.replace('Bearer ','').trim();
     let siteDetails = '';
+    let isAuthSuccess = false;
     
     const { SSOValidation, decodingJWT } = require('./shared');
     let dashboardType = 'siteManagerUser';
@@ -19,11 +22,23 @@ const dashboard = async (req, res) => {
     const SSOObject = await SSOValidation(dashboardType, access_token);
     const userEmail = SSOObject.email;
     siteDetails = SSOObject.siteDetails;
-    if(!siteDetails) { // Temporary allowing used of siteKey to validate
+    isAuthSuccess = SSOObject !== false && !!SSOObject.siteDetails;
+
+    // Check siteKey if SSO fails
+    if(!isAuthSuccess) { 
         const { APIAuthorization } = require('./shared');
-        siteDetails = await APIAuthorization(req);
+        const apiAuthResult = await APIAuthorization(req);
+        if(apiAuthResult instanceof Error){
+            return res.status(500).json(getResponseJSON(apiAuthResult.message, 500));
+        }
+        // Unauthorized and return, if both SSO and siteKey auth fail
+        if (!apiAuthResult) {
+            return res.status(401) .json(getResponseJSON('Authorization failed!', 401));
+          }
+        siteDetails = apiAuthResult;
     }
-    if(!siteDetails) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+
+    // Auth success, and proceed below steps:
     const { isParentEntity } = require('./shared');
     const authObj = await isParentEntity(siteDetails);
     if(userEmail) authObj['userEmail'] = userEmail;
@@ -31,10 +46,8 @@ const dashboard = async (req, res) => {
     const siteCodes = authObj.siteCodes;
     const isCoordinatingCenter = authObj.coordinatingCenter;
     const isHelpDesk = authObj.helpDesk;
-    const query = req.query;
-    if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
-    const api = query.api;
-    console.log(api);
+    const api = req.query.api;
+    
     if(api === 'validateSiteUsers') {
         const { validateSiteUsers } = require('./validation');
         return await validateSiteUsers(req, res, authObj);
@@ -57,7 +70,7 @@ const dashboard = async (req, res) => {
     }
     else if (api === 'updateUserAuthentication') {
         const { updateUserAuthentication } = require('./sites');
-        return await updateUserAuthentication(req, res, authObj);
+        return await updateUserAuthentication(req, res);
     }
     else if (api === 'stats') {
         const { stats } = require('./stats');

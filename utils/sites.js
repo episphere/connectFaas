@@ -358,18 +358,14 @@ const qc = (newData, existingData, rules) => {
 }
 
 const updateUserAuthentication = async (req, res) => {
-    logIPAdddress(req);
-    setHeaders(res);
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
-    const { APIAuthorization } = require('./shared');
-    const authorized = await APIAuthorization(req);
-    if(authorized instanceof Error) return res.status(500).json(getResponseJSON(authorized.message, 500));
-    if(!authorized) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+
+    if(req.body.data === undefined) {
+        return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    }
+
     const { updateUserPhoneSigninMethod, updateUserEmailSigninMethod, updateUsersCurrentLogin } = require('./firestore');
     let status = ``
     if (req.body.data['phone'] && req.body.data.flag === `replaceSignin`) status = await updateUserPhoneSigninMethod(req.body.data.phone, req.body.data.uid);
