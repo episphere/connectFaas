@@ -433,6 +433,77 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
+const retrieveParticipantsDataDestruction = async (totalDocNumber = 10) => {
+    try {
+        const deletedFieldList = ['100767870', '113579866', '117249500', '121430614', '123868967', '126331570', '130371375', '131458944', '141450621', '142654897', '150818546', '153211406', '167958071', '175732191', '230663853', '253883960', '265193023', '271757434', '285488731', '311580100', '335767902', '352891568', '371067537', '372303208', '388711124', '404289911', '421823980', '430551721', '431428747', '452166062', '454205108', '454445267', '459098666', '471593703', '507120821', '512820379', '521824358', '523768810', '536735468', '538619788', '547363263', '564964481', '576083042', '596510649', '620696506', '624030581', '634434746', '637147033', '639172801', '646873644', '663265240', '684635302', '685002411', '693626233', '699625233', 'state'];
+        let pageLimit = 500;
+        let pageCount = 0;
+        let toContinue = true;
+        let docCount = 0;
+        console.time('Total time taken');
+
+        pageLimit = Math.min(pageLimit, totalDocNumber);
+        const { isIsoDate } = require('./validation');
+        while (toContinue) {
+            const batch = db.batch();
+            const checkedDocCount = pageCount * pageLimit;
+            const remainingDocCount = totalDocNumber - checkedDocCount;
+            const currLimit = Math.min(remainingDocCount, pageLimit);
+
+            const currSnapshot = await db
+                .collection('participants')
+                .where('831041022', '==', 353358909)
+                .limit(currLimit)
+                .offset(checkedDocCount)
+                .get();
+
+            for (const doc of currSnapshot.docs) {
+                const participant = doc.data();
+                const millisecondsInDay = 24 * 60 * 60 * 1000;
+                const timeDiiff = isIsoDate(participant['269050420'])
+                    ? new Date().getTime() - new Date(participant['269050420']).getTime()
+                    : 0
+
+                if (participant['883668444'] === 704529432 || (Math.floor(timeDiiff / millisecondsInDay) > 60)) {
+                    console.log('++++++++++++++++++');
+                    console.log(participant);
+                    console.log('doc.id', doc.id);
+                    console.log('PII', participant['query']);
+                    console.log('831041022', participant['831041022']);
+                    console.log('883668444', participant['883668444']);
+                    console.log('requested date', new Date(participant['269050420']));
+                    console.log('now', new Date());
+                    console.log('days', Math.floor(timeDiiff / millisecondsInDay));
+
+                    const participantRef = doc.ref;
+                    deletedFieldList.forEach(field => {
+                        batch.update(participantRef, { [field]: admin.firestore.FieldValue.delete() });
+                    })
+                    docCount++;
+                }
+            }
+
+            batch.commit().then(result => console.log(result)).catch((err) => {
+                console.log(`Error occurred when updating documents: ${err}`);
+                toContinue = false;
+            });
+
+            if (currSnapshot.size < pageLimit) {
+                toContinue = false;
+            } else {
+                pageCount += 1;
+            }
+        }
+
+        console.log('Total documents processed: ', docCount);
+        console.timeEnd('Total time taken');
+        return true;
+    } catch (error) {
+        console.error(error);
+        return new Error(error)
+    }
+}
+
 const getChildrens = async (ID) => {
     try{
         const snapShot = await db.collection('siteDetails')
@@ -2001,6 +2072,7 @@ module.exports = {
     decrementCounter,
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
+    retrieveParticipantsDataDestruction,
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,
