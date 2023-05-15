@@ -1,5 +1,5 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
-const {validateSiteUser} = require('./firestore')
+const { validateSiteUser } = require('./firestore');
 
 const dashboard = async (req, res) => {
     logIPAdddress(req);
@@ -8,7 +8,9 @@ const dashboard = async (req, res) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
-    if(!req.query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
+    if (!req.query.api) {
+      return res.status(400).json(getResponseJSON('Bad request!', 400));
+    }
 
     const access_token = req.headers.authorization.replace('Bearer ','').trim();
     let siteDetails = '';
