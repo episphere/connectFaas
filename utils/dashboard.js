@@ -14,7 +14,8 @@ const dashboard = async (req, res) => {
 
     const access_token = req.headers.authorization.replace('Bearer ','').trim();
     let siteDetails = '';
-    
+    let userEmail = '';
+
     const { SSOValidation, decodingJWT } = require('./shared');
     let dashboardType = 'siteManagerUser';
     if(access_token.includes('.')) {
@@ -23,18 +24,18 @@ const dashboard = async (req, res) => {
     }
     const SSOObject = await SSOValidation(dashboardType, access_token);
     const isSsoAuthSuccess = SSOObject !== false && !!SSOObject.siteDetails;
-    const userEmail = SSOObject.email;
-    siteDetails = SSOObject.siteDetails;
 
-    // Check siteKey if SSO fails
-    if (!isSsoAuthSuccess) { 
+    if (isSsoAuthSuccess) {
+        userEmail = SSOObject.email;
+        siteDetails = SSOObject.siteDetails;
+    } else { // Check siteKey if SSO fails
         const { APIAuthorization } = require('./shared');
         const isApiAuthSuccess = await APIAuthorization(req);
 
         if (isApiAuthSuccess instanceof Error) {
           return res.status(500).json(getResponseJSON(isApiAuthSuccess.message, 500));
         }
-        // Unauthorized and return, if both SSO and siteKey auth fail
+        // Unauthorized if both SSO and siteKey auth fail
         if (!isApiAuthSuccess) {
           return res.status(401) .json(getResponseJSON('Authorization failed!', 401));
         }
