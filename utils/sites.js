@@ -366,8 +366,8 @@ const updateUserAuthentication = async (req, res, authObj) => {
         return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
     }
 
-    const sitesWithPermission = ['NIH', 'NORC'];
-    if (!sitesWithPermission.includes(authObj.siteDetails.acronym)) {
+    const permSiteArray = ['NIH', 'NORC'];
+    if (!permSiteArray.includes(authObj.acronym)) {
         return res.status(403).json(getResponseJSON('You are not authorized!', 403));
     }
 
