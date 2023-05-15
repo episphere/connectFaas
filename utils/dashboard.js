@@ -70,7 +70,7 @@ const dashboard = async (req, res) => {
     }
     else if (api === 'updateUserAuthentication') {
         const { updateUserAuthentication } = require('./sites');
-        return await updateUserAuthentication(req, res);
+        return await updateUserAuthentication(req, res, authObj);
     }
     else if (api === 'stats') {
         const { stats } = require('./stats');

@@ -357,13 +357,18 @@ const qc = (newData, existingData, rules) => {
     return errors;
 }
 
-const updateUserAuthentication = async (req, res) => {
+const updateUserAuthentication = async (req, res, authObj) => {
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
     if(req.body.data === undefined) {
         return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    }
+
+    const sitesWithPermission = ['NIH', 'NORC'];
+    if (!sitesWithPermission.includes(authObj.siteDetails.acronym)) {
+        return res.status(403).json(getResponseJSON('You are not authorized!', 403));
     }
 
     const { updateUserPhoneSigninMethod, updateUserEmailSigninMethod, updateUsersCurrentLogin } = require('./firestore');
