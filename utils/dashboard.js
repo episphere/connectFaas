@@ -1,4 +1,5 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const {validateSiteUser} = require('./firestore')
 
 const dashboard = async (req, res) => {
     logIPAdddress(req);
@@ -35,7 +36,7 @@ const dashboard = async (req, res) => {
         if (!isApiAuthSuccess) {
           return res.status(401) .json(getResponseJSON('Authorization failed!', 401));
         }
-        siteDetails = isApiAuthSuccess;
+        siteDetails = await validateSiteUser(access_token);
     }
 
     // Auth success, and proceed below steps:
