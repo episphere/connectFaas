@@ -440,7 +440,6 @@ const retrieveParticipantsDataDestruction = async (totalDocNumber = 10) => {
         let pageCount = 0;
         let toContinue = true;
         let docCount = 0;
-        console.time('Total time taken');
 
         pageLimit = Math.min(pageLimit, totalDocNumber);
         const { isIsoDate } = require('./validation');
@@ -465,16 +464,6 @@ const retrieveParticipantsDataDestruction = async (totalDocNumber = 10) => {
                     : 0
 
                 if (participant['883668444'] === 704529432 || (Math.floor(timeDiiff / millisecondsInDay) > 60)) {
-                    console.log('++++++++++++++++++');
-                    console.log(participant);
-                    console.log('doc.id', doc.id);
-                    console.log('PII', participant['query']);
-                    console.log('831041022', participant['831041022']);
-                    console.log('883668444', participant['883668444']);
-                    console.log('requested date', new Date(participant['269050420']));
-                    console.log('now', new Date());
-                    console.log('days', Math.floor(timeDiiff / millisecondsInDay));
-
                     const participantRef = doc.ref;
                     deletedFieldList.forEach(field => {
                         batch.update(participantRef, { [field]: admin.firestore.FieldValue.delete() });
@@ -484,7 +473,7 @@ const retrieveParticipantsDataDestruction = async (totalDocNumber = 10) => {
             }
 
             batch.commit().then(result => console.log(result)).catch((err) => {
-                console.log(`Error occurred when updating documents: ${err}`);
+                console.error(`Error occurred when updating documents: ${err}`);
                 toContinue = false;
             });
 
@@ -495,8 +484,6 @@ const retrieveParticipantsDataDestruction = async (totalDocNumber = 10) => {
             }
         }
 
-        console.log('Total documents processed: ', docCount);
-        console.timeEnd('Total time taken');
         return true;
     } catch (error) {
         console.error(error);
