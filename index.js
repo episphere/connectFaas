@@ -10,7 +10,7 @@ const { dashboard } = require('./utils/dashboard');
 const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport } = require('./utils/events');
 const { consistencyCheck } = require('./utils/qcDataChecks');
-const { sop } = require('./utils/sop')
+const { sop } = require('./utils/shared')
 
 // For NORC Incentive
 
