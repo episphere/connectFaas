@@ -682,6 +682,15 @@ const convertSiteLoginToNumber = (siteLogin) => {
     return isSiteLoginCidFound ? siteLoginNumber : undefined;
 }
 
+const swapObjKeysAndValues = (object) => {
+    const newObject = {};
+    for (const key in object) {
+        const value = object[key];
+        newObject[value] = key;
+    }
+    return newObject;
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -712,5 +721,6 @@ module.exports = {
     checkDefaultFlags,
     cleanSurveyData,
     refusalWithdrawalConcepts,
-    convertSiteLoginToNumber
+    convertSiteLoginToNumber,
+    swapObjKeysAndValues,
 }

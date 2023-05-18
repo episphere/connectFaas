@@ -9,11 +9,11 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, bagConceptIDs } = require('./shared');
+const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const nciCode = 13;
 const nciConceptId = `517700004`;
-const conversionTubesBags = fieldMapping.conversionTubesBags;
+const tubesBagsCids = fieldMapping.tubesBagsCids;
 
 const verifyToken = async (token) => {
     try{
@@ -998,35 +998,36 @@ const searchSpecimen = async (masterSpecimenId, siteCode) => {
 }
 
 const searchShipments = async (siteCode) => {
-    const { reportMissingTube, submitShipmentFlag, healthCareProvider} = fieldMapping;
+    const { reportMissingTube, submitShipmentFlag, no } = fieldMapping;
+    const healthCareProvider = fieldMapping.healthCareProvider.toString();
+    const tubesBagsCidKeys = swapObjKeysAndValues(tubesBagsCids);
     const snapshot = await db.collection('biospecimen').where(healthCareProvider, '==', siteCode).get();
 
     if(snapshot.size !== 0){
-        return snapshot.docs.filter(document => {
-            let data = document.data(); 
+        let shipmentData = [];
+
+        for(let documents of snapshot.docs) {
+            let data = documents.data();
             let keys = Object.keys(data);
             let isFound = false;
 
             for (let key of keys) {
-                if (conversionTubesBags[key]) {
+                if (tubesBagsCidKeys[key]) {
                     let currJSON = data[key];
-
                     if (currJSON[reportMissingTube]) {
                         if (currJSON[reportMissingTube] === no) {
-                            return true;
+                            isFound = false;
                         }
                         isFound = true;
                     }
                     else if (currJSON[submitShipmentFlag]) {
                         isFound = true;
                     }
-                    else {
-                        return true;
-                    }
                 }
             }
-            return (isFound === false) ? true : false;
-        }).map(document => document.data());
+            if (isFound === false) shipmentData.push(data);
+        }
+        return shipmentData;
     }
     else{
         return [];

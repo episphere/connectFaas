@@ -221,7 +221,7 @@ const biospecimenAPIs = async (req, res) => {
         }
         else {
             const { searchShipments } = require('./firestore');
-            const requestedSite = convertSiteLoginToNumber(req?.query?.requestedSite);
+            const requestedSite = convertSiteLoginToNumber(req.query.requestedSite);
             const response = requestedSite ? await searchShipments(requestedSite) : await searchShipments(siteCode);
             return res.status(200).json({data: response, code:200});
         }
