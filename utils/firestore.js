@@ -1002,12 +1002,11 @@ const searchShipments = async (siteCode) => {
     const healthCareProvider = fieldMapping.healthCareProvider.toString();
     const tubesBagsCidKeys = swapObjKeysAndValues(tubesBagsCids);
     const snapshot = await db.collection('biospecimen').where(healthCareProvider, '==', siteCode).get();
+    let shipmentData = [];
 
-    if(snapshot.size !== 0){
-        let shipmentData = [];
-
-        for(let documents of snapshot.docs) {
-            let data = documents.data();
+    if (snapshot.size !== 0) {
+        for (let document of snapshot.docs) {
+            let data = document.data();
             let keys = Object.keys(data);
             let isFound = false;
 
@@ -1028,9 +1027,6 @@ const searchShipments = async (siteCode) => {
             if (isFound === false) shipmentData.push(data);
         }
         return shipmentData;
-    }
-    else{
-        return [];
     }
 }
 
