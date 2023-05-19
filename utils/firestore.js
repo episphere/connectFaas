@@ -439,7 +439,6 @@ const removeParticipantsDataDestruction = async (totalDocNumber = 10) => {
         let pageLimit = 500;
         let pageCount = 0;
         let toContinue = true;
-        let docCount = 0;
 
         pageLimit = Math.min(pageLimit, totalDocNumber);
         const { isIsoDate } = require('./validation');
@@ -468,13 +467,13 @@ const removeParticipantsDataDestruction = async (totalDocNumber = 10) => {
                     deletedFieldList.forEach(field => {
                         batch.update(participantRef, { [field]: admin.firestore.FieldValue.delete() });
                     })
-                    docCount++;
                 }
             }
 
             batch.commit().then(result => console.log(result)).catch((err) => {
                 console.error(`Error occurred when updating documents: ${err}`);
                 toContinue = false;
+                return new Error(err)
             });
 
             if (currSnapshot.size < pageLimit) {

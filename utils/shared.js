@@ -701,9 +701,11 @@ const removeParticipantsDataDestruction = async (req, res) => {
     }
 
     const { removeParticipantsDataDestruction } = require(`./firestore`);
-    await removeParticipantsDataDestruction()
+    const result = await removeParticipantsDataDestruction()
 
-    return res.status(200).json({message: 'Success!', code: 200})
+    return result
+        ? res.status(200).json({ message: 'Success!', code: 200 })
+        : res.status(500).json(getResponseJSON('Error occurred when updating documents!', 500));
 }
 
 module.exports = {
