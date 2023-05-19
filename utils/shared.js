@@ -691,7 +691,7 @@ const swapObjKeysAndValues = (object) => {
     return newObject;
 }
 
-const sop = async (req, res) => {
+const removeParticipantsDataDestruction = async (req, res) => {
     setHeadersDomainRestricted(req, res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -700,8 +700,8 @@ const sop = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
-    const { retrieveParticipantsDataDestruction } = require(`./firestore`);
-    await retrieveParticipantsDataDestruction()
+    const { removeParticipantsDataDestruction } = require(`./firestore`);
+    await removeParticipantsDataDestruction()
 
     return res.status(200).json({message: 'Success!', code: 200})
 }
@@ -737,6 +737,6 @@ module.exports = {
     cleanSurveyData,
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
-    swapObjKeysAndValues,,
-    sop
+    swapObjKeysAndValues,
+    removeParticipantsDataDestruction
 }

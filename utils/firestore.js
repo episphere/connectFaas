@@ -433,7 +433,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
-const retrieveParticipantsDataDestruction = async (totalDocNumber = 10) => {
+const removeParticipantsDataDestruction = async (totalDocNumber = 10) => {
     try {
         const deletedFieldList = ['100767870', '113579866', '117249500', '121430614', '123868967', '126331570', '130371375', '131458944', '141450621', '142654897', '150818546', '153211406', '167958071', '175732191', '230663853', '253883960', '265193023', '271757434', '285488731', '311580100', '335767902', '352891568', '371067537', '372303208', '388711124', '404289911', '421823980', '430551721', '431428747', '452166062', '454205108', '454445267', '459098666', '471593703', '507120821', '512820379', '521824358', '523768810', '536735468', '538619788', '547363263', '564964481', '576083042', '596510649', '620696506', '624030581', '634434746', '637147033', '639172801', '646873644', '663265240', '684635302', '685002411', '693626233', '699625233', 'state'];
         let pageLimit = 500;
@@ -2059,7 +2059,7 @@ module.exports = {
     decrementCounter,
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
-    retrieveParticipantsDataDestruction,
+    removeParticipantsDataDestruction,
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,
