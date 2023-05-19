@@ -435,7 +435,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
 
 const removeParticipantsDataDestruction = async (totalDocNumber = 10) => {
     try {
-        const deletedFieldList = ['100767870', '113579866', '117249500', '121430614', '123868967', '126331570', '130371375', '131458944', '141450621', '142654897', '150818546', '153211406', '167958071', '175732191', '230663853', '253883960', '265193023', '271757434', '285488731', '311580100', '335767902', '352891568', '371067537', '372303208', '388711124', '404289911', '421823980', '430551721', '431428747', '452166062', '454205108', '454445267', '459098666', '471593703', '507120821', '512820379', '521824358', '523768810', '536735468', '538619788', '547363263', '564964481', '576083042', '596510649', '620696506', '624030581', '634434746', '637147033', '639172801', '646873644', '663265240', '684635302', '685002411', '693626233', '699625233', 'state'];
+        const dataDestructionFieldList = ['104278817','119449326','153713899','173836415','231676651','262613359','268665918','269050420','304438543','359404406','399159511','407743866','412000022','471168198','479278368','524352591','526455436','544150384','558435199','577794331','592227431','613641698', '664453818','744604255', '747006172','765336427','773707518','826240317','831041022','883668444','996038075','token','Connect_ID','query','pin'];
         let pageLimit = 500;
         let pageCount = 0;
         let toContinue = true;
@@ -463,9 +463,12 @@ const removeParticipantsDataDestruction = async (totalDocNumber = 10) => {
                     : 0
 
                 if (participant['883668444'] === 704529432 || (Math.floor(timeDiiff / millisecondsInDay) > 60)) {
+                    const fieldKeys = Object.keys(participant)
                     const participantRef = doc.ref;
-                    deletedFieldList.forEach(field => {
-                        batch.update(participantRef, { [field]: admin.firestore.FieldValue.delete() });
+                    fieldKeys.forEach(key => {
+                        if (!dataDestructionFieldList.includes(key)) {
+                            batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
+                        }
                     })
                 }
             }
