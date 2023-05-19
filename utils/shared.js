@@ -1,3 +1,5 @@
+const fieldMapping = require('./fieldToConceptIdMapping')
+
 const getResponseJSON = (message, code) => {
     return { message, code };
 };
@@ -672,6 +674,23 @@ const cleanSurveyData = (data) => {
     return data;
 }
 
+const convertSiteLoginToNumber = (siteLogin) => {
+    const siteLoginNumber = parseInt(siteLogin);
+    if (siteLoginNumber === NaN) return undefined;
+    const siteLoginCidArray = Object.values(fieldMapping.siteLoginMap);
+    const isSiteLoginCidFound = siteLoginCidArray?.includes(siteLoginNumber);
+    return isSiteLoginCidFound ? siteLoginNumber : undefined;
+}
+
+const swapObjKeysAndValues = (object) => {
+    const newObject = {};
+    for (const key in object) {
+        const value = object[key];
+        newObject[value] = key;
+    }
+    return newObject;
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -701,5 +720,7 @@ module.exports = {
     bagConceptIDs,
     checkDefaultFlags,
     cleanSurveyData,
-    refusalWithdrawalConcepts
+    refusalWithdrawalConcepts,
+    convertSiteLoginToNumber,
+    swapObjKeysAndValues,
 }
