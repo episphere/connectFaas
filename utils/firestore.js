@@ -103,26 +103,6 @@ const participantExists = async (uid) => {
     }
 }
 
-const storeResponse = async (data) => {
-    try{
-        const response = await db.collection('participants').where('state.token', '==', data.token).get();
-        if(response.size > 0) {
-            const latestVersion = response.docs.reduce((max, record) => record.data().version > max ? record.data().version : max, 0);
-            data.version = latestVersion + 1;
-            await db.collection('participants').add(data);
-            return true;
-        }
-        else{
-            data.version = 1;
-            await db.collection('participants').add(data);
-            return true;
-        }
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
 
 const updateResponse = async (data, uid) => {
     try{
@@ -433,60 +413,40 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
-const removeParticipantsDataDestruction = async (totalDocNumber = 10) => {
+const removeParticipantsDataDestruction = async () => {
     try {
-        const dataDestructionFieldList = ['104278817','119449326','153713899','173836415','231676651','262613359','268665918','269050420','304438543','359404406','399159511','407743866','412000022','471168198','479278368','524352591','526455436','544150384','558435199','577794331','592227431','613641698', '664453818','744604255', '747006172','765336427','773707518','826240317','831041022','883668444','996038075','token','Connect_ID','query','pin'];
-        let pageLimit = 500;
-        let pageCount = 0;
-        let toContinue = true;
+        const dataDestructionFieldList = ['104278817', '119449326', '153713899', '173836415', '231676651', '262613359', '268665918', '269050420', '304438543', '359404406', '399159511', '407743866', '412000022', '471168198', '479278368', '524352591', '526455436', '544150384', '558435199', '577794331', '592227431', '613641698', '664453818', '744604255', '747006172', '765336427', '773707518', '826240317', '831041022', '883668444', '996038075', 'token', 'Connect_ID', 'query', 'pin'];
 
-        pageLimit = Math.min(pageLimit, totalDocNumber);
-        const { isIsoDate } = require('./validation');
-        while (toContinue) {
+        const currSnapshot = await db
+            .collection('participants')
+            .where('831041022', '==', 353358909)
+            .get();
+
+        for (const doc of currSnapshot.docs) {
             const batch = db.batch();
-            const checkedDocCount = pageCount * pageLimit;
-            const remainingDocCount = totalDocNumber - checkedDocCount;
-            const currLimit = Math.min(remainingDocCount, pageLimit);
+            const participant = doc.data();
+            const millisecondsInDay = 24 * 60 * 60 * 1000;
+            const { isIsoDate } = require('./validation');
+            const timeDiiff = isIsoDate(participant['269050420'])
+                ? new Date().getTime() - new Date(participant['269050420']).getTime()
+                : 0
 
-            const currSnapshot = await db
-                .collection('participants')
-                .where('831041022', '==', 353358909)
-                .limit(currLimit)
-                .offset(checkedDocCount)
-                .get();
-
-            for (const doc of currSnapshot.docs) {
-                const participant = doc.data();
-                const millisecondsInDay = 24 * 60 * 60 * 1000;
-                const timeDiiff = isIsoDate(participant['269050420'])
-                    ? new Date().getTime() - new Date(participant['269050420']).getTime()
-                    : 0
-
-                if (participant['883668444'] === 704529432 || (Math.floor(timeDiiff / millisecondsInDay) > 60)) {
-                    const fieldKeys = Object.keys(participant)
-                    const participantRef = doc.ref;
-                    fieldKeys.forEach(key => {
-                        if (!dataDestructionFieldList.includes(key)) {
-                            batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
-                        }
-                    })
-                }
+            if (participant['883668444'] === 704529432 || (Math.floor(timeDiiff / millisecondsInDay) > 60)) {
+                const fieldKeys = Object.keys(participant)
+                const participantRef = doc.ref;
+                fieldKeys.forEach(key => {
+                    if (!dataDestructionFieldList.includes(key)) {
+                        batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
+                    }
+                })
             }
-
-            batch.commit().then(result => console.log(result)).catch((err) => {
+            batch.commit().then().catch((err) => {
                 console.error(`Error occurred when updating documents: ${err}`);
-                toContinue = false;
                 return new Error(err)
             });
-
-            if (currSnapshot.size < pageLimit) {
-                toContinue = false;
-            } else {
-                pageCount += 1;
-            }
         }
-
-        return true;
+       
+        return true
     } catch (error) {
         console.error(error);
         return new Error(error)
@@ -654,31 +614,6 @@ const updateSurvey = async (data, collection, doc) => {
     }
 }
 
-const retrieveToken = async (access_token) => {
-    try{
-        const response = await db.collection('apiKeys')
-                                .where('access_token', '==', access_token)
-                                .get();
-        if(response.size > 0) {
-            const data = response.docs[0].data();
-            const expiry = data.expires.toDate().getTime();
-            const currentTime = new Date().getTime();
-            if(expiry > currentTime){
-                return {token: data.token, docId: response.docs[0].id};
-            }
-            else{
-                return false;
-            }
-        }
-        else{
-            return false;
-        }
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
 
 const sanityCheckConnectID = async (ID) => {
     try{
@@ -1018,7 +953,6 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
         const docId = snapshot.docs[0].id;
         let currDoc = snapshot.docs[0].data();
         //find id before updating
-        let keys = Object.keys(currDoc)
         /*for(let i = 0; i < keys.length; i++){
             if(keys[i].match(/tube[0-9]+Id/)){
                 if(currDoc[keys[i]] == tubeId){
@@ -1091,7 +1025,7 @@ const searchShipments = async (siteCode) => {
 }
 
 
-const specimenExists = async (id, data) => {
+const specimenExists = async (id) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
     if(snapshot.size === 1) return true;
     else return false;
