@@ -952,18 +952,6 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
     if(snapshot.size === 1 && conceptTube != undefined){
         const docId = snapshot.docs[0].id;
         let currDoc = snapshot.docs[0].data();
-        //find id before updating
-        /*for(let i = 0; i < keys.length; i++){
-            if(keys[i].match(/tube[0-9]+Id/)){
-                if(currDoc[keys[i]] == tubeId){
-                    let currTubeNum = keys[i].match(/[0-9]+/g)[0];
-                    let toUpdate = {};
-                    toUpdate['tube' + currTubeNum + 'Missing'] = true;
-                    await db.collection('biospecimen').doc(docId).update(toUpdate);
-                    return 'Success!'
-                }
-            }
-        }*/
         if(currDoc.hasOwnProperty(conceptTube)){
             let currObj = currDoc[conceptTube];
             currObj['258745303'] = '353358909';
