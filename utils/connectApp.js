@@ -2,6 +2,7 @@ const { getResponseJSON, setHeadersDomainRestricted } = require('./shared');
 const { recruitSubmit, getUserProfile, getUserSurveys, getUserCollections } = require('./submission');
 const { retrieveNotifications } = require('./notifications');
 const { validateToken, generateToken, validateUsersEmailPhone } = require('./validation');
+const { updateParticipantFirebaseAuthentication } = require('./firestore');
 
 const connectApp = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -48,6 +49,8 @@ const connectApp = async (req, res) => {
     else if (api === 'validateToken') return validateToken(req, res, uid);
     
     else if (api === 'generateToken') return generateToken(req, res, uid);
+
+    else if (api === 'updateParticipantFirebaseAuthentication') return await updateParticipantFirebaseAuthentication(req, res);
 
     else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
 
