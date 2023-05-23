@@ -1852,7 +1852,7 @@ const verifyUsersEmailOrPhone = async (req) => {
     }
 }
 
-const updateUserFirebaseAuthentication = async (req, res) => {
+const updateParticipantFirebaseAuthentication = async (req, res) => {
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
@@ -2045,5 +2045,5 @@ module.exports = {
     updateUserPhoneSigninMethod,
     updateUserEmailSigninMethod,
     updateUsersCurrentLogin,
-    updateUserFirebaseAuthentication
+    updateParticipantFirebaseAuthentication
 }
