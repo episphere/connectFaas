@@ -50,9 +50,7 @@ const connectApp = async (req, res) => {
     
     else if (api === 'generateToken') return generateToken(req, res, uid);
 
-    else if (api === 'updateUserFirebaseAuthentication') {
-        return await updateUserFirebaseAuthentication(req, res);
-    }
+    else if (api === 'updateUserFirebaseAuthentication') return await updateUserFirebaseAuthentication(req, res);
 
     else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
 
