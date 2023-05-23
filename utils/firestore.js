@@ -1852,6 +1852,27 @@ const verifyUsersEmailOrPhone = async (req) => {
     }
 }
 
+const updateUserFirebaseAuthentication = async (req, res) => {
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+
+    if(req.body.data === undefined) {
+        return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    }
+
+    let status = ``
+    if (req.body.data['phone'] && req.body.data.flag === `replaceSignin`) status = await updateUserPhoneSigninMethod(req.body.data.phone, req.body.data.uid);
+    if (req.body.data['email'] && req.body.data.flag === `replaceSignin`) status = await updateUserEmailSigninMethod(req.body.data.email, req.body.data.uid);
+    if (req.body.data.flag === `updateEmail` || req.body.data.flag === `updatePhone`) status = await updateUsersCurrentLogin(req.body.data, req.body.data.uid);
+    if (status === true) return res.status(200).json({code: 200});
+    else if (status === `auth/phone-number-already-exists`) return res.status(409).json(getResponseJSON('The user with provided phone number already exists.', 409));
+    else if (status === `auth/email-already-exists`) return res.status(409).json(getResponseJSON('The user with the provided email already exists.', 409));
+    else if (status === `auth/invalid-phone-number`) return res.status(403).json(getResponseJSON('Invalid Phone number', 403));
+    else if (status === `auth/invalid-email`) return res.status(403).json(getResponseJSON('Invalid Email', 403));
+    else return res.status(400).json(getResponseJSON('Operation Unsuccessful', 400));
+}
+
 const updateUsersCurrentLogin = async (req, uid) => {   
     const queries = req
     if (queries.email) {
@@ -2023,5 +2044,6 @@ module.exports = {
     retrieveRefusalWithdrawalParticipants,
     updateUserPhoneSigninMethod,
     updateUserEmailSigninMethod,
-    updateUsersCurrentLogin
+    updateUsersCurrentLogin,
+    updateUserFirebaseAuthentication
 }
