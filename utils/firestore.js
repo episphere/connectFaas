@@ -1861,7 +1861,7 @@ const updateUserFirebaseAuthentication = async (req, res) => {
         return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
     }
 
-    let status = ``
+    let status = '';
     if (req.body.data['phone'] && req.body.data.flag === `replaceSignin`) status = await updateUserPhoneSigninMethod(req.body.data.phone, req.body.data.uid);
     if (req.body.data['email'] && req.body.data.flag === `replaceSignin`) status = await updateUserEmailSigninMethod(req.body.data.email, req.body.data.uid);
     if (req.body.data.flag === `updateEmail` || req.body.data.flag === `updatePhone`) status = await updateUsersCurrentLogin(req.body.data, req.body.data.uid);
