@@ -1856,15 +1856,27 @@ const updateParticipantFirebaseAuthentication = async (req, res) => {
     if(req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
+    const data = req.body.data;
+    const flag = data.flag;
+    const uid =  data.uid;
 
-    if(req.body.data === undefined) {
+    if(data === undefined) {
         return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
     }
 
     let status = '';
-    if (req.body.data['phone'] && req.body.data.flag === `replaceSignin`) status = await updateUserPhoneSigninMethod(req.body.data.phone, req.body.data.uid);
-    if (req.body.data['email'] && req.body.data.flag === `replaceSignin`) status = await updateUserEmailSigninMethod(req.body.data.email, req.body.data.uid);
-    if (req.body.data.flag === `updateEmail` || req.body.data.flag === `updatePhone`) status = await updateUsersCurrentLogin(req.body.data, req.body.data.uid);
+    if (flag === `replaceSignin`) {
+        if (data['phone']) {
+            status = await updateUserPhoneSigninMethod(data.phone, uid);
+        } else if (data['email'] && flag === `replaceSignin`) {
+            status = await updateUserEmailSigninMethod(data.email, uid);
+        }
+    }
+
+    if (flag === `updateEmail` || flag === `updatePhone`) {
+        status = await updateUsersCurrentLogin(data, uid);
+    }
+
     if (status === true) return res.status(200).json({code: 200});
     else if (status === `auth/phone-number-already-exists`) return res.status(409).json(getResponseJSON('The user with provided phone number already exists.', 409));
     else if (status === `auth/email-already-exists`) return res.status(409).json(getResponseJSON('The user with the provided email already exists.', 409));
