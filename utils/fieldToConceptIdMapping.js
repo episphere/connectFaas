@@ -35,5 +35,8 @@ module.exports = {
         heparinTube2: 958646668,
         edtaTube2: 677469051,
         edtaTube3: 683613884,    
+    },
+    participantMap: {
+        uninvitedRecruits: 288972510
     }
 }

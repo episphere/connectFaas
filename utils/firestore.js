@@ -455,10 +455,10 @@ const removeParticipantsDataDestruction = async () => {
 
 const removeUninvitedParticipants = async () => {
     try {
-
+        const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString()
         const currSnapshot = await db
             .collection('participants')
-            .where('288972510', '==', 353358909)
+            .where(uninvitedRecruitsCId, '==', fieldMapping.yes)
             .get();
 
         for (const doc of currSnapshot.docs) {
