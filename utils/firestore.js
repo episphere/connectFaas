@@ -467,7 +467,6 @@ const removeUninvitedParticipants = async () => {
 
             const fieldKeys = Object.keys(participant)
             const participantRef = doc.ref;
-            console.log(participantRef.query)
             fieldKeys.forEach(key => {
                 if (!dataDestructionFieldList.includes(key)) {
                     batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });

@@ -694,9 +694,9 @@ const swapObjKeysAndValues = (object) => {
 const removeParticipantsDataDestruction = async (req, res) => {
     setHeadersDomainRestricted(req, res);
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+    if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
 
-    if(req.method !== 'POST') {
+    if (req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
@@ -709,9 +709,9 @@ const removeParticipantsDataDestruction = async (req, res) => {
 const removeUninvitedParticipants = async (req, res) => {
     setHeadersDomainRestricted(req, res);
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+    if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
 
-    if(req.method !== 'POST') {
+    if (req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
