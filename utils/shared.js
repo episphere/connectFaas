@@ -706,6 +706,21 @@ const removeParticipantsDataDestruction = async (req, res) => {
         : res.status(500).json(getResponseJSON('Error occurred when updating documents!', 500));
 }
 
+const removeUninvitedParticipants = async (req, res) => {
+    setHeadersDomainRestricted(req, res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+
+    const { removeUninvitedParticipants } = require(`./firestore`);
+    return await removeUninvitedParticipants() === true
+        ? res.status(200).json({ message: 'Success!', code: 200 })
+        : res.status(500).json(getResponseJSON('Error occurred when deleting participants!', 500));
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -738,5 +753,6 @@ module.exports = {
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
-    removeParticipantsDataDestruction
+    removeParticipantsDataDestruction,
+    removeUninvitedParticipants
 }

@@ -453,6 +453,39 @@ const removeParticipantsDataDestruction = async () => {
     }
 }
 
+const removeUninvitedParticipants = async () => {
+    try {
+
+        const currSnapshot = await db
+            .collection('participants')
+            .where('288972510', '==', 353358909)
+            .get();
+
+        for (const doc of currSnapshot.docs) {
+            const batch = db.batch();
+            const participant = doc.data();
+
+            const fieldKeys = Object.keys(participant)
+            const participantRef = doc.ref;
+            console.log(participantRef.query)
+            fieldKeys.forEach(key => {
+                if (!dataDestructionFieldList.includes(key)) {
+                    batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
+                }
+            })
+            batch.commit().then().catch((err) => {
+                console.error(`Error occurred when updating documents: ${err}`);
+                return new Error(err)
+            });
+        }
+
+        return true
+    } catch (error) {
+        console.error(error);
+        return new Error(error)
+    }
+}
+
 const getChildrens = async (ID) => {
     try{
         const snapShot = await db.collection('siteDetails')
@@ -2017,6 +2050,7 @@ module.exports = {
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
     removeParticipantsDataDestruction,
+    removeUninvitedParticipants,
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,
