@@ -225,7 +225,7 @@ const updateParticipantData = async (req, res, authObj) => {
 
         const flat = (obj, att, attribute) => {
             for(let k in obj) {
-                if(typeof(obj[k]) === 'object') flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
+                if(typeof(obj[k]) === 'object' && !Array.isArray(obj[k])) flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
                 else {
                     if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
                     flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
@@ -245,7 +245,7 @@ const updateParticipantData = async (req, res, authObj) => {
         
             if(primaryIdentifiers.indexOf(key) !== -1) continue;
 
-            if(typeof(dataObj[key]) === 'object') flat(dataObj[key], 'newData', key);
+            if(typeof(dataObj[key]) === 'object' && !Array.isArray(dataObj[key])) flat(dataObj[key], 'newData', key);
             else flattened['newData'][key] = dataObj[key];
 
             updatedData = {...updatedData, ...flattened.newData}
@@ -318,8 +318,21 @@ const qc = (newData, existingData, rules) => {
             }
 
             if(rules[key].dataType) {
-                if(rules[key].dataType == 'ISO') {
+                if(rules[key].dataType === 'ISO') {
                     if(typeof newData[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(newData[key]))) {
+                        errors.push(" Invalid data type / format for Key (" + key + ")");
+                    }
+                }
+                else if(rules[key].dataType === 'array') {
+                    if(Array.isArray(newData[key])) {
+                        for(const element of newData[key]) {
+                            if(typeof element !== 'string') {
+                                errors.push(" Invalid data type / format in array element for Key (" + key + ")");
+                                break;
+                            }
+                        }
+                    }
+                    else {
                         errors.push(" Invalid data type / format for Key (" + key + ")");
                     }
                 }
@@ -344,7 +357,35 @@ const qc = (newData, existingData, rules) => {
     return errors;
 }
 
+const updateUserAuthentication = async (req, res, authObj) => {
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+
+    if(req.body.data === undefined) {
+        return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    }
+
+    const permSiteArray = ['NIH', 'NORC'];
+    if (!permSiteArray.includes(authObj.acronym)) {
+        return res.status(403).json(getResponseJSON('You are not authorized!', 403));
+    }
+
+    const { updateUserPhoneSigninMethod, updateUserEmailSigninMethod, updateUsersCurrentLogin } = require('./firestore');
+    let status = ``
+    if (req.body.data['phone'] && req.body.data.flag === `replaceSignin`) status = await updateUserPhoneSigninMethod(req.body.data.phone, req.body.data.uid);
+    if (req.body.data['email'] && req.body.data.flag === `replaceSignin`) status = await updateUserEmailSigninMethod(req.body.data.email, req.body.data.uid);
+    if (req.body.data.flag === `updateEmail` || req.body.data.flag === `updatePhone`) status = await updateUsersCurrentLogin(req.body.data, req.body.data.uid);
+    if (status === true) return res.status(200).json({code: 200});
+    else if (status === `auth/phone-number-already-exists`) return res.status(409).json(getResponseJSON('The user with provided phone number already exists.', 409));
+    else if (status === `auth/email-already-exists`) return res.status(409).json(getResponseJSON('The user with the provided email already exists.', 409));
+    else if (status === `auth/invalid-phone-number`) return res.status(403).json(getResponseJSON('Invalid Phone number', 403));
+    else if (status === `auth/invalid-email`) return res.status(403).json(getResponseJSON('Invalid Email', 403));
+    else return res.status(400).json(getResponseJSON('Operation Unsuccessful', 400));
+}
+
 module.exports = {
     submitParticipantsData,
-    updateParticipantData
+    updateParticipantData,
+    updateUserAuthentication
 }

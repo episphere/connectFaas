@@ -1,4 +1,5 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { validateSiteUser } = require('./firestore');
 
 const dashboard = async (req, res) => {
     logIPAdddress(req);
@@ -7,9 +8,14 @@ const dashboard = async (req, res) => {
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
+    if (!req.query.api) {
+      return res.status(400).json(getResponseJSON('Bad request!', 400));
+    }
+
     const access_token = req.headers.authorization.replace('Bearer ','').trim();
     let siteDetails = '';
-    
+    let userEmail = '';
+
     const { SSOValidation, decodingJWT } = require('./shared');
     let dashboardType = 'siteManagerUser';
     if(access_token.includes('.')) {
@@ -17,13 +23,26 @@ const dashboard = async (req, res) => {
         dashboardType = ['saml.connect-norc', 'saml.connect-norc-prod'].includes(decodedJWT.firebase.sign_in_provider) ? 'helpDeskUser' : 'siteManagerUser';
     }
     const SSOObject = await SSOValidation(dashboardType, access_token);
-    const userEmail = SSOObject.email;
-    siteDetails = SSOObject.siteDetails;
-    if(!siteDetails) { // Temporary allowing used of siteKey to validate
+    const isSsoAuthSuccess = SSOObject !== false && !!SSOObject.siteDetails;
+
+    if (isSsoAuthSuccess) {
+        userEmail = SSOObject.email;
+        siteDetails = SSOObject.siteDetails;
+    } else { // Check siteKey if SSO fails
         const { APIAuthorization } = require('./shared');
-        siteDetails = await APIAuthorization(req);
+        const isApiAuthSuccess = await APIAuthorization(req);
+
+        if (isApiAuthSuccess instanceof Error) {
+          return res.status(500).json(getResponseJSON(isApiAuthSuccess.message, 500));
+        }
+        // Unauthorized if both SSO and siteKey auth fail
+        if (!isApiAuthSuccess) {
+          return res.status(401) .json(getResponseJSON('Authorization failed!', 401));
+        }
+        siteDetails = await validateSiteUser(access_token);
     }
-    if(!siteDetails) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+
+    // Auth success, and proceed below steps:
     const { isParentEntity } = require('./shared');
     const authObj = await isParentEntity(siteDetails);
     if(userEmail) authObj['userEmail'] = userEmail;
@@ -31,10 +50,8 @@ const dashboard = async (req, res) => {
     const siteCodes = authObj.siteCodes;
     const isCoordinatingCenter = authObj.coordinatingCenter;
     const isHelpDesk = authObj.helpDesk;
-    const query = req.query;
-    if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
-    const api = query.api;
-    console.log(api);
+    const api = req.query.api;
+    
     if(api === 'validateSiteUsers') {
         const { validateSiteUsers } = require('./validation');
         return await validateSiteUsers(req, res, authObj);
@@ -54,6 +71,10 @@ const dashboard = async (req, res) => {
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
         return await updateParticipantData(req, res, authObj);
+    }
+    else if (api === 'updateUserAuthentication') {
+        const { updateUserAuthentication } = require('./sites');
+        return await updateUserAuthentication(req, res, authObj);
     }
     else if (api === 'stats') {
         const { stats } = require('./stats');
