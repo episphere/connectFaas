@@ -455,32 +455,37 @@ const removeParticipantsDataDestruction = async () => {
 
 const removeUninvitedParticipants = async () => {
     try {
-        const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString()
+        const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
         const currSnapshot = await db
             .collection('participants')
             .where(uninvitedRecruitsCId, '==', fieldMapping.yes)
             .get();
 
+        let count = 0;
+        const batch = db.batch();
+
         for (const doc of currSnapshot.docs) {
-            const batch = db.batch();
             const participant = doc.data();
 
-            const fieldKeys = Object.keys(participant)
+            const fieldKeys = Object.keys(participant);
             const participantRef = doc.ref;
             fieldKeys.forEach(key => {
-                if (!dataDestructionFieldList.includes(key)) {
-                    batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
+                batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
+                count++
+                if (count === 500) {
+                    count = 0;
+                    batch.commit().then().catch((err) => {
+                        console.error(`Error occurred when updating documents: ${err}`);
+                        return new Error(err)
+                    });
                 }
             })
-            batch.commit().then().catch((err) => {
-                console.error(`Error occurred when updating documents: ${err}`);
-                return new Error(err)
-            });
         }
+        await batch.commit()
 
         return true
     } catch (error) {
-        console.error(error);
+        console.error(`Error occurred when updating documents: ${err}`);
         return new Error(error)
     }
 }
