@@ -415,6 +415,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
 
 const removeParticipantsDataDestruction = async () => {
     try {
+        let count = 0;
         const dataDestructionFieldList = ['104278817', '119449326', '153713899', '173836415', '231676651', '262613359', '268665918', '269050420', '304438543', '359404406', '399159511', '407743866', '412000022', '471168198', '479278368', '524352591', '526455436', '544150384', '558435199', '577794331', '592227431', '613641698', '664453818', '744604255', '747006172', '765336427', '773707518', '826240317', '831041022', '883668444', '996038075', 'token', 'Connect_ID', 'query', 'pin'];
 
         const currSnapshot = await db
@@ -439,23 +440,21 @@ const removeParticipantsDataDestruction = async () => {
                         batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
                     }
                 })
+                count++;
             }
-            batch.commit().then().catch((err) => {
-                console.error(`Error occurred when updating documents: ${err}`);
-                return new Error(err)
-            });
+            await batch.commit()
         }
-       
-        return true
+
+        console.log(`Successfully updated ${count} participants for data destruction`)
     } catch (error) {
-        console.error(error);
-        return new Error(error)
+        console.error(`Error occurred when updating documents: ${error}`);
     }
 }
 
-const removeUninvitedParticipantsInFirestore = async () => {
+const removeUninvitedParticipants = async () => {
     try {
-        let willContinue = true
+        let count = 0;
+        let willContinue = true;
         const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
 
         while (willContinue) {
@@ -469,16 +468,16 @@ const removeUninvitedParticipantsInFirestore = async () => {
             const batch = db.batch();
             for (const doc of currSnapshot.docs) {
                 batch.delete(doc.ref);
+                count++
             }
         
             await batch.commit();
         }
 
-        return true
+        console.log(`Successfully deleted ${count} uninvited participants`)
     } catch (error) {
         willContinue = false;
-        console.error(`Error occurred when updating documents: ${error}`);
-        return new Error(error)
+        console.error(`Error occurred when deleting documents: ${error}`);
     }
 }
 
@@ -2046,7 +2045,7 @@ module.exports = {
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
     removeParticipantsDataDestruction,
-    removeUninvitedParticipantsInFirestore,
+    removeUninvitedParticipants,
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,

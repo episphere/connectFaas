@@ -691,36 +691,6 @@ const swapObjKeysAndValues = (object) => {
     return newObject;
 }
 
-const removeParticipantsDataDestruction = async (req, res) => {
-    setHeadersDomainRestricted(req, res);
-
-    if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
-
-    if (req.method !== 'POST') {
-        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-    }
-
-    const { removeParticipantsDataDestruction } = require(`./firestore`);
-    return await removeParticipantsDataDestruction() === true
-        ? res.status(200).json({ message: 'Success!', code: 200 })
-        : res.status(500).json(getResponseJSON('Error occurred when updating documents!', 500));
-}
-
-const removeUninvitedParticipantsAPI = async (req, res) => {
-    setHeadersDomainRestricted(req, res);
-
-    if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
-
-    if (req.method !== 'POST') {
-        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-    }
-
-    const { removeUninvitedParticipantsInFirestore } = require(`./firestore`);
-    return await removeUninvitedParticipantsInFirestore() === true
-        ? res.status(200).json({ message: 'Success!', code: 200 })
-        : res.status(500).json(getResponseJSON('Error occurred when deleting participants!', 500));
-}
-
 const batchLimit = 500;
 
 module.exports = {
@@ -755,7 +725,5 @@ module.exports = {
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
-    batchLimit,
-    removeParticipantsDataDestruction,
-    removeUninvitedParticipantsAPI
+    batchLimit
 }
