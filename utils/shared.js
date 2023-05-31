@@ -721,6 +721,8 @@ const removeUninvitedParticipants = async (req, res) => {
         : res.status(500).json(getResponseJSON('Error occurred when deleting participants!', 500));
 }
 
+const batchLimit = 500;
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -753,6 +755,7 @@ module.exports = {
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
+    batchLimit,
     removeParticipantsDataDestruction,
     removeUninvitedParticipants
 }

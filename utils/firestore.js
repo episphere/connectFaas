@@ -9,7 +9,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues } = require('./shared');
+const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const nciCode = 13;
 const nciConceptId = `517700004`;
@@ -455,37 +455,29 @@ const removeParticipantsDataDestruction = async () => {
 
 const removeUninvitedParticipants = async () => {
     try {
+        let willContinue = true
         const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
-        const currSnapshot = await db
+
+        while (willContinue) {
+            const currSnapshot = await db
             .collection('participants')
             .where(uninvitedRecruitsCId, '==', fieldMapping.yes)
+            .limit(batchLimit)
             .get();
 
-        let count = 0;
-        const batch = db.batch();
-
-        for (const doc of currSnapshot.docs) {
-            const participant = doc.data();
-
-            const fieldKeys = Object.keys(participant);
-            const participantRef = doc.ref;
-            fieldKeys.forEach(key => {
-                batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
-                count++
-                if (count === 500) {
-                    count = 0;
-                    batch.commit().then().catch((err) => {
-                        console.error(`Error occurred when updating documents: ${err}`);
-                        return new Error(err)
-                    });
-                }
-            })
+            willContinue = currSnapshot.docs.length === batchLimit;
+            const batch = db.batch();
+            for (const doc of currSnapshot.docs) {
+                batch.delete(doc.ref);
+            }
+        
+            await batch.commit();
         }
-        await batch.commit()
 
         return true
     } catch (error) {
-        console.error(`Error occurred when updating documents: ${err}`);
+        willContinue = false;
+        console.error(`Error occurred when updating documents: ${error}`);
         return new Error(error)
     }
 }
