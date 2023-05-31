@@ -706,7 +706,7 @@ const removeParticipantsDataDestruction = async (req, res) => {
         : res.status(500).json(getResponseJSON('Error occurred when updating documents!', 500));
 }
 
-const removeUninvitedParticipants = async (req, res) => {
+const removeUninvitedParticipantsAPI = async (req, res) => {
     setHeadersDomainRestricted(req, res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
@@ -715,8 +715,8 @@ const removeUninvitedParticipants = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
-    const { removeUninvitedParticipants } = require(`./firestore`);
-    return await removeUninvitedParticipants() === true
+    const { removeUninvitedParticipantsInFirestore } = require(`./firestore`);
+    return await removeUninvitedParticipantsInFirestore() === true
         ? res.status(200).json({ message: 'Success!', code: 200 })
         : res.status(500).json(getResponseJSON('Error occurred when deleting participants!', 500));
 }
@@ -757,5 +757,5 @@ module.exports = {
     swapObjKeysAndValues,
     batchLimit,
     removeParticipantsDataDestruction,
-    removeUninvitedParticipants
+    removeUninvitedParticipantsAPI
 }

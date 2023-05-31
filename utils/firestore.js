@@ -453,7 +453,7 @@ const removeParticipantsDataDestruction = async () => {
     }
 }
 
-const removeUninvitedParticipants = async () => {
+const removeUninvitedParticipantsInFirestore = async () => {
     try {
         let willContinue = true
         const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
@@ -2046,7 +2046,7 @@ module.exports = {
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
     removeParticipantsDataDestruction,
-    removeUninvitedParticipants,
+    removeUninvitedParticipantsInFirestore,
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,
