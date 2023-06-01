@@ -1,24 +1,13 @@
-const { getResponseJSON } = require('./shared');
+const participantDataCleanup = async () => {
 
-const participantDataCleanupAPIs = async (req, res) => {
-    const query = req.query;
-    if (!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
-    const api = query.api;
-    console.log(api)
+    console.log(`Start cleaning up participant data`);
+    const { removeParticipantsDataDestruction } = require(`./firestore`);
+    const { removeUninvitedParticipants } = require(`./firestore`);
 
-    if (api === 'destruction') {
-        const { removeParticipantsDataDestruction } = require(`./firestore`);
-        await removeParticipantsDataDestruction()
-    }
-    else if (api === 'uninvited') {
-        const { removeUninvitedParticipants } = require(`./firestore`);
-        await removeUninvitedParticipants()
-    }
-    else return res.status(400).json(getResponseJSON('Bad request!', 400));
-
-    res.status(200).json({ message: 'Success!', code: 200 })
+    await Promise.all([removeParticipantsDataDestruction(), removeUninvitedParticipants()])
+    console.log(`Complete cleanup of participant data`);
 }
 
 module.exports = {
-    participantDataCleanupAPIs
+    participantDataCleanup
 }
