@@ -428,11 +428,11 @@ const removeParticipantsDataDestruction = async () => {
             const participant = doc.data();
             const millisecondsInDay = 24 * 60 * 60 * 1000;
             const { isIsoDate } = require('./validation');
-            const timeDiiff = isIsoDate(participant['269050420'])
+            const timeDiff = isIsoDate(participant['269050420'])
                 ? new Date().getTime() - new Date(participant['269050420']).getTime()
                 : 0
 
-            if (participant['883668444'] === 704529432 || (Math.floor(timeDiiff / millisecondsInDay) > 2)) {
+            if (participant['883668444'] === 704529432 || (Math.floor(timeDiff / millisecondsInDay) > 2)) {
                 const fieldKeys = Object.keys(participant)
                 const participantRef = doc.ref;
                 fieldKeys.forEach(key => {
