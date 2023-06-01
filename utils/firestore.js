@@ -432,7 +432,7 @@ const removeParticipantsDataDestruction = async () => {
                 ? new Date().getTime() - new Date(participant['269050420']).getTime()
                 : 0
 
-            if (participant['883668444'] === 704529432 || (Math.floor(timeDiiff / millisecondsInDay) > 60)) {
+            if (participant['883668444'] === 704529432 || (Math.floor(timeDiiff / millisecondsInDay) > 2)) {
                 const fieldKeys = Object.keys(participant)
                 const participantRef = doc.ref;
                 fieldKeys.forEach(key => {
