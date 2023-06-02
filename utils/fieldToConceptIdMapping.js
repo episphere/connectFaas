@@ -37,6 +37,10 @@ module.exports = {
         edtaTube3: 683613884,    
     },
     participantMap: {
-        uninvitedRecruits: 288972510
+        uninvitedRecruits: 288972510,
+        destroyData: 831041022,
+        dateRequestedDataDestroy: 269050420,
+        destroyDataCategorical: 883668444,
+        requestedAndSign: 704529432
     }
 }

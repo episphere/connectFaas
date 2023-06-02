@@ -416,23 +416,27 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
 const removeParticipantsDataDestruction = async () => {
     try {
         let count = 0;
+        const millisecondsInTwoDays = 2 * 24 * 60 * 60 * 1000;
         const dataDestructionFieldList = ['104278817', '119449326', '153713899', '173836415', '231676651', '262613359', '268665918', '269050420', '304438543', '359404406', '399159511', '407743866', '412000022', '471168198', '479278368', '524352591', '526455436', '544150384', '558435199', '577794331', '592227431', '613641698', '664453818', '744604255', '747006172', '765336427', '773707518', '826240317', '831041022', '883668444', '996038075', 'token', 'Connect_ID', 'query', 'pin'];
+        const destroyDataCId = fieldMapping.participantMap.destroyData.toString();
+        const dateRequestedDataDestroyCId = fieldMapping.participantMap.dateRequestedDataDestroy.toString();
+        const destroyDataCategoricalCId = fieldMapping.participantMap.destroyDataCategorical.toString();
+        const requestedAndSignCId = fieldMapping.participantMap.requestedAndSign;
 
         const currSnapshot = await db
             .collection('participants')
-            .where('831041022', '==', 353358909)
+            .where(destroyDataCId, '==', fieldMapping.yes)
             .get();
 
         for (const doc of currSnapshot.docs) {
             const batch = db.batch();
             const participant = doc.data();
-            const millisecondsInDay = 24 * 60 * 60 * 1000;
             const { isIsoDate } = require('./validation');
-            const timeDiff = isIsoDate(participant['269050420'])
-                ? new Date().getTime() - new Date(participant['269050420']).getTime()
+            const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
+                ? new Date().getTime() - new Date(participant[dateRequestedDataDestroyCId]).getTime()
                 : 0
 
-            if (participant['883668444'] === 704529432 || (Math.floor(timeDiff / millisecondsInDay) > 2)) {
+            if (participant[destroyDataCategoricalCId] === requestedAndSignCId || timeDiff > millisecondsInTwoDays) {
                 const fieldKeys = Object.keys(participant)
                 const participantRef = doc.ref;
                 fieldKeys.forEach(key => {
