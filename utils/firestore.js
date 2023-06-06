@@ -789,8 +789,7 @@ const filterDB = async (queries, siteCode, isParent) => {
             if(key === 'token') query = query.where('token', '==', queries[key]);
             if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
         }
-        let snapshot = ``
-        queries['allSiteSearch'] === 'true' ? snapshot = await query.get() : snapshot = await query.where('827220437', operator, siteCode).get();
+        const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
         if(snapshot.size !== 0){
             return snapshot.docs.map(document => document.data());
         }
