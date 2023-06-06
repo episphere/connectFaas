@@ -791,7 +791,7 @@ const filterDB = async (queries, siteCode, isParent) => {
         }
         let snapshot = ``
         queries['allSiteSearch'] === 'true' ? snapshot = await query.get() : snapshot = await query.where('827220437', operator, siteCode).get();
-        const snapshot = await query.where('827220437', 'in', siteCodes).get();
+        const snapshot = await query.where('827220437', operator, siteCodes).get();
         if(snapshot.size !== 0){
             return snapshot.docs.map(document => document.data());
         }
