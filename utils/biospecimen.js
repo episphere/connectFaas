@@ -215,7 +215,8 @@ const biospecimenAPIs = async (req, res) => {
             const masterSpecimenId = req.query.masterSpecimenId;
             if(!masterSpecimenId) return res.status(400).json(getResponseJSON('Bad request!', 400));
             const { searchSpecimen } = require('./firestore');
-            const response = await searchSpecimen(masterSpecimenId, siteCode);
+            const allSitesFlag = (req.query.allSitesFlag) ? true : false
+            const response = await searchSpecimen(masterSpecimenId, siteCode, allSitesFlag);
             if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
             return res.status(200).json({data: response, code:200});
         }
