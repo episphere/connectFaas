@@ -474,15 +474,15 @@ const SSOValidation = async (dashboardType, idToken) => {
         const tenant = decodedJWT.firebase.tenant;
         const { validateMultiTenantIDToken } = require('./firestore');
         const decodedToken = await validateMultiTenantIDToken(idToken, tenant);
-        console.log('decodedToken:\n', decodedToken);
+
         if(decodedToken instanceof Error) {
             return false;
         }
+
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
         if(!allGroups) return;
         const email = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']];
-        console.log(allGroups)
-        console.log(email)
+
         if(!SSOConfig[tenant][dashboardType]) return false;
         let requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
         let isBiospecimenUser = false;
@@ -503,7 +503,7 @@ const SSOValidation = async (dashboardType, idToken) => {
             if(new RegExp(SSOConfig[tenant]['kpnw']['name'], 'g').test(allGroups.toString())) acronym = SSOConfig[tenant]['kpnw']['acronym'];
             if(!acronym) return false;
         }
-        console.log(acronym)
+
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
         return {siteDetails, email, isBPTLUser, isBiospecimenUser};
@@ -693,6 +693,51 @@ const swapObjKeysAndValues = (object) => {
 
 const batchLimit = 500;
 
+const getUserProfile = async (req, res, uid) => {
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    const { retrieveUserProfile } = require('./firestore');
+    let responseProfile = await retrieveUserProfile(uid);
+
+    if(responseProfile instanceof Error){
+        return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+    }
+
+    console.log(responseProfile);
+
+    if(!isEmpty(responseProfile)){
+
+        let responseDefaults = await checkDefaultFlags(responseProfile, uid);
+        
+        if(responseDefaults instanceof Error){
+            return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
+        }
+
+        if(responseDefaults) {
+            responseProfile = await retrieveUserProfile(uid);
+
+            if(responseProfile instanceof Error){
+                return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+            }
+        }
+    }
+    
+    return res.status(200).json({data: responseProfile, code:200});
+}
+
+const isEmpty = (object) => {
+    for(let prop in object) {
+        if(Object.prototype.hasOwnProperty.call(object, prop)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -720,10 +765,10 @@ module.exports = {
     collectionIdConversion,
     sites, 
     bagConceptIDs,
-    checkDefaultFlags,
     cleanSurveyData,
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
-    batchLimit
+    batchLimit,
+    getUserProfile
 }
