@@ -1002,11 +1002,11 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
 const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).get();
     if (snapshot.size === 1) {
+        if (allSitesFlag) return snapshot.docs[0].data();
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
-        const participantSiteCode = response.docs[0].data()['827220437'];
-        if (allSitesFlag) return snapshot.docs[0].data();
-        else if (!allSitesFlag && participantSiteCode === siteCode) return snapshot.docs[0].data();
+        const participantSiteCode = response.docs[0].data()['827220437']; 
+        if (participantSiteCode === siteCode) return snapshot.docs[0].data();
         else return false;
     }
     else return false;
