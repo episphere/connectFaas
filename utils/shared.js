@@ -706,8 +706,6 @@ const getUserProfile = async (req, res, uid) => {
         return res.status(500).json(getResponseJSON(responseProfile.message, 500));
     }
 
-    console.log(responseProfile);
-
     if(!isEmpty(responseProfile)){
 
         let responseDefaults = await checkDefaultFlags(responseProfile, uid);
