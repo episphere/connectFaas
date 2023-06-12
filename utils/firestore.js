@@ -417,7 +417,7 @@ const removeParticipantsDataDestruction = async () => {
     try {
         let count = 0;
         const millisecondsInTwoDays = 2 * 24 * 60 * 60 * 1000;
-        const stubRecordList = ['104278817', '119449326', '153713899', '173836415', '231676651', '262613359', '268665918', '269050420', '304438543', '359404406', '399159511', '407743866', '412000022', '471168198', '479278368', '524352591', '526455436', '544150384', '558435199', '577794331', '592227431', '613641698', '664453818', '744604255', '747006172', '765336427', '773707518', '826240317', '831041022', '883668444', '996038075', 'token', 'Connect_ID', 'query', 'pin', 'state', '371067537', '827220437'];
+        const stubFieldArray = ['104278817', '119449326', '153713899', '173836415', '231676651', '262613359', '268665918', '269050420', '304438543', '359404406', '399159511', '407743866', '412000022', '471168198', '479278368', '524352591', '526455436', '544150384', '558435199', '577794331', '592227431', '613641698', '664453818', '744604255', '747006172', '765336427', '773707518', '826240317', '831041022', '883668444', '996038075', 'token', 'Connect_ID', 'query', 'pin', 'state', '371067537', '827220437', '699625233'];
         const destroyDataCId = fieldMapping.participantMap.destroyData.toString();
         const dateRequestedDataDestroyCId = fieldMapping.participantMap.dateRequestedDataDestroy.toString();
         const destroyDataCategoricalCId = fieldMapping.participantMap.destroyDataCategorical.toString();
@@ -437,14 +437,16 @@ const removeParticipantsDataDestruction = async () => {
                 : 0
 
             if (participant[destroyDataCategoricalCId] === requestedAndSignCId || timeDiff > millisecondsInTwoDays) {
+                let hasRemovedField = false;
                 const fieldKeys = Object.keys(participant)
                 const participantRef = doc.ref;
                 fieldKeys.forEach(key => {
-                    if (!stubRecordList.includes(key)) {
+                    if (!stubFieldArray.includes(key)) {
                         batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
+                        hasRemovedField = true
                     }
                 })
-                count++;
+                if (hasRemovedField) count++;
             }
             await batch.commit()
         }
