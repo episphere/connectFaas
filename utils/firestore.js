@@ -9,9 +9,11 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, bagConceptIDs  } = require('./shared');
+const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit } = require('./shared');
+const fieldMapping = require('./fieldToConceptIdMapping');
 const nciCode = 13;
 const nciConceptId = `517700004`;
+const tubesBagsCids = fieldMapping.tubesBagsCids;
 
 const verifyToken = async (token) => {
     try{
@@ -101,26 +103,6 @@ const participantExists = async (uid) => {
     }
 }
 
-const storeResponse = async (data) => {
-    try{
-        const response = await db.collection('participants').where('state.token', '==', data.token).get();
-        if(response.size > 0) {
-            const latestVersion = response.docs.reduce((max, record) => record.data().version > max ? record.data().version : max, 0);
-            data.version = latestVersion + 1;
-            await db.collection('participants').add(data);
-            return true;
-        }
-        else{
-            data.version = 1;
-            await db.collection('participants').add(data);
-            return true;
-        }
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
 
 const updateResponse = async (data, uid) => {
     try{
@@ -431,6 +413,78 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
+const removeParticipantsDataDestruction = async () => {
+    try {
+        let count = 0;
+        const millisecondsInTwoDays = 2 * 24 * 60 * 60 * 1000;
+        const stubRecordList = ['104278817', '119449326', '153713899', '173836415', '231676651', '262613359', '268665918', '269050420', '304438543', '359404406', '399159511', '407743866', '412000022', '471168198', '479278368', '524352591', '526455436', '544150384', '558435199', '577794331', '592227431', '613641698', '664453818', '744604255', '747006172', '765336427', '773707518', '826240317', '831041022', '883668444', '996038075', 'token', 'Connect_ID', 'query', 'pin', 'state', '371067537', '827220437'];
+        const destroyDataCId = fieldMapping.participantMap.destroyData.toString();
+        const dateRequestedDataDestroyCId = fieldMapping.participantMap.dateRequestedDataDestroy.toString();
+        const destroyDataCategoricalCId = fieldMapping.participantMap.destroyDataCategorical.toString();
+        const requestedAndSignCId = fieldMapping.participantMap.requestedAndSign;
+
+        const currSnapshot = await db
+            .collection('participants')
+            .where(destroyDataCId, '==', fieldMapping.yes)
+            .get();
+
+        for (const doc of currSnapshot.docs) {
+            const batch = db.batch();
+            const participant = doc.data();
+            const { isIsoDate } = require('./validation');
+            const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
+                ? new Date().getTime() - new Date(participant[dateRequestedDataDestroyCId]).getTime()
+                : 0
+
+            if (participant[destroyDataCategoricalCId] === requestedAndSignCId || timeDiff > millisecondsInTwoDays) {
+                const fieldKeys = Object.keys(participant)
+                const participantRef = doc.ref;
+                fieldKeys.forEach(key => {
+                    if (!stubRecordList.includes(key)) {
+                        batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
+                    }
+                })
+                count++;
+            }
+            await batch.commit()
+        }
+
+        console.log(`Successfully updated ${count} participants for data destruction`)
+    } catch (error) {
+        console.error(`Error occurred when updating documents: ${error}`);
+    }
+}
+
+const removeUninvitedParticipants = async () => {
+    try {
+        let count = 0;
+        let willContinue = true;
+        const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
+
+        while (willContinue) {
+            const currSnapshot = await db
+            .collection('participants')
+            .where(uninvitedRecruitsCId, '==', fieldMapping.yes)
+            .limit(batchLimit)
+            .get();
+
+            willContinue = currSnapshot.docs.length === batchLimit;
+            const batch = db.batch();
+            for (const doc of currSnapshot.docs) {
+                batch.delete(doc.ref);
+                count++
+            }
+        
+            await batch.commit();
+        }
+
+        console.log(`Successfully deleted ${count} uninvited participants`)
+    } catch (error) {
+        willContinue = false;
+        console.error(`Error occurred when deleting documents: ${error}`);
+    }
+}
+
 const getChildrens = async (ID) => {
     try{
         const snapShot = await db.collection('siteDetails')
@@ -592,31 +646,6 @@ const updateSurvey = async (data, collection, doc) => {
     }
 }
 
-const retrieveToken = async (access_token) => {
-    try{
-        const response = await db.collection('apiKeys')
-                                .where('access_token', '==', access_token)
-                                .get();
-        if(response.size > 0) {
-            const data = response.docs[0].data();
-            const expiry = data.expires.toDate().getTime();
-            const currentTime = new Date().getTime();
-            if(expiry > currentTime){
-                return {token: data.token, docId: response.docs[0].id};
-            }
-            else{
-                return false;
-            }
-        }
-        else{
-            return false;
-        }
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
 
 const sanityCheckConnectID = async (ID) => {
     try{
@@ -760,7 +789,7 @@ const filterDB = async (queries, siteCode, isParent) => {
             if(key === 'token') query = query.where('token', '==', queries[key]);
             if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
         }
-        const snapshot = await query.where('827220437', operator, siteCode).get();
+        const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
         if(snapshot.size !== 0){
             return snapshot.docs.map(document => document.data());
         }
@@ -955,19 +984,6 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
     if(snapshot.size === 1 && conceptTube != undefined){
         const docId = snapshot.docs[0].id;
         let currDoc = snapshot.docs[0].data();
-        //find id before updating
-        let keys = Object.keys(currDoc)
-        /*for(let i = 0; i < keys.length; i++){
-            if(keys[i].match(/tube[0-9]+Id/)){
-                if(currDoc[keys[i]] == tubeId){
-                    let currTubeNum = keys[i].match(/[0-9]+/g)[0];
-                    let toUpdate = {};
-                    toUpdate['tube' + currTubeNum + 'Missing'] = true;
-                    await db.collection('biospecimen').doc(docId).update(toUpdate);
-                    return 'Success!'
-                }
-            }
-        }*/
         if(currDoc.hasOwnProperty(conceptTube)){
             let currObj = currDoc[conceptTube];
             currObj['258745303'] = '353358909';
@@ -983,83 +999,54 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
 
 }
 
-const searchSpecimen = async (masterSpecimenId, siteCode) => {
+const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).get();
-    if(snapshot.size === 1) {
+    if (snapshot.size === 1) {
+        if (allSitesFlag) return snapshot.docs[0].data();
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
-        const participantSiteCode = response.docs[0].data()['827220437'];
-        if(participantSiteCode === siteCode) return snapshot.docs[0].data();
+        const participantSiteCode = response.docs[0].data()['827220437']; 
+        if (participantSiteCode === siteCode) return snapshot.docs[0].data();
         else return false;
     }
     else return false;
 }
 
 const searchShipments = async (siteCode) => {
-    const snapshot = await db.collection('biospecimen').where('827220437', '==', siteCode).get();
-    if(snapshot.size !== 0){
-        //
-        return snapshot.docs.filter(document => {
-            
+    const { reportMissingTube, submitShipmentFlag, no } = fieldMapping;
+    const healthCareProvider = fieldMapping.healthCareProvider.toString();
+    const tubesBagsCidKeys = swapObjKeysAndValues(tubesBagsCids);
+    const snapshot = await db.collection('biospecimen').where(healthCareProvider, '==', siteCode).get();
+    let shipmentData = [];
+
+    if (snapshot.size !== 0) {
+        for (let document of snapshot.docs) {
             let data = document.data();
             let keys = Object.keys(data);
-            let found = false;
-            const conversion = {
-                "299553921":"0001",
-                "703954371":"0002",
-                "838567176":"0003",
-                "454453939":"0004",
-                "652357376":"0005",
-                "973670172":"0006",
-                "143615646":"0007",
-                "787237543":"0008",
-                "223999569":"0009",
-                "376960806":"0011",
-                "232343615":"0012",
-                "589588440":"0021",
-                "746999767":"0022",
-                "857757831":"0031",
-                "654812257":"0032",
-                "958646668":"0013",
-                "677469051":"0014",
-                "683613884":"0024"
-            }
-            for(let i = 0; i < keys.length; i++){
-                if(conversion.hasOwnProperty(keys[i])){
-                   
-                    let currJSON = data[keys[i]]; 
-                    if(currJSON.hasOwnProperty('258745303')){
-                        if(currJSON['258745303'] == '104430631'){
-                            return true;
+            let isFound = false;
+
+            for (let key of keys) {
+                if (tubesBagsCidKeys[key]) {
+                    let currJSON = data[key];
+                    if (currJSON[reportMissingTube]) {
+                        if (currJSON[reportMissingTube] === no) {
+                            isFound = false;
                         }
-                        found = true;
+                        isFound = true;
                     }
-                    else if(currJSON.hasOwnProperty('145971562')){
-                        if(currJSON['145971562'] == '104430631'){
-                            found = true;
-                        }
-                        found = true;
-                    }
-                    else{
-                        return true;
+                    else if (currJSON[submitShipmentFlag]) {
+                        isFound = true;
                     }
                 }
             }
-            if(found == false){
-                return true;
-            }
-            else{
-                return false;
-            }
-        }).map(document => document.data());
-    }
-    else{
-        return [];
+            if (isFound === false) shipmentData.push(data);
+        }
+        return shipmentData;
     }
 }
 
 
-const specimenExists = async (id, data) => {
+const specimenExists = async (id) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
     if(snapshot.size === 1) return true;
     else return false;
@@ -1898,6 +1885,39 @@ const verifyUsersEmailOrPhone = async (req) => {
     }
 }
 
+const updateParticipantFirebaseAuthentication = async (req, res) => {
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+    const data = req.body.data;
+    const flag = data.flag;
+    const uid =  data.uid;
+
+    if(data === undefined) {
+        return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    }
+
+    let status = '';
+    if (flag === `replaceSignin`) {
+        if (data['phone']) {
+            status = await updateUserPhoneSigninMethod(data.phone, uid);
+        } else if (data['email'] && flag === `replaceSignin`) {
+            status = await updateUserEmailSigninMethod(data.email, uid);
+        }
+    }
+
+    if (flag === `updateEmail` || flag === `updatePhone`) {
+        status = await updateUsersCurrentLogin(data, uid);
+    }
+
+    if (status === true) return res.status(200).json({code: 200});
+    else if (status === `auth/phone-number-already-exists`) return res.status(409).json(getResponseJSON('The user with provided phone number already exists.', 409));
+    else if (status === `auth/email-already-exists`) return res.status(409).json(getResponseJSON('The user with the provided email already exists.', 409));
+    else if (status === `auth/invalid-phone-number`) return res.status(403).json(getResponseJSON('Invalid Phone number', 403));
+    else if (status === `auth/invalid-email`) return res.status(403).json(getResponseJSON('Invalid Email', 403));
+    else return res.status(400).json(getResponseJSON('Operation Unsuccessful', 400));
+}
+
 const updateUsersCurrentLogin = async (req, uid) => {   
     const queries = req
     if (queries.email) {
@@ -2029,6 +2049,8 @@ module.exports = {
     decrementCounter,
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
+    removeParticipantsDataDestruction,
+    removeUninvitedParticipants,
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,
@@ -2068,5 +2090,6 @@ module.exports = {
     retrieveRefusalWithdrawalParticipants,
     updateUserPhoneSigninMethod,
     updateUserEmailSigninMethod,
-    updateUsersCurrentLogin
+    updateUsersCurrentLogin,
+    updateParticipantFirebaseAuthentication
 }

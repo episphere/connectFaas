@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation, convertSiteLoginToNumber } = require('./shared');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -214,13 +214,15 @@ const biospecimenAPIs = async (req, res) => {
         if(req.query.masterSpecimenId) {
             const { searchSpecimen } = require('./firestore');
             const masterSpecimenId = req.query.masterSpecimenId;
-            const response = await searchSpecimen(masterSpecimenId, siteCode);
+            const allSitesFlag = (req.query.allSitesFlag) ? true : false;
+            const response = await searchSpecimen(masterSpecimenId, siteCode, allSitesFlag);
             if (!response) return res.status(200).json({data: {}, code:200});
             return res.status(200).json({data: response, code:200});
         }
         else {
             const { searchShipments } = require('./firestore');
-            const response = await searchShipments(siteCode);
+            const requestedSite = convertSiteLoginToNumber(req.query.requestedSite);
+            const response = requestedSite ? await searchShipments(requestedSite) : await searchShipments(siteCode);
             return res.status(200).json({data: response, code:200});
         }
         
