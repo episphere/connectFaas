@@ -25,7 +25,7 @@ const generateToken = async (req, res, uid) => {
         471593703: (new Date()).toISOString(),
         ...defaultFlags
     }
-    console.log(JSON.stringify(obj));
+    console.log('Token of new record:', obj.token);
     const { createRecord } = require('./firestore');
     createRecord(obj);
     return res.status(200).json(getResponseJSON('Ok', 200));
@@ -37,7 +37,7 @@ const validateToken = async (req, res, uid) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    console.log(uid+' '+JSON.stringify(req.query));
+    console.log('uid:', uid, ' req.query:', JSON.stringify(req.query));
     const { participantExists } = require('./firestore')
     const userAlreadyExists = await participantExists(uid);
 
@@ -147,7 +147,7 @@ const getToken = async (req, res) => {
         let responseArray = [];
         if(req.body.data.length > 999) return res.status(400).json(getResponseJSON('Bad request!', 400));
         const data = req.body.data;
-        console.log(data);
+        console.log('Data in request body:', data);
         for(let dt in data){
             if(data[dt].studyId && data[dt].studyId.trim() !== ""){
                 const studyId = data[dt].studyId
@@ -203,7 +203,7 @@ const checkDerivedVariables = async (token, siteCode) => {
     const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
 
     const response = await getParticipantData(token, siteCode);
-    const collections = await getSpecimenCollections(token, siteCode);
+    const specimenArray = await getSpecimenCollections(token, siteCode);
     
     const data = response.data;
     const doc = response.id;
@@ -238,9 +238,8 @@ const checkDerivedVariables = async (token, siteCode) => {
                 incentiveEligible = true;
             }    
             else {
-                
-                if(collections) {
-                    const baselineResearchCollections = collections.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
+                if (specimenArray.length > 0) {
+                    const baselineResearchCollections = specimenArray.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
                 
                     if(baselineResearchCollections.length != 0) {
                         baselineResearchCollections.forEach(collection => {
@@ -431,8 +430,7 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...refusalUpdates};
     }
 
-    console.log("UPDATES");
-    console.log(updates);
+    console.log('Participant data updates:', updates);
 
     if(Object.keys(updates).length > 0) {
         const { updateParticipantData } = require('./firestore');

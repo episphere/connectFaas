@@ -237,14 +237,18 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         if(req.query.token) {
-            const token = req.query.token;
-            if(!token) return res.status(400).json(getResponseJSON('Bad request!', 400));
             const { getSpecimenCollections } = require('./firestore');
-            const response = await getSpecimenCollections(token, siteCode);
-            if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
-            return res.status(200).json({data: response, code:200});
+            const token = req.query.token;
+
+            try {
+              const specimenArray = await getSpecimenCollections(token, siteCode);
+              return res.status(200).json({ data: specimenArray, code: 200 });
+            } catch (error) {
+              console.error('Error occurred when running getSpecimenCollections:', error);
+            return res.status(500).json({ data: [], message: 'Error occurred when running getSpecimenCollections.', code: 500 });
+            }
         }
-        else return res.status(400).json(getResponseJSON('Bad request!', 400));
+
     }
     else if(api == 'addBox'){
         if(req.method !== 'POST') {

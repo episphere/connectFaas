@@ -1181,9 +1181,8 @@ const getSpecimenCollections = async (token, siteCode) => {
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
-    else{
-        return false;
-    }
+    
+    return [];
 }
 
 const getBoxesPagination = async (siteCode, body) => {

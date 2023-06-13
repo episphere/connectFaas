@@ -473,14 +473,14 @@ const getUserCollections = async (req, res, uid) => {
 
     const siteCode = participant['827220437'];
     const token = await getTokenForParticipant(uid);
-    const response = await getSpecimenCollections(token, siteCode);
 
-    if(response instanceof Error){
-        return res.status(500).json(getResponseJSON(response.message, 500));
+    try {
+      const specimenArray = await getSpecimenCollections(token, siteCode);
+      return res.status(200).json({ data: specimenArray, code: 200 });
+    } catch (error) {
+      console.error('Error occurred when running getSpecimenCollections:', error);
+    return res.status(500).json({ data: [], message: 'Error occurred when running getSpecimenCollections.', code: 500 });
     }
-
-    if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
-    return res.status(200).json({data: response, code:200});
 }
 
 module.exports = {
