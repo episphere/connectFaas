@@ -215,9 +215,14 @@ const biospecimenAPIs = async (req, res) => {
             const { searchSpecimen } = require('./firestore');
             const masterSpecimenId = req.query.masterSpecimenId;
             const allSitesFlag = (req.query.allSitesFlag) ? true : false;
-            const response = await searchSpecimen(masterSpecimenId, siteCode, allSitesFlag);
-            if (!response) return res.status(200).json({data: {}, code:200});
-            return res.status(200).json({data: response, code:200});
+
+            try {
+              const biospecimenData = await searchSpecimen(masterSpecimenId, siteCode, allSitesFlag);
+              return res.status(200).json({ data: biospecimenData, code: 200 });
+            } catch (error) {
+              console.error('Error occurred when running searchSpecimen:', error);
+              return res.status(500).json({ message: 'Error occurred when running searchSpecimen.', code: 500 });
+            }
         }
         else {
             const { searchShipments } = require('./firestore');
