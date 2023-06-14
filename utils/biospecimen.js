@@ -221,7 +221,7 @@ const biospecimenAPIs = async (req, res) => {
               return res.status(200).json({ data: biospecimenData, code: 200 });
             } catch (error) {
               console.error('Error occurred when running searchSpecimen:', error);
-              return res.status(500).json({ message: 'Error occurred when running searchSpecimen.', code: 500 });
+              return res.status(500).json({ data: {}, message: 'Error occurred when running searchSpecimen.', code: 500 });
             }
         }
         else {
