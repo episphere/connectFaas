@@ -218,7 +218,7 @@ const biospecimenAPIs = async (req, res) => {
 
             try {
               const biospecimenData = await searchSpecimen(masterSpecimenId, siteCode, allSitesFlag);
-              return res.status(200).json({ data: biospecimenData, code: 200 });
+              return res.status(200).json({ data: biospecimenData, message: 'Success!', code: 200 });
             } catch (error) {
               console.error('Error occurred when running searchSpecimen:', error);
               return res.status(500).json({ data: {}, message: 'Error occurred when running searchSpecimen.', code: 500 });
@@ -242,7 +242,7 @@ const biospecimenAPIs = async (req, res) => {
 
             try {
               const specimenArray = await getSpecimenCollections(token, siteCode);
-              return res.status(200).json({ data: specimenArray, code: 200 });
+              return res.status(200).json({ data: specimenArray, message: 'Success!', code: 200 });
             } catch (error) {
               console.error('Error occurred when running getSpecimenCollections:', error);
               return res.status(500).json({ data: [], message: 'Error occurred when running getSpecimenCollections.', code: 500 });

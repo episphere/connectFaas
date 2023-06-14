@@ -476,7 +476,7 @@ const getUserCollections = async (req, res, uid) => {
 
     try {
       const specimenArray = await getSpecimenCollections(token, siteCode);
-      return res.status(200).json({ data: specimenArray, code: 200 });
+      return res.status(200).json({ data: specimenArray, message: 'Success!', code: 200 });
     } catch (error) {
       console.error('Error occurred when running getSpecimenCollections:', error);
     return res.status(500).json({ data: [], message: 'Error occurred when running getSpecimenCollections.', code: 500 });
