@@ -113,19 +113,19 @@ const updateResponse = async (data, uid) => {
                     const previousQuery = doc.data().query
                     const firstName = data[399159511].trim().toLowerCase()
                     const lastName = data[996038075].trim().toLowerCase()
-                    let query = {...previousQuery, firstName, lastName}
+                    const query = {...previousQuery, firstName, lastName}
                     data = {...data, query}
                 }
                 if(data[399159511] && !data[996038075]) { // if only user profile first name is updated
                     const previousQuery = doc.data().query
                     const firstName = data[399159511].trim().toLowerCase()
-                    let query = {...previousQuery, firstName}
+                    const query = {...previousQuery, firstName}
                     data = {...data, query}
                 }
                 if(data[996038075] && !data[399159511]) { // if only user profile last name is updated
                     const previousQuery = doc.data().query
                     const lastName = data[996038075].trim().toLowerCase()
-                    let query = {...previousQuery, lastName}
+                    const query = {...previousQuery, lastName}
                     data = {...data, query}
                 }
                 await db.collection('participants').doc(doc.id).update(data);
