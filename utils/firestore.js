@@ -103,6 +103,7 @@ const participantExists = async (uid) => {
     }
 }
 
+
 const updateResponse = async (data, uid) => {
     try{
         const response = await db.collection('participants').where('state.uid', '==', uid).get();
