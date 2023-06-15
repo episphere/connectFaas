@@ -73,6 +73,19 @@ const submit = async (res, data, uid) => {
         }
     }
 
+    if (data[399159511] || data[996038075]) { // update user profile F + L name in search query
+        const { retrieveUserProfile } = require('./firestore');
+        const previousQuery = (await retrieveUserProfile(uid))[0].query;
+        const firstName = data[399159511]?.trim()?.toLowerCase();
+        const lastName = data[996038075]?.trim()?.toLowerCase();
+        const query = {
+            ...previousQuery,
+            ...(firstName && { firstName }),
+            ...(lastName && { lastName })
+        };
+        data = { ...data, query };
+    }
+
     const { cleanSurveyData } = require('./shared');
     data = cleanSurveyData(data);
 
