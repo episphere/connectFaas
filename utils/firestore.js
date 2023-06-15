@@ -117,7 +117,7 @@ const updateResponse = async (data, uid) => {
                   ...(firstName && { firstName }),
                   ...(lastName && { lastName })
                 };
-                data = { ...data, query };
+                data = { ...data, query }; // update user profile F + L name in search query
                 
                 await db.collection('participants').doc(doc.id).update(data);
                 return true;
