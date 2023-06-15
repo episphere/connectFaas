@@ -103,22 +103,15 @@ const participantExists = async (uid) => {
     }
 }
 
-
 const updateResponse = async (data, uid) => {
     try{
         const response = await db.collection('participants').where('state.uid', '==', uid).get();
         if(response.size === 1) {
             for(let doc of response.docs){
-                const previousQuery = doc.data().query;
-                const firstName = data[399159511]?.trim()?.toLowerCase();
-                const lastName = data[996038075]?.trim()?.toLowerCase();
-                const query = {
-                  ...previousQuery,
-                  ...(firstName && { firstName }),
-                  ...(lastName && { lastName })
-                };
-                data = { ...data, query }; // update user profile F + L name in search query
-                
+                if (data[399159511] || data[996038075]) { 
+                    const query = updateUPSearchQuery(data, doc.data().query);
+                    data = { ...data, query };
+                }
                 await db.collection('participants').doc(doc.id).update(data);
                 return true;
             }
@@ -128,6 +121,16 @@ const updateResponse = async (data, uid) => {
         console.error(error);
         return new Error(error)
     }
+}
+
+const updateUPSearchQuery = (data, previousQuery) => {
+    const firstName = data[399159511]?.trim()?.toLowerCase();
+    const lastName = data[996038075]?.trim()?.toLowerCase();
+    return {
+        ...previousQuery,
+        ...(firstName && { firstName }),
+        ...(lastName && { lastName })
+    };
 }
 
 const incrementCounter = async (field, siteCode) => {
