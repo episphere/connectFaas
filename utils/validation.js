@@ -488,6 +488,35 @@ const validateUsersEmailPhone = async (req, res) => {
     else return res.status(200).json({data: {accountExists: false}, code: 200})
 }
 
+const updateParticipantFirebaseAuthentication = async (req, res) => {
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+    const data = req.body.data;
+    const flag = data.flag;
+    const uid =  data.uid;
+
+    if(data === undefined) {
+        return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    }
+
+    let status = '';
+    const { updateUserPhoneSigninMethod, updateUserEmailSigninMethod, updateUsersCurrentLogin } = require('./firestore');
+    
+    if (flag === 'replaceSignin' && data['phone']) status = await updateUserPhoneSigninMethod(data.phone, uid);
+    else if (flag === 'replaceSignin' && data['email']) status = await updateUserEmailSigninMethod(data.email, uid);
+    else return res.status(403).json(getResponseJSON('Invalid Request. Phone or email data not defined in request.', 403));
+    
+    if (flag === `updateEmail` || flag === `updatePhone`) status = await updateUsersCurrentLogin(data, uid);
+
+    if (status === true) return res.status(200).json({code: 200});
+    else if (status === `auth/phone-number-already-exists`) return res.status(409).json(getResponseJSON('The user with provided phone number already exists.', 409));
+    else if (status === `auth/email-already-exists`) return res.status(409).json(getResponseJSON('The user with the provided email already exists.', 409));
+    else if (status === `auth/invalid-phone-number`) return res.status(403).json(getResponseJSON('Invalid Phone number', 403));
+    else if (status === `auth/invalid-email`) return res.status(403).json(getResponseJSON('Invalid Email', 403));
+    else return res.status(400).json(getResponseJSON('Operation Unsuccessful', 400));
+}
+
 const isIsoDate = (str) => {
     if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(str)) return false;
     const d = new Date(str);
@@ -501,5 +530,6 @@ module.exports = {
     getToken,
     checkDerivedVariables,
     validateUsersEmailPhone,
+    updateParticipantFirebaseAuthentication,
     isIsoDate
 }

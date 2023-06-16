@@ -1,8 +1,7 @@
 const { getResponseJSON, setHeadersDomainRestricted } = require('./shared');
 const { recruitSubmit, getUserProfile, getUserSurveys, getUserCollections } = require('./submission');
 const { retrieveNotifications } = require('./notifications');
-const { validateToken, generateToken, validateUsersEmailPhone } = require('./validation');
-const { updateParticipantFirebaseAuthentication } = require('./firestore');
+const { validateToken, generateToken, updateParticipantFirebaseAuthentication, validateUsersEmailPhone } = require('./validation');
 
 const connectApp = async (req, res) => {
     setHeadersDomainRestricted(req, res);
