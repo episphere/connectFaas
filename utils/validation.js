@@ -502,12 +502,11 @@ const updateParticipantFirebaseAuthentication = async (req, res) => {
 
     let status = '';
     const { updateUserPhoneSigninMethod, updateUserEmailSigninMethod, updateUsersCurrentLogin } = require('./firestore');
-    if (flag === `replaceSignin`) {
-        if (data['phone']) status = await updateUserPhoneSigninMethod(data.phone, uid);
-        else if (data['email']) status = await updateUserEmailSigninMethod(data.email, uid);
-        else return res.status(403).json(getResponseJSON('Invalid Request. Phone or email data not defined in request.', 403));
-    }
-
+    
+    if (flag === 'replaceSignin' && data['phone']) status = await updateUserPhoneSigninMethod(data.phone, uid);
+    else if (flag === 'replaceSignin' && data['email']) status = await updateUserEmailSigninMethod(data.email, uid);
+    else return res.status(403).json(getResponseJSON('Invalid Request. Phone or email data not defined in request.', 403));
+    
     if (flag === `updateEmail` || flag === `updatePhone`) status = await updateUsersCurrentLogin(data, uid);
 
     if (status === true) return res.status(200).json({code: 200});
