@@ -215,6 +215,7 @@ const defaultFlags = {
     976570371: 972455046,
     663265240: 972455046,
     265193023: 972455046,
+    220186468: 972455046,
     459098666: 972455046,
     126331570: 972455046,
     311580100: 104430631,
@@ -245,6 +246,7 @@ const moduleConceptsToCollections = {
     "D_965707586" :     "module3_v1",
     "D_716117817" :     "module4_v1",
     "D_299215535" :     "bioSurvey_v1",
+    "D_793330426" :     "covid19Survey_v1",
     "D_912367929" :     "menstrualSurvey_v1",
     "D_826163434" :     "clinicalBioSurvey_v1"
 }
@@ -255,6 +257,7 @@ const moduleStatusConcepts = {
     "976570371" :       "module3",
     "663265240" :       "module4",
     "265193023" :       "bioSurvey",
+    "220186468" :       "covid19Survey",
     "459098666" :       "menstrualSurvey",
     "253883960" :       "clinicalBioSurvey"
 }
