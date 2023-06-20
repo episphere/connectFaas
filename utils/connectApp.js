@@ -1,5 +1,5 @@
-const { getResponseJSON, setHeadersDomainRestricted } = require('./shared');
-const { recruitSubmit, getUserProfile, getUserSurveys, getUserCollections } = require('./submission');
+const { getResponseJSON, setHeadersDomainRestricted, getUserProfile } = require('./shared');
+const { recruitSubmit, getUserSurveys, getUserCollections } = require('./submission');
 const { retrieveNotifications } = require('./notifications');
 const { validateToken, generateToken, updateParticipantFirebaseAuthentication, validateUsersEmailPhone } = require('./validation');
 
