@@ -552,15 +552,15 @@ const retrieveUserProfile = async (uid) => {
         const snapShot = await db.collection('participants')
                                 .where('state.uid', '==', uid)
                                 .get();
-        if(snapShot.size > 0){
-            return snapShot.docs.map(document => {
-                let data = document.data();
-                delete data.state;
-                return data;
-            });
+
+        if(snapShot.size > 0) {
+            let data = snapShot.docs[0].data();
+            delete data.state;
+
+            return data;
         }
-        else{
-            return new Error('No record found!')    
+        else {
+            return {};
         }
     }
     catch(error){
