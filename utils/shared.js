@@ -776,5 +776,6 @@ module.exports = {
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
     batchLimit,
-    getUserProfile
+    getUserProfile,
+    isEmpty
 }
