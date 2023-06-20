@@ -37,7 +37,7 @@ const dashboard = async (req, res) => {
         }
         // Unauthorized if both SSO and siteKey auth fail
         if (!isApiAuthSuccess) {
-          return res.status(401) .json(getResponseJSON('Authorization failed!', 401));
+          return res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
         siteDetails = await validateSiteUser(access_token);
     }
@@ -51,7 +51,8 @@ const dashboard = async (req, res) => {
     const isCoordinatingCenter = authObj.coordinatingCenter;
     const isHelpDesk = authObj.helpDesk;
     const api = req.query.api;
-    
+    console.log(`SMDB API: ${api}, accessed by: ${userEmail}`);
+
     if(api === 'validateSiteUsers') {
         const { validateSiteUsers } = require('./validation');
         return await validateSiteUsers(req, res, authObj);

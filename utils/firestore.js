@@ -1010,9 +1010,9 @@ const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
         const response = await db.collection('participants').where('token', '==', token).get();
         const participantSiteCode = response.docs[0].data()['827220437']; 
         if (participantSiteCode === siteCode) return snapshot.docs[0].data();
-        else return false;
     }
-    else return false;
+    
+    return {};
 }
 
 const searchShipments = async (siteCode) => {
@@ -1184,9 +1184,8 @@ const getSpecimenCollections = async (token, siteCode) => {
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
-    else{
-        return false;
-    }
+    
+    return [];
 }
 
 const getBoxesPagination = async (siteCode, body) => {
