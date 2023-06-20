@@ -12,7 +12,6 @@ const decrement = admin.firestore.FieldValue.increment(-1);
 const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
-
 const nciCode = 13;
 const nciConceptId = `517700004`;
 const tubesBagsCids = fieldMapping.tubesBagsCids;
@@ -220,6 +219,7 @@ const getParticipantData = async (token, siteCode, isParent) => {
 }
 
 const updateParticipantData = async (id, data) => {
+
     await db.collection('participants')
             .doc(id)
             .update(data);
