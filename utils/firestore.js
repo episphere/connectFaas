@@ -9,8 +9,9 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues } = require('./shared');
+const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
+const { isIsoDate } = require('./validation');
 const nciCode = 13;
 const nciConceptId = `517700004`;
 const tubesBagsCids = fieldMapping.tubesBagsCids;
@@ -103,26 +104,6 @@ const participantExists = async (uid) => {
     }
 }
 
-const storeResponse = async (data) => {
-    try{
-        const response = await db.collection('participants').where('state.token', '==', data.token).get();
-        if(response.size > 0) {
-            const latestVersion = response.docs.reduce((max, record) => record.data().version > max ? record.data().version : max, 0);
-            data.version = latestVersion + 1;
-            await db.collection('participants').add(data);
-            return true;
-        }
-        else{
-            data.version = 1;
-            await db.collection('participants').add(data);
-            return true;
-        }
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
 
 const updateResponse = async (data, uid) => {
     try{
@@ -434,6 +415,79 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
+const removeParticipantsDataDestruction = async () => {
+    try {
+        let count = 0;
+        const millisecondsWait = 5184000000; // 60days
+        const stubFieldArray = ['104278817', '119449326', '153713899', '173836415', '231676651', '262613359', '268665918', '269050420', '304438543', '359404406', '399159511', '407743866', '412000022', '471168198', '479278368', '524352591', '526455436', '544150384', '558435199', '577794331', '592227431', '613641698', '664453818', '744604255', '747006172', '765336427', '773707518', '826240317', '831041022', '883668444', '996038075', 'token', 'Connect_ID', 'query', 'pin', 'state', '371067537', '827220437', '699625233','436680969','736251808','480305327','795827569', '564964481', '454205108','919254129','982402227','821247024','914594314','635994596','297147359','241236037', '912301837','869588347','506826178', '153211406'];
+        const destroyDataCId = fieldMapping.participantMap.destroyData.toString();
+        const dateRequestedDataDestroyCId = fieldMapping.participantMap.dateRequestedDataDestroy.toString();
+        const destroyDataCategoricalCId = fieldMapping.participantMap.destroyDataCategorical.toString();
+        const requestedAndSignCId = fieldMapping.participantMap.requestedAndSign;
+
+        const currSnapshot = await db
+            .collection('participants')
+            .where(destroyDataCId, '==', fieldMapping.yes)
+            .get();
+
+        for (const doc of currSnapshot.docs) {
+            const batch = db.batch();
+            const participant = doc.data();
+            const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
+                ? new Date().getTime() - new Date(participant[dateRequestedDataDestroyCId]).getTime()
+                : 0
+
+            if (participant[destroyDataCategoricalCId] === requestedAndSignCId || timeDiff > millisecondsWait) {
+                let hasRemovedField = false;
+                const fieldKeys = Object.keys(participant)
+                const participantRef = doc.ref;
+                fieldKeys.forEach(key => {
+                    if (!stubFieldArray.includes(key)) {
+                        batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
+                        hasRemovedField = true
+                    }
+                })
+                if (hasRemovedField) count++;
+            }
+            await batch.commit()
+        }
+
+        console.log(`Successfully updated ${count} participants for data destruction`)
+    } catch (error) {
+        console.error(`Error occurred when updating documents: ${error}`);
+    }
+}
+
+const removeUninvitedParticipants = async () => {
+    try {
+        let count = 0;
+        let willContinue = true;
+        const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
+
+        while (willContinue) {
+            const currSnapshot = await db
+            .collection('participants')
+            .where(uninvitedRecruitsCId, '==', fieldMapping.yes)
+            .limit(batchLimit)
+            .get();
+
+            willContinue = currSnapshot.docs.length === batchLimit;
+            const batch = db.batch();
+            for (const doc of currSnapshot.docs) {
+                batch.delete(doc.ref);
+                count++
+            }
+        
+            await batch.commit();
+        }
+
+        console.log(`Successfully deleted ${count} uninvited participants`)
+    } catch (error) {
+        willContinue = false;
+        console.error(`Error occurred when deleting documents: ${error}`);
+    }
+}
+
 const getChildrens = async (ID) => {
     try{
         const snapShot = await db.collection('siteDetails')
@@ -498,15 +552,15 @@ const retrieveUserProfile = async (uid) => {
         const snapShot = await db.collection('participants')
                                 .where('state.uid', '==', uid)
                                 .get();
-        if(snapShot.size > 0){
-            return snapShot.docs.map(document => {
-                let data = document.data();
-                delete data.state;
-                return data;
-            });
+
+        if(snapShot.size > 0) {
+            let data = snapShot.docs[0].data();
+            delete data.state;
+
+            return data;
         }
-        else{
-            return new Error('No record found!')    
+        else {
+            return {};
         }
     }
     catch(error){
@@ -595,31 +649,6 @@ const updateSurvey = async (data, collection, doc) => {
     }
 }
 
-const retrieveToken = async (access_token) => {
-    try{
-        const response = await db.collection('apiKeys')
-                                .where('access_token', '==', access_token)
-                                .get();
-        if(response.size > 0) {
-            const data = response.docs[0].data();
-            const expiry = data.expires.toDate().getTime();
-            const currentTime = new Date().getTime();
-            if(expiry > currentTime){
-                return {token: data.token, docId: response.docs[0].id};
-            }
-            else{
-                return false;
-            }
-        }
-        else{
-            return false;
-        }
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
 
 const sanityCheckConnectID = async (ID) => {
     try{
@@ -763,7 +792,7 @@ const filterDB = async (queries, siteCode, isParent) => {
             if(key === 'token') query = query.where('token', '==', queries[key]);
             if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
         }
-        const snapshot = await query.where('827220437', operator, siteCode).get();
+        const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
         if(snapshot.size !== 0){
             return snapshot.docs.map(document => document.data());
         }
@@ -958,19 +987,6 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
     if(snapshot.size === 1 && conceptTube != undefined){
         const docId = snapshot.docs[0].id;
         let currDoc = snapshot.docs[0].data();
-        //find id before updating
-        let keys = Object.keys(currDoc)
-        /*for(let i = 0; i < keys.length; i++){
-            if(keys[i].match(/tube[0-9]+Id/)){
-                if(currDoc[keys[i]] == tubeId){
-                    let currTubeNum = keys[i].match(/[0-9]+/g)[0];
-                    let toUpdate = {};
-                    toUpdate['tube' + currTubeNum + 'Missing'] = true;
-                    await db.collection('biospecimen').doc(docId).update(toUpdate);
-                    return 'Success!'
-                }
-            }
-        }*/
         if(currDoc.hasOwnProperty(conceptTube)){
             let currObj = currDoc[conceptTube];
             currObj['258745303'] = '353358909';
@@ -986,16 +1002,17 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
 
 }
 
-const searchSpecimen = async (masterSpecimenId, siteCode) => {
+const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).get();
-    if(snapshot.size === 1) {
+    if (snapshot.size === 1) {
+        if (allSitesFlag) return snapshot.docs[0].data();
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
-        const participantSiteCode = response.docs[0].data()['827220437'];
-        if(participantSiteCode === siteCode) return snapshot.docs[0].data();
-        else return false;
+        const participantSiteCode = response.docs[0].data()['827220437']; 
+        if (participantSiteCode === siteCode) return snapshot.docs[0].data();
     }
-    else return false;
+    
+    return {};
 }
 
 const searchShipments = async (siteCode) => {
@@ -1032,7 +1049,7 @@ const searchShipments = async (siteCode) => {
 }
 
 
-const specimenExists = async (id, data) => {
+const specimenExists = async (id) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
     if(snapshot.size === 1) return true;
     else return false;
@@ -1167,9 +1184,8 @@ const getSpecimenCollections = async (token, siteCode) => {
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
-    else{
-        return false;
-    }
+    
+    return [];
 }
 
 const getBoxesPagination = async (siteCode, body) => {
@@ -2002,6 +2018,8 @@ module.exports = {
     decrementCounter,
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
+    removeParticipantsDataDestruction,
+    removeUninvitedParticipants,
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,
@@ -2041,5 +2059,5 @@ module.exports = {
     retrieveRefusalWithdrawalParticipants,
     updateUserPhoneSigninMethod,
     updateUserEmailSigninMethod,
-    updateUsersCurrentLogin
+    updateUsersCurrentLogin,
 }

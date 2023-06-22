@@ -215,6 +215,7 @@ const defaultFlags = {
     976570371: 972455046,
     663265240: 972455046,
     265193023: 972455046,
+    220186468: 972455046,
     459098666: 972455046,
     126331570: 972455046,
     311580100: 104430631,
@@ -245,6 +246,7 @@ const moduleConceptsToCollections = {
     "D_965707586" :     "module3_v1",
     "D_716117817" :     "module4_v1",
     "D_299215535" :     "bioSurvey_v1",
+    "D_793330426" :     "covid19Survey_v1",
     "D_912367929" :     "menstrualSurvey_v1",
     "D_826163434" :     "clinicalBioSurvey_v1"
 }
@@ -255,6 +257,7 @@ const moduleStatusConcepts = {
     "976570371" :       "module3",
     "663265240" :       "module4",
     "265193023" :       "bioSurvey",
+    "220186468" :       "covid19Survey",
     "459098666" :       "menstrualSurvey",
     "253883960" :       "clinicalBioSurvey"
 }
@@ -474,15 +477,15 @@ const SSOValidation = async (dashboardType, idToken) => {
         const tenant = decodedJWT.firebase.tenant;
         const { validateMultiTenantIDToken } = require('./firestore');
         const decodedToken = await validateMultiTenantIDToken(idToken, tenant);
-        console.log('decodedToken:\n', decodedToken);
+
         if(decodedToken instanceof Error) {
             return false;
         }
+
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
         if(!allGroups) return;
         const email = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']];
-        console.log(allGroups)
-        console.log(email)
+
         if(!SSOConfig[tenant][dashboardType]) return false;
         let requiredGroups = new RegExp(SSOConfig[tenant][dashboardType], 'g').test(allGroups.toString());
         let isBiospecimenUser = false;
@@ -503,7 +506,7 @@ const SSOValidation = async (dashboardType, idToken) => {
             if(new RegExp(SSOConfig[tenant]['kpnw']['name'], 'g').test(allGroups.toString())) acronym = SSOConfig[tenant]['kpnw']['acronym'];
             if(!acronym) return false;
         }
-        console.log(acronym)
+
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
 
@@ -697,6 +700,50 @@ const swapObjKeysAndValues = (object) => {
     return newObject;
 }
 
+const batchLimit = 500;
+
+const getUserProfile = async (req, res, uid) => {
+
+    if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+
+    const { retrieveUserProfile } = require('./firestore');
+    let responseProfile = await retrieveUserProfile(uid);
+
+    if(responseProfile instanceof Error){
+        return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+    }
+
+    if(!isEmpty(responseProfile)){
+
+        let responseDefaults = await checkDefaultFlags(responseProfile, uid);
+        
+        if(responseDefaults instanceof Error){
+            return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
+        }
+
+        if(responseDefaults) {
+            responseProfile = await retrieveUserProfile(uid);
+
+            if(responseProfile instanceof Error){
+                return res.status(500).json(getResponseJSON(responseProfile.message, 500));
+            }
+        }
+    }
+    
+    return res.status(200).json({data: responseProfile, code:200});
+}
+
+const isEmpty = (object) => {
+    for(let prop in object) {
+        if(Object.prototype.hasOwnProperty.call(object, prop)) {
+            return false;
+        }
+    }
+
+    return true;
+}
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -724,9 +771,11 @@ module.exports = {
     collectionIdConversion,
     sites, 
     bagConceptIDs,
-    checkDefaultFlags,
     cleanSurveyData,
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
+    batchLimit,
+    getUserProfile,
+    isEmpty
 }

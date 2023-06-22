@@ -35,5 +35,12 @@ module.exports = {
         heparinTube2: 958646668,
         edtaTube2: 677469051,
         edtaTube3: 683613884,    
+    },
+    participantMap: {
+        uninvitedRecruits: 288972510,
+        destroyData: 831041022,
+        dateRequestedDataDestroy: 269050420,
+        destroyDataCategorical: 883668444,
+        requestedAndSign: 704529432
     }
 }

@@ -95,7 +95,7 @@ const submit = async (res, data, uid) => {
             const { checkDerivedVariables } = require('./validation');
             const { getTokenForParticipant, retrieveUserProfile } = require('./firestore');
 
-            const participant = (await retrieveUserProfile(uid))[0];
+            const participant = await retrieveUserProfile(uid);
             const siteCode = participant['827220437'];
             const token = await getTokenForParticipant(uid);
 
@@ -398,43 +398,6 @@ const identifyParticipant = async (req, res, site) => {
     }
 }
 
-const getUserProfile = async (req, res, uid) => {
-
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-
-    const { retrieveUserProfile } = require('./firestore');
-    let responseProfile = await retrieveUserProfile(uid);
-
-    if(responseProfile instanceof Error){
-        return res.status(500).json(getResponseJSON(responseProfile.message, 500));
-    }
-
-    if(!responseProfile){
-        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    }
-
-    if(responseProfile){
-        const { checkDefaultFlags } = require('./shared');
-        let responseDefaults = await checkDefaultFlags(responseProfile[0], uid);
-        
-        if(responseDefaults instanceof Error){
-            return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
-        }
-
-        if(responseDefaults) {
-            responseProfile = await retrieveUserProfile(uid);
-
-            if(responseProfile instanceof Error){
-                return res.status(500).json(getResponseJSON(responseProfile.message, 500));
-            }
-        }
-
-        return res.status(200).json({data: responseProfile[0], code:200});
-    }
-}
-
 const getUserSurveys = async (req, res, uid) => {
 
     if(req.method !== 'POST') {
@@ -463,24 +426,25 @@ const getUserCollections = async (req, res, uid) => {
     }
     
     const { getSpecimenCollections, getTokenForParticipant, retrieveUserProfile } = require('./firestore');
+    const { isEmpty } = require('./shared');
     
-    const participant = (await retrieveUserProfile(uid))[0];
+    const participant = await retrieveUserProfile(uid);
 
     // handle errors and undefined siteCode
-    if (participant instanceof Error || typeof participant['827220437'] === 'undefined') {
+    if (participant instanceof Error || isEmpty(participant)) {
         return res.status(404).json(getResponseJSON('Data not found!', 404));
     }
 
     const siteCode = participant['827220437'];
     const token = await getTokenForParticipant(uid);
-    const response = await getSpecimenCollections(token, siteCode);
 
-    if(response instanceof Error){
-        return res.status(500).json(getResponseJSON(response.message, 500));
+    try {
+      const specimenArray = await getSpecimenCollections(token, siteCode);
+      return res.status(200).json({ data: specimenArray, message: 'Success!', code: 200 });
+    } catch (error) {
+      console.error('Error occurred when running getSpecimenCollections:', error);
+    return res.status(500).json({ data: [], message: 'Error occurred when running getSpecimenCollections.', code: 500 });
     }
-
-    if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
-    return res.status(200).json({data: response, code:200});
 }
 
 module.exports = {
@@ -488,7 +452,6 @@ module.exports = {
     recruitSubmit,
     getParticipants,
     identifyParticipant,
-    getUserProfile,
     getUserSurveys,
     getUserCollections
 }
