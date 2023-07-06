@@ -37,7 +37,7 @@ const dashboard = async (req, res) => {
         }
         // Unauthorized if both SSO and siteKey auth fail
         if (!isApiAuthSuccess) {
-          return res.status(401) .json(getResponseJSON('Authorization failed!', 401));
+          return res.status(401).json(getResponseJSON('Authorization failed!', 401));
         }
         siteDetails = await validateSiteUser(access_token);
     }
@@ -51,7 +51,8 @@ const dashboard = async (req, res) => {
     const isCoordinatingCenter = authObj.coordinatingCenter;
     const isHelpDesk = authObj.helpDesk;
     const api = req.query.api;
-    
+    console.log(`SMDB API: ${api}, accessed by: ${userEmail}`);
+
     if(api === 'validateSiteUsers') {
         const { validateSiteUsers } = require('./validation');
         return await validateSiteUsers(req, res, authObj);
@@ -71,6 +72,19 @@ const dashboard = async (req, res) => {
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
         return await updateParticipantData(req, res, authObj);
+    }
+    else if (api === 'updateParticipantDataNotSite') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }   
+        const {submit} = require('./submission');
+        let body = req.body;
+        if(!body.uid) {
+            return res.status(500).json(getResponseJSON('Missing UID!', 405));
+        }
+        let uid = body.uid;
+        delete body['uid']
+        return submit(res, body, uid)
     }
     else if (api === 'updateUserAuthentication') {
         const { updateUserAuthentication } = require('./sites');

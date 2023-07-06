@@ -25,7 +25,7 @@ const generateToken = async (req, res, uid) => {
         471593703: (new Date()).toISOString(),
         ...defaultFlags
     }
-    console.log(JSON.stringify(obj));
+    console.log('Token of new record:', obj.token);
     const { createRecord } = require('./firestore');
     createRecord(obj);
     return res.status(200).json(getResponseJSON('Ok', 200));
@@ -37,7 +37,7 @@ const validateToken = async (req, res, uid) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
 
-    console.log(uid+' '+JSON.stringify(req.query));
+    console.log('uid:', uid, ' req.query:', JSON.stringify(req.query));
     const { participantExists } = require('./firestore')
     const userAlreadyExists = await participantExists(uid);
 
@@ -147,7 +147,7 @@ const getToken = async (req, res) => {
         let responseArray = [];
         if(req.body.data.length > 999) return res.status(400).json(getResponseJSON('Bad request!', 400));
         const data = req.body.data;
-        console.log(data);
+        console.log('Data in request body:', data);
         for(let dt in data){
             if(data[dt].studyId && data[dt].studyId.trim() !== ""){
                 const studyId = data[dt].studyId
@@ -203,7 +203,7 @@ const checkDerivedVariables = async (token, siteCode) => {
     const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
 
     const response = await getParticipantData(token, siteCode);
-    const collections = await getSpecimenCollections(token, siteCode);
+    const specimenArray = await getSpecimenCollections(token, siteCode);
     
     const data = response.data;
     const doc = response.id;
@@ -238,9 +238,8 @@ const checkDerivedVariables = async (token, siteCode) => {
                 incentiveEligible = true;
             }    
             else {
-                
-                if(collections) {
-                    const baselineResearchCollections = collections.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
+                if (specimenArray.length > 0) {
+                    const baselineResearchCollections = specimenArray.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077);
                 
                     if(baselineResearchCollections.length != 0) {
                         baselineResearchCollections.forEach(collection => {
@@ -431,8 +430,7 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...refusalUpdates};
     }
 
-    console.log("UPDATES");
-    console.log(updates);
+    console.log('Participant data updates:', updates);
 
     if(Object.keys(updates).length > 0) {
         const { updateParticipantData } = require('./firestore');
@@ -488,11 +486,48 @@ const validateUsersEmailPhone = async (req, res) => {
     else return res.status(200).json({data: {accountExists: false}, code: 200})
 }
 
+const updateParticipantFirebaseAuthentication = async (req, res) => {
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+    const data = req.body.data;
+    const flag = data.flag;
+    const uid =  data.uid;
+
+    if(data === undefined) {
+        return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
+    }
+
+    let status = '';
+    const { updateUserPhoneSigninMethod, updateUserEmailSigninMethod, updateUsersCurrentLogin } = require('./firestore');
+    
+    if (flag === 'replaceSignin' && data['phone']) status = await updateUserPhoneSigninMethod(data.phone, uid);
+    else if (flag === 'replaceSignin' && data['email']) status = await updateUserEmailSigninMethod(data.email, uid);
+    else return res.status(403).json(getResponseJSON('Invalid Request. Phone or email data not defined in request.', 403));
+    
+    if (flag === `updateEmail` || flag === `updatePhone`) status = await updateUsersCurrentLogin(data, uid);
+
+    if (status === true) return res.status(200).json({code: 200});
+    else if (status === `auth/phone-number-already-exists`) return res.status(409).json(getResponseJSON('The user with provided phone number already exists.', 409));
+    else if (status === `auth/email-already-exists`) return res.status(409).json(getResponseJSON('The user with the provided email already exists.', 409));
+    else if (status === `auth/invalid-phone-number`) return res.status(403).json(getResponseJSON('Invalid Phone number', 403));
+    else if (status === `auth/invalid-email`) return res.status(403).json(getResponseJSON('Invalid Email', 403));
+    else return res.status(400).json(getResponseJSON('Operation Unsuccessful', 400));
+}
+
+const isIsoDate = (str) => {
+    if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(str)) return false;
+    const d = new Date(str);
+    return d instanceof Date && !isNaN(d) && d.toISOString() === str; // valid date 
+}
+
 module.exports = {
     generateToken,
     validateToken,
     validateSiteUsers,
     getToken,
     checkDerivedVariables,
-    validateUsersEmailPhone
+    validateUsersEmailPhone,
+    updateParticipantFirebaseAuthentication,
+    isIsoDate
 }

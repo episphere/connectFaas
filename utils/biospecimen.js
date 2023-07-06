@@ -12,8 +12,10 @@ const biospecimenAPIs = async (req, res) => {
 
     const query = req.query;
     if(!query.api) return res.status(400).json(getResponseJSON('Bad request!', 400));
+
     const api = query.api;
-    console.log(api)
+    console.log("API Accessed: Biospecimen - " + api);
+
     const idToken = req.headers.authorization.replace('Bearer','').trim();
     const { validateIDToken } = require('./firestore');
     let decodedToken = await SSOValidation('biospecimenUser', idToken) || await validateIDToken(idToken);
@@ -27,6 +29,8 @@ const biospecimenAPIs = async (req, res) => {
     }
     
     const email = decodedToken.email;
+    console.log("Accessed By: " + email);
+
     const isBPTLUser = decodedToken.isBPTLUser !== undefined ? decodedToken.isBPTLUser : false;
     const isBiospecimenUser = decodedToken.isBiospecimenUser !== undefined ? decodedToken.isBiospecimenUser : false;
 
@@ -212,12 +216,17 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         if(req.query.masterSpecimenId) {
-            const masterSpecimenId = req.query.masterSpecimenId;
-            if(!masterSpecimenId) return res.status(400).json(getResponseJSON('Bad request!', 400));
             const { searchSpecimen } = require('./firestore');
-            const response = await searchSpecimen(masterSpecimenId, siteCode);
-            if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
-            return res.status(200).json({data: response, code:200});
+            const masterSpecimenId = req.query.masterSpecimenId;
+            const allSitesFlag = (req.query.allSitesFlag) ? true : false;
+
+            try {
+              const biospecimenData = await searchSpecimen(masterSpecimenId, siteCode, allSitesFlag);
+              return res.status(200).json({ data: biospecimenData, message: 'Success!', code: 200 });
+            } catch (error) {
+              console.error('Error occurred when running searchSpecimen:', error);
+              return res.status(500).json({ data: {}, message: 'Error occurred when running searchSpecimen.', code: 500 });
+            }
         }
         else {
             const { searchShipments } = require('./firestore');
@@ -232,14 +241,19 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         if(req.query.token) {
-            const token = req.query.token;
-            if(!token) return res.status(400).json(getResponseJSON('Bad request!', 400));
             const { getSpecimenCollections } = require('./firestore');
-            const response = await getSpecimenCollections(token, siteCode);
-            if(!response) return res.status(404).json(getResponseJSON('Data not found!', 404));
-            return res.status(200).json({data: response, code:200});
+            const token = req.query.token;
+
+            try {
+              const specimenArray = await getSpecimenCollections(token, siteCode);
+              return res.status(200).json({ data: specimenArray, message: 'Success!', code: 200 });
+            } catch (error) {
+              console.error('Error occurred when running getSpecimenCollections:', error);
+              return res.status(500).json({ data: [], message: 'Error occurred when running getSpecimenCollections.', code: 500 });
+            }
         }
-        else return res.status(400).json(getResponseJSON('Bad request!', 400));
+
+        return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
     else if(api == 'addBox'){
         if(req.method !== 'POST') {
@@ -384,42 +398,13 @@ const biospecimenAPIs = async (req, res) => {
         return submit(res, body, uid)
     }
     else if (api === 'getUserProfile') {
-        
-        if(req.method !== 'POST') {
-            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+
+        const { getUserProfile } = require('./shared');
+
+        if(query.uid) {
+            return getUserProfile(req, res, query.uid);
         }
-
-        if(!req.body.uid) {
-            return res.status(500).json(getResponseJSON('Missing UID!', 405));
-        }
-        
-        const { retrieveUserProfile } = require('./firestore');
-        let responseProfile = await retrieveUserProfile(req.body.uid);
-
-        if(responseProfile instanceof Error){
-            return res.status(500).json(getResponseJSON(responseProfile.message, 500));
-        }
-
-        if(!responseProfile){
-            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        }
-
-        const { checkDefaultFlags } = require('./shared');
-        let responseDefaults = await checkDefaultFlags(responseProfile[0], req.body.uid);
-        
-        if(responseDefaults instanceof Error){
-            return res.status(500).json(getResponseJSON(responseDefaults.message, 500));
-        }
-
-        if(responseDefaults) {
-            responseProfile = await retrieveUserProfile(req.body.uid);
-
-            if(responseProfile instanceof Error){
-                return res.status(500).json(getResponseJSON(responseProfile.message, 500));
-            }
-        }
-
-        return res.status(200).json({data: responseProfile[0], code:200});
+        else return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
     else if (api === 'removeBag') {
         if(req.method !== 'POST') {
