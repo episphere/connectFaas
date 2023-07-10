@@ -791,6 +791,7 @@ const filterDB = async (queries, siteCode, isParent) => {
             if(key === 'connectId') query = query.where('Connect_ID', '==', parseInt(queries[key]));
             if(key === 'token') query = query.where('token', '==', queries[key]);
             if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
+            if(key === 'checkedIn') query = query.where('331584571.266600170.135591601', '==', 353358909);
         }
         const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
         if(snapshot.size !== 0){
