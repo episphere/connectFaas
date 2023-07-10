@@ -780,32 +780,186 @@ const retrieveSiteNotifications = async (siteId, isParent) => {
     }
 }
 
+/**
+ * This function is used to retrieve a list of participants from the database.
+ * If name is included in the query, we have to handle two cases: sometimes typeof(participantDoc.query.firstName) === 'string' and sometimes typeof(participantDoc.query.firstName) === 'array'.
+ * If it's a string, we can just do a simple query.where('query.firstName', '==', queries.firstName.toLowerCase()).
+ * If it's an array, we have to do a query.where('query.firstName', 'array-contains', queries.firstName.toLowerCase()).
+ * Additionally, only one 'array-contains' query can be done per query, so we have to do two separate queries if both firstName and lastName are included in the query.
+ * We also use array-contains for email and phone number, since those are arrays as well. Note: only email or phone can be included in a query, not both.
+ * TODO Future: if we (1) adjust signup to write query.firstName and query.lastName as arrays, and (2) update existing participant docs, we can simplify this function by removing the 'string' searches for firstName and lastName.
+ */
 const filterDB = async (queries, siteCode, isParent) => {
-    try{
+    try {
         const operator = isParent ? 'in' : '==';
-        let query = db.collection('participants');
-        for(let key in queries) {
-            if(key === 'firstName' || key === 'lastName') query = query.where(`query.${key}`, '==', queries[key].toLowerCase());
-            if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
-            if(key === 'dob') query = query.where('371067537', '==', queries[key]);
-            if(key === 'connectId') query = query.where('Connect_ID', '==', parseInt(queries[key]));
-            if(key === 'token') query = query.where('token', '==', queries[key]);
-            if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
-            if(key === 'checkedIn') query = query.where('331584571.266600170.135591601', '==', 353358909);
+        const collection = db.collection('participants');
+        let fetchedResults = [];
+
+        // We need to make separate get requests for each query, since Firestore only allows one 'array-contains' query per request.
+        // This function isolates a single array-contains query (firstName, lastName, email, phone).
+        const updateQueryForArrayContainsConstraints = (queryInput) => {
+            const newQueriesObj = {...queries};
+
+            for(let property in newQueriesObj) {
+                if(queryInput.includes(newQueriesObj[property])) {
+                    delete newQueriesObj[property];
+                }
+            }
+
+            return newQueriesObj;
+        };
+
+        // This function directs the generation and execution of queries based on the search properties that are present.
+        // If neither firstName nor lastName are present, this function is bypassed.
+        // TODO Future: once all query.firstName and query.lastName are arrays, we can simplify this function by removing the 'string' searches for firstName and lastName.
+        const handleQueries = async (firstNameQuery, lastNameQuery, phoneEmailQuery) => {
+            if (firstNameQuery) {
+                const fNameStringQueryForSearch = generateQuery(firstNameQuery, 'string');
+                await executeQuery(fNameStringQueryForSearch);
+
+                const fNameArrayQueryForSearch = generateQuery(firstNameQuery, 'array');
+                await executeQuery(fNameArrayQueryForSearch);
+            }
+
+            if (lastNameQuery) {
+                const lNameStringQueryForSearch = generateQuery(lastNameQuery, 'string');
+                await executeQuery(lNameStringQueryForSearch);
+
+                const lNameArrayQueryForSearch = generateQuery(lastNameQuery, 'array');
+                await executeQuery(lNameArrayQueryForSearch);
+            }
+
+            if (phoneEmailQuery) {
+                const phoneOrEmailQueryForSearch = generateQuery(phoneEmailQuery);
+                await executeQuery(phoneOrEmailQueryForSearch);
+            }
+        };
+
+        // This function generates a query based on the property that are passed in
+        // nameType is either 'string' or 'array' and it only applies to firstName and lastName properties in search.
+        // nameType is currently a string when a participant signs up, but is written as array when a name update is made in connectApp or SMDB as of the PRs on (JA 07/07/23).
+        const generateQuery = (queryInput, nameType) => {
+            for (let key in queries) {
+                if (key === 'firstName' || key === 'lastName') {
+                    if (nameType === 'string') queryInput = collection.where(`query.${key}`, '==', queries[key].toLowerCase());
+                    else if (nameType === 'array') queryInput = collection.where(`${key === 'firstName' ? 'query.firstName' : 'query.lastName'}`, 'array-contains', queries[key].toLowerCase());
+                }
+                if (key === 'email' || key === 'phone') queryInput = collection.where(`${key === 'email' ? 'query.allEmails' : 'query.allPhoneNo'}`, 'array-contains', queries[key].toLowerCase());
+                if (key === 'dob') queryInput = collection.where('371067537', '==', queries[key]);
+                if (key === 'connectId') queryInput = collection.where('Connect_ID', '==', parseInt(queries[key]));
+                if (key === 'token') queryInput = collection.where('token', '==', queries[key]);
+                if (key === 'studyId') queryInput = collection.where('state.studyId', '==', queries[key]);
+            }
+
+            return queryInput;
+        }        
+        
+  
+        // This function executes each query and pushes the data to the fetchedResults array
+        const executeQuery = async (query) => {
+            const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
+            if (snapshot.size !== 0) {
+                snapshot.docs.forEach(doc => {
+                    fetchedResults.push(doc.data());
+                });
+            }
+        };
+
+        // This function removes duplicate Connect_ID entries from fetchedResults. Since we have to perform multiple get() requests to handle the array-contains queries,
+        // We expect to end up with duplicate entries in fetchedResults that need to be handled.
+        // Example: A search for 'John Smith' will result in two get() requests: one for 'John' and one for 'Smith'. Both requests will return the same participant, so we need to remove the duplicate.
+        const removeDuplicateResults = () => {
+            let uniques = new Set();
+
+            fetchedResults = fetchedResults.filter(participant => {
+                if (uniques.has(participant.Connect_ID)) {
+                    return false;
+                } else {
+                    uniques.add(participant.Connect_ID);
+                    return true;
+                }
+            });
+        };
+
+        // Map from query type, returns true if a participant doc should be kept in fetchedResults
+        const queryToResultsChecker = {
+            firstName: (participant, queryValue) => {
+                const value = participant.query.firstName;
+                return typeof value === 'string'
+                    ? value === queryValue
+                    : Array.isArray(value) && value.includes(queryValue);
+            },
+            lastName: (participant, queryValue) => {
+                const value = participant.query.lastName;
+                return typeof value === 'string'
+                    ? value === queryValue
+                    : Array.isArray(value) && value.includes(queryValue);
+            },
+            email: (participant, queryValue) => participant.query.allEmails.includes(queryValue),
+            phone: (participant, queryValue) => participant.query.allPhoneNo.includes(queryValue),
+            dob: (participant, queryValue) => participant['371067537'] === queryValue,
+        };
+
+        // This function removes results that don't match the query. For example, if the query is for 'John Smith' and the results include 'John Doe', 'John Smith', and 'Jane Smith', we need to remove 'John Doe' and 'Jane Smith' from the results.
+        // This is necessary because we have to run multiple queries to handle the array-contains constraints, so we inevitably end up with results that don't match the query when more than one array-contains operation is executed.
+        // Array-contains reminder: a query can only contain one array-contains operation, so we have to run multiple queries to handle multiple array-contains constraints (see participant query properties: firstName, lastName, email, phone).
+        // For each query type, use the corresponding checker function 
+        const removeMismatchedResults = () => {          
+            for (const queryType in queries) {
+                if (queries.hasOwnProperty(queryType)) {
+                    const queryValue = queries[queryType];
+            
+                    const checkResult = queryToResultsChecker[queryType];
+                    if (checkResult) {
+                        fetchedResults = fetchedResults.filter(participant => checkResult(participant, queryValue));
+                    }
+                }
+            }
+        };
+
+        // Control flow for the participant query
+        // If two or more of firstName, lastName, and (email or phone) are included in the query, we have to run multiple queries and handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+        // If only firstName or lastName is in the query (no phone or email), only one array-contains operation is needed BUT we still need to handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+        // If compound queries are executed, we need to handle results including duplicates and the mismatches caused by executing multiple queries
+        // If neither firstName nor lastName are in the query, we can run a simple query that doesn't need post-processing. This is the else statement. Return early since no additional processing is needed.
+        if (queries.firstName && queries.lastName && (queries.email || queries.phone)) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleQueries(fNameExtractedQuery, lNameExtractedQuery, phoneOrEmailExtractedQuery);
+        } else if (queries.firstName && queries.lastName) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            await handleQueries(fNameExtractedQuery, lNameExtractedQuery, null);
+        } else if (queries.firstName && (queries.email || queries.phone)) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleQueries(fNameExtractedQuery, null, phoneOrEmailExtractedQuery);
+        } else if (queries.lastName && (queries.email || queries.phone)) {
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleQueries(null, lNameExtractedQuery, phoneOrEmailExtractedQuery);
+        } else if (queries.firstName) {
+            await handleQueries(queries, null, null);
+        } else if (queries.lastName) {
+            await handleQueries(null, queries, null);
+        } else {
+            const nonNameQuery = generateQuery(collection, queries);
+            await executeQuery(nonNameQuery);
+
+            return fetchedResults;
         }
-        const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
-        if(snapshot.size !== 0){
-            return snapshot.docs.map(document => document.data());
-        }
-        else{
-            return [];
-        }
+  
+        removeDuplicateResults();
+        removeMismatchedResults();
+
+        return fetchedResults;
+
+    } catch (error) {
+      console.error(error);
+      return new Error(error);
     }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
+};
 
 const validateBiospecimenUser = async (email) => {
     try {
