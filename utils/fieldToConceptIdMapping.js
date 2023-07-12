@@ -18,6 +18,13 @@ module.exports = {
     healthCareProvider: 827220437,
     reportMissingTube: 258745303,
     submitShipmentFlag: 145971562,
+    pinMatch: 948195369,
+    verificationStatus: 821247024,
+    notVerified: 875007964,
+    verified: 197316935, 
+    duplicate: 922622075,
+    cannotBeVerified: 219863910,
+    outreachTimeOut: 160161595,
 
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,

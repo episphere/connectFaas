@@ -32,9 +32,9 @@ const connectApp = async (req, res) => {
     
     const api = query.api;
 
-    console.log(api);
-    console.log(uid);
+    console.log(`PWA API: ${api}, called from uid: ${uid}`);
 
+  try {
     if (api === 'submit') return recruitSubmit(req, res, uid);
 
     else if (api === 'getUserProfile') return getUserProfile(req, res, uid);
@@ -54,6 +54,11 @@ const connectApp = async (req, res) => {
     else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(getResponseJSON(error.message, 500));
+  }
 }
 
 module.exports = {

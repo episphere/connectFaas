@@ -17,40 +17,50 @@ const nciConceptId = `517700004`;
 const tubesBagsCids = fieldMapping.tubesBagsCids;
 
 const verifyToken = async (token) => {
-    try{
-        const response = await db.collection('participants').where('token', '==', token).get();
-        if(response.size === 1) {
-            if(response.docs[0].data().state.uid === undefined){
-                return response.docs[0].id;
-            }else{
-                return false;
-            }
-        }
-        return false;
+  const resultObj = { isDuplicateAccount: false, isValidToken: false, docId: null };
+  const snapshot = await db
+    .collection('participants')
+    .where('token', '==', token)
+    .get();
+
+  if (snapshot.size === 1) {
+    const participantData = snapshot.docs[0].data();
+    if (participantData[fieldMapping.verificationStatus] === fieldMapping.duplicate) {
+      resultObj.isDuplicateAccount = true;
+      return resultObj;
     }
-    catch(error){
-        console.error(error);
-        return new Error(error);
+
+    if (participantData.state.uid === undefined) {
+      resultObj.isValidToken = true;
+      resultObj.docId = snapshot.docs[0].id;
     }
-}
+  }
+
+  return resultObj;
+};
 
 const verifyPin = async (pin) => {
-    try{
-        const response = await db.collection('participants').where('pin', '==', pin).get();
-        if(response.size === 1) {
-            if(response.docs[0].data().state.uid === undefined){
-                return response.docs[0].id;
-            }else{
-                return false;
-            }
-        }
-        return false;
+  const resultObj = { isDuplicateAccount: false, isValidPin: false, docId: null };
+  const snapshot = await db
+    .collection('participants')
+    .where('pin', '==', pin)
+    .get();
+
+  if (snapshot.size === 1) {
+    const participantData = snapshot.docs[0].data();
+    if (participantData[fieldMapping.verificationStatus] === fieldMapping.duplicate) {
+      resultObj.isDuplicateAccount = true;
+      return resultObj;
     }
-    catch(error){
-        console.error(error);
-        return new Error(error);
+    
+    if (participantData.state.uid === undefined) {
+      resultObj.isValidPin = true;
+      resultObj.docId = snapshot.docs[0].id;
     }
-}
+  }
+
+  return resultObj;
+};
 
 const validateIDToken = async (idToken) => {
     try{

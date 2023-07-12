@@ -1,4 +1,5 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const conceptIds = require('./fieldToConceptIdMapping')
 
 const generateToken = async (req, res, uid) => {
 
@@ -45,51 +46,48 @@ const validateToken = async (req, res, uid) => {
         return res.status(401).json(getResponseJSON('Account already exists', 401));
     }
 
-    if(req.query.token && req.query.token.trim() !== "") {
-        const token = req.query.token.trim();
-
-        const { verifyToken } = require('./firestore');
-        const isValid = await verifyToken(token);
-
-        if(isValid instanceof Error){
-            return res.status(500).json(getResponseJSON(isValid.message, 500));
-        }
-
-        if(isValid){ // add uid to participant record
-            const { linkParticipanttoFirebaseUID } = require('./firestore');
-            linkParticipanttoFirebaseUID(isValid , uid);
-            return res.status(200).json(getResponseJSON('Ok', 200));
-        }
-        else{ // Invalid token
-            return res.status(401).json(getResponseJSON('Invalid token', 401));
-        }
+    const pin = req.query.pin?.trim();
+    const token = req.query.token?.trim();
+    if (!pin && !token) {
+        return res.status(400).json(getResponseJSON('Bad request: token/pin required', 400));
     }
-    else if(req.query.pin && req.query.pin){ // check for PIN
-        const pin =  req.query.pin.trim();
 
-        const { verifyPin } = require('./firestore');
-        const isValid = await verifyPin(pin);
+    if (token) {
+      const {
+        verifyToken,
+        linkParticipanttoFirebaseUID,
+      } = require('./firestore');
+      const { isDuplicateAccount, isValidToken, docId } = await verifyToken(token);
+      if (isDuplicateAccount) {
+        return res.status(202).json(getResponseJSON('Duplicate account', 202));
+      }
 
-        if(isValid instanceof Error){
-            return res.status(500).json(getResponseJSON(isValid.message, 500));
-        }
+      if (isValidToken) {
+        await linkParticipanttoFirebaseUID(docId, uid);
+        return res.status(200).json(getResponseJSON('Ok', 200));
+      }
 
-        if(isValid){ // add uid to participant record
-            const { linkParticipanttoFirebaseUID } = require('./firestore');
-            await linkParticipanttoFirebaseUID(isValid , uid);
-            const obj = {
-                948195369: 353358909
-            }
-            const { updateResponse } = require('./firestore');
-            updateResponse(obj, uid);
-            return res.status(200).json(getResponseJSON('Ok', 200));
-        }
-        else{ // Invalid pin
-            return res.status(401).json(getResponseJSON('Invalid pin', 401));
-        }
+      return res.status(401).json(getResponseJSON('Invalid token', 401));
     }
-    else{
-        return res.status(400).json(getResponseJSON('Bad request', 400));
+
+    if (pin) {
+      const {
+        verifyPin,
+        linkParticipanttoFirebaseUID,
+        updateResponse,
+      } = require('./firestore');
+      const { isDuplicateAccount, isValidPin, docId } = await verifyPin(pin);
+      if (isDuplicateAccount) {
+        return res.status(202).json(getResponseJSON('Duplicate account', 202));
+      }
+
+      if (isValidPin) {
+        await linkParticipanttoFirebaseUID(docId, uid);
+        await updateResponse({ [conceptIds.pinMatch]: conceptIds.yes }, uid);
+        return res.status(200).json(getResponseJSON('Ok', 200));
+      }
+
+      return res.status(401).json(getResponseJSON('Invalid pin', 401));
     }
 };
 
@@ -190,7 +188,7 @@ const getToken = async (req, res) => {
             } else {
                 // Return error?
             }
-        };
+        }
         return res.status(200).json({data: responseArray, code: 200});
     }
     else {
