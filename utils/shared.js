@@ -521,24 +521,23 @@ const SSOValidation = async (dashboardType, idToken) => {
     }
 }
 
-const APIAuthorization = async (req, notAuthorized) => {
+const APIAuthorization = async (req) => {
+    
     if(!req.headers.authorization || req.headers.authorization.trim() === "" || req.headers.authorization.replace('Bearer ','').trim() === ""){
         return false;
     }
-    try {
-        let authorized = false;
-        const access_token = req.headers.authorization.replace('Bearer ','').trim();
-        // Remove this after SSO and SA authorization are implemented.
-        const { validateSiteUser } = require(`./firestore`);
-        authorized = await validateSiteUser(access_token);
-        if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
-        if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
-        if(authorized) return authorized;
 
+    let authorized = false;
+
+    try {
         const {google} = require("googleapis");
+
         const OAuth2 = google.auth.OAuth2;
         const oauth2Client = new OAuth2();
+        const access_token = req.headers.authorization.replace('Bearer ','').trim();
+
         oauth2Client.setCredentials({access_token: access_token});
+
         const oauth2 = await google.oauth2({
             auth: oauth2Client,
             version: 'v2'
@@ -547,17 +546,21 @@ const APIAuthorization = async (req, notAuthorized) => {
         const response = await oauth2.userinfo.get();
         if(response.status === 200) {
             const saEmail = response.data.email;
-            console.log('API accessed by ' +saEmail);
             const { validateSiteSAEmail } = require(`./firestore`);
+
             authorized = await validateSiteSAEmail(saEmail);
-            if(!notAuthorized && authorized && authorized.acronym === 'NORC') authorized = false;
-            if(notAuthorized && authorized && authorized.acronym !== 'NORC') authorized = false;
-            if(authorized instanceof Error){
+
+            if(authorized instanceof Error) {
                 return new Error(authorized)
             }
-            if(authorized) return authorized;
+
+            if(authorized) {
+                return authorized;
+            }
         }
+
         return false;
+
     } catch (error) {
         if(error.code === 401) return false;
         else return new Error(error)
@@ -565,11 +568,15 @@ const APIAuthorization = async (req, notAuthorized) => {
 }
 
 const isParentEntity = async (authorized) => {
-    const ID = authorized.id;
-    const { getChildrens } = require('./firestore');
-    let siteCodes = await getChildrens(ID);
+    
+    const id = authorized.id;
+    const { getChildren } = require('./firestore');
+    
+    let siteCodes = await getChildren(id);
     let isParent = siteCodes ? true : false;
+    
     siteCodes = siteCodes ? siteCodes : authorized.siteCode;
+
     return {isParent, siteCodes, ...authorized};
 }
 
@@ -744,6 +751,11 @@ const isEmpty = (object) => {
 
     return true;
 }
+
+const isDateTimeFormat = (value) => {
+    return typeof value == "string" && (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(value));
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -777,5 +789,6 @@ module.exports = {
     swapObjKeysAndValues,
     batchLimit,
     getUserProfile,
-    isEmpty
+    isEmpty,
+    isDateTimeFormat
 }

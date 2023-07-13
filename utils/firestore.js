@@ -104,7 +104,6 @@ const participantExists = async (uid) => {
     }
 }
 
-
 const updateResponse = async (data, uid) => {
     try{
         const response = await db.collection('participants').where('state.uid', '==', uid).get();
@@ -155,24 +154,6 @@ const recordExists = async (studyId, siteCode) => {
         else {
             return false;
         }
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
-
-const validateSiteUser = async (siteKey) => {
-    try{
-        const snapShot = await db.collection('siteDetails')
-                                .where('siteKey', '==', siteKey)
-                                .get();
-        if(snapShot.size === 1) {
-            return snapShot.docs[0].data();
-        }
-        else{
-            return false;
-        };
     }
     catch(error){
         console.error(error);
@@ -388,8 +369,10 @@ const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept
 
 const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, isParent, limit, page) => {
     try {
+
         const operator = isParent ? 'in' : '==';
         const offset = (page-1)*limit;
+
         const { incentiveConcepts } = require('./shared');
         const object = incentiveConcepts[roundType]
         
@@ -404,10 +387,9 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
                                 .limit(limit)
                                 .get();
                         
-
         return participants.docs.map(document => {
             let data = document.data();
-            return {firstName: data['399159511'], email: data['869588347'], token: data['token']}
+            return {firstName: data['399159511'], email: data['869588347'], token: data['token'], site: data['827220437']}
         });
     } catch (error) {
         console.error(error);
@@ -488,10 +470,10 @@ const removeUninvitedParticipants = async () => {
     }
 }
 
-const getChildrens = async (ID) => {
+const getChildren = async (id) => {
     try{
         const snapShot = await db.collection('siteDetails')
-                                .where('state.parentID', 'array-contains', ID)
+                                .where('state.parentID', 'array-contains', id)
                                 .get();
         if(snapShot.size > 0) {
             const siteCodes = [];
@@ -1963,7 +1945,6 @@ const getRestrictedFields = async () => {
 
 module.exports = {
     updateResponse,
-    validateSiteUser,
     retrieveParticipants,
     verifyIdentity,
     retrieveUserProfile,
@@ -1982,7 +1963,7 @@ module.exports = {
     sanityCheckConnectID,
     sanityCheckPIN,
     individualParticipant,
-    getChildrens,
+    getChildren,
     deleteFirestoreDocuments,
     getParticipantData,
     updateParticipantData,
