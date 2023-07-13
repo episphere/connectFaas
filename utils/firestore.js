@@ -16,22 +16,30 @@ const nciCode = 13;
 const nciConceptId = `517700004`;
 const tubesBagsCids = fieldMapping.tubesBagsCids;
 
-const verifyToken = async (token) => {
-  const resultObj = { isDuplicateAccount: false, isValidToken: false, docId: null };
-  const snapshot = await db
-    .collection('participants')
-    .where('token', '==', token)
-    .get();
+const verifyTokenOrPin = async ({ token = null, pin = null }) => {
+  const resultObj = { isDuplicateAccount: false, isValid: false, docId: null };
+  if (!token && !pin) return resultObj;
 
+  let query = db.collection('participants');
+  if (token) {
+    query = query.where('token', '==', token);
+  } else {
+    query = query.where('pin', '==', pin);
+  }
+
+  const snapshot = await query.get();
   if (snapshot.size === 1) {
     const participantData = snapshot.docs[0].data();
-    if (participantData[fieldMapping.verificationStatus] === fieldMapping.duplicate) {
+    if (
+      participantData[fieldMapping.verificationStatus] ===
+      fieldMapping.duplicate
+    ) {
       resultObj.isDuplicateAccount = true;
       return resultObj;
     }
 
     if (participantData.state.uid === undefined) {
-      resultObj.isValidToken = true;
+      resultObj.isValid = true;
       resultObj.docId = snapshot.docs[0].id;
     }
   }
@@ -39,27 +47,12 @@ const verifyToken = async (token) => {
   return resultObj;
 };
 
+const verifyToken = async (token) => {
+  return await verifyTokenOrPin({ token });
+};
+
 const verifyPin = async (pin) => {
-  const resultObj = { isDuplicateAccount: false, isValidPin: false, docId: null };
-  const snapshot = await db
-    .collection('participants')
-    .where('pin', '==', pin)
-    .get();
-
-  if (snapshot.size === 1) {
-    const participantData = snapshot.docs[0].data();
-    if (participantData[fieldMapping.verificationStatus] === fieldMapping.duplicate) {
-      resultObj.isDuplicateAccount = true;
-      return resultObj;
-    }
-    
-    if (participantData.state.uid === undefined) {
-      resultObj.isValidPin = true;
-      resultObj.docId = snapshot.docs[0].id;
-    }
-  }
-
-  return resultObj;
+  return await verifyTokenOrPin({ pin });
 };
 
 const validateIDToken = async (idToken) => {
