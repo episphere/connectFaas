@@ -54,10 +54,16 @@ const validateToken = async (req, res, uid) => {
 
     if (token) {
       const {
-        verifyToken,
+        verifyTokenOrPin,
         linkParticipanttoFirebaseUID,
       } = require('./firestore');
-      const { isDuplicateAccount, isValid: isValidToken, docId } = await verifyToken(token);
+
+      const {
+        isDuplicateAccount,
+        isValid: isValidToken,
+        docId,
+      } = await verifyTokenOrPin({ token });
+
       if (isDuplicateAccount) {
         return res.status(202).json(getResponseJSON('Duplicate account', 202));
       }
@@ -72,11 +78,17 @@ const validateToken = async (req, res, uid) => {
 
     if (pin) {
       const {
-        verifyPin,
+        verifyTokenOrPin,
         linkParticipanttoFirebaseUID,
         updateResponse,
       } = require('./firestore');
-      const { isDuplicateAccount, isValid: isValidPin, docId } = await verifyPin(pin);
+
+      const {
+        isDuplicateAccount,
+        isValid: isValidPin,
+        docId,
+      } = await verifyTokenOrPin({ pin });
+
       if (isDuplicateAccount) {
         return res.status(202).json(getResponseJSON('Duplicate account', 202));
       }

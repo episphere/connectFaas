@@ -47,14 +47,6 @@ const verifyTokenOrPin = async ({ token = null, pin = null }) => {
   return resultObj;
 };
 
-const verifyToken = async (token) => {
-  return await verifyTokenOrPin({ token });
-};
-
-const verifyPin = async (pin) => {
-  return await verifyTokenOrPin({ pin });
-};
-
 const validateIDToken = async (idToken) => {
     try{
         const decodedToken = await admin.auth().verifyIdToken(idToken, true);
@@ -1977,8 +1969,7 @@ module.exports = {
     createRecord,
     recordExists,
     validateIDToken,
-    verifyToken,
-    verifyPin,
+    verifyTokenOrPin,
     linkParticipanttoFirebaseUID,
     participantExists,
     sanityCheckConnectID,
