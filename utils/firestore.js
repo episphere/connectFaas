@@ -16,41 +16,36 @@ const nciCode = 13;
 const nciConceptId = `517700004`;
 const tubesBagsCids = fieldMapping.tubesBagsCids;
 
-const verifyToken = async (token) => {
-    try{
-        const response = await db.collection('participants').where('token', '==', token).get();
-        if(response.size === 1) {
-            if(response.docs[0].data().state.uid === undefined){
-                return response.docs[0].id;
-            }else{
-                return false;
-            }
-        }
-        return false;
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
+const verifyTokenOrPin = async ({ token = null, pin = null }) => {
+  const resultObj = { isDuplicateAccount: false, isValid: false, docId: null };
+  if (!token && !pin) return resultObj;
 
-const verifyPin = async (pin) => {
-    try{
-        const response = await db.collection('participants').where('pin', '==', pin).get();
-        if(response.size === 1) {
-            if(response.docs[0].data().state.uid === undefined){
-                return response.docs[0].id;
-            }else{
-                return false;
-            }
-        }
-        return false;
+  let query = db.collection('participants');
+  if (token) {
+    query = query.where('token', '==', token);
+  } else {
+    query = query.where('pin', '==', pin);
+  }
+
+  const snapshot = await query.get();
+  if (snapshot.size === 1) {
+    const participantData = snapshot.docs[0].data();
+    if (
+      participantData[fieldMapping.verificationStatus] ===
+      fieldMapping.duplicate
+    ) {
+      resultObj.isDuplicateAccount = true;
+      return resultObj;
     }
-    catch(error){
-        console.error(error);
-        return new Error(error);
+
+    if (participantData.state.uid === undefined) {
+      resultObj.isValid = true;
+      resultObj.docId = snapshot.docs[0].id;
     }
-}
+  }
+
+  return resultObj;
+};
 
 const validateIDToken = async (idToken) => {
     try{
@@ -2111,8 +2106,7 @@ module.exports = {
     createRecord,
     recordExists,
     validateIDToken,
-    verifyToken,
-    verifyPin,
+    verifyTokenOrPin,
     linkParticipanttoFirebaseUID,
     participantExists,
     sanityCheckConnectID,
