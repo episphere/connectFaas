@@ -780,32 +780,168 @@ const retrieveSiteNotifications = async (siteId, isParent) => {
     }
 }
 
+/**
+ * Retrieve a list of participants from the database.
+ * If name is in the query, we handle two cases: typeof(participantDoc.query.firstName) === 'string' and typeof(participantDoc.query.firstName) === 'array'.
+ * If string, do a simple query.where('query.firstName', '==', queries.firstName.toLowerCase()). If array, we have to do a query.where('query.firstName', 'array-contains', queries.firstName.toLowerCase()).
+ * Only one 'array-contains' operation can be done per query, so separate queries are required if both firstName and lastName are in the query. We also use array-contains for email and phone number. Note: only email or phone can be included in a query, not both.
+ * TODO Future: if we (1) adjust signup to write query.firstName and query.lastName as arrays, and (2) update existing participant docs, we can remove the 'string' searches for firstName and lastName.
+ */
 const filterDB = async (queries, siteCode, isParent) => {
-    try{
+
+    // Make separate get requests for each query, since Firestore only allows one 'array-contains' query per request.
+    // This isolates a single array-contains query (firstName, lastName, email, phone).
+    const updateQueryForArrayContainsConstraints = (queryInput) => {
+        const newQueriesObj = {...queries};
+
+        for(let property in newQueriesObj) {
+            if(queryInput.includes(newQueriesObj[property])) {
+                delete newQueriesObj[property];
+            }
+        }
+
+        return newQueriesObj;
+    };
+
+    // Direct the generation and execution of queries based on the search properties present. If neither firstName nor lastName are present, this function is bypassed.
+    const handleNameQueries = async (firstNameQuery, lastNameQuery, phoneEmailQuery) => {
+        if (firstNameQuery) {
+            const fNameStringQueryForSearch = generateQuery(firstNameQuery, 'string');
+            await executeQuery(fNameStringQueryForSearch);
+
+            const fNameArrayQueryForSearch = generateQuery(firstNameQuery, 'array');
+            await executeQuery(fNameArrayQueryForSearch);
+        }
+
+        if (lastNameQuery) {
+            const lNameStringQueryForSearch = generateQuery(lastNameQuery, 'string');
+            await executeQuery(lNameStringQueryForSearch);
+
+            const lNameArrayQueryForSearch = generateQuery(lastNameQuery, 'array');
+            await executeQuery(lNameArrayQueryForSearch);
+        }
+
+        if (phoneEmailQuery) {
+            const phoneOrEmailQueryForSearch = generateQuery(phoneEmailQuery);
+            await executeQuery(phoneOrEmailQueryForSearch);
+        }
+    };
+
+    // Generate the queries. nameType is either 'string' or 'array' and applies to firstName and lastName properties.
+    const generateQuery = (queryKeys, nameType) => {
+        let participantQuery = collection;
+
+        for (let key in queryKeys) {
+            if (key === 'firstName' || key === 'lastName') {
+                const path = `query.${key}`;
+                const queryValue =(key === 'firstName' ? queries.firstName : queries.lastName).toLowerCase();
+                const operation = (nameType === 'string') ? '==' : 'array-contains';
+                participantQuery = participantQuery.where(path, operation, queryValue);
+            }
+            if (key === 'email' || key === 'phone') {
+                const path = `query.${key === 'email' ? 'allEmails' : 'allPhoneNo'}`;
+                const queryValue = (key === 'email' ? queries.email : queries.phone).toLowerCase();
+                participantQuery = participantQuery.where(path, 'array-contains', queryValue);
+            }
+            if (key === 'dob') participantQuery = participantQuery.where('371067537', '==', queries.dob);
+            if (key === 'connectId') participantQuery = participantQuery.where('Connect_ID', '==', parseInt(queries.connectId));
+            if (key === 'token') participantQuery = participantQuery.where('token', '==', queries.token);
+            if (key === 'studyId') participantQuery = participantQuery.where('state.studyId', '==', queries.studyId);
+            if (key === 'checkedIn') participantQuery = participantQuery.where('331584571.266600170.135591601', '==', 353358909);
+        }
+
+        return participantQuery;
+    }   
+
+    // This executes each query and pushes the data to the fetchedResults array.
+    const executeQuery = async (query) => {
         const operator = isParent ? 'in' : '==';
-        let query = db.collection('participants');
-        for(let key in queries) {
-            if(key === 'firstName' || key === 'lastName') query = query.where(`query.${key}`, '==', queries[key].toLowerCase());
-            if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
-            if(key === 'dob') query = query.where('371067537', '==', queries[key]);
-            if(key === 'connectId') query = query.where('Connect_ID', '==', parseInt(queries[key]));
-            if(key === 'token') query = query.where('token', '==', queries[key]);
-            if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
-            if(key === 'checkedIn') query = query.where('331584571.266600170.135591601', '==', 353358909);
-        }
         const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
-        if(snapshot.size !== 0){
-            return snapshot.docs.map(document => document.data());
+        if (snapshot.size !== 0) {
+            snapshot.docs.forEach(doc => {
+                fetchedResults.push(doc.data());
+            });
         }
-        else{
-            return [];
+    };
+
+    // Remove duplicate Connect_ID entries from fetchedResults. Since we have to perform multiple get() requests to handle the array-contains queries, we get some duplicate entries in fetchedResults.
+    // Example: search for 'John Smith' will result in two get() requests: one for 'John' and one for 'Smith'. Both requests return the same participant. Remove the duplicate.
+    const removeDuplicateResults = () => {
+        let uniqueParticipants = new Set();
+
+        fetchedResults = fetchedResults.filter(participant => {
+            if (uniqueParticipants.has(participant.Connect_ID)) {
+                return false;
+            } else {
+                uniqueParticipants.add(participant.Connect_ID);
+                return true;
+            }
+        });
+    };
+
+    // Remove results that don't match the query. Ex: if the query is for 'John Smith', the results include 'John Doe', 'John Smith', and 'Jane Smith'. Remove 'John Doe' and 'Jane Smith' from the results.
+    // Why? We run multiple queries due to the array-contains constraints, end up with results that don't match the query when more than one array-contains operation is executed.
+    const removeMismatchedResults = () => {
+        fetchedResults = fetchedResults.filter(participant => {
+            return (!queries.firstName || participant.query.firstName.includes(queries.firstName)) &&
+                (!queries.lastName || participant.query.lastName.includes(queries.lastName)) &&
+                (!queries.email || participant.query.allEmails.includes(queries.email)) &&
+                (!queries.phone || participant.query.allPhoneNo.includes(queries.phone)) &&
+                (!queries.dob || participant['371067537'] === queries.dob) &&
+                (!queries.connectId || participant.Connect_ID === parseInt(queries.connectId)) &&
+                (!queries.token || participant.token === queries.token) &&
+                (!queries.studyId || participant.state.studyId === queries.studyId) &&
+                (!queries.checkedIn || participant['331584571.266600170.135591601'] === 353358909);
+        });
+    };
+
+    // Control flow for the participant query
+    // If two or more of firstName, lastName, and (email or phone) are included in the query, run multiple queries. Handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+    // If only firstName or lastName is in the query (no phone or email), handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+    // If compound queries are executed, handle results including duplicates and the mismatches caused by executing multiple queries.
+    // If neither firstName nor lastName are in the query, run a simple query that doesn't need post-processing. This is the else statement, return early.
+    const collection = db.collection('participants');
+    let fetchedResults = [];
+        
+    try {
+        if (queries.firstName && queries.lastName && (queries.email || queries.phone)) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleNameQueries(fNameExtractedQuery, lNameExtractedQuery, phoneOrEmailExtractedQuery);
+        } else if (queries.firstName && queries.lastName) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            await handleNameQueries(fNameExtractedQuery, lNameExtractedQuery, null);
+        } else if (queries.firstName && (queries.email || queries.phone)) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleNameQueries(fNameExtractedQuery, null, phoneOrEmailExtractedQuery);
+        } else if (queries.lastName && (queries.email || queries.phone)) {
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleNameQueries(null, lNameExtractedQuery, phoneOrEmailExtractedQuery);
+        } else if (queries.firstName) {
+            await handleNameQueries(queries, null, null);
+        } else if (queries.lastName) {
+            await handleNameQueries(null, queries, null);
+        } else {
+            const nonNameQuery = generateQuery(queries);
+            await executeQuery(nonNameQuery);
+
+            return fetchedResults;
         }
+  
+        removeDuplicateResults();
+        removeMismatchedResults();
+
+        return fetchedResults;
+
+    } catch (error) {
+      console.error(error);
+      return new Error(error);
     }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
+};
 
 const validateBiospecimenUser = async (email) => {
     try {
