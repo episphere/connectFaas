@@ -781,18 +781,16 @@ const retrieveSiteNotifications = async (siteId, isParent) => {
 }
 
 /**
- * This function is used to retrieve a list of participants from the database.
- * If name is included in the query, we have to handle two cases: sometimes typeof(participantDoc.query.firstName) === 'string' and sometimes typeof(participantDoc.query.firstName) === 'array'.
- * If it's a string, we can just do a simple query.where('query.firstName', '==', queries.firstName.toLowerCase()).
- * If it's an array, we have to do a query.where('query.firstName', 'array-contains', queries.firstName.toLowerCase()).
- * Additionally, only one 'array-contains' query can be done per query, so we have to do two separate queries if both firstName and lastName are included in the query.
- * We also use array-contains for email and phone number, since those are arrays as well. Note: only email or phone can be included in a query, not both.
- * TODO Future: if we (1) adjust signup to write query.firstName and query.lastName as arrays, and (2) update existing participant docs, we can simplify this function by removing the 'string' searches for firstName and lastName.
+ * Retrieve a list of participants from the database.
+ * If name is in the query, we handle two cases: typeof(participantDoc.query.firstName) === 'string' and typeof(participantDoc.query.firstName) === 'array'.
+ * If string, do a simple query.where('query.firstName', '==', queries.firstName.toLowerCase()). If array, we have to do a query.where('query.firstName', 'array-contains', queries.firstName.toLowerCase()).
+ * Only one 'array-contains' operation can be done per query, so separate queries are required if both firstName and lastName are in the query. We also use array-contains for email and phone number. Note: only email or phone can be included in a query, not both.
+ * TODO Future: if we (1) adjust signup to write query.firstName and query.lastName as arrays, and (2) update existing participant docs, we can remove the 'string' searches for firstName and lastName.
  */
 const filterDB = async (queries, siteCode, isParent) => {
 
-    // We need to make separate get requests for each query, since Firestore only allows one 'array-contains' query per request.
-    // This function isolates a single array-contains query (firstName, lastName, email, phone).
+    // Make separate get requests for each query, since Firestore only allows one 'array-contains' query per request.
+    // This isolates a single array-contains query (firstName, lastName, email, phone).
     const updateQueryForArrayContainsConstraints = (queryInput) => {
         const newQueriesObj = {...queries};
 
@@ -805,9 +803,7 @@ const filterDB = async (queries, siteCode, isParent) => {
         return newQueriesObj;
     };
 
-    // This function directs the generation and execution of queries based on the search properties that are present.
-    // If neither firstName nor lastName are present, this function is bypassed.
-    // TODO Future: once all query.firstName and query.lastName are arrays, we can simplify this function by removing the 'string' searches for firstName and lastName.
+    // Direct the generation and execution of queries based on the search properties present. If neither firstName nor lastName are present, this function is bypassed.
     const handleNameQueries = async (firstNameQuery, lastNameQuery, phoneEmailQuery) => {
         if (firstNameQuery) {
             const fNameStringQueryForSearch = generateQuery(firstNameQuery, 'string');
@@ -831,9 +827,7 @@ const filterDB = async (queries, siteCode, isParent) => {
         }
     };
 
-    // This function generates a query based on the property that are passed in
-    // nameType is either 'string' or 'array' and it only applies to firstName and lastName properties in search.
-    // nameType is currently a string when a participant signs up, but is written as array when a name update is made in connectApp or SMDB as of the PRs on (JA 07/07/23).
+    // Generate the queries. nameType is either 'string' or 'array' and applies to firstName and lastName properties.
     const generateQuery = (queryKeys, nameType) => {
         let participantQuery = collection;
 
@@ -859,7 +853,7 @@ const filterDB = async (queries, siteCode, isParent) => {
         return participantQuery;
     }   
 
-    // This function executes each query and pushes the data to the fetchedResults array
+    // This executes each query and pushes the data to the fetchedResults array.
     const executeQuery = async (query) => {
         const operator = isParent ? 'in' : '==';
         const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
@@ -870,9 +864,8 @@ const filterDB = async (queries, siteCode, isParent) => {
         }
     };
 
-    // This function removes duplicate Connect_ID entries from fetchedResults. Since we have to perform multiple get() requests to handle the array-contains queries,
-    // We expect to end up with duplicate entries in fetchedResults that need to be handled.
-    // Example: A search for 'John Smith' will result in two get() requests: one for 'John' and one for 'Smith'. Both requests will return the same participant, so we need to remove the duplicate.
+    // Remove duplicate Connect_ID entries from fetchedResults. Since we have to perform multiple get() requests to handle the array-contains queries, we get some duplicate entries in fetchedResults.
+    // Example: search for 'John Smith' will result in two get() requests: one for 'John' and one for 'Smith'. Both requests return the same participant. Remove the duplicate.
     const removeDuplicateResults = () => {
         let uniqueParticipants = new Set();
 
@@ -886,9 +879,8 @@ const filterDB = async (queries, siteCode, isParent) => {
         });
     };
 
-    // This function removes results that don't match the query. For example, if the query is for 'John Smith' and the results include 'John Doe', 'John Smith', and 'Jane Smith', we need to remove 'John Doe' and 'Jane Smith' from the results.
-    // This is necessary because we have to run multiple queries to handle the array-contains constraints, so we inevitably end up with results that don't match the query when more than one array-contains operation is executed.
-    // Array-contains reminder: a query can only contain one array-contains operation, so we have to run multiple queries to handle multiple array-contains constraints (see participant query properties: firstName, lastName, email, phone).
+    // Remove results that don't match the query. Ex: if the query is for 'John Smith', the results include 'John Doe', 'John Smith', and 'Jane Smith'. Remove 'John Doe' and 'Jane Smith' from the results.
+    // Why? We run multiple queries due to the array-contains constraints, end up with results that don't match the query when more than one array-contains operation is executed.
     const removeMismatchedResults = () => {
         fetchedResults = fetchedResults.filter(participant => {
             return (!queries.firstName || participant.query.firstName.includes(queries.firstName)) &&
@@ -904,10 +896,10 @@ const filterDB = async (queries, siteCode, isParent) => {
     };
 
     // Control flow for the participant query
-    // If two or more of firstName, lastName, and (email or phone) are included in the query, we have to run multiple queries and handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
-    // If only firstName or lastName is in the query (no phone or email), only one array-contains operation is needed BUT we still need to handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
-    // If compound queries are executed, we need to handle results including duplicates and the mismatches caused by executing multiple queries
-    // If neither firstName nor lastName are in the query, we can run a simple query that doesn't need post-processing. This is the else statement. Return early since no additional processing is needed.
+    // If two or more of firstName, lastName, and (email or phone) are included in the query, run multiple queries. Handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+    // If only firstName or lastName is in the query (no phone or email), handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+    // If compound queries are executed, handle results including duplicates and the mismatches caused by executing multiple queries.
+    // If neither firstName nor lastName are in the query, run a simple query that doesn't need post-processing. This is the else statement, return early.
     const collection = db.collection('participants');
     let fetchedResults = [];
         
