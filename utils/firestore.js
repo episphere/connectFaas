@@ -811,13 +811,13 @@ const filterDB = async (queries, siteCode, isParent) => {
         for (let key in queryKeys) {
             if (key === 'firstName' || key === 'lastName') {
                 const path = `query.${key}`;
-                const queryValue =(key === 'firstName' ? queries.firstName : queries.lastName).toLowerCase();
+                const queryValue = key === 'firstName' ? queries.firstName : queries.lastName;
                 const operation = (nameType === 'string') ? '==' : 'array-contains';
                 participantQuery = participantQuery.where(path, operation, queryValue);
             }
             if (key === 'email' || key === 'phone') {
                 const path = `query.${key === 'email' ? 'allEmails' : 'allPhoneNo'}`;
-                const queryValue = (key === 'email' ? queries.email : queries.phone).toLowerCase();
+                const queryValue = key === 'email' ? queries.email : queries.phone;
                 participantQuery = participantQuery.where(path, 'array-contains', queryValue);
             }
             if (key === 'dob') participantQuery = participantQuery.where('371067537', '==', queries.dob);
@@ -879,6 +879,10 @@ const filterDB = async (queries, siteCode, isParent) => {
     // If neither firstName nor lastName are in the query, run a simple query that doesn't need post-processing. This is the else statement, return early.
     const collection = db.collection('participants');
     let fetchedResults = [];
+
+    if (queries.firstName) queries.firstName = queries.firstName.toLowerCase();
+    if (queries.lastName) queries.lastName = queries.lastName.toLowerCase();
+    if (queries.email) queries.email = queries.email.toLowerCase();
         
     try {
         if (queries.firstName && queries.lastName && (queries.email || queries.phone)) {
