@@ -596,7 +596,7 @@ const retrieveUserSurveys = async (uid, concepts) => {
 
 const surveyExists = async (collection, uid) => {
     const snapshot = await db.collection(collection).where('uid', '==', uid).get();
-    if (snapshot.size === 1) {
+    if (snapshot.size > 0) {
         return snapshot.docs[0];
     }
     else {
