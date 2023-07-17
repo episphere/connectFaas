@@ -19,6 +19,9 @@ const incentiveCompleted = async (req, res) => {
     let responseArray = [];
     let error = false;
 
+    const { getParticipantData } = require('./firestore');
+    const { incentiveConcepts } = require('./shared');
+
     const data = req.body.data;
 
     for(let i = 0; i < data.length; i++) {
@@ -31,7 +34,6 @@ const incentiveCompleted = async (req, res) => {
             continue;
         }
 
-        const { getParticipantData } = require('./firestore');
         const participantExists = await getParticipantData(token, siteCodes, isParent);
 
         if(!participantExists) {
@@ -52,7 +54,6 @@ const incentiveCompleted = async (req, res) => {
             continue;
         }
 
-        const { incentiveConcepts } = require('./shared');
         const roundConcept = incentiveConcepts[round];
 
         let incentiveUpdates = {};
