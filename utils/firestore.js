@@ -419,44 +419,78 @@ const removeParticipantsDataDestruction = async () => {
     try {
         let count = 0;
         const millisecondsWait = 5184000000; // 60days
-        const stubFieldArray = ["pin", "token", "state", "Connect_ID", "471168198", "736251808", "436680969", "480305327", "564964481", "795827569", "544150384", "371067537", "454205108", "454445267", "919254129", "412000022", "558435199", "262613359", "821247024", "914594314", "747006172", "659990606", "299274441", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "637147033", "734828170", "715390138", "538619788", "153713899", "613641698", "407743866", "831041022", "269050420", "359404406", "119449326", "304438543", "912301837", '130371375', "765336427", "479278368", "826240317", "693626233", "104278817", "744604255", "268665918", "592227431", "399159511", "231676651", "996038075", "506826178", "524352591", "902332801", "457532784", "773707518", "577794331", "883668444"];
-        const destroyDataCId = fieldMapping.participantMap.destroyData.toString();
-        const dateRequestedDataDestroyCId = fieldMapping.participantMap.dateRequestedDataDestroy.toString();
-        const destroyDataCategoricalCId = fieldMapping.participantMap.destroyDataCategorical.toString();
-        const requestedAndSignCId = fieldMapping.participantMap.requestedAndSign;
+        const stubFieldArray = [ "query", "pin", "token", "state", "Connect_ID", "471168198", "736251808", "436680969", "480305327", "564964481", "795827569", "544150384", "371067537", "454205108", "454445267", "919254129", "412000022", "558435199", "262613359", "821247024", "914594314", "747006172", "659990606", "299274441", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "637147033", "734828170", "715390138", "538619788", "153713899", "613641698", "407743866", "831041022", "269050420", "359404406", "119449326", "304438543", "912301837", "130371375", "765336427", "479278368", "826240317", "693626233", "104278817", "744604255", "268665918", "592227431", "399159511", "231676651", "996038075", "506826178", "524352591", "902332801", "457532784", "773707518", "577794331", "883668444", "827220437", "699625233", ];
+        const subStubFieldArray = ["firstName", "lastName", "studyId"];
+        const dataHasBeenDestroyed =
+            fieldMapping.participantMap.dataHasBeenDestroyed.toString();
+        const destroyDataCId =
+            fieldMapping.participantMap.destroyData.toString();
+        const dateRequestedDataDestroyCId =
+            fieldMapping.participantMap.dateRequestedDataDestroy.toString();
+        const destroyDataCategoricalCId =
+            fieldMapping.participantMap.destroyDataCategorical.toString();
+        const requestedAndSignCId =
+            fieldMapping.participantMap.requestedAndSign;
 
         const currSnapshot = await db
-            .collection('participants')
-            .where(destroyDataCId, '==', fieldMapping.yes)
+            .collection("participants")
+            .where(destroyDataCId, "==", fieldMapping.yes)
+            .where(dataHasBeenDestroyed, "!=", fieldMapping.yes)
             .get();
 
         for (const doc of currSnapshot.docs) {
             const batch = db.batch();
             const participant = doc.data();
             const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
-                ? new Date().getTime() - new Date(participant[dateRequestedDataDestroyCId]).getTime()
-                : 0
+                ? new Date().getTime() -
+                  new Date(participant[dateRequestedDataDestroyCId]).getTime()
+                : 0;
 
-            if (participant[destroyDataCategoricalCId] === requestedAndSignCId || timeDiff > millisecondsWait) {
+            if (
+                participant[destroyDataCategoricalCId] ===
+                    requestedAndSignCId ||
+                timeDiff > millisecondsWait
+            ) {
                 let hasRemovedField = false;
-                const fieldKeys = Object.keys(participant)
+                const fieldKeys = Object.keys(participant);
                 const participantRef = doc.ref;
-                fieldKeys.forEach(key => {
+                fieldKeys.forEach((key) => {
                     if (!stubFieldArray.includes(key)) {
-                        batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
-                        hasRemovedField = true
+                        batch.update(participantRef, {
+                            [key]: admin.firestore.FieldValue.delete(),
+                        });
+                        hasRemovedField = true;
+                    } else {
+                        if (key === "query" || key === "state") {
+                            const subFieldKeys = Object.keys(participant[key]);
+                            subFieldKeys.forEach((subKey) => {
+                                if (!subStubFieldArray.includes(subKey)) {
+                                    batch.update(participantRef, {
+                                        [`${key}.${subKey}`]:
+                                            admin.firestore.FieldValue.delete(),
+                                    });
+                                }
+                            });
+                        }
                     }
-                })
-                if (hasRemovedField) count++;
+                });
+                if (hasRemovedField) {
+                    batch.update(participantRef, {
+                        [dataHasBeenDestroyed]: fieldMapping.yes,
+                    });
+                    count++;
+                }
             }
-            await batch.commit()
+            await batch.commit();
         }
 
-        console.log(`Successfully updated ${count} participants for data destruction`)
+        console.log(
+            `Successfully updated ${count} participants for data destruction`
+        );
     } catch (error) {
         console.error(`Error occurred when updating documents: ${error}`);
     }
-}
+};
 
 const removeUninvitedParticipants = async () => {
     try {
