@@ -1,5 +1,4 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
-const { validateSiteUser } = require('./firestore');
 
 const dashboard = async (req, res) => {
     logIPAdddress(req);
@@ -13,8 +12,6 @@ const dashboard = async (req, res) => {
     }
 
     const access_token = req.headers.authorization.replace('Bearer ','').trim();
-    let siteDetails = '';
-    let userEmail = '';
 
     const { SSOValidation, decodingJWT } = require('./shared');
     let dashboardType = 'siteManagerUser';
@@ -23,24 +20,13 @@ const dashboard = async (req, res) => {
         dashboardType = ['saml.connect-norc', 'saml.connect-norc-prod'].includes(decodedJWT.firebase.sign_in_provider) ? 'helpDeskUser' : 'siteManagerUser';
     }
     const SSOObject = await SSOValidation(dashboardType, access_token);
-    const isSsoAuthSuccess = SSOObject !== false && !!SSOObject.siteDetails;
 
-    if (isSsoAuthSuccess) {
-        userEmail = SSOObject.email;
-        siteDetails = SSOObject.siteDetails;
-    } else { // Check siteKey if SSO fails
-        const { APIAuthorization } = require('./shared');
-        const isApiAuthSuccess = await APIAuthorization(req);
-
-        if (isApiAuthSuccess instanceof Error) {
-          return res.status(500).json(getResponseJSON(isApiAuthSuccess.message, 500));
-        }
-        // Unauthorized if both SSO and siteKey auth fail
-        if (!isApiAuthSuccess) {
-          return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        }
-        siteDetails = await validateSiteUser(access_token);
+    if (!SSOObject) {
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
+
+    let userEmail = SSOObject.email;
+    let siteDetails = SSOObject.siteDetails;
 
     // Auth success, and proceed below steps:
     const { isParentEntity } = require('./shared');

@@ -16,41 +16,36 @@ const nciCode = 13;
 const nciConceptId = `517700004`;
 const tubesBagsCids = fieldMapping.tubesBagsCids;
 
-const verifyToken = async (token) => {
-    try{
-        const response = await db.collection('participants').where('token', '==', token).get();
-        if(response.size === 1) {
-            if(response.docs[0].data().state.uid === undefined){
-                return response.docs[0].id;
-            }else{
-                return false;
-            }
-        }
-        return false;
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
+const verifyTokenOrPin = async ({ token = null, pin = null }) => {
+  const resultObj = { isDuplicateAccount: false, isValid: false, docId: null };
+  if (!token && !pin) return resultObj;
 
-const verifyPin = async (pin) => {
-    try{
-        const response = await db.collection('participants').where('pin', '==', pin).get();
-        if(response.size === 1) {
-            if(response.docs[0].data().state.uid === undefined){
-                return response.docs[0].id;
-            }else{
-                return false;
-            }
-        }
-        return false;
+  let query = db.collection('participants');
+  if (token) {
+    query = query.where('token', '==', token);
+  } else {
+    query = query.where('pin', '==', pin);
+  }
+
+  const snapshot = await query.get();
+  if (snapshot.size === 1) {
+    const participantData = snapshot.docs[0].data();
+    if (
+      participantData[fieldMapping.verificationStatus] ===
+      fieldMapping.duplicate
+    ) {
+      resultObj.isDuplicateAccount = true;
+      return resultObj;
     }
-    catch(error){
-        console.error(error);
-        return new Error(error);
+
+    if (participantData.state.uid === undefined) {
+      resultObj.isValid = true;
+      resultObj.docId = snapshot.docs[0].id;
     }
-}
+  }
+
+  return resultObj;
+};
 
 const validateIDToken = async (idToken) => {
     try{
@@ -104,7 +99,6 @@ const participantExists = async (uid) => {
     }
 }
 
-
 const updateResponse = async (data, uid) => {
     try{
         const response = await db.collection('participants').where('state.uid', '==', uid).get();
@@ -155,24 +149,6 @@ const recordExists = async (studyId, siteCode) => {
         else {
             return false;
         }
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
-
-const validateSiteUser = async (siteKey) => {
-    try{
-        const snapShot = await db.collection('siteDetails')
-                                .where('siteKey', '==', siteKey)
-                                .get();
-        if(snapShot.size === 1) {
-            return snapShot.docs[0].data();
-        }
-        else{
-            return false;
-        };
     }
     catch(error){
         console.error(error);
@@ -388,8 +364,10 @@ const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept
 
 const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, isParent, limit, page) => {
     try {
+
         const operator = isParent ? 'in' : '==';
         const offset = (page-1)*limit;
+
         const { incentiveConcepts } = require('./shared');
         const object = incentiveConcepts[roundType]
         
@@ -404,10 +382,9 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
                                 .limit(limit)
                                 .get();
                         
-
         return participants.docs.map(document => {
             let data = document.data();
-            return {firstName: data['399159511'], email: data['869588347'], token: data['token']}
+            return {firstName: data['399159511'], email: data['869588347'], token: data['token'], site: data['827220437']}
         });
     } catch (error) {
         console.error(error);
@@ -419,7 +396,7 @@ const removeParticipantsDataDestruction = async () => {
     try {
         let count = 0;
         const millisecondsWait = 5184000000; // 60days
-        const stubFieldArray = ['104278817', '119449326', '153713899', '173836415', '231676651', '262613359', '268665918', '269050420', '304438543', '359404406', '399159511', '407743866', '412000022', '471168198', '479278368', '524352591', '526455436', '544150384', '558435199', '577794331', '592227431', '613641698', '664453818', '744604255', '747006172', '765336427', '773707518', '826240317', '831041022', '883668444', '996038075', 'token', 'Connect_ID', 'query', 'pin', 'state', '371067537', '827220437', '699625233','436680969','736251808','480305327','795827569', '564964481', '454205108','919254129','982402227','821247024','914594314','635994596','297147359','241236037', '912301837','869588347','506826178', '153211406'];
+        const stubFieldArray = ["pin", "token", "state", "Connect_ID", "471168198", "736251808", "436680969", "480305327", "564964481", "795827569", "544150384", "371067537", "454205108", "454445267", "919254129", "412000022", "558435199", "262613359", "821247024", "914594314", "747006172", "659990606", "299274441", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "637147033", "734828170", "715390138", "538619788", "153713899", "613641698", "407743866", "831041022", "269050420", "359404406", "119449326", "304438543", "912301837", '130371375', "765336427", "479278368", "826240317", "693626233", "104278817", "744604255", "268665918", "592227431", "399159511", "231676651", "996038075", "506826178", "524352591", "902332801", "457532784", "773707518", "577794331", "883668444"];
         const destroyDataCId = fieldMapping.participantMap.destroyData.toString();
         const dateRequestedDataDestroyCId = fieldMapping.participantMap.dateRequestedDataDestroy.toString();
         const destroyDataCategoricalCId = fieldMapping.participantMap.destroyDataCategorical.toString();
@@ -488,10 +465,10 @@ const removeUninvitedParticipants = async () => {
     }
 }
 
-const getChildrens = async (ID) => {
+const getChildren = async (id) => {
     try{
         const snapShot = await db.collection('siteDetails')
-                                .where('state.parentID', 'array-contains', ID)
+                                .where('state.parentID', 'array-contains', id)
                                 .get();
         if(snapShot.size > 0) {
             const siteCodes = [];
@@ -619,7 +596,7 @@ const retrieveUserSurveys = async (uid, concepts) => {
 
 const surveyExists = async (collection, uid) => {
     const snapshot = await db.collection(collection).where('uid', '==', uid).get();
-    if (snapshot.size === 1) {
+    if (snapshot.size > 0) {
         return snapshot.docs[0];
     }
     else {
@@ -780,31 +757,172 @@ const retrieveSiteNotifications = async (siteId, isParent) => {
     }
 }
 
+/**
+ * Retrieve a list of participants from the database.
+ * If name is in the query, we handle two cases: typeof(participantDoc.query.firstName) === 'string' and typeof(participantDoc.query.firstName) === 'array'.
+ * If string, do a simple query.where('query.firstName', '==', queries.firstName.toLowerCase()). If array, we have to do a query.where('query.firstName', 'array-contains', queries.firstName.toLowerCase()).
+ * Only one 'array-contains' operation can be done per query, so separate queries are required if both firstName and lastName are in the query. We also use array-contains for email and phone number. Note: only email or phone can be included in a query, not both.
+ * TODO Future: if we (1) adjust signup to write query.firstName and query.lastName as arrays, and (2) update existing participant docs, we can remove the 'string' searches for firstName and lastName.
+ */
 const filterDB = async (queries, siteCode, isParent) => {
-    try{
+
+    // Make separate get requests for each query, since Firestore only allows one 'array-contains' query per request.
+    // This isolates a single array-contains query (firstName, lastName, email, phone).
+    const updateQueryForArrayContainsConstraints = (queryInput) => {
+        const newQueriesObj = {...queries};
+
+        for(let property in newQueriesObj) {
+            if(queryInput.includes(newQueriesObj[property])) {
+                delete newQueriesObj[property];
+            }
+        }
+
+        return newQueriesObj;
+    };
+
+    // Direct the generation and execution of queries based on the search properties present. If neither firstName nor lastName are present, this function is bypassed.
+    const handleNameQueries = async (firstNameQuery, lastNameQuery, phoneEmailQuery) => {
+        if (firstNameQuery) {
+            const fNameStringQueryForSearch = generateQuery(firstNameQuery, 'string');
+            await executeQuery(fNameStringQueryForSearch);
+
+            const fNameArrayQueryForSearch = generateQuery(firstNameQuery, 'array');
+            await executeQuery(fNameArrayQueryForSearch);
+        }
+
+        if (lastNameQuery) {
+            const lNameStringQueryForSearch = generateQuery(lastNameQuery, 'string');
+            await executeQuery(lNameStringQueryForSearch);
+
+            const lNameArrayQueryForSearch = generateQuery(lastNameQuery, 'array');
+            await executeQuery(lNameArrayQueryForSearch);
+        }
+
+        if (phoneEmailQuery) {
+            const phoneOrEmailQueryForSearch = generateQuery(phoneEmailQuery);
+            await executeQuery(phoneOrEmailQueryForSearch);
+        }
+    };
+
+    // Generate the queries. nameType is either 'string' or 'array' and applies to firstName and lastName properties.
+    const generateQuery = (queryKeys, nameType) => {
+        let participantQuery = collection;
+
+        for (let key in queryKeys) {
+            if (key === 'firstName' || key === 'lastName') {
+                const path = `query.${key}`;
+                const queryValue = key === 'firstName' ? queries.firstName : queries.lastName;
+                const operation = (nameType === 'string') ? '==' : 'array-contains';
+                participantQuery = participantQuery.where(path, operation, queryValue);
+            }
+            if (key === 'email' || key === 'phone') {
+                const path = `query.${key === 'email' ? 'allEmails' : 'allPhoneNo'}`;
+                const queryValue = key === 'email' ? queries.email : queries.phone;
+                participantQuery = participantQuery.where(path, 'array-contains', queryValue);
+            }
+            if (key === 'dob') participantQuery = participantQuery.where('371067537', '==', queries.dob);
+            if (key === 'connectId') participantQuery = participantQuery.where('Connect_ID', '==', parseInt(queries.connectId));
+            if (key === 'token') participantQuery = participantQuery.where('token', '==', queries.token);
+            if (key === 'studyId') participantQuery = participantQuery.where('state.studyId', '==', queries.studyId);
+            if (key === 'checkedIn') participantQuery = participantQuery.where('331584571.266600170.135591601', '==', 353358909);
+        }
+
+        return participantQuery;
+    }   
+
+    // This executes each query and pushes the data to the fetchedResults array.
+    const executeQuery = async (query) => {
         const operator = isParent ? 'in' : '==';
-        let query = db.collection('participants');
-        for(let key in queries) {
-            if(key === 'firstName' || key === 'lastName') query = query.where(`query.${key}`, '==', queries[key].toLowerCase());
-            if(key === 'email' || key === 'phone') query = query.where(`${key === 'email' ? `query.allEmails` : `query.allPhoneNo`}`, 'array-contains', queries[key].toLowerCase());
-            if(key === 'dob') query = query.where('371067537', '==', queries[key]);
-            if(key === 'connectId') query = query.where('Connect_ID', '==', parseInt(queries[key]));
-            if(key === 'token') query = query.where('token', '==', queries[key]);
-            if(key === 'studyId') query = query.where('state.studyId', '==', queries[key]);
-        }
         const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
-        if(snapshot.size !== 0){
-            return snapshot.docs.map(document => document.data());
+        if (snapshot.size !== 0) {
+            snapshot.docs.forEach(doc => {
+                fetchedResults.push(doc.data());
+            });
         }
-        else{
-            return [];
+    };
+
+    // Remove duplicate Connect_ID entries from fetchedResults. Since we have to perform multiple get() requests to handle the array-contains queries, we get some duplicate entries in fetchedResults.
+    // Example: search for 'John Smith' will result in two get() requests: one for 'John' and one for 'Smith'. Both requests return the same participant. Remove the duplicate.
+    const removeDuplicateResults = () => {
+        let uniqueParticipants = new Set();
+
+        fetchedResults = fetchedResults.filter(participant => {
+            if (uniqueParticipants.has(participant.Connect_ID)) {
+                return false;
+            } else {
+                uniqueParticipants.add(participant.Connect_ID);
+                return true;
+            }
+        });
+    };
+
+    // Remove results that don't match the query. Ex: if the query is for 'John Smith', the results include 'John Doe', 'John Smith', and 'Jane Smith'. Remove 'John Doe' and 'Jane Smith' from the results.
+    // Why? We run multiple queries due to the array-contains constraints, end up with results that don't match the query when more than one array-contains operation is executed.
+    const removeMismatchedResults = () => {
+        fetchedResults = fetchedResults.filter(participant => {
+            return (!queries.firstName || participant.query.firstName.includes(queries.firstName)) &&
+                (!queries.lastName || participant.query.lastName.includes(queries.lastName)) &&
+                (!queries.email || participant.query.allEmails.includes(queries.email)) &&
+                (!queries.phone || participant.query.allPhoneNo.includes(queries.phone)) &&
+                (!queries.dob || participant['371067537'] === queries.dob) &&
+                (!queries.connectId || participant.Connect_ID === parseInt(queries.connectId)) &&
+                (!queries.token || participant.token === queries.token) &&
+                (!queries.studyId || participant.state.studyId === queries.studyId) &&
+                (!queries.checkedIn || participant['331584571.266600170.135591601'] === 353358909);
+        });
+    };
+
+    // Control flow for the participant query
+    // If two or more of firstName, lastName, and (email or phone) are included in the query, run multiple queries. Handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+    // If only firstName or lastName is in the query (no phone or email), handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+    // If compound queries are executed, handle results including duplicates and the mismatches caused by executing multiple queries.
+    // If neither firstName nor lastName are in the query, run a simple query that doesn't need post-processing. This is the else statement, return early.
+    const collection = db.collection('participants');
+    let fetchedResults = [];
+
+    if (queries.firstName) queries.firstName = queries.firstName.toLowerCase();
+    if (queries.lastName) queries.lastName = queries.lastName.toLowerCase();
+    if (queries.email) queries.email = queries.email.toLowerCase();
+        
+    try {
+        if (queries.firstName && queries.lastName && (queries.email || queries.phone)) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleNameQueries(fNameExtractedQuery, lNameExtractedQuery, phoneOrEmailExtractedQuery);
+        } else if (queries.firstName && queries.lastName) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            await handleNameQueries(fNameExtractedQuery, lNameExtractedQuery, null);
+        } else if (queries.firstName && (queries.email || queries.phone)) {
+            const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleNameQueries(fNameExtractedQuery, null, phoneOrEmailExtractedQuery);
+        } else if (queries.lastName && (queries.email || queries.phone)) {
+            const lNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.phone, queries.email]);
+            const phoneOrEmailExtractedQuery = updateQueryForArrayContainsConstraints([queries.firstName, queries.lastName]);
+            await handleNameQueries(null, lNameExtractedQuery, phoneOrEmailExtractedQuery);
+        } else if (queries.firstName) {
+            await handleNameQueries(queries, null, null);
+        } else if (queries.lastName) {
+            await handleNameQueries(null, queries, null);
+        } else {
+            const nonNameQuery = generateQuery(queries);
+            await executeQuery(nonNameQuery);
+
+            return fetchedResults;
         }
+  
+        removeDuplicateResults();
+        removeMismatchedResults();
+
+        return fetchedResults;
+
+    } catch (error) {
+      console.error(error);
+      return new Error(error);
     }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
+};
 
 const validateBiospecimenUser = async (email) => {
     try {
@@ -1962,7 +2080,6 @@ const getRestrictedFields = async () => {
 
 module.exports = {
     updateResponse,
-    validateSiteUser,
     retrieveParticipants,
     verifyIdentity,
     retrieveUserProfile,
@@ -1974,14 +2091,13 @@ module.exports = {
     createRecord,
     recordExists,
     validateIDToken,
-    verifyToken,
-    verifyPin,
+    verifyTokenOrPin,
     linkParticipanttoFirebaseUID,
     participantExists,
     sanityCheckConnectID,
     sanityCheckPIN,
     individualParticipant,
-    getChildrens,
+    getChildren,
     deleteFirestoreDocuments,
     getParticipantData,
     updateParticipantData,
