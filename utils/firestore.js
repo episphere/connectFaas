@@ -415,12 +415,19 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
+/**
+ * This function is run every day at 01:00.
+ * This function is used to delete the data of the participant who requested and signed the data destruction form or requested data destruction within 60 days
+ */
 const removeParticipantsDataDestruction = async () => {
     try {
         let count = 0;
         const millisecondsWait = 5184000000; // 60days
+        // Stub records that will be retained after deleting data.
         const stubFieldArray = [ "query", "pin", "token", "state", "Connect_ID", "471168198", "736251808", "436680969", "480305327", "564964481", "795827569", "544150384", "371067537", "454205108", "454445267", "919254129", "412000022", "558435199", "262613359", "821247024", "914594314", "747006172", "659990606", "299274441", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "637147033", "734828170", "715390138", "538619788", "153713899", "613641698", "407743866", "831041022", "269050420", "359404406", "119449326", "304438543", "912301837", "130371375", "765336427", "479278368", "826240317", "693626233", "104278817", "744604255", "268665918", "592227431", "399159511", "231676651", "996038075", "506826178", "524352591", "902332801", "457532784", "773707518", "577794331", "883668444", "827220437", "699625233", ];
+        // Sub stub records of "query" and "state".
         const subStubFieldArray = ["firstName", "lastName", "studyId", "uid"];
+        // CID for participant's data destruction status.
         const dataHasBeenDestroyed =
             fieldMapping.participantMap.dataHasBeenDestroyed.toString();
         const destroyDataCId =
@@ -432,12 +439,15 @@ const removeParticipantsDataDestruction = async () => {
         const requestedAndSignCId =
             fieldMapping.participantMap.requestedAndSign;
 
+        // Get all participants who have requested data destruction and have not been processed.
         const currSnapshot = await db
             .collection("participants")
             .where(destroyDataCId, "==", fieldMapping.yes)
             .where(dataHasBeenDestroyed, "!=", fieldMapping.yes)
             .get();
 
+        // Check each participant if they are already registered or more than 60 days from the date of their request
+        // then the system will delete their data except the stub records and update the dataHasBeenDestroyed flag to yes.
         for (const doc of currSnapshot.docs) {
             const batch = db.batch();
             const participant = doc.data();
