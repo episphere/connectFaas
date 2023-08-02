@@ -1889,25 +1889,27 @@ const setPackageReceiptFedex = async (data) => {
 }
 
 const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
+    let mutex = Promise.resolve();
     for (let key in collectionIdHolder) {
-        if (collectionIdHolder.hasOwnProperty(key)) {
             try {
                 const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id change this
                 const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
                 for (const element of collectionIdKeys[key]['234868461']) {
-                    let tubeId = element.split(' ')[1];
-                    let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                    let conceptIdTubes = `${conceptTube}.926457119`
-                    await db.collection("biospecimen").doc(docId).update({ 
-                                                        "926457119": dateTimeStamp, 
-                                                        [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
+                        let tubeId = element.split(' ')[1];
+                        let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                        let conceptIdTubes = `${conceptTube}.926457119`
+                        mutex.then(() => {
+                            return db.collection("biospecimen").doc(docId).update({ 
+                                                                "926457119": dateTimeStamp, 
+                                                                [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
+                        })
             }
         }
         catch(error){
             return new Error(error);
-        }
         }}
-    }
+}
+
 const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
     try {
         await db.collection("bptlMetrics").doc('--metrics--').update({ 
