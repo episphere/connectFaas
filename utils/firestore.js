@@ -1850,9 +1850,7 @@ const setPackageReceiptFedex = async (data) => {
         let collectionIdHolder = {}
         if ((token).length === 34) token = data.scannedBarcode.slice((data.scannedBarcode).length - 22)
         const snapshot = await db.collection("boxes").where('959708259', '==', token).get(); // find related box using barcode
-        if (snapshot.empty) {
-            return false
-        }
+        if (snapshot.empty) return false
         const docId = snapshot.docs[0].id;
         data['959708259'] = token
         delete data.scannedBarcode
@@ -1867,13 +1865,13 @@ const setPackageReceiptFedex = async (data) => {
                     if (bag in collectionIdKeys){
                         if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
                             if (collectionIdKeys[bag]['787237543'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
-                                collectionIdHolder[bag] = collectionIdKeys[bag]['787237543'].split(' ')[0]
+                                collectionIdHolder[bag] = collectionIdKeys[bag]['787237543'].split(' ')[0] // blood or urine bag
                             }
                             if (collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
-                                collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0]
+                                collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0] // mouthwash bag
                             }
                             if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['787237543'] === `` ) {
-                                collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0]
+                                collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0] // orphan bag
                             }
                         }
                     }
@@ -1889,25 +1887,27 @@ const setPackageReceiptFedex = async (data) => {
 }
 
 const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
+    let mutex = Promise.resolve();
     for (let key in collectionIdHolder) {
-        if (collectionIdHolder.hasOwnProperty(key)) {
             try {
                 const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id change this
                 const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
                 for (const element of collectionIdKeys[key]['234868461']) {
-                    let tubeId = element.split(' ')[1];
-                    let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                    let conceptIdTubes = `${conceptTube}.926457119`
-                    await db.collection("biospecimen").doc(docId).update({ 
-                                                        "926457119": dateTimeStamp, 
-                                                        [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
+                        let tubeId = element.split(' ')[1];
+                        let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                        let conceptIdTubes = `${conceptTube}.926457119`
+                        mutex.then(() => {
+                            return db.collection("biospecimen").doc(docId).update({ 
+                                                                "926457119": dateTimeStamp, 
+                                                                [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
+                        })
             }
         }
         catch(error){
             return new Error(error);
-        }
         }}
-    }
+}
+
 const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
     try {
         await db.collection("bptlMetrics").doc('--metrics--').update({ 
