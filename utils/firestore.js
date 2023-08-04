@@ -465,12 +465,18 @@ const removeUninvitedParticipants = async () => {
     }
 }
 
+/**
+ * 
+ * @param {string} id 
+ * @returns
+ */
 const getChildren = async (id) => {
     try{
         const snapShot = await db.collection('siteDetails')
                                 .where('state.parentID', 'array-contains', id)
                                 .get();
         if(snapShot.size > 0) {
+            /** @type {number[]} */
             const siteCodes = [];
             snapShot.docs.map(document => {
                 if(document.data().siteCode){
@@ -481,11 +487,11 @@ const getChildren = async (id) => {
         }
         else{
             return false;
-        };
+        }
     }
     catch(error){
         console.error(error);
-        return new Error(error);
+        return false;
     }
 }
 

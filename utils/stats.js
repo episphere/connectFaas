@@ -1,6 +1,5 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
 
-
 const stats = async (req, res, authObj) => {
     logIPAdddress(req);
     setHeaders(res);
@@ -59,8 +58,55 @@ const stats = async (req, res, authObj) => {
     if(type === 'participants_biospecimen') response = await getTable('participants_biospecimen', isParent, siteCodes);
 
     return res.status(200).json({stats: response, code:200});
-}
+};
+
+const shortNameToTableName = {
+  race: 'participants_race_count_by_sites',
+  age: 'participant_birthYear_by_siteCode',
+  gender: 'participants_sex_count_by_sites',
+  verification: 'participants_verification_status',
+  workflow: 'participants_workflow_status',
+  recruitsCount: 'participants_recruits_count',
+  optOuts: 'participants_optOuts',
+  allModules: 'participants_allModules',
+  moduleOne: 'participants_moduleOne',
+  modulesTwoThree: 'participants_modulesTwoThree',
+  allModulesAllSamples: 'participants_allModulesAllSamples',
+  modulesNone: 'participants_modulesNone',
+  ssn: 'participants_ssn',
+  biospecimen: 'participants_biospecimen',
+};
+
+/**
+ * Retrieve all stats in one call for dashboard display
+ * @param {Request} req 
+ * @param {Response} res 
+ * @param {object} authObj 
+ * @returns 
+ */
+const getStatsForDashboard = async (req, res, authObj) => {
+  if (req.method !== 'GET') {
+    return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+  }
+
+  const { getStatsFromBQ } = require('./bigquery');
+  const siteCodes = authObj.siteCodes;
+  let data = {};
+  console.log(`Retrieveing stats data for siteCode: ${siteCodes}`);
+
+  try {
+    for (const [shortName, tableName] of Object.entries(shortNameToTableName)) {
+      data[shortName] = await getStatsFromBQ(tableName, siteCodes);
+    }
+    
+    return res.status(200).json({ data: [{...data}], code: 200 });
+  } catch (error) {
+    console.error('Error occured when querying stats dataset:', error);
+    return res.status(500).json({ message: 'Internal server error', code: 500, data: []});
+  }
+};
 
 module.exports = {
-    stats
-}
+    stats, 
+    getStatsForDashboard
+};

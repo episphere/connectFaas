@@ -1,7 +1,6 @@
 const {BigQuery} = require('@google-cloud/bigquery');
 const bigquery = new BigQuery();
 
-
 const getTable = async (tableName, isParent, siteCode) => {
     try {
         const dataset = bigquery.dataset('stats');
@@ -18,6 +17,23 @@ const getTable = async (tableName, isParent, siteCode) => {
     }
 }
 
+/**
+ * @param {string} tableName
+ * @param {number | number[]} siteCode
+ */
+const getStatsFromBQ = async (tableName, siteCode) => {
+  const query = `SELECT * FROM \`stats.${tableName}\` WHERE siteCode IN UNNEST(@siteCode)`;
+  const options = {
+    query,
+    location: "US",
+    params: { siteCode: Array.isArray(siteCode) ? siteCode : [siteCode] },
+  };
+  const [rows] = await bigquery.query(options);
+  
+  return rows;
+};
+
 module.exports = {
-    getTable
-}
+    getTable,
+    getStatsFromBQ
+};
