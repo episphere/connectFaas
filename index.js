@@ -10,7 +10,7 @@ const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport } = require('./utils/events');
 const { participantDataCleanup } = require('./utils/participantDataCleanup');
 
-// For Sites
+// API End-Points for Sites
 
 exports.incentiveCompleted = incentiveCompleted;
 
@@ -28,44 +28,34 @@ exports.updateParticipantData = updateParticipantData;
 
 exports.getParticipantNotification = getParticipantNotification;
 
+
+// End-Point for Site Manager Dashboard
+
 exports.dashboard = dashboard;
 
-// For Connect App
+
+// End-Point for Connect PWA
 
 exports.app = connectApp;
 
-// Biospecimen
+
+// End-Point for Biospecimen Dashboard
 
 exports.biospecimen = biospecimenAPIs;
 
+
+// End-Point for Email Notifications Handler
+
 exports.sendEmailNotification = notificationHandler
 
-const getAccessTokenForSA = async () => {
-    const {google} = require("googleapis");
-    const serviceAccount = require(process.env.GCP_SA);
 
-    const scopes = ["https://www.googleapis.com/auth/userinfo.email"];
-
-    const jwtClient = new google.auth.JWT(
-        serviceAccount.client_email,
-        null,
-        serviceAccount.private_key,
-        scopes
-    );
-
-    try {
-        const tokens = await jwtClient.authorize();
-        const accessToken = tokens.access_token;
-        if(accessToken === null) return console.log("Provided service account does not have permission to generate access tokens");
-        return accessToken;
-    } 
-    catch (error) {
-        console.log(error)
-    };
-}
+// End-Points for Exporting Firestore to Big Query
 
 exports.importToBigQuery = importToBigQuery;
   
 exports.scheduleFirestoreDataExport = firestoreExport;
+
+
+// End-Points for Participant Data Cleaning
 
 exports.participantDataCleanup = participantDataCleanup
