@@ -5,7 +5,6 @@ const { notificationHandler } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive');
-const { stats } = require('./utils/stats');
 const { dashboard } = require('./utils/dashboard');
 const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport } = require('./utils/events');
@@ -30,8 +29,6 @@ exports.identifyParticipant = identifyParticipant;
 exports.submitParticipantsData = submitParticipantsData;
 
 exports.updateParticipantData = updateParticipantData;
-
-exports.stats = stats;
 
 exports.getParticipantNotification = getParticipantNotification;
 
