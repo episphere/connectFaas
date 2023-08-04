@@ -1,4 +1,4 @@
-const { validateSiteUsers, getToken } = require('./utils/validation');
+const { getToken } = require('./utils/validation');
 const { getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
 const { notificationHandler } = require('./utils/notifications');
@@ -10,19 +10,15 @@ const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport } = require('./utils/events');
 const { participantDataCleanup } = require('./utils/participantDataCleanup');
 
-// For NORC Incentive
+// For Sites
 
 exports.incentiveCompleted = incentiveCompleted;
 
 exports.participantsEligibleForIncentive = eligibleForIncentive;
 
-// For Sites
-
 exports.getParticipantToken = getToken;
 
 exports.getParticipants = getParticipants;
-
-exports.validateSiteUsers = validateSiteUsers;
 
 exports.identifyParticipant = identifyParticipant;
 
