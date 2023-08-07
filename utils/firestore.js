@@ -1889,7 +1889,7 @@ const setPackageReceiptFedex = async (data) => {
 }
 
 // mutex implementation source: www.nodejsdesignpatterns.com/blog/node-js-race-conditions/
-let mutex = Promise.resolve(); // assign mutex globally to reuse same version of mutex for multiple calls to processReceiptData()
+// Using mutex so that concurrent calls to processReceiptData() can be queued to be executed sequentially.
 const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
     for (let key in collectionIdHolder) {
             try {
