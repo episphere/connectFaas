@@ -1888,8 +1888,12 @@ const setPackageReceiptFedex = async (data) => {
     }
 }
 
-// mutex implementation source: www.nodejsdesignpatterns.com/blog/node-js-race-conditions/
-// Using mutex so that concurrent calls to processReceiptData() can be queued to be executed sequentially.
+/**
+ * mutex implementation source: www.nodejsdesignpatterns.com/blog/node-js-race-conditions/
+   Using  mutex allows us to have concurrent calls to processReceiptData() & are queued to be executed sequentially.
+*/ 
+
+let mutex = Promise.resolve(); // assign mutex globally to reuse same version of mutex for multiple calls to processReceiptData()
 const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
     for (let key in collectionIdHolder) {
             try {
