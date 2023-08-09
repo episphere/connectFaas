@@ -1894,20 +1894,21 @@ const setPackageReceiptFedex = async (data) => {
 */ 
 
 let mutex = Promise.resolve(); // assign mutex globally to reuse same version of mutex for multiple calls to processReceiptData()
+
 const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
     for (let key in collectionIdHolder) {
-            try {
-                const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id change this
-                const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
-                for (const element of collectionIdKeys[key]['234868461']) {
-                        const tubeId = element.split(' ')[1];
-                        const conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                        const conceptIdTubes = `${conceptTube}.926457119`
-                        mutex = mutex.then(() => { // reassign mutex to syncronize the next execution of the promise
-                            return db.collection("biospecimen").doc(docId).update({ 
-                                                                "926457119": dateTimeStamp, 
-                                                                [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
-                        })
+        try {
+            const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id change this
+            const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
+            for (const element of collectionIdKeys[key]['234868461']) {
+                const tubeId = element.split(' ')[1];
+                const conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                const conceptIdTubes = `${conceptTube}.926457119`
+                mutex = mutex.then(() => { // reassign mutex to syncronize the next execution of the promise
+                    return db.collection("biospecimen").doc(docId).update({ 
+                                                        "926457119": dateTimeStamp, 
+                                                        [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
+                })
             }
         }
         catch(error){
