@@ -827,18 +827,18 @@ const filterDB = async (queries, siteCode, isParent) => {
     // Direct the generation and execution of queries based on the search properties present. If neither firstName nor lastName are present, this function is bypassed.
     const handleNameQueries = async (firstNameQuery, lastNameQuery, phoneEmailQuery) => {
         if (firstNameQuery) {
-            const fNameStringQueryForSearch = generateQuery(firstNameQuery, 'string');
-            await executeQuery(fNameStringQueryForSearch);
+            // const fNameStringQueryForSearch = generateQuery(firstNameQuery, 'string');
+            // await executeQuery(fNameStringQueryForSearch);
 
-            const fNameArrayQueryForSearch = generateQuery(firstNameQuery, 'array');
+            const fNameArrayQueryForSearch = generateQuery(firstNameQuery/*, 'array'*/);
             await executeQuery(fNameArrayQueryForSearch);
         }
 
         if (lastNameQuery) {
-            const lNameStringQueryForSearch = generateQuery(lastNameQuery, 'string');
-            await executeQuery(lNameStringQueryForSearch);
+            // const lNameStringQueryForSearch = generateQuery(lastNameQuery, 'string');
+            // await executeQuery(lNameStringQueryForSearch);
 
-            const lNameArrayQueryForSearch = generateQuery(lastNameQuery, 'array');
+            const lNameArrayQueryForSearch = generateQuery(lastNameQuery/*, 'array'*/);
             await executeQuery(lNameArrayQueryForSearch);
         }
 
@@ -849,15 +849,15 @@ const filterDB = async (queries, siteCode, isParent) => {
     };
 
     // Generate the queries. nameType is either 'string' or 'array' and applies to firstName and lastName properties.
-    const generateQuery = (queryKeys, nameType) => {
+    const generateQuery = (queryKeys/*, nameType*/) => {
         let participantQuery = collection;
 
         for (let key in queryKeys) {
             if (key === 'firstName' || key === 'lastName') {
                 const path = `query.${key}`;
                 const queryValue = key === 'firstName' ? queries.firstName : queries.lastName;
-                const operation = (nameType === 'string') ? '==' : 'array-contains';
-                participantQuery = participantQuery.where(path, operation, queryValue);
+                //const operation = /*(nameType === 'string') ? '==' :*/ 'array-contains';
+                participantQuery = participantQuery.where(path, 'array-contains', queryValue);
             }
             if (key === 'email' || key === 'phone') {
                 const path = `query.${key === 'email' ? 'allEmails' : 'allPhoneNo'}`;
@@ -907,12 +907,12 @@ const filterDB = async (queries, siteCode, isParent) => {
             return (!queries.firstName || participant.query.firstName.includes(queries.firstName)) &&
                 (!queries.lastName || participant.query.lastName.includes(queries.lastName)) &&
                 (!queries.email || participant.query.allEmails.includes(queries.email)) &&
-                (!queries.phone || participant.query.allPhoneNo.includes(queries.phone)) &&
-                (!queries.dob || participant['371067537'] === queries.dob) &&
-                (!queries.connectId || participant.Connect_ID === parseInt(queries.connectId)) &&
-                (!queries.token || participant.token === queries.token) &&
-                (!queries.studyId || participant.state.studyId === queries.studyId) &&
-                (!queries.checkedIn || participant['331584571.266600170.135591601'] === 353358909);
+                (!queries.phone || participant.query.allPhoneNo.includes(queries.phone)) //&&
+                // (!queries.dob || participant['371067537'] === queries.dob) &&
+                // (!queries.connectId || participant.Connect_ID === parseInt(queries.connectId)) &&
+                // (!queries.token || participant.token === queries.token) &&
+                // (!queries.studyId || participant.state.studyId === queries.studyId) &&
+                // (!queries.checkedIn || participant['331584571.266600170.135591601'] === 353358909);
         });
     };
 
