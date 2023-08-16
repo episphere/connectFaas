@@ -81,8 +81,6 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        const queries = req.query.type;
-        if(Object.keys(queries).length === 0) return res.status(404).json(getResponseJSON('Please include parameters to filter data.', 400));
         const { queryDailyReportParticipants } = require('./firestore');
         const result = await queryDailyReportParticipants();
         if(result instanceof Error){
