@@ -1,6 +1,7 @@
 const rules = require("../updateParticipantData.json");
 const submitRules = require("../submitParticipantData.json");
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submitParticipantsData = async (req, res, site) => {
     logIPAdddress(req);
@@ -67,6 +68,14 @@ const submitParticipantsData = async (req, res, site) => {
 
         const docID = record.id;
         const docData = record.data;
+
+        const dataHasBeenDestroyed =
+            fieldMapping.participantMap.dataHasBeenDestroyed.toString();
+        if (docData[dataHasBeenDestroyed] === fieldMapping.yes) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Data Destroyed'}});
+            continue;
+        }
 
         let flattened = {
             docData: {}
@@ -222,6 +231,14 @@ const updateParticipantData = async (req, res, authObj) => {
 
         const docID = record.id;
         const docData = record.data;
+
+        const dataHasBeenDestroyed =
+            fieldMapping.participantMap.dataHasBeenDestroyed.toString();
+        if (docData[dataHasBeenDestroyed] === fieldMapping.yes) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Data Destroyed'}});
+            continue;
+        }
 
         const flat = (obj, att, attribute) => {
             for(let k in obj) {
