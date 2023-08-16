@@ -2130,6 +2130,10 @@ const updateUserPhoneSigninMethod = async (phone, uid) => {
  * @param {}
  * returns participants that are no more than 2 days old from the time of check in date/time
  * Using promises to resolve array of objects
+ * object containes essential information Collection Location (951355211), Connect ID,
+ * F+L Name (996038075 & 399159511), Check-In (840048338), Collection ID (820476880),
+ * Collection Finalized(556788178), Check-Out (343048998)
+ * Queried from Participants & Biospecimen table
  */
 
 const queryDailyReportParticipants = async () => {
