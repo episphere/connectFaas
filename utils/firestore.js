@@ -825,24 +825,24 @@ const filterDB = async (queries, siteCode, isParent) => {
 
     // Direct the generation and execution of queries based on the search properties present. If neither firstName nor lastName are present, this function is bypassed.
     const handleNameQueries = async (firstNameQuery, lastNameQuery, phoneEmailQuery) => {
-        const promises = [];
+        const searchPromises = [];
 
         if (firstNameQuery) {
             const fNameArrayQueryForSearch = generateQuery(firstNameQuery);
-            promises.push(executeQuery(fNameArrayQueryForSearch));
+            searchPromises.push(executeQuery(fNameArrayQueryForSearch));
         }
 
         if (lastNameQuery) {
             const lNameArrayQueryForSearch = generateQuery(lastNameQuery);
-            promises.push(executeQuery(lNameArrayQueryForSearch));
+            searchPromises.push(executeQuery(lNameArrayQueryForSearch));
         }
 
         if (phoneEmailQuery) {
             const phoneOrEmailQueryForSearch = generateQuery(phoneEmailQuery);
-            promises.push(executeQuery(phoneOrEmailQueryForSearch));
+            searchPromises.push(executeQuery(phoneOrEmailQueryForSearch));
         }
 
-        await Promise.all(promises);
+        await Promise.all(searchPromises);
     };
 
     // Generate the queries.
