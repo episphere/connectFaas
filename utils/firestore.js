@@ -2137,38 +2137,47 @@ const updateUserPhoneSigninMethod = async (phone, uid) => {
  */
 
 const queryDailyReportParticipants = async () => {
-    const twoDaysAgo = new Date(new Date().getTime() - (2 * 24 * 60 * 60 * 1000)).toISOString();
+    const twoDaysinMilliseconds = 172800000;
+    const twoDaysAgo = new Date(new Date().getTime() - (twoDaysinMilliseconds)).toISOString();
     let query = db.collection('participants');
-    const snapshot = await query.where('331584571.266600170.135591601', '==', 353358909).where('331584571.266600170.840048338', '<', twoDaysAgo).get();
-    if (snapshot.size !== 0) {
-        const promises = snapshot.docs.map(async (document) => {
-            return processQueryDailyReportParticipants(document);
-        });
-        return Promise.all(promises).then((results) => {
-            return results.filter((result) => result !== undefined);
-        });
-    } else {
-        return 'Error';
+    try {
+        const snapshot = await query.where('331584571.266600170.135591601', '==', 353358909).where('331584571.266600170.840048338', '<', twoDaysAgo).get();
+        if (snapshot.size !== 0) {
+            const promises = snapshot.docs.map(async (document) => {
+                return processQueryDailyReportParticipants(document);
+            });
+            return Promise.all(promises).then((results) => {
+                return results.filter((result) => result !== undefined);
+            });
+        }
+    }
+    catch(error) {
+        return error.errorInfo.code
     }
 };
 
 const processQueryDailyReportParticipants = async (document) => {
-    const secondSnapshot = await db.collection('biospecimen').where('Connect_ID', '==', document.data()['Connect_ID']).get();
-    if (secondSnapshot.size !== 0) {
-        const dailyReport = {};
-        if (secondSnapshot.docs[0].data()['951355211'] !== undefined) {
-            dailyReport['Connect_ID'] = document.data()['Connect_ID'];
-            dailyReport['996038075'] = document.data()['996038075'];
-            dailyReport['399159511'] = document.data()['399159511'];
-            dailyReport['840048338'] = document.data()['331584571']['266600170']['840048338'];
-            dailyReport['951355211'] = document.data()['951355211'];
-            dailyReport['343048998'] = document.data()['331584571']['266600170']?.['343048998'];
-            dailyReport['951355211'] = secondSnapshot.docs[0].data()['951355211'];
-            dailyReport['820476880'] = secondSnapshot.docs[0].data()['820476880'];
-            dailyReport['556788178'] = secondSnapshot.docs[0].data()['556788178'];
-            
-            return dailyReport;
+    try {
+        const secondSnapshot = await db.collection('biospecimen').where('Connect_ID', '==', document.data()['Connect_ID']).get();
+        if (secondSnapshot.size !== 0) {
+            const dailyReport = {};
+            if (secondSnapshot.docs[0].data()['951355211'] !== undefined) {
+                dailyReport['Connect_ID'] = document.data()['Connect_ID'];
+                dailyReport['996038075'] = document.data()['996038075'];
+                dailyReport['399159511'] = document.data()['399159511'];
+                dailyReport['840048338'] = document.data()['331584571']['266600170']['840048338'];
+                dailyReport['951355211'] = document.data()['951355211'];
+                dailyReport['343048998'] = document.data()['331584571']['266600170']?.['343048998'];
+                dailyReport['951355211'] = secondSnapshot.docs[0].data()['951355211'];
+                dailyReport['820476880'] = secondSnapshot.docs[0].data()['820476880'];
+                dailyReport['556788178'] = secondSnapshot.docs[0].data()['556788178'];
+                
+                return dailyReport;
+            }
         }
+    }
+    catch(error) {
+        return error.errorInfo.code
     }
 };
 
