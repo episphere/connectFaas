@@ -204,14 +204,15 @@ const notificationHandler = async (message) => {
 
             if(body.indexOf('<loginDetails>') !== -1) {
                 let loginDetails;
+                const addLoginText = `Your login information for the MyConnect app is `
                 
                 if(participant[995036844] === 'phone' && participant[348474836]) {
                     loginDetails = participant[348474836];
-                    loginDetails = `You may sign in to MyConnect app using ` + redactPhoneLoginInfo(loginDetails) + `.`;
+                    loginDetails = addLoginText + redactPhoneLoginInfo(loginDetails) + `.`;
                 }
                 else if(participant[995036844] === 'password' && participant[421823980]) {
                     loginDetails = participant[421823980];
-                    loginDetails = `You may sign in to MyConnect app using ` + redactEmailLoginInfo(loginDetails) + `.`
+                    loginDetails = addLoginText + redactEmailLoginInfo(loginDetails) + `.`
                 }
                 else if(participant[995036844] === 'passwordAndPhone' && participant[421823980] && participant[348474836]) {
                     let emailLoginDetails = participant[421823980];
@@ -220,7 +221,7 @@ const notificationHandler = async (message) => {
                     emailLoginDetails = redactEmailLoginInfo(emailLoginDetails)
                     phoneLoginDetails = redactPhoneLoginInfo(phoneLoginDetails);
 
-                    loginDetails = `You may sign in to MyConnect app using ` + emailLoginDetails + ` or ` + phoneLoginDetails + `.`
+                    loginDetails = addLoginText + emailLoginDetails + ` or ` + phoneLoginDetails + `.`
                 }
                 else continue;
 
