@@ -765,7 +765,7 @@ const redactEmailLoginInfo = (participantEmail) => {
     return changedPrefix + "@" + domain;
 }
 
-const redactPhoneLoginInfo = (participantPhone) => { return participantPhone = "***-***-" + participantPhone.substring(participantPhone.length - 4); }
+const redactPhoneLoginInfo = (participantPhone) => { return participantPhone = "***-***-" + participantPhone.slice(-4); }
 
 module.exports = {
     getResponseJSON,
