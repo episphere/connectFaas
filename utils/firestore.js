@@ -1057,7 +1057,7 @@ const addBoxAndUpdateSiteDetails = async (data) => {
             throw new Error("siteDetailsDocRef is not provided in the data object.");
         }
 
-        const boxIdString = data['132929440'];
+        const boxIdString = data[fieldMapping.shippingBoxId];
         if (!boxIdString || typeof boxIdString !== 'string') {
             throw new Error("Invalid or missing BoxId value in the data object.");
         }

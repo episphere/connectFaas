@@ -25,6 +25,7 @@ module.exports = {
     duplicate: 922622075,
     cannotBeVerified: 219863910,
     outreachTimeOut: 160161595,
+    shippingBoxId: 132929440,
 
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,
