@@ -9,9 +9,10 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit } = require('./shared');
+const {collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit, createChunkArray} = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
+
 const nciCode = 13;
 const nciConceptId = `517700004`;
 const tubesBagsCids = fieldMapping.tubesBagsCids;
@@ -1520,10 +1521,7 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
             query = query.where(obj, operator, values);
         }
         const participants = await query.get();
-        return participants.docs.map(document => {
-            let data = document.data();
-            return data;
-        });
+        return participants.docs.map(doc => doc.data());
     } catch (error) {
         console.error(error);
         return new Error(error);
@@ -1532,11 +1530,10 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
 
 const notificationAlreadySent = async (token, notificationSpecificationsID) => {
     try {
-        const snapshot = await db.collection('notifications').where('token', '==', token).where('notificationSpecificationsID', '==', notificationSpecificationsID).get()
-        if(snapshot.size === 0) return false
-        else true;
+        const snapshot = await db.collection('notifications').where('token', '==', token).where('notificationSpecificationsID', '==', notificationSpecificationsID).get();
+        return snapshot.size !== 0;
     } catch (error) {
-        new Error(error)
+        return new Error(error);
     }
 }
 
@@ -1575,6 +1572,50 @@ const storeNotifications = async payload => {
         return new Error(error);
     }
 }
+
+/**
+ * Save notification records to `notifications` collection.
+ * @param {object[]} notificationRecordArray Array of notification records to be saved
+ */
+const saveNotificationBatch = async (notificationRecordArray) => {
+  const chunkSize = 500; // batched write has a doc limit of 500
+  const chunkArray = createChunkArray(notificationRecordArray, chunkSize);
+  for (const recordChunk of chunkArray) {
+    const batch = db.batch();
+    try {
+        for (const record of recordChunk) {
+        const docId = record.uid + record.notificationSpecificationsID.slice(0, 6);
+        const docRef = db.collection("notifications").doc(docId);
+        batch.set(docRef, record);
+      }
+
+      await batch.commit();
+    } catch (error) {
+      throw new Error("saveNotificationBatch() error.", {cause: error});
+    }
+  }
+};
+
+/**
+ * @param {string} specId ID of notification specification
+ * @param {string[]} participantTokenArray Array of participant tokens for data updates
+ */
+const saveSpecIdsToParticipants = async (specId, participantTokenArray) => {
+  const chunkSize = 30; // 'in' operator has size limit of 30
+  const chunkArray = createChunkArray(participantTokenArray, chunkSize);
+
+  for (const tokenChunk of chunkArray) {
+    const batch = db.batch();
+    try {
+      const snapshot = await db.collection("participants").where("token", "in", tokenChunk).get();
+      if (snapshot.empty) continue;
+      snapshot.forEach((doc) => batch.update(doc.ref, {[`query.notificationSpecIdsUsed.${specId}`]: true}));
+      await batch.commit();
+    } catch (error) {
+      throw new Error("saveSpecIdsToParticipants() error.", {cause: error});
+    }
+  }
+};
 
 const markNotificationAsRead = async (id, collection) => {
     const snapshot = await db.collection(collection).where('id', '==', id).get();
@@ -2176,4 +2217,6 @@ module.exports = {
     updateUserPhoneSigninMethod,
     updateUserEmailSigninMethod,
     updateUsersCurrentLogin,
+    saveNotificationBatch,
+    saveSpecIdsToParticipants,
 }

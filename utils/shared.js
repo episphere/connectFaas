@@ -756,6 +756,21 @@ const isDateTimeFormat = (value) => {
     return typeof value == "string" && (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(value));
 }
 
+/**
+ * Split a large array into smaller chunks for batched processing
+ * @param {Array} inputArray 
+ * @param {number} chunkSize 
+ * @returns 
+ */
+const createChunkArray = (inputArray, chunkSize) => {
+    let chunkArray = [];
+    for (let i = 0; i < inputArray.length; i += chunkSize) {
+        chunkArray.push(inputArray.slice(i, i + chunkSize));
+    }
+
+    return chunkArray;
+};
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -790,5 +805,6 @@ module.exports = {
     batchLimit,
     getUserProfile,
     isEmpty,
-    isDateTimeFormat
-}
+    isDateTimeFormat,
+    createChunkArray,
+};
