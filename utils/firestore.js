@@ -393,32 +393,36 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
 }
 
 const removeDocumentFromCollection = async (connectID) => {
-    // Collections with document related to participant
-    const collectionArray = [
-        "bioSurvey_v1",
-        "clinicalBioSurvey_v1",
-        "covid19Survey_v1",
-        "menstrualSurvey_v1",
-        "module1_v1",
-        "module1_v2",
-        "module2_v1",
-        "module2_v2",
-        "module3_v1",
-        "module4_v1",
-        "ssn",
-        "biospecimen",
-    ];
-    while (collectionArray.length > 0) {
-        const collection = collectionArray.shift();
-        const data = await db
-            .collection(collection)
-            .where("Connect_ID", "==", connectID)
-            .get();
-        if (data.size !== 0) {
-            data.docs.forEach(async (dt) => {
-                await db.collection(collection).doc(dt.id).delete();
-            });
+    try {
+        // Collections with document related to participant
+        const collectionArray = [
+            "bioSurvey_v1",
+            "clinicalBioSurvey_v1",
+            "covid19Survey_v1",
+            "menstrualSurvey_v1",
+            "module1_v1",
+            "module1_v2",
+            "module2_v1",
+            "module2_v2",
+            "module3_v1",
+            "module4_v1",
+            "ssn",
+            "biospecimen",
+        ];
+        while (collectionArray.length > 0) {
+            const collection = collectionArray.shift();
+            const data = await db
+                .collection(collection)
+                .where("Connect_ID", "==", connectID)
+                .get();
+            if (data.size !== 0) {
+                for (const dt of data.docs) {
+                    await db.collection(collection).doc(dt.id).delete();
+                }
+            }
         }
+    } catch (error) {
+        console.error(`Error occurred when remove documents related to participan: ${error}`);
     }
 };
 
