@@ -757,17 +757,15 @@ const isDateTimeFormat = (value) => {
     return typeof value == "string" && (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(value));
 }
 
-const redactEmailLoginInfo = (loginDetails) => {
-    let amp = loginDetails.indexOf('@');    
-    for(let i = 0; i < amp; i++) {
-        if(i != 0 && i != 1 && i != amp - 1) {
-            loginDetails = loginDetails.substring(0, i) + "*" + loginDetails.substring(i + 1);
-        } 
-    }
-    return loginDetails
+const redactEmailLoginInfo = (participantEmail) => {
+    const [prefix, domain] = participantEmail.split("@");
+    const changedPrefix = prefix.length > 3
+        ? prefix.slice(0, 2) + "*".repeat(prefix.length - 3) + prefix.slice(-1)
+        : prefix.slice(0, -1) + "*";
+    return changedPrefix + "@" + domain;
 }
 
-const redactPhoneLoginInfo = (loginDetails) => { return loginDetails = "***-***-" + loginDetails.substring(loginDetails.length - 4); }
+const redactPhoneLoginInfo = (participantPhone) => { return participantPhone = "***-***-" + participantPhone.substring(participantPhone.length - 4); }
 
 module.exports = {
     getResponseJSON,
