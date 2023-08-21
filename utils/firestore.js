@@ -392,6 +392,36 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
+const removeDocumentFromCollection = async (connectID) => {
+    // Collections with document related to participant
+    const collectionArray = [
+        "bioSurvey_v1",
+        "clinicalBioSurvey_v1",
+        "covid19Survey_v1",
+        "menstrualSurvey_v1",
+        "module1_v1",
+        "module1_v2",
+        "module2_v1",
+        "module2_v2",
+        "module3_v1",
+        "module4_v1",
+        "ssn",
+        "biospecimen",
+    ];
+    while (collectionArray.length > 0) {
+        const collection = collectionArray.shift();
+        const data = await db
+            .collection(collection)
+            .where("Connect_ID", "==", connectID)
+            .get();
+        if (data.size !== 0) {
+            data.docs.forEach(async (dt) => {
+                await db.collection(collection).doc(dt.id).delete();
+            });
+        }
+    }
+};
+
 /**
  * This function is run every day at 01:00.
  * This function is used to delete the data of the participant who requested and signed the data destruction form or requested data destruction within 60 days
@@ -469,6 +499,7 @@ const removeParticipantsDataDestruction = async () => {
                 }
             }
             await batch.commit();
+            await removeDocumentFromCollection(participant['Connect_ID']);
         }
 
         console.log(
