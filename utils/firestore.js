@@ -1074,7 +1074,7 @@ const addBoxAndUpdateSiteDetails = async (data) => {
         return true;
     } catch (error) {
         console.error("Error in addBoxAndUpdateSiteDetails:", error.message);
-        throw new Error(error);
+        throw new Error('Error in addBoxAndUpdateSiteDetails', { cause: error });
     }
 }
 
@@ -1808,8 +1808,8 @@ const getSiteMostRecentBoxId = async (siteCode) => {
         }
         return null;
     } catch (error) {
-        console.error(error);
-        return new Error(error);
+        console.error('Error in getSiteMostRecentBoxId', error);
+        throw new Error('Error getting site most recent box id', { cause: error });
     }
 }
 
