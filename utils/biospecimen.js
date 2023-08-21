@@ -76,6 +76,20 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(400).json(getResponseJSON('Bad request!', 400));
         }
     }
+
+    if(api === 'getDailyReportParticipants') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const { queryDailyReportParticipants } = require('./firestore');
+        const result = await queryDailyReportParticipants();
+        if(result instanceof Error){
+            return res.status(500).json(getResponseJSON(result.message, 500));
+        }
+
+        return res.status(200).json({data: result, code: 200})
+    }
+
     else if(api === 'validateUsers') {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
