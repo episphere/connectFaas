@@ -48,6 +48,7 @@ module.exports = {
         destroyData: 831041022,
         dateRequestedDataDestroy: 269050420,
         destroyDataCategorical: 883668444,
-        requestedAndSign: 704529432
-    }
-}
+        requestedAndSign: 704529432,
+        dataHasBeenDestroyed: 861639549,
+    },
+};

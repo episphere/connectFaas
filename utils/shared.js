@@ -153,6 +153,7 @@ const withdrawalConcepts = {
     831041022: 104430631,
     359404406: 104430631,
     987563196: 104430631,
+    861639549: 104430631,
     123868967: '',
     113579866: '',
     659990606: '',
@@ -261,6 +262,20 @@ const moduleStatusConcepts = {
     "459098666" :       "menstrualSurvey",
     "253883960" :       "clinicalBioSurvey"
 }
+
+const listOfCollectionsRelatedToDataDestruction = [
+    "bioSurvey_v1",
+    "clinicalBioSurvey_v1",
+    "covid19Survey_v1",
+    "menstrualSurvey_v1",
+    "module1_v1",
+    "module1_v2",
+    "module2_v1",
+    "module2_v2",
+    "module3_v1",
+    "module4_v1",
+    "biospecimen",
+];
 
 const incentiveConcepts = {
     'baseline': '130371375.266600170',
@@ -771,6 +786,16 @@ const createChunkArray = (inputArray, chunkSize) => {
     return chunkArray;
 };
 
+const redactEmailLoginInfo = (participantEmail) => {
+    const [prefix, domain] = participantEmail.split("@");
+    const changedPrefix = prefix.length > 3
+        ? prefix.slice(0, 2) + "*".repeat(prefix.length - 3) + prefix.slice(-1)
+        : prefix.slice(0, -1) + "*";
+    return changedPrefix + "@" + domain;
+};
+
+const redactPhoneLoginInfo = (participantPhone) => "***-***-" + participantPhone.slice(-4);
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -785,6 +810,7 @@ module.exports = {
     moduleConcepts,
     moduleConceptsToCollections,
     moduleStatusConcepts,
+    listOfCollectionsRelatedToDataDestruction,
     incentiveConcepts,
     APIAuthorization,
     isParentEntity,
@@ -807,4 +833,6 @@ module.exports = {
     isEmpty,
     isDateTimeFormat,
     createChunkArray,
+    redactEmailLoginInfo,
+    redactPhoneLoginInfo,
 };

@@ -1,7 +1,7 @@
 const uuid = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactPhoneLoginInfo, redactEmailLoginInfo} = require("./shared");
 const {getEmailNotifications, saveNotificationBatch, saveSpecIdsToParticipants} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 
@@ -202,18 +202,16 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       if (!fetchedData[emailField]) continue;
       let notificationBody = htmlTemplate;
       let substitutions = {};
-      
       if (htmlContainsLoginDetails) {
         let loginDetails = "";
+        const addLoginText = "Your login information for the MyConnect app is ";
+
         if (fetchedData[995036844] === "phone" && fetchedData[348474836]) {
-          loginDetails = "***-***-" + fetchedData[348474836].slice(-4);
+          loginDetails = addLoginText + redactPhoneLoginInfo(fetchedData[348474836]) + ".";
         } else if (fetchedData[995036844] === "password" && fetchedData[421823980]) {
-          const [prefix, domain] = fetchedData[421823980].split("@");
-          const changedPrefix =
-            prefix.length > 3
-              ? prefix.slice(0, 2) + "*".repeat(prefix.length - 3) + prefix.slice(-1)
-              : prefix.slice(0, -1) + "*";
-          loginDetails = changedPrefix + "@" + domain;
+          loginDetails = addLoginText + redactEmailLoginInfo(fetchedData[421823980]) + ".";
+        } else if (fetchedData[995036844] === 'passwordAndPhone' && fetchedData[421823980] && fetchedData[348474836]) {
+          loginDetails = addLoginText + redactEmailLoginInfo(fetchedData[421823980]) + " or " + redactPhoneLoginInfo(fetchedData[348474836]) + ".";
         } else {
           console.log("No login details found for participant with token:", fetchedData.token);
           continue;

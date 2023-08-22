@@ -9,7 +9,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const {collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit, createChunkArray} = require('./shared');
+const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -393,48 +393,112 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
+const removeDocumentFromCollection = async (connectID) => {
+    try {
+        while (listOfCollectionsRelatedToDataDestruction.length > 0) {
+            const collection = listOfCollectionsRelatedToDataDestruction.shift();
+            const data = await db
+                .collection(collection)
+                .where("Connect_ID", "==", connectID)
+                .get();
+            if (data.size !== 0) {
+                for (const dt of data.docs) {
+                    await db.collection(collection).doc(dt.id).delete();
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Error occurred when remove documents related to participan: ${error}`);
+    }
+};
+
+/**
+ * This function is run every day at 01:00.
+ * This function is used to delete the data of the participant who requested and signed the data destruction form or requested data destruction within 60 days
+ */
 const removeParticipantsDataDestruction = async () => {
     try {
         let count = 0;
         const millisecondsWait = 5184000000; // 60days
-        const stubFieldArray = ["pin", "token", "state", "Connect_ID", "471168198", "736251808", "436680969", "480305327", "564964481", "795827569", "544150384", "371067537", "454205108", "454445267", "919254129", "412000022", "558435199", "262613359", "821247024", "914594314", "747006172", "659990606", "299274441", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "637147033", "734828170", "715390138", "538619788", "153713899", "613641698", "407743866", "831041022", "269050420", "359404406", "119449326", "304438543", "912301837", '130371375', "765336427", "479278368", "826240317", "693626233", "104278817", "744604255", "268665918", "592227431", "399159511", "231676651", "996038075", "506826178", "524352591", "902332801", "457532784", "773707518", "577794331", "883668444"];
-        const destroyDataCId = fieldMapping.participantMap.destroyData.toString();
-        const dateRequestedDataDestroyCId = fieldMapping.participantMap.dateRequestedDataDestroy.toString();
-        const destroyDataCategoricalCId = fieldMapping.participantMap.destroyDataCategorical.toString();
-        const requestedAndSignCId = fieldMapping.participantMap.requestedAndSign;
+        // Stub records that will be retained after deleting data.
+        const stubFieldArray = [ "query", "pin", "token", "state", "Connect_ID", "471168198", "736251808", "436680969", "480305327", "564964481", "795827569", "544150384", "371067537", "454205108", "454445267", "919254129", "412000022", "558435199", "262613359", "821247024", "914594314", "747006172", "659990606", "299274441", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "637147033", "734828170", "715390138", "538619788", "153713899", "613641698", "407743866", "831041022", "269050420", "359404406", "119449326", "304438543", "912301837", "130371375", "765336427", "479278368", "826240317", "693626233", "104278817", "744604255", "268665918", "592227431", "399159511", "231676651", "996038075", "506826178", "524352591", "902332801", "457532784", "773707518", "577794331", "883668444", "827220437", "699625233", ];
+        // Sub stub records of "query" and "state".
+        const subStubFieldArray = ["firstName", "lastName", "studyId", "uid"];
+        // CID for participant's data destruction status.
+        const dataHasBeenDestroyed =
+            fieldMapping.participantMap.dataHasBeenDestroyed.toString();
+        const destroyDataCId =
+            fieldMapping.participantMap.destroyData.toString();
+        const dateRequestedDataDestroyCId =
+            fieldMapping.participantMap.dateRequestedDataDestroy.toString();
+        const destroyDataCategoricalCId =
+            fieldMapping.participantMap.destroyDataCategorical.toString();
+        const requestedAndSignCId =
+            fieldMapping.participantMap.requestedAndSign;
 
+        // Get all participants who have requested data destruction and have not been processed.
         const currSnapshot = await db
-            .collection('participants')
-            .where(destroyDataCId, '==', fieldMapping.yes)
+            .collection("participants")
+            .where(destroyDataCId, "==", fieldMapping.yes)
+            .where(dataHasBeenDestroyed, "!=", fieldMapping.yes)
             .get();
 
+        // Check each participant if they are already registered or more than 60 days from the date of their request
+        // then the system will delete their data except the stub records and update the dataHasBeenDestroyed flag to yes.
         for (const doc of currSnapshot.docs) {
             const batch = db.batch();
             const participant = doc.data();
             const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
-                ? new Date().getTime() - new Date(participant[dateRequestedDataDestroyCId]).getTime()
-                : 0
+                ? new Date().getTime() -
+                  new Date(participant[dateRequestedDataDestroyCId]).getTime()
+                : 0;
 
-            if (participant[destroyDataCategoricalCId] === requestedAndSignCId || timeDiff > millisecondsWait) {
+            if (
+                participant[destroyDataCategoricalCId] ===
+                    requestedAndSignCId ||
+                timeDiff > millisecondsWait
+            ) {
                 let hasRemovedField = false;
-                const fieldKeys = Object.keys(participant)
+                const fieldKeys = Object.keys(participant);
                 const participantRef = doc.ref;
-                fieldKeys.forEach(key => {
+                fieldKeys.forEach((key) => {
                     if (!stubFieldArray.includes(key)) {
-                        batch.update(participantRef, { [key]: admin.firestore.FieldValue.delete() });
-                        hasRemovedField = true
+                        batch.update(participantRef, {
+                            [key]: admin.firestore.FieldValue.delete(),
+                        });
+                        hasRemovedField = true;
+                    } else {
+                        if (key === "query" || key === "state") {
+                            const subFieldKeys = Object.keys(participant[key]);
+                            subFieldKeys.forEach((subKey) => {
+                                if (!subStubFieldArray.includes(subKey)) {
+                                    batch.update(participantRef, {
+                                        [`${key}.${subKey}`]:
+                                            admin.firestore.FieldValue.delete(),
+                                    });
+                                }
+                            });
+                        }
                     }
-                })
-                if (hasRemovedField) count++;
+                });
+                if (hasRemovedField) {
+                    batch.update(participantRef, {
+                        [dataHasBeenDestroyed]: fieldMapping.yes,
+                    });
+                    count++;
+                }
             }
-            await batch.commit()
+            await batch.commit();
+            await removeDocumentFromCollection(participant['Connect_ID']);
         }
 
-        console.log(`Successfully updated ${count} participants for data destruction`)
+        console.log(
+            `Successfully updated ${count} participants for data destruction`
+        );
     } catch (error) {
         console.error(`Error occurred when updating documents: ${error}`);
     }
-}
+};
 
 const removeUninvitedParticipants = async () => {
     try {
@@ -760,10 +824,9 @@ const retrieveSiteNotifications = async (siteId, isParent) => {
 
 /**
  * Retrieve a list of participants from the database.
- * If name is in the query, we handle two cases: typeof(participantDoc.query.firstName) === 'string' and typeof(participantDoc.query.firstName) === 'array'.
- * If string, do a simple query.where('query.firstName', '==', queries.firstName.toLowerCase()). If array, we have to do a query.where('query.firstName', 'array-contains', queries.firstName.toLowerCase()).
- * Only one 'array-contains' operation can be done per query, so separate queries are required if both firstName and lastName are in the query. We also use array-contains for email and phone number. Note: only email or phone can be included in a query, not both.
- * TODO Future: if we (1) adjust signup to write query.firstName and query.lastName as arrays, and (2) update existing participant docs, we can remove the 'string' searches for firstName and lastName.
+ * If name is in the query, we handle the typeof(participantDoc.query.firstName) === 'array' case with firestore's 'array-contains' operator.
+ * Only one 'array-contains' operation can be done per query, so separate queries are required if both firstName and lastName are in the query.
+ * We also use array-contains for email and phone number. Note: only email or phone can be included in a query, not both.
  */
 const filterDB = async (queries, siteCode, isParent) => {
 
@@ -783,38 +846,35 @@ const filterDB = async (queries, siteCode, isParent) => {
 
     // Direct the generation and execution of queries based on the search properties present. If neither firstName nor lastName are present, this function is bypassed.
     const handleNameQueries = async (firstNameQuery, lastNameQuery, phoneEmailQuery) => {
-        if (firstNameQuery) {
-            const fNameStringQueryForSearch = generateQuery(firstNameQuery, 'string');
-            await executeQuery(fNameStringQueryForSearch);
+        const searchPromises = [];
 
-            const fNameArrayQueryForSearch = generateQuery(firstNameQuery, 'array');
-            await executeQuery(fNameArrayQueryForSearch);
+        if (firstNameQuery) {
+            const fNameArrayQueryForSearch = generateQuery(firstNameQuery);
+            searchPromises.push(executeQuery(fNameArrayQueryForSearch));
         }
 
         if (lastNameQuery) {
-            const lNameStringQueryForSearch = generateQuery(lastNameQuery, 'string');
-            await executeQuery(lNameStringQueryForSearch);
-
-            const lNameArrayQueryForSearch = generateQuery(lastNameQuery, 'array');
-            await executeQuery(lNameArrayQueryForSearch);
+            const lNameArrayQueryForSearch = generateQuery(lastNameQuery);
+            searchPromises.push(executeQuery(lNameArrayQueryForSearch));
         }
 
         if (phoneEmailQuery) {
             const phoneOrEmailQueryForSearch = generateQuery(phoneEmailQuery);
-            await executeQuery(phoneOrEmailQueryForSearch);
+            searchPromises.push(executeQuery(phoneOrEmailQueryForSearch));
         }
+
+        await Promise.all(searchPromises);
     };
 
-    // Generate the queries. nameType is either 'string' or 'array' and applies to firstName and lastName properties.
-    const generateQuery = (queryKeys, nameType) => {
+    // Generate the queries.
+    const generateQuery = (queryKeys) => {
         let participantQuery = collection;
 
         for (let key in queryKeys) {
             if (key === 'firstName' || key === 'lastName') {
                 const path = `query.${key}`;
                 const queryValue = key === 'firstName' ? queries.firstName : queries.lastName;
-                const operation = (nameType === 'string') ? '==' : 'array-contains';
-                participantQuery = participantQuery.where(path, operation, queryValue);
+                participantQuery = participantQuery.where(path, 'array-contains', queryValue);
             }
             if (key === 'email' || key === 'phone') {
                 const path = `query.${key === 'email' ? 'allEmails' : 'allPhoneNo'}`;
@@ -864,18 +924,13 @@ const filterDB = async (queries, siteCode, isParent) => {
             return (!queries.firstName || participant.query.firstName.includes(queries.firstName)) &&
                 (!queries.lastName || participant.query.lastName.includes(queries.lastName)) &&
                 (!queries.email || participant.query.allEmails.includes(queries.email)) &&
-                (!queries.phone || participant.query.allPhoneNo.includes(queries.phone)) &&
-                (!queries.dob || participant['371067537'] === queries.dob) &&
-                (!queries.connectId || participant.Connect_ID === parseInt(queries.connectId)) &&
-                (!queries.token || participant.token === queries.token) &&
-                (!queries.studyId || participant.state.studyId === queries.studyId) &&
-                (!queries.checkedIn || participant['331584571.266600170.135591601'] === 353358909);
+                (!queries.phone || participant.query.allPhoneNo.includes(queries.phone))
         });
     };
 
     // Control flow for the participant query
-    // If two or more of firstName, lastName, and (email or phone) are included in the query, run multiple queries. Handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
-    // If only firstName or lastName is in the query (no phone or email), handle the string and array cases for participantDoc.query.firstName and participantDoc.query.lastName
+    // If two or more of firstName, lastName, and (email or phone) are included in the query, run multiple queries.
+    // If only firstName or lastName is in the query (no phone or email), handle the array case for participantDoc.query.firstName or participantDoc.query.lastName
     // If compound queries are executed, handle results including duplicates and the mismatches caused by executing multiple queries.
     // If neither firstName nor lastName are in the query, run a simple query that doesn't need post-processing. This is the else statement, return early.
     const collection = db.collection('participants');
@@ -1929,26 +1984,34 @@ const setPackageReceiptFedex = async (data) => {
     }
 }
 
+/**
+ * mutex implementation source: www.nodejsdesignpatterns.com/blog/node-js-race-conditions/
+   Using  mutex allows us to have concurrent calls to processReceiptData() & are queued to be executed sequentially.
+*/ 
+
+let mutex = Promise.resolve(); // assign mutex globally to reuse same version of mutex for multiple calls to processReceiptData()
+
 const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
     for (let key in collectionIdHolder) {
-        if (collectionIdHolder.hasOwnProperty(key)) {
-            try {
-                const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id change this
-                const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
-                for (const element of collectionIdKeys[key]['234868461']) {
-                    let tubeId = element.split(' ')[1];
-                    let conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
-                    let conceptIdTubes = `${conceptTube}.926457119`
-                    await db.collection("biospecimen").doc(docId).update({ 
+        try {
+            const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id change this
+            const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
+            for (const element of collectionIdKeys[key]['234868461']) {
+                const tubeId = element.split(' ')[1];
+                const conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                const conceptIdTubes = `${conceptTube}.926457119`
+                mutex = mutex.then(() => { // reassign mutex to syncronize the next execution of the promise
+                    return db.collection("biospecimen").doc(docId).update({ 
                                                         "926457119": dateTimeStamp, 
                                                         [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
+                })
             }
         }
         catch(error){
             return new Error(error);
-        }
         }}
-    }
+}
+
 const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
     try {
         await db.collection("bptlMetrics").doc('--metrics--').update({ 
@@ -2114,6 +2177,62 @@ const updateUserPhoneSigninMethod = async (phone, uid) => {
     }
 }
 
+/**
+ * queryDailyReportParticipants
+ * @param {}
+ * returns participants that are no more than 2 days old from the time of check in date/time
+ * Using promises to resolve array of objects
+ * object containes essential information Collection Location (951355211), Connect ID,
+ * F+L Name (996038075 & 399159511), Check-In (840048338), Collection ID (820476880),
+ * Collection Finalized(556788178), Check-Out (343048998)
+ * Queried from Participants & Biospecimen table
+ */
+
+const queryDailyReportParticipants = async () => {
+    const twoDaysinMilliseconds = 172800000;
+    const twoDaysAgo = new Date(new Date().getTime() - (twoDaysinMilliseconds)).toISOString();
+    let query = db.collection('participants');
+    try {
+        const snapshot = await query.where('331584571.266600170.135591601', '==', 353358909).where('331584571.266600170.840048338', '<', twoDaysAgo).get();
+        if (snapshot.size !== 0) {
+            const promises = snapshot.docs.map(async (document) => {
+                return processQueryDailyReportParticipants(document);
+            });
+            return Promise.all(promises).then((results) => {
+                return results.filter((result) => result !== undefined);
+            });
+        }
+    }
+    catch(error) {
+        return error.errorInfo.code
+    }
+};
+
+const processQueryDailyReportParticipants = async (document) => {
+    try {
+        const secondSnapshot = await db.collection('biospecimen').where('Connect_ID', '==', document.data()['Connect_ID']).get();
+        if (secondSnapshot.size !== 0) {
+            const dailyReport = {};
+            if (secondSnapshot.docs[0].data()['951355211'] !== undefined) {
+                dailyReport['Connect_ID'] = document.data()['Connect_ID'];
+                dailyReport['996038075'] = document.data()['996038075'];
+                dailyReport['399159511'] = document.data()['399159511'];
+                dailyReport['840048338'] = document.data()['331584571']['266600170']['840048338'];
+                dailyReport['951355211'] = document.data()['951355211'];
+                dailyReport['343048998'] = document.data()['331584571']['266600170']?.['343048998'];
+                dailyReport['951355211'] = secondSnapshot.docs[0].data()['951355211'];
+                dailyReport['820476880'] = secondSnapshot.docs[0].data()['820476880'];
+                dailyReport['556788178'] = secondSnapshot.docs[0].data()['556788178'];
+                
+                return dailyReport;
+            }
+        }
+    }
+    catch(error) {
+        return error.errorInfo.code
+    }
+};
+
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
     return snapshot.docs[0].data().restrictedFields;
@@ -2217,6 +2336,7 @@ module.exports = {
     updateUserPhoneSigninMethod,
     updateUserEmailSigninMethod,
     updateUsersCurrentLogin,
+    queryDailyReportParticipants,
     saveNotificationBatch,
     saveSpecIdsToParticipants,
 }
