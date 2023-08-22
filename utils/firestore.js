@@ -9,7 +9,13 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit } = require('./shared');
+const {
+    collectionIdConversion,
+    bagConceptIDs,
+    swapObjKeysAndValues,
+    batchLimit,
+    listOfCollectionsRelatedToDataDestruction,
+} = require("./shared");
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 const nciCode = 13;
@@ -392,6 +398,25 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
+const removeDocumentFromCollection = async (connectID) => {
+    try {
+        while (listOfCollectionsRelatedToDataDestruction.length > 0) {
+            const collection = listOfCollectionsRelatedToDataDestruction.shift();
+            const data = await db
+                .collection(collection)
+                .where("Connect_ID", "==", connectID)
+                .get();
+            if (data.size !== 0) {
+                for (const dt of data.docs) {
+                    await db.collection(collection).doc(dt.id).delete();
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Error occurred when remove documents related to participan: ${error}`);
+    }
+};
+
 /**
  * This function is run every day at 01:00.
  * This function is used to delete the data of the participant who requested and signed the data destruction form or requested data destruction within 60 days
@@ -469,6 +494,7 @@ const removeParticipantsDataDestruction = async () => {
                 }
             }
             await batch.commit();
+            await removeDocumentFromCollection(participant['Connect_ID']);
         }
 
         console.log(
