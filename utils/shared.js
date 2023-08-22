@@ -263,6 +263,20 @@ const moduleStatusConcepts = {
     "253883960" :       "clinicalBioSurvey"
 }
 
+const listOfCollectionsRelatedToDataDestruction = [
+    "bioSurvey_v1",
+    "clinicalBioSurvey_v1",
+    "covid19Survey_v1",
+    "menstrualSurvey_v1",
+    "module1_v1",
+    "module1_v2",
+    "module2_v1",
+    "module2_v2",
+    "module3_v1",
+    "module4_v1",
+    "biospecimen",
+];
+
 const incentiveConcepts = {
     'baseline': '130371375.266600170',
     'followup1': '130371375.496823485',
@@ -771,6 +785,7 @@ module.exports = {
     moduleConcepts,
     moduleConceptsToCollections,
     moduleStatusConcepts,
+    listOfCollectionsRelatedToDataDestruction,
     incentiveConcepts,
     APIAuthorization,
     isParentEntity,
