@@ -2132,7 +2132,7 @@ const queryDailyReportParticipants = async () => {
     const twoDaysAgo = new Date(new Date().getTime() - (twoDaysinMilliseconds)).toISOString();
     let query = db.collection('participants');
     try {
-        const snapshot = await query.where('331584571.266600170.135591601', '==', 353358909).where('331584571.266600170.840048338', '<', twoDaysAgo).get();
+        const snapshot = await query.where('331584571.266600170.135591601', '==', 353358909).where('331584571.266600170.840048338', '>=', twoDaysAgo).get();
         if (snapshot.size !== 0) {
             const promises = snapshot.docs.map(async (document) => {
                 return processQueryDailyReportParticipants(document);
@@ -2143,7 +2143,7 @@ const queryDailyReportParticipants = async () => {
         }
     }
     catch(error) {
-        return error.errorInfo.code
+        return error.errorInfo
     }
 };
 
@@ -2168,7 +2168,7 @@ const processQueryDailyReportParticipants = async (document) => {
         }
     }
     catch(error) {
-        return error.errorInfo.code
+        return error.errorInfo
     }
 };
 
