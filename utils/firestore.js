@@ -1067,8 +1067,41 @@ const updateSpecimen = async (id, data) => {
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
+//TODO: remove this function after Aug 2023 push. Verify addBoxAndUpdateSiteDetails() is live and working as expected.
 const addBox = async (data) => {
     await db.collection('boxes').add(data);
+}
+
+// atomically create a new box in the 'boxes' collection and update the 'siteDetails' doc with the most recent boxId as a numeric value
+const addBoxAndUpdateSiteDetails = async (data) => {
+    try {
+        const boxDocRef = db.collection('boxes').doc();
+        const siteDetailsDocRef = db.collection('siteDetails').doc(data['siteDetailsDocRef']);
+        delete data['siteDetailsDocRef'];
+
+        if (!siteDetailsDocRef) {
+            throw new Error("siteDetailsDocRef is not provided in the data object.");
+        }
+
+        const boxIdString = data[fieldMapping.shippingBoxId];
+        if (!boxIdString || typeof boxIdString !== 'string') {
+            throw new Error("Invalid or missing BoxId value in the data object.");
+        }
+
+        const numericBoxId = parseInt(boxIdString.substring(3));
+        if (isNaN(numericBoxId)) {
+            throw new Error("Failed to parse numericBoxId from BoxId value.");
+        }
+
+        const batch = db.batch();
+        batch.set(boxDocRef, data);
+        batch.update(siteDetailsDocRef, { 'mostRecentBoxId': numericBoxId });
+        await batch.commit();
+        return true;
+    } catch (error) {
+        console.error("Error in addBoxAndUpdateSiteDetails:", error.message);
+        throw new Error('Error in addBoxAndUpdateSiteDetails', { cause: error });
+    }
 }
 
 const updateBox = async (id, data, loginSite) => {
@@ -1789,6 +1822,23 @@ const getSiteAcronym = async (siteCode) => {
     }
 }
 
+const getSiteMostRecentBoxId = async (siteCode) => {
+    try {
+        const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        if (snapshot.size > 0) {
+            const doc = snapshot.docs[0];
+            return {
+                docId: doc.id,
+                mostRecentBoxId: doc.data().mostRecentBoxId
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error in getSiteMostRecentBoxId', error);
+        throw new Error('Error getting site most recent box id', { cause: error });
+    }
+}
+
 const addPrintAddressesParticipants = async (data) => {
     try {
         const uuid = require('uuid');
@@ -2243,6 +2293,7 @@ module.exports = {
     boxExists,
     accessionIdExists,
     addBox,
+    addBoxAndUpdateSiteDetails,
     updateBox,
     searchBoxes,
     shipBatchBoxes,
@@ -2285,6 +2336,7 @@ module.exports = {
     getCoordinatingCenterEmail,
     getSiteEmail,
     getSiteAcronym,
+    getSiteMostRecentBoxId,
     retrieveSiteNotifications,
     addPrintAddressesParticipants,
     getParticipantSelection,
