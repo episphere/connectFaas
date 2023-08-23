@@ -1,7 +1,7 @@
 const uuid = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactPhoneLoginInfo, redactEmailLoginInfo} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo} = require("./shared");
 const {getEmailNotifications, saveNotificationBatch, saveSpecIdsToParticipants} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 
