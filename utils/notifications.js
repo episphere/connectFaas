@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo } = require('./shared');
 
 const subscribeToNotification = async (req, res) => {
     setHeadersDomainRestricted(req, res);
