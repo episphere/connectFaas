@@ -127,23 +127,21 @@ async function notificationHandler(message) {
 
 async function handleNotificationSpec(notificationSpec) {
   const primaryField = notificationSpec.primaryField;
+  let paramObj = {notificationSpec};
   let cutoffTime = new Date();
   cutoffTime.setDate(cutoffTime.getDate() - notificationSpec.time.day);
   cutoffTime.setHours(cutoffTime.getHours() - notificationSpec.time.hour);
   cutoffTime.setMinutes(cutoffTime.getMinutes() - notificationSpec.time.minute);
   
+  // Do nothing if primaryField is a timestamp and time isn't reached. Otherwise, take actions.
   if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(primaryField)) {
-    // Do nothing if primaryField is a timestamp and time isn't reached. Otherwise, take actions.
     const scheduledTime = new Date(primaryField);
     if (scheduledTime > cutoffTime) return;
-    await getParticipantsAndSendEmails({notificationSpec});
   } else {
-    await getParticipantsAndSendEmails({
-      notificationSpec,
-      cutoffTimeStr: cutoffTime.toISOString(),
-      timeField: primaryField
-    });
+    paramObj = {...paramObj, cutoffTimeStr: cutoffTime.toISOString(), timeField: primaryField};
   }
+
+  await getParticipantsAndSendEmails(paramObj);
 }
 
 async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, timeField}) {
