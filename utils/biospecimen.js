@@ -269,6 +269,7 @@ const biospecimenAPIs = async (req, res) => {
 
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
+    //TODO: remove this endpoint after Aug 2023 push. Verify addBoxAndUpdateSiteDetails is working as expected.
     else if(api == 'addBox'){
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
@@ -287,6 +288,36 @@ const biospecimenAPIs = async (req, res) => {
             }
         }
         return res.status(200).json({message: 'Success!', code:200})
+    }
+    else if(api === 'addBoxAndUpdateSiteDetails'){
+        try {
+            if(req.method !== 'POST') {
+                return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+            }
+    
+            const requestData = req.body;
+            if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+
+            const boxId = requestData['132929440'];
+            const loginSite = requestData['789843387'];
+    
+            if (!boxId || !loginSite) {
+                return res.status(400).json(getResponseJSON('Required fields are missing!', 400));
+            }
+    
+            const { boxExists, addBoxAndUpdateSiteDetails } = require('./firestore');
+            const exists = await boxExists(boxId, loginSite);
+    
+            if (exists === true) {
+                return res.status(409).json(getResponseJSON('Conflict: Box already exists!', 409));
+            } else if (exists === false) {
+                await addBoxAndUpdateSiteDetails(requestData);
+                return res.status(200).json({message: 'Success!', code:200});
+            }
+        } catch (error) {
+            console.error("Error in addBoxAndUpdateSiteDetails endpoint:", error.message);
+            return res.status(500).json(getResponseJSON('Internal Server Error', 500));
+        }
     }
     else if(api == 'updateBox'){
         if(req.method !== 'POST') {
@@ -519,6 +550,22 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data: response, code:200})
     }
 
+    else if(api === 'getSiteMostRecentBoxId'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        try {
+            const {getSiteMostRecentBoxId} = require('./firestore');
+            const response = await getSiteMostRecentBoxId(siteCode);
+            if(!response) {
+                return res.status(404).json(getResponseJSON('No matching document found!', 404));
+            }
+            return res.status(200).json({data: response, code: 200});
+        } catch (error) {
+            console.error("Error fetching site most recent box ID:", error);
+            return res.status(500).json(getResponseJSON('Internal Server Error', 500));
+        }
+    }
      // Print Addresses POST- BPTL
     else if(api == 'printAddresses'){
         if(req.method !== 'POST') {
