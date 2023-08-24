@@ -771,15 +771,30 @@ const isDateTimeFormat = (value) => {
     return typeof value == "string" && (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(value));
 }
 
+/**
+ * Split a large array into smaller chunks for batched processing
+ * @param {Array} inputArray 
+ * @param {number} chunkSize 
+ * @returns 
+ */
+const createChunkArray = (inputArray, chunkSize) => {
+    let chunkArray = [];
+    for (let i = 0; i < inputArray.length; i += chunkSize) {
+        chunkArray.push(inputArray.slice(i, i + chunkSize));
+    }
+
+    return chunkArray;
+};
+
 const redactEmailLoginInfo = (participantEmail) => {
     const [prefix, domain] = participantEmail.split("@");
     const changedPrefix = prefix.length > 3
         ? prefix.slice(0, 2) + "*".repeat(prefix.length - 3) + prefix.slice(-1)
         : prefix.slice(0, -1) + "*";
     return changedPrefix + "@" + domain;
-}
+};
 
-const redactPhoneLoginInfo = (participantPhone) => { return "***-***-" + participantPhone.slice(-4); }
+const redactPhoneLoginInfo = (participantPhone) => "***-***-" + participantPhone.slice(-4);
 
 module.exports = {
     getResponseJSON,
@@ -817,6 +832,7 @@ module.exports = {
     getUserProfile,
     isEmpty,
     isDateTimeFormat,
+    createChunkArray,
     redactEmailLoginInfo,
-    redactPhoneLoginInfo
-}
+    redactPhoneLoginInfo,
+};
