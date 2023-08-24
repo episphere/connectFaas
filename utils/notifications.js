@@ -202,14 +202,13 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       let substitutions = {};
       if (htmlContainsLoginDetails) {
         let loginDetails = "";
-        const addLoginText = "Your login information for the MyConnect app is ";
 
         if (fetchedData[995036844] === "phone" && fetchedData[348474836]) {
-          loginDetails = addLoginText + redactPhoneLoginInfo(fetchedData[348474836]) + ".";
+          loginDetails = redactPhoneLoginInfo(fetchedData[348474836]);
         } else if (fetchedData[995036844] === "password" && fetchedData[421823980]) {
-          loginDetails = addLoginText + redactEmailLoginInfo(fetchedData[421823980]) + ".";
+          loginDetails = redactEmailLoginInfo(fetchedData[421823980]);
         } else if (fetchedData[995036844] === 'passwordAndPhone' && fetchedData[421823980] && fetchedData[348474836]) {
-          loginDetails = addLoginText + redactEmailLoginInfo(fetchedData[421823980]) + " or " + redactPhoneLoginInfo(fetchedData[348474836]) + ".";
+          loginDetails = redactEmailLoginInfo(fetchedData[421823980]) + " or " + redactPhoneLoginInfo(fetchedData[348474836]);
         } else {
           console.log("No login details found for participant with token:", fetchedData.token);
           continue;
