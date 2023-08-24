@@ -111,11 +111,13 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
 }
 
 async function notificationHandler(message) {
+  console.log("Received message:", JSON.stringify(message));
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
   const notificationSpecArray = await getEmailNotifications(scheduleAt);
   if (notificationSpecArray.length === 0) return;
   const apiKey = await getSecrets();
   sgMail.setApiKey(apiKey);
+  console.log("apiKey length:", apiKey.length);
 
   const notificationPromises = [];
   for (const notificationSpec of notificationSpecArray) {
@@ -141,6 +143,7 @@ async function handleNotificationSpec(notificationSpec) {
     paramObj = {...paramObj, cutoffTimeStr: cutoffTime.toISOString(), timeField: primaryField};
   }
 
+  console.log("paramObj:", JSON.stringify(paramObj));
   await getParticipantsAndSendEmails(paramObj);
 }
 
