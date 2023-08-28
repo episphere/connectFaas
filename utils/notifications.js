@@ -256,7 +256,6 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       };
 
       notificationRecordArray.push(notificationRecord);
-      emailCount++;
     }
 
     if (personalizationArray.length === 0) continue;
@@ -275,8 +274,10 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       await sgMail.send(msgBatch);
     } catch (error) {
       console.error(`Error sending emails for ${notificationSpecId}(${messageSubject}).`, error);
-      return;
+      break;
     }
+
+    emailCount += personalizationArray.length;
 
     try {
       await Promise.all([
@@ -285,7 +286,7 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       ]);
     } catch (error) {
       console.error(`Error saving data for ${notificationSpecId}(${messageSubject}).`, error);
-      return;
+      break;
     }
 
     offset += limit;
