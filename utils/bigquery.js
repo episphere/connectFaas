@@ -59,10 +59,9 @@ async function getParticipantsForNotificationsBQ({
     bqConditionArray.push(`${bqTimeField} <= "${cutoffTimeStr}"`);
   }
 
-  const dotPlaceholder = "_DOT_"; // holds locations of "." during BQ query
   const bqFieldArray = fieldsToFetch
     .map(convertToBigqueryKey)
-    .map((field) => `${field} AS ${field.replaceAll(".", dotPlaceholder)}`);
+    .map((field) => `${field} AS ${field.replace(/\./g, "_DOT_")}`);
   const queryStr = `SELECT ${bqFieldArray.length === 0 ? "*" : bqFieldArray.join(", ")} 
     FROM \`Connect.participants\` 
     WHERE ${bqConditionArray.join(" AND ")} 
@@ -74,7 +73,7 @@ async function getParticipantsForNotificationsBQ({
     if (rows.length === 0) return result;
 
     result.hasNext = rows.length === limit;
-    result.fetchedDataArray = rows.map((data) => convertToFirestoreData(data, dotPlaceholder));
+    result.fetchedDataArray = rows.map((data) => convertToFirestoreData(data));
     return result;
   } catch (error) { // Error occurs on missing field(s) in BQ table.
     console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, error);
@@ -85,19 +84,18 @@ async function getParticipantsForNotificationsBQ({
 /**
  * Unflatten and convert to firestore data format
  * @param {object} bqData data from BQ
- * @param {string} dotPlaceholder placeholder of "." in keys during BQ query
  * @returns
  */
-function convertToFirestoreData(bqData, dotPlaceholder) {
+function convertToFirestoreData(bqData) {
   let result = {};
   let keySet = new Set();
 
   for (const [bqKey, val] of Object.entries(bqData)) {
     if (val === null) continue;
-    const longKey = convertToFirestoreKey(bqKey).replaceAll(dotPlaceholder, ".");
+    const longKey = convertToFirestoreKey(bqKey).replace(/_DOT_/g, ".");
     if (!longKey.includes(".")) {
       if (typeof val === "object" && !Array.isArray(val)) {
-        result[longKey] = convertToFirestoreData(val, dotPlaceholder);
+        result[longKey] = convertToFirestoreData(val);
         continue;
       }
 
@@ -112,7 +110,7 @@ function convertToFirestoreData(bqData, dotPlaceholder) {
   }
 
   for (const key of keySet) {
-    result[key] = convertToFirestoreData(result[key], dotPlaceholder);
+    result[key] = convertToFirestoreData(result[key]);
   }
 
   return result;
