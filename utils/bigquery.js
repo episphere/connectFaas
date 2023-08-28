@@ -76,8 +76,9 @@ async function getParticipantsForNotificationsBQ({
     result.hasNext = rows.length === limit;
     result.fetchedDataArray = rows.map((data) => convertToFirestoreData(data, dotPlaceholder));
     return result;
-  } catch (error) {
-    throw new Error("getParticipantsForNotificationsBQ() error.", {cause: error});
+  } catch (error) { // Error occurs on missing field(s) in BQ table.
+    console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, error);
+    return result;
   }
 }
 

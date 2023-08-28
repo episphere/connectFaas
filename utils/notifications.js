@@ -117,14 +117,13 @@ async function notificationHandler(message) {
   if (notificationSpecArray.length === 0) return;
   const apiKey = await getSecrets();
   sgMail.setApiKey(apiKey);
-  console.log("apiKey length:", apiKey.length);
 
   const notificationPromises = [];
   for (const notificationSpec of notificationSpecArray) {
     notificationPromises.push(handleNotificationSpec(notificationSpec));
   }
 
-  await Promise.allSettled(notificationPromises);
+  await Promise.all(notificationPromises);
 }
 
 async function handleNotificationSpec(notificationSpec) {
@@ -143,12 +142,12 @@ async function handleNotificationSpec(notificationSpec) {
     paramObj = {...paramObj, cutoffTimeStr: cutoffTime.toISOString(), timeField: primaryField};
   }
 
-  console.log("paramObj:", JSON.stringify(paramObj));
   await getParticipantsAndSendEmails(paramObj);
 }
 
 async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, timeField}) {
   const notificationSpecId = notificationSpec.id;
+  if (!notificationSpecId) return;
   const conditions = notificationSpec.conditions;
   const messageBody = notificationSpec.email.body;
   const messageSubject = notificationSpec.email.subject;
@@ -164,7 +163,11 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
 
   let htmlContainsToken = false;
   let htmlContainsLoginDetails = false;
-  let fieldsToFetch = ["token", "state.uid", firstNameField, preferredNameField, emailField];
+  let fieldsToFetch = ["token", "state.uid"];
+  firstNameField && fieldsToFetch.push(firstNameField);
+  preferredNameField && fieldsToFetch.push(preferredNameField);
+  emailField && fieldsToFetch.push(emailField);
+
   htmlTemplate = htmlTemplate.replace("<firstName>", "{{firstName}}");
   if (htmlTemplate.includes("${token}")) {
     htmlContainsToken = true;
@@ -193,8 +196,7 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       limit,
       offset,
     }));
-    if (fetchedDataArray.length === 0) return;
-
+    if (fetchedDataArray.length === 0) break;
     let participantTokenArray = [];
     let notificationRecordArray = [];
     let personalizationArray = [];
@@ -234,6 +236,7 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
         to: fetchedData[emailField],
         substitutions,
       });
+      participantTokenArray.push(fetchedData.token);
 
       const notificationRecord = {
         notificationSpecificationsID: notificationSpecId,
@@ -253,7 +256,6 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       };
 
       notificationRecordArray.push(notificationRecord);
-      emailCount++;
     }
 
     if (personalizationArray.length === 0) continue;
@@ -271,9 +273,11 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
     try {
       await sgMail.send(msgBatch);
     } catch (error) {
-      console.error(`Error sending emails for ${notificationSpecId} (${messageSubject}).`, error);
-      return;
+      console.error(`Error sending emails for ${notificationSpecId}(${messageSubject}).`, error);
+      break;
     }
+
+    emailCount += personalizationArray.length;
 
     try {
       await Promise.all([
@@ -282,12 +286,12 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       ]);
     } catch (error) {
       console.error(`Error saving data for ${notificationSpecId}(${messageSubject}).`, error);
-      return;
+      break;
     }
 
     offset += limit;
   }
-  console.log(`Finished notification spec: ${notificationSpecId} (${messageSubject}), emails sent: ${emailCount}`);
+  console.log(`Finished notification spec: ${notificationSpecId}(${messageSubject}), emails sent: ${emailCount}`);
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
