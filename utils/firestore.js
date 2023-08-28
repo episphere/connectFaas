@@ -393,14 +393,16 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     }
 }
 
-const removeDocumentFromCollection = async (connectID) => {
+const removeDocumentFromCollection = async (connectID, token) => {
     try {
         while (listOfCollectionsRelatedToDataDestruction.length > 0) {
             const collection = listOfCollectionsRelatedToDataDestruction.shift();
-            const data = await db
-                .collection(collection)
-                .where("Connect_ID", "==", connectID)
-                .get();
+            const query = db.collection(collection)
+            const data =
+                collection === "notifications"
+                    ? await query.where("token", "==", token).get()
+                    : await query.where("Connect_ID", "==", connectID).get();
+            
             if (data.size !== 0) {
                 for (const dt of data.docs) {
                     await db.collection(collection).doc(dt.id).delete();
@@ -489,7 +491,10 @@ const removeParticipantsDataDestruction = async () => {
                 }
             }
             await batch.commit();
-            await removeDocumentFromCollection(participant['Connect_ID']);
+            await removeDocumentFromCollection(
+                participant["Connect_ID"],
+                participant["token"]
+            );
         }
 
         console.log(
