@@ -395,8 +395,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
 
 const removeDocumentFromCollection = async (connectID, token) => {
     try {
-        while (listOfCollectionsRelatedToDataDestruction.length > 0) {
-            const collection = listOfCollectionsRelatedToDataDestruction.shift();
+        for (const collection of listOfCollectionsRelatedToDataDestruction) {
             const query = db.collection(collection)
             const data =
                 collection === "notifications"
