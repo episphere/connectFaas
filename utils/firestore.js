@@ -1109,16 +1109,23 @@ const updateBox = async (id, data, loginSite) => {
     await db.collection('boxes').doc(docId).update(data);
 }
 
-
+/**
+ * Remove a bag from a box. Orphan tubes are treated as separate bags.
+ * @param {*} siteCode - Site code of the site where the box is located.
+ * @param {*} requestData - Single element array for regular bags and one element for stray tube for orphan bags.
+ * @returns - Success or Failure message.
+ */
 const removeBag = async (siteCode, requestData) => {
-    let boxId = requestData.boxId;
-    let bags = requestData.bags;
-    let currDate = requestData.date;
-    let hasOrphanFlag = 104430631; 
+    const boxId = requestData.boxId;
+    const bags = requestData.bags;
+    const currDate = requestData.date;
+    let hasOrphanFlag = 104430631;
+
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
+    
     if(snapshot.size === 1){
-      let doc = snapshot.docs[0];
-      let box = doc.data();
+      const doc = snapshot.docs[0];
+      const box = doc.data();
       
       for (let conceptID of bagConceptIDs) { 
           const currBag = box[conceptID];
@@ -1130,38 +1137,42 @@ const removeBag = async (siteCode, requestData) => {
           }
       }
 
-      let bagConceptIDIndex = 0;
-      for (let k of Object.keys(box)) { 
-          if (bagConceptIDs.includes(k)) {
-              const currBagConceptID = bagConceptIDs[bagConceptIDIndex];
-              if (currBagConceptID === k) continue;
-              box[currBagConceptID] = box[k];
-              delete box[k];
-              bagConceptIDIndex++;
+      // Create a new sorted box
+      let sortedBox = {};
+      for (let conceptID of bagConceptIDs) {
+          const foundKey = Object.keys(box).find(k => bagConceptIDs.includes(k));
+          if (foundKey) {
+              sortedBox[conceptID] = box[foundKey];
+              delete box[foundKey];
           }
       }
 
+      // Merge remaining properties from the original box to the sorted box
+      sortedBox = { ...sortedBox, ...box }
+
       // iterate over all current bag concept Ids and change the value of hasOrphanFlag
       for(let conceptID of bagConceptIDs) {
-        const currBag = box[conceptID];
+        const currBag = sortedBox[conceptID];
         if (!currBag) continue;
         if(currBag['255283733'] == 104430631 ) {
           hasOrphanFlag = 104430631;
-        }
-        else if (currBag['255283733'] == 353358909) {
+        } else if (currBag['255283733'] == 353358909) {
           hasOrphanFlag = 353358909;
-        }
-        else {
+        } else {
           hasOrphanFlag = 104430631;
         }
       }
       
-      await db.collection('boxes').doc(doc.id).set({ ...box, '555611076':currDate, '842312685':hasOrphanFlag  });
-      return 'Success!';
-    }
-    else {
+      try {
+        await db.collection('boxes').doc(doc.id).set({ ...sortedBox, '555611076':currDate, '842312685':hasOrphanFlag });
+        return 'Success!';
+      } catch (error) {
+        console.error('Error writing document: ', error);
+        throw new Error('Error updating the box in the database.');
+      }
+    } else {
       return 'Failure! Could not find box mentioned';
-  }   
+    }   
 }
 
 const reportMissingSpecimen = async (siteAcronym, requestData) => {
