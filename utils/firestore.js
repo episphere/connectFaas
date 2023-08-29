@@ -1139,7 +1139,7 @@ const removeBag = async (siteCode, requestData) => {
       }
 
       // Create a new sorted box
-      const sortedBox = {};
+      let sortedBox = {};
       for (let conceptID of bagConceptIDs) {
           const foundKey = Object.keys(box).find(k => bagConceptIDs.includes(k));
           if (foundKey) {
@@ -1148,10 +1148,8 @@ const removeBag = async (siteCode, requestData) => {
           }
       }
 
-      // Copy any remaining properties from the original box to the sorted box
-      for (let k of Object.keys(box)) {
-          sortedBox[k] = box[k];
-      }
+      // Merge remaining properties from the original box to the sorted box
+      sortedBox = { ...sortedBox, ...box }
 
       // iterate over all current bag concept Ids and change the value of hasOrphanFlag
       for(let conceptID of bagConceptIDs) {
