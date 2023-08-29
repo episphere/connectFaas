@@ -455,12 +455,22 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
+
         const {removeBag} = require('./firestore');
         const requestData = req.body;
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
 
-        await removeBag(siteCode, requestData);
-        return res.status(200).json({message: 'Success!', code:200});
+        try {
+            const result = await removeBag(siteCode, requestData);
+            if (result === 'Success!') {
+                return res.status(200).json({message: 'Success!', code:200});
+            } else {
+                return res.status(500).json({message: 'Failure. Could not remove bag.', code:500});
+            }
+        } catch (error) {
+            console.error('Error removing bag:', error);
+            return res.status(500).json({message: 'Error removing bag', code:500});
+        }
     }
     else if (api === 'reportMissingSpecimen'){
         if(req.method !== 'POST') {
