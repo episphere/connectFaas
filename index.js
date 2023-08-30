@@ -7,7 +7,7 @@ const { biospecimenAPIs } = require('./utils/biospecimen');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive');
 const { dashboard } = require('./utils/dashboard');
 const { getParticipantNotification } = require('./utils/notifications');
-const { importToBigQuery, firestoreExport } = require('./utils/events');
+const { importToBigQuery, firestoreExport, exportNotificationsToBucket, importNotificationsToBigquery } = require('./utils/events');
 const { participantDataCleanup } = require('./utils/participantDataCleanup');
 
 // API End-Points for Sites
@@ -55,6 +55,8 @@ exports.importToBigQuery = importToBigQuery;
   
 exports.scheduleFirestoreDataExport = firestoreExport;
 
+exports.exportNotificationsToBucket = exportNotificationsToBucket;
+exports.importNotificationsToBigquery = importNotificationsToBigquery;
 
 // End-Points for Participant Data Cleaning
 
