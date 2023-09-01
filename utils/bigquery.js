@@ -43,6 +43,9 @@ async function getParticipantsForNotificationsBQ({
   if (!notificationSpecId || Object.keys(conditions).length === 0) return result;
 
   const bqNotificationSpecId = notificationSpecId.replace(/-/g, "_").replace(/^(\d)/, "d_$1");
+  const bqFieldArray = fieldsToFetch
+    .map(convertToBigqueryKey)
+    .map((field) => `${field} AS ${field.replace(/\./g, "_DOT_")}`);
   let bqConditionArray = [];
 
   for (const [key, val] of Object.entries(conditions)) {
@@ -59,26 +62,36 @@ async function getParticipantsForNotificationsBQ({
     bqConditionArray.push(`${bqTimeField} <= "${cutoffTimeStr}"`);
   }
 
-  const bqFieldArray = fieldsToFetch
-    .map(convertToBigqueryKey)
-    .map((field) => `${field} AS ${field.replace(/\./g, "_DOT_")}`);
-  const queryStr = `SELECT ${bqFieldArray.length === 0 ? "*" : bqFieldArray.join(", ")} 
-    FROM \`Connect.participants\` 
-    WHERE ${bqConditionArray.join(" AND ")} 
-    AND query.notificationSpecIdsUsed.${bqNotificationSpecId} IS NOT true 
-    LIMIT ${limit} OFFSET ${offset}`;
+  const queryStrCommon = `SELECT ${
+    bqFieldArray.length === 0 ? "*" : bqFieldArray.join(", ")
+  } FROM \`Connect.participants\` WHERE ${bqConditionArray.join(" AND ")}`;
 
   try {
+    const queryStr = `${queryStrCommon} AND query.notificationSpecIdsUsed.${bqNotificationSpecId} IS NOT true LIMIT ${limit} OFFSET ${offset}`;
     const [rows] = await bigquery.query(queryStr);
     if (rows.length === 0) return result;
 
     result.hasNext = rows.length === limit;
-    result.fetchedDataArray = rows.map((data) => convertToFirestoreData(data));
-    return result;
-  } catch (error) { // Error occurs on missing field(s) in BQ table.
-    console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, error);
-    return result;
+    result.fetchedDataArray = rows.map(convertToFirestoreData);
+  } catch (error) {
+    // Error occurs on missing field(s) in BQ table.
+    if (error.message.includes(`Field name ${bqNotificationSpecId} does not exist`)) {
+      try {
+        const queryStr = `${queryStrCommon} LIMIT ${limit} OFFSET ${offset}`;
+        const [rows] = await bigquery.query(queryStr);
+        if (rows.length === 0) return result;
+
+        result.hasNext = rows.length === limit;
+        result.fetchedDataArray = rows.map(convertToFirestoreData);
+      } catch (err) {
+        console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, err);
+      }
+    } else {
+      console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, error);
+    }
   }
+
+  return result;
 }
 
 /**
