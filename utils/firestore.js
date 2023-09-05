@@ -2266,6 +2266,8 @@ const queryDailyReportParticipants = async () => {
             return Promise.all(promises).then((results) => {
                 return results.filter((result) => result !== undefined);
             });
+        } else {
+            return []
         }
     }
     catch(error) {
