@@ -17,4 +17,4 @@ substitutions:
   _ROLE: roles/cloudfunctions.invoker
   _RESOURCE: myconnect_firestore_backup_stage
   _EVENT: google.storage.object.finalize
-  _TOPIC: participant-data-cleanup
+  _TOPIC: Daily-Notifications-Backup
