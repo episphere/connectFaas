@@ -25,6 +25,7 @@ module.exports = {
     duplicate: 922622075,
     cannotBeVerified: 219863910,
     outreachTimeOut: 160161595,
+    shippingBoxId: 132929440,
 
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,
@@ -48,6 +49,7 @@ module.exports = {
         destroyData: 831041022,
         dateRequestedDataDestroy: 269050420,
         destroyDataCategorical: 883668444,
-        requestedAndSign: 704529432
-    }
-}
+        requestedAndSign: 704529432,
+        dataHasBeenDestroyed: 861639549,
+    },
+};
