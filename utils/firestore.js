@@ -2238,12 +2238,12 @@ const updateUserPhoneSigninMethod = async (phone, uid) => {
  * Queried from Participants & Biospecimen table
  */
 
-const queryDailyReportParticipants = async () => {
+const queryDailyReportParticipants = async (sitecode) => {
     const twoDaysinMilliseconds = 172800000;
     const twoDaysAgo = new Date(new Date().getTime() - (twoDaysinMilliseconds)).toISOString();
     let query = db.collection('participants');
     try {
-        const snapshot = await query.where('331584571.266600170.840048338', '>=', twoDaysAgo).get();
+        const snapshot = await query.where('331584571.266600170.840048338', '>=', twoDaysAgo).where('827220437', '==', sitecode).get();
         if (snapshot.size !== 0) {
             const promises = snapshot.docs.map(async (document) => {
                 return processQueryDailyReportParticipants(document);
