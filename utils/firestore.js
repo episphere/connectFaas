@@ -2312,13 +2312,12 @@ const getSpecimensByReceivedDate = async (receivedTimestamp) => {
     try {
         const boxes = await getBoxesByReceivedDate(receivedTimestamp);
         const collectionIdArray = extractCollectionIdsFromBoxes(boxes);
-        console.log('collectionIdArray', collectionIdArray)
         if (collectionIdArray.length === 0) {
             return [];
         }
 
         const specimenCollections = await getSpecimensByCollectionIds(collectionIdArray, true);
-        const specimenData = processSpecimenCollections(specimenCollections, receivedTimestamp, tubeConceptIds);
+        const specimenData = processSpecimenCollections(specimenCollections, receivedTimestamp);
 
         return specimenData;
     } catch (error) {
