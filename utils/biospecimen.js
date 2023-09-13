@@ -472,6 +472,39 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(500).json({message: 'Error removing bag', code:500});
         }
     }
+    else if (api === 'getSpecimensByCollectionIds'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        const collectionIdArray = req.query.collectionIdArray.split(',');
+        const isBPTL = req.query.isBPTL ?? false;
+        if (!collectionIdArray) return res.status(400).json(getResponseJSON('CollectionIdArray is missing.', 400));
+
+        try {
+            const { getSpecimensByCollectionIds } = require('./firestore');
+            const specimensList = await getSpecimensByCollectionIds(collectionIdArray, isBPTL, siteCode);
+            return res.status(200).json({data: specimensList, code:200});
+        } catch (error) {
+            return res.status(500).json({ message: `Internal Server Error running getSpecimensByCollectionIds(), ${error}`, code: 500 });
+        }
+    }
+    else if (api === 'getSpecimensByReceivedDate'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        const receivedTimestamp = req.query.receivedTimestamp;
+        if (!receivedTimestamp) return res.status(400).json(getResponseJSON('Timestamp is missing.', 400));
+
+        try {
+            const { getSpecimensByReceivedDate } = require('./firestore');
+            const boxesByReceivedDateBPTL = await getSpecimensByReceivedDate(receivedTimestamp);
+            return res.status(200).json({data: boxesByReceivedDateBPTL, code:200});
+        } catch (error) {
+            return res.status(500).json({ message: `Internal Server Error running getSpecimensByReceivedDate(), ${error}`, code: 500 });
+        }
+    }
     else if (api === 'reportMissingSpecimen'){
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
@@ -482,8 +515,6 @@ const biospecimenAPIs = async (req, res) => {
 
         await reportMissingSpecimen(siteAcronym, requestData);
         return res.status(200).json({message: 'Success!', code:200});
- 
-
     }
     else if (api === 'getLocations'){
         if(req.method !== 'GET') {

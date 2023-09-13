@@ -2305,6 +2305,58 @@ const getRestrictedFields = async () => {
     return snapshot.docs[0].data().restrictedFields;
 }
 
+// This is for managing received boxes in BPTL only.
+// receivedTimestamp format has year, month, date. Time is not specified. 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'
+const getSpecimensByReceivedDate = async (receivedTimestamp) => {
+    const { extractCollectionIdsFromBoxes, processSpecimenCollections } = require('./shared');
+    try {
+        const boxes = await getBoxesByReceivedDate(receivedTimestamp);
+        const collectionIdArray = extractCollectionIdsFromBoxes(boxes);
+        console.log('collectionIdArray', collectionIdArray)
+        if (collectionIdArray.length === 0) {
+            return [];
+        }
+
+        const specimenCollections = await getSpecimensByCollectionIds(collectionIdArray, true);
+        const specimenData = processSpecimenCollections(specimenCollections, receivedTimestamp, tubeConceptIds);
+
+        return specimenData;
+    } catch (error) {
+        error.message = `Error fetching specimens by received date: ${error.message}`;
+        throw error;
+    }
+}
+
+// This is for managing received boxes in BPTL only.
+// receivedTimestamp format has year, month, date. Time is not specified. 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'
+const getBoxesByReceivedDate = async (receivedTimestamp) => {
+    const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
+    return snapshot.docs.map(doc => doc.data());
+}
+
+// Get biospecimen docs from collectionIdsArray (conceptId: 820476880). Ex: ['CXA123456', 'CXA234567', 'CXA345678']
+const getSpecimensByCollectionIds = async (collectionIdsArray, isBPTL = false, siteCode) => {
+    try {
+        if (collectionIdsArray.length < 30) {
+            const snapshots = isBPTL 
+                ? await db.collection('biospecimen').where('820476880', 'in', collectionIdsArray).get()
+                : await db.collection('biospecimen').where('820476880', 'in', collectionIdsArray).where('827220437', '==', siteCode).get();
+            return snapshots.docs.map(doc => doc.data());
+        } else {
+            const queries = collectionIdsArray.map(collectionId => {
+                return isBPTL
+                    ? db.collection('biospecimen').where('820476880', '==', collectionId).get()
+                    : db.collection('biospecimen').where('820476880', '==', collectionId).where('827220437', '==', siteCode).get();
+            });
+            return (await Promise.all(queries))
+                .map(result => result.docs.map(doc => doc.data()))
+                .flat();
+        }
+    } catch (error) {
+        throw error;
+    }
+}
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -2408,4 +2460,6 @@ module.exports = {
     queryDailyReportParticipants,
     saveNotificationBatch,
     saveSpecIdsToParticipants,
+    getSpecimensByReceivedDate,
+    getSpecimensByCollectionIds,
 }

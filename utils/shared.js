@@ -797,6 +797,82 @@ const redactEmailLoginInfo = (participantEmail) => {
 
 const redactPhoneLoginInfo = (participantPhone) => "***-***-" + participantPhone.slice(-4);
 
+// Note: '223999569' is Biohazard bag (mouthwash) scan, '787237543' is Biohazard bag (blood/urine) scan, '522094118' is Orphan bag scan. These are not tubes.
+const tubeConceptIds = [
+    '143615646', // Mouthwash tube 1
+    '232343615', // Serum separator tube 4
+    '299553921', // Serum separator tube 1
+    '376960806', // Serum separator tube 3
+    '454453939', // EDTA tube 1
+    '589588440', // Serum separator tube 5
+    '652357376', // ACD tube 1
+    '677469051', // EDTA tube 2
+    '683613884', // EDTA tube 3
+    '703954371', // Serum separator tube 2
+    '838567176', // Heparin tube 1
+    '958646668', // Heparin tube 2
+    '973670172', // Urine tube 1
+];
+
+// Extract all the collectionIds from a list of boxes, return an array of unique collectionIds.
+// Bag types: 787237543 (Biohazard Blood/Urine), 223999569 (Biohazard Mouthwash), 522094118 (Orphan)
+const extractCollectionIdsFromBoxes = (boxesList) => {
+    const { bagConceptIDs } = require('./shared');
+    const collectionIdSet = new Set();
+    for (const box of boxesList) {
+        for (const bag of bagConceptIDs) {
+            if (box[bag]) {
+                //console.log(box[bag]);
+                const bagId = box[bag]['787237543'] || box[bag]['223999569'] || box[bag]['522094118'];
+                //console.log('bagId', bagId);
+                const collectionId = bagId.split(' ')[0];
+                if (collectionId) {
+                    collectionIdSet.add(collectionId);
+                }
+            }
+        }
+    }
+    return Array.from(collectionIdSet);
+}
+
+// process fetched specimen collections, filter out tubes that are not received on the receivedTimestamp day.
+// return specimen data array with modified tube data
+const processSpecimenCollections = (specimenCollections, receivedTimestamp, tubeConceptIds) => {
+    let tubeCount = 0;
+    const specimenDataArray = [];
+
+    for (const specimenCollection of specimenCollections) {
+        let hasSpecimens = false;
+
+        const filteredSpecimens = tubeConceptIds.reduce((acc, key) => {
+            const tube = specimenCollection[key];
+            if (tube && tube['926457119'] === receivedTimestamp) {
+                tubeCount++;
+                acc[key] = tube;
+                hasSpecimens = true;
+            }
+            return acc;
+        }, {});
+
+        if (hasSpecimens) {
+            specimenDataArray.push({
+                'specimens': filteredSpecimens,
+                '820476880': specimenCollection['820476880'],
+                '926457119': specimenCollection['926457119'],
+                '678166505': specimenCollection['678166505'],
+                '827220437': specimenCollection['827220437'],
+                '951355211': specimenCollection['951355211'],
+                '915838974': specimenCollection['915838974'],
+                '650516960': specimenCollection['650516960'],
+                'Connect_ID': specimenCollection['Connect_ID'],
+            });
+        }
+    }
+
+    return specimenDataArray;
+}
+
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -836,4 +912,7 @@ module.exports = {
     createChunkArray,
     redactEmailLoginInfo,
     redactPhoneLoginInfo,
+    tubeConceptIds,
+    extractCollectionIdsFromBoxes,
+    processSpecimenCollections,
 };
