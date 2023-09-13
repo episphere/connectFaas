@@ -2335,12 +2335,14 @@ const getBoxesByReceivedDate = async (receivedTimestamp) => {
 }
 
 // Get biospecimen docs from collectionIdsArray (conceptId: 820476880). Ex: ['CXA123456', 'CXA234567', 'CXA345678']
+// Max 30 disjunctions for 'in' queries: array length <= 30 for BPTL, <= 15 for site due to extra .where() clause in site query 
 const getSpecimensByCollectionIds = async (collectionIdsArray, isBPTL = false, siteCode) => {
     try {
-        if (collectionIdsArray.length < 30) {
-            const snapshots = isBPTL 
-                ? await db.collection('biospecimen').where('820476880', 'in', collectionIdsArray).get()
-                : await db.collection('biospecimen').where('820476880', 'in', collectionIdsArray).where('827220437', '==', siteCode).get();
+        if (collectionIdsArray.length <= 30 && isBPTL) {
+            const snapshots = await db.collection('biospecimen').where('820476880', 'in', collectionIdsArray).get()
+            return snapshots.docs.map(doc => doc.data());
+        } else if (collectionIdsArray.length <= 15 && !isBPTL) {
+            const snapshots = await db.collection('biospecimen').where('820476880', 'in', collectionIdsArray).where('827220437', '==', siteCode).get();
             return snapshots.docs.map(doc => doc.data());
         } else {
             const queries = collectionIdsArray.map(collectionId => {
