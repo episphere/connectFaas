@@ -1,4 +1,5 @@
 const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation, convertSiteLoginToNumber } = require('./shared');
+const fieldMapping = require('./fieldToConceptIdMapping');
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -359,70 +360,89 @@ const biospecimenAPIs = async (req, res) => {
         const response = await searchBoxesByLocation(siteCode, location);
         return res.status(200).json({data: response, code:200});
     }
+    else if (api === 'getBoxesById') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        const boxIdQuery = req.query.boxIdArray;
+        if (!boxIdQuery) return res.status(400).json(getResponseJSON('BoxIdArray is missing.', 400));
+        
+        const isBPTL = req.query.isBPTL ?? false;
+        const boxIdArray = boxIdQuery.split(',');
+
+        try {
+            const { getBoxesByBoxId } = require('./firestore');
+            const boxesList = await getBoxesByBoxId(boxIdArray, siteCode, isBPTL);
+            return res.status(200).json({data: boxesList, code:200});
+        } catch (error) {
+            return res.status(500).json({ message: `Internal Server Error running getBoxesById(), ${error}`, code: 500 });
+        }
+    }
     else if(api === 'ship'){
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
 
+        // Confirm request data
         const boxIdToTrackingNumberMap = req.body.boxIdToTrackingNumberMap;
         const shippingData = req.body.shippingData;
+
         if (!boxIdToTrackingNumberMap || !shippingData) {
-          return res
-            .status(400)
-            .json(getResponseJSON('Request data is incomplete!', 400));
+            return res.status(400).json(getResponseJSON('Request data is incomplete!', 400));
         }
 
-        const requiredKeysInShippingdData = ['666553960', '948887825'];
+        // Confirm shipmentCourier & shipperEmail are in shippingData
+        const requiredKeysInShippingdData = [`${fieldMapping.shipmentCourier}`, `${fieldMapping.shipperEmail}`];
         for (const key of requiredKeysInShippingdData) {
-          if (!shippingData[key]) {
-            return res
-              .status(400)
-              .json(getResponseJSON(`Required key ${key} is missing in shipping data!`,400));
-          }
+            if (!shippingData[key]) {
+                return res.status(400).json(getResponseJSON(`Required key ${key} is missing in shipping data!`,400));
+            }
         }
 
+        // Confirm Box Ids Exist
         const boxIdArray = Object.keys(boxIdToTrackingNumberMap);
         if (boxIdArray.length === 0 ) {
-          return res.status(400).json(getResponseJSON('No box data found in request!', 400));
+            return res.status(400).json(getResponseJSON('No box data found in request!', 400));
         }
-        
-        const { shipBatchBoxes} = require('./firestore');
         
         let {boxWithTempMonitor, ...sharedShipmentData} = shippingData;
         
         sharedShipmentData = {
-          ...sharedShipmentData,
-          656548982: new Date().toISOString(),
-          145971562: 353358909,
-          105891443: 104430631,
+            ...sharedShipmentData,
+            [fieldMapping.submitShipmentTimestamp]: new Date().toISOString(),
+            [fieldMapping.submitShipmentFlag]: fieldMapping.yes,
+            [fieldMapping.temperatureProbeInBox]: fieldMapping.no,
         };
 
-        let boxIdAndShipmentDataArray = [];
+        const boxIdAndShipmentDataArray = [];
 
         for (const boxId of boxIdArray) {
-          let shipmentData = {
-            ...sharedShipmentData,
-            959708259: boxIdToTrackingNumberMap[boxId],
-          };
+            const shipmentData = {
+                ...sharedShipmentData,
+                [fieldMapping.boxTrackingNumberScan]: boxIdToTrackingNumberMap[boxId],
+            };
 
-          if (boxWithTempMonitor === boxId) {
-            shipmentData['105891443'] = 353358909;
-          }
+            if (boxWithTempMonitor === boxId) {
+                shipmentData[fieldMapping.temperatureProbeInBox] = fieldMapping.yes;
+            }
 
-          boxIdAndShipmentDataArray.push({boxId, shipmentData});
+            boxIdAndShipmentDataArray.push({boxId, shipmentData});
         }
 
         try {
-          const isShipmentSuccessful = await shipBatchBoxes(boxIdAndShipmentDataArray, siteCode);
-          if (!isShipmentSuccessful) {
-            return res.status(500).json({ message: 'Failed to save box data', code: 500 });
-          }
-          return res.status(200).json({ message: 'Success!', code: 200 });
+            const { shipBatchBoxes} = require('./firestore');
+            
+            const isShipmentSuccessful = await shipBatchBoxes(boxIdAndShipmentDataArray, siteCode);
+            if (!isShipmentSuccessful) {
+                return res.status(500).json({ message: 'Failed to save box data', code: 500 });
+            }
+            
+            return res.status(200).json({ message: 'Success!', code: 200 });
         } catch (error) {
-          console.log("Error occurred when running shipBatchBoxes():\n", error);
-          return res.status(500).json({ message: 'Internal Server Error', code: 500 });
-        }
-        
+            console.error(`Error occurred when running shipBatchBoxes(): ${error}`);
+            return res.status(500).json({ message: `Internal Server Error: ${error}`, code: 500 });
+        }    
     }
     else if (api === 'updateParticipantData') {
         const { updateParticipantData } = require('./sites');
