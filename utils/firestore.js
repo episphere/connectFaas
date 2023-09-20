@@ -535,9 +535,8 @@ const removeUninvitedParticipants = async () => {
 }
 
 /**
- * 
- * @param {string} id 
- * @returns
+ * Get site codes of children entities
+ * @param {string} id - Entity ID
  */
 const getChildren = async (id) => {
     try{
@@ -547,20 +546,18 @@ const getChildren = async (id) => {
         if(snapShot.size > 0) {
             /** @type {number[]} */
             const siteCodes = [];
-            snapShot.docs.map(document => {
+            snapShot.docs.forEach(document => {
                 if(document.data().siteCode){
                     siteCodes.push(document.data().siteCode);
                 }
             });
             return siteCodes;
         }
-        else{
-            return false;
-        }
+        return [];
     }
     catch(error){
         console.error(error);
-        return false;
+        return [];
     }
 }
 

@@ -1,4 +1,5 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getStatsFromBQ } = require('./bigquery');
 
 const stats = async (req, res, authObj) => {
     logIPAdddress(req);
@@ -77,6 +78,8 @@ const shortNameToTableName = {
   biospecimen: 'participants_biospecimen',
 };
 
+const shortNameArray = Object.keys(shortNameToTableName);
+
 /**
  * Retrieve all stats in one call for dashboard display
  * @param {Request} req 
@@ -89,20 +92,25 @@ const getStatsForDashboard = async (req, res, authObj) => {
     return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
   }
 
-  const { getStatsFromBQ } = require('./bigquery');
   const siteCodes = authObj.siteCodes;
   let data = {};
   console.log(`Retrieveing stats data for siteCode: ${siteCodes}`);
 
   try {
-    for (const [shortName, tableName] of Object.entries(shortNameToTableName)) {
-      data[shortName] = await getStatsFromBQ(tableName, siteCodes);
+    let promiseArray = [];
+    for (const shortName of shortNameArray) {
+      promiseArray.push(getStatsFromBQ(shortNameToTableName[shortName], siteCodes));
     }
-    
-    return res.status(200).json({ data: [{...data}], code: 200 });
+
+    const results = await Promise.all(promiseArray);
+    for (const [index, result] of results.entries()) {
+      data[shortNameArray[index]] = result;
+    }
+
+    return res.status(200).json({data: [data], code: 200});
   } catch (error) {
-    console.error('Error occured when querying stats dataset:', error);
-    return res.status(500).json({ message: 'Internal server error', code: 500, data: []});
+    console.error("Error occured when querying stats dataset.", error);
+    return res.status(500).json({message: "Internal server error", code: 500, data: []});
   }
 };
 

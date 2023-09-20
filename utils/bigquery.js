@@ -147,7 +147,13 @@ const getStatsFromBQ = async (tableName, siteCode) => {
     location: "US",
     params: { siteCode: Array.isArray(siteCode) ? siteCode : [siteCode] },
   };
-  const [rows] = await bigquery.query(options);
+  
+  let rows = [];
+  try {
+    [rows] = await bigquery.query(options);
+  } catch (error) {
+    console.error("getStatsFromBQ() error.", error);
+  }
   
   return rows;
 };

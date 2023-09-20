@@ -587,9 +587,8 @@ const isParentEntity = async (siteDetails) => {
 
     const id = siteDetails.id;
     let siteCodes = await getChildren(id);
-    let isParent = !!siteCodes;
-    
-    siteCodes = siteCodes || siteDetails.siteCode;
+    siteCodes = siteCodes.length > 0 ? siteCodes : siteDetails.siteCode;
+    const isParent = siteCodes.length > 0;
 
     return {...siteDetails, isParent, siteCodes};
 };
