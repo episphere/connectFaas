@@ -241,8 +241,20 @@ const biospecimenAPIs = async (req, res) => {
               console.error('Error occurred when running searchSpecimen:', error);
               return res.status(500).json({ data: {}, message: 'Error occurred when running searchSpecimen.', code: 500 });
             }
-        }
-        else {
+        } else if (req.query.requestedSite && req.query.boxId) {
+            const { getSiteLocationBox, getBiospecimenCollectionIdsFromBox, getBiospecimenDocs, searchSpecimenBySiteAndBoxId } = require('./firestore');
+            const requestedSite = convertSiteLoginToNumber(req.query.requestedSite);
+            const boxId = req.query.boxId;
+            console.log("requestedSite box Id", requestedSite, typeof requestedSite, "--", boxId, typeof boxId)
+            try {
+                const biospecimenData = await searchSpecimenBySiteAndBoxId(requestedSite, boxId);
+                return res.status(200).json({ data: biospecimenData, message: 'Success!', code: 200 });
+                
+            } catch (error) {
+                console.error('Error occurred when running searchSpecimenBySiteAndBoxId:', error);
+                return res.status(500).json({ data: {}, message: error, code: 500 });
+            }
+        } else {
             const { searchShipments } = require('./firestore');
             const requestedSite = convertSiteLoginToNumber(req.query.requestedSite);
             const response = requestedSite ? await searchShipments(requestedSite) : await searchShipments(siteCode);
@@ -345,9 +357,14 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-            const { searchBoxes } = require('./firestore');
-            const response = await searchBoxes(siteCode, req.query.source === `bptl` ? `bptl` : ``);
-            return res.status(200).json({data: response, code:200});
+        const { searchBoxes } = require('./firestore');
+        let querySource = '';
+        if (req.query.source === `bptl` || req.query.source === `bptlPackagesInTransit`) { 
+            querySource = req.query.source;
+        }
+        const response = await searchBoxes(siteCode, querySource);
+        console.log("querySource response", querySource, response);
+        return res.status(200).json({data: response, code:200});
     }
     else if (api === 'searchBoxesByLocation'){
         if(req.method !== 'POST') {

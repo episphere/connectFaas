@@ -1237,6 +1237,118 @@ const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
     return {};
 }
 
+const getSiteLocationBox = async (requestedSite, boxId) => {
+    try {
+        const snapshot = await db.collection('boxes')
+                                .where(fieldMapping.loginSite.toString(), "==", requestedSite)
+                                .where(fieldMapping.shippingBoxId.toString(), "==", boxId).get();
+        const boxMatch = [];
+        for(let doc of snapshot.docs) {
+            boxMatch.push(doc.data());
+        }
+        // console.log("boxMatch",boxMatch, boxMatch.length);
+        return boxMatch;
+    }
+    catch(error) {
+        console.log("getSiteLocationBox error", error);
+        // add throw error
+    }
+}
+
+const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
+    try {
+        const shipBoxMatch = await getSiteLocationBox(requestedSite, boxId);
+        // const shipBoxMatch = testBox // use for testing boxes with copied data 
+        console.log("shipBoxMatch", shipBoxMatch)
+        if (shipBoxMatch === undefined || shipBoxMatch.length === 0) return [];
+        else {
+            let shipBoxObj = shipBoxMatch[0]
+            // loop over keys using bagConceptIdList as a reference 
+            console.log("shipBoxObj", shipBoxObj);
+            const collectionIdArray = [];
+            const bagConceptIdList = Object.values(fieldMapping.bagContainerCids);
+            console.log("bagConceptIdList", bagConceptIdList)
+            for (let key in shipBoxObj) {
+
+            // console.log("key", key, typeof key)
+            // console.log(bagConceptIdList.includes(key))
+            // console.log("bagConceptIdList", bagConceptIdList)
+            
+            
+                if (bagConceptIdList.includes(parseInt(key))) {
+                    const bagContainerContent = shipBoxObj[key];
+                    // const bagContainerContentKeys = Object.keys(bagContainerContent);
+                    // console.log("bagContainerContent", bagContainerContent)
+                    // console.log("---------------------")
+                    const bloodUrineScan = fieldMapping.tubesBagsCids.biohazardBagScan;
+                    const mouthwashScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
+                    const orphanScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
+                    // console.log("bagContainerContent","Looping" ,bagContainerContent)
+                    // loop over nested bagContainerContentKeys 
+                    // condition where bagContainerContentKeys is one of the three conceptIds
+                    console.log("bagContainerContent√√√√", bagContainerContent)
+                    for (let key in bagContainerContent) {
+                        // console.log("key√√", key)
+                        if (parseInt(key) === bloodUrineScan || 
+                            parseInt(key) === mouthwashScan || 
+                            parseInt(key) === orphanScan) {
+                            if (bagContainerContent[key] !== '') {
+                                console.log("push", "------" , key ,bagContainerContent[key])
+                                // extract the collectionId and push to collectionIdArray
+                                const collectionIdString = bagContainerContent[key].split(" ")[0]
+                                // check if collectionIdString is already in, if it isn't push it
+                                if (!collectionIdArray.includes(collectionIdString)) {
+                                    collectionIdArray.push(collectionIdString);
+                                }
+                                // collectionIdArray.push(bagContainerContent[key]);
+                                break;
+                            } 
+                        }   
+                    }
+                }
+            }
+            console.log("collectionIdArray", collectionIdArray)
+            return collectionIdArray
+        } 
+    } catch(error) {
+        console.log("getBiospecimenCollectionIdsFromBox error", error)
+        // add throw error
+    }
+}
+
+const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => { // 1
+    console.log("requestedSite, boxId", requestedSite, boxId)
+    try {
+        const collectionIdArray = await getBiospecimenCollectionIdsFromBox(requestedSite, boxId); // 2
+        // return
+        // if (collectionIdArray)
+        
+        // const collectionId = collectionIdArray[0];
+        // console.log("collectionId", collectionId, typeof collectionId)
+        // 827220437
+        
+        const snapshot = await db.collection('biospecimen').where(fieldMapping.healthCareProvider.toString(), "==", requestedSite).where(fieldMapping.collectionId.toString(), "in", collectionIdArray).get();
+        console.log("🚀 ~ file: firestore.js:1337 ~ searchSpecimenBySiteAndBoxId ~ snapshot:", snapshot)
+        const biospecimenDocs = [];
+        if (snapshot.empty) {
+            console.log('No matching documents.');
+            return;
+        } else {
+            for(let doc of snapshot.docs) {
+                biospecimenDocs.push(doc.data());
+            }
+        }
+        console.log("biospecimenDocs", biospecimenDocs, biospecimenDocs.length)
+        return biospecimenDocs;
+    }
+    catch(error) {
+        console.log("searchSpecimenBySiteAndBoxId error", error)
+        // add throw error
+    }
+    
+
+}
+
 const searchShipments = async (siteCode) => {
     const { reportMissingTube, submitShipmentFlag, no } = fieldMapping;
     const healthCareProvider = fieldMapping.healthCareProvider.toString();
@@ -1369,16 +1481,21 @@ const getLocations = async (institute) => {
 
 const searchBoxes = async (institute, flag) => {
     let snapshot = ``
-    if ((institute === nciCode || institute == nciConceptId) && flag === `bptl`) {
-        snapshot = await db.collection('boxes').get()
-    } 
-    else { 
+    if ((institute === nciCode || institute == nciConceptId)) {
+        if (flag === `bptl`) {
+            console.log("bptl")
+            snapshot = await db.collection('boxes').get();
+        } else if (flag === `bptlPackagesInTransit`) {
+            console.log("bptlPackagesInTransit")
+            snapshot = await db.collection("boxes").where(fieldMapping.submitShipmentFlag.toString(), "==", 353358909).where(fieldMapping.siteShipmentReceived.toString(), "==", 104430631).get();
+        }
+    } else { 
         snapshot = await db.collection('boxes').where('789843387', '==', institute).get()
     }
-    if(snapshot.size !== 0){
+
+    if (snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
-    }
-    else{
+    } else {
         return [];
     }
 }
@@ -2408,4 +2525,5 @@ module.exports = {
     queryDailyReportParticipants,
     saveNotificationBatch,
     saveSpecIdsToParticipants,
+    searchSpecimenBySiteAndBoxId
 }
