@@ -363,7 +363,6 @@ const biospecimenAPIs = async (req, res) => {
             querySource = req.query.source;
         }
         const response = await searchBoxes(siteCode, querySource);
-        console.log("querySource response", querySource, response);
         return res.status(200).json({data: response, code:200});
     }
     else if (api === 'searchBoxesByLocation'){
