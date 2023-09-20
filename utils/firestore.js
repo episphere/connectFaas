@@ -1433,12 +1433,12 @@ const getBoxesPagination = async (siteCode, body) => {
     const currPage = body.pageNumber;
     const orderByField = body.orderBy;
     const elementsPerPage = body.elementsPerPage;
-    const filters = body.filters || {};
-    const source = body.source || '';
+    const filters = body.filters ?? {};
+    const source = body.source ?? '';
 
-    const startDate = filters.startDate || '0';
-    const trackingId = filters.trackingId || '';
-    const endDate = filters.endDate || '0';
+    const startDate = filters.startDate ?? '0';
+    const trackingId = filters.trackingId ?? '';
+    const endDate = filters.endDate ?? '0';
 
     let query = db.collection('boxes').where('145971562', '==', 353358909);
 
