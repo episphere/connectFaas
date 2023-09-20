@@ -1463,11 +1463,13 @@ const getLocations = async (institute) => {
 
 const searchBoxes = async (institute, flag) => {
     let snapshot = ``
-    if ((institute === nciCode || institute == nciConceptId)) {
+    if (institute === nciCode || institute == nciConceptId) {
         if (flag === `bptl`) {
             snapshot = await db.collection('boxes').get();
         } else if (flag === `bptlPackagesInTransit`) {
-            snapshot = await db.collection("boxes").where(fieldMapping.submitShipmentFlag.toString(), "==", 353358909).where(fieldMapping.siteShipmentReceived.toString(), "==", 104430631).get();
+            snapshot = await db.collection("boxes")
+                            .where(fieldMapping.submitShipmentFlag.toString(), "==", fieldMapping.yes)
+                            .where(fieldMapping.siteShipmentReceived.toString(), "==", fieldMapping.no).get();
         }
     } else { 
         snapshot = await db.collection('boxes').where('789843387', '==', institute).get()

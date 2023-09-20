@@ -242,10 +242,10 @@ const biospecimenAPIs = async (req, res) => {
               return res.status(500).json({ data: {}, message: 'Error occurred when running searchSpecimen.', code: 500 });
             }
         } else if (req.query.requestedSite && req.query.boxId) {
-            const { getSiteLocationBox, getBiospecimenCollectionIdsFromBox, getBiospecimenDocs, searchSpecimenBySiteAndBoxId } = require('./firestore');
+            const { searchSpecimenBySiteAndBoxId } = require('./firestore');
             const requestedSite = convertSiteLoginToNumber(req.query.requestedSite);
             const boxId = req.query.boxId;
-            console.log("requestedSite box Id", requestedSite, typeof requestedSite, "--", boxId, typeof boxId)
+
             try {
                 const biospecimenData = await searchSpecimenBySiteAndBoxId(requestedSite, boxId);
                 return res.status(200).json({ data: biospecimenData, message: 'Success!', code: 200 });
@@ -260,7 +260,6 @@ const biospecimenAPIs = async (req, res) => {
             const response = requestedSite ? await searchShipments(requestedSite) : await searchShipments(siteCode);
             return res.status(200).json({data: response, code:200});
         }
-        
     }
     else if(api === 'getParticipantCollections') {
         if(req.method !== 'GET') {
@@ -363,7 +362,7 @@ const biospecimenAPIs = async (req, res) => {
             querySource = req.query.source;
         }
         const response = await searchBoxes(siteCode, querySource);
-        return res.status(200).json({data: response, code:200});
+        return res.status(200).json({data: response, code: 200});
     }
     else if (api === 'searchBoxesByLocation'){
         if(req.method !== 'POST') {
