@@ -1267,43 +1267,43 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
         const shipBoxMatch = await getSiteLocationBox(requestedSite, boxId);
 
         if (shipBoxMatch === undefined || shipBoxMatch.length === 0) return [];
-        else {
-            let shipBoxObj = shipBoxMatch[0];
-            const collectionIdArray = [];
-            const bagConceptIdList = Object.values(fieldMapping.bagContainerCids);
+        
+        const shipBoxObj = shipBoxMatch[0];
+        const collectionIdArray = [];
+        const bagConceptIdList = Object.values(fieldMapping.bagContainerCids);
 
-            for (let key in shipBoxObj) {
-            // check if key is in bagConceptIdList array of conceptIds
-                if (bagConceptIdList.includes(parseInt(key))) {
-                    const bagContainerContent = shipBoxObj[key]; 
-                    const bloodUrineScan = fieldMapping.tubesBagsCids.biohazardBagScan;
-                    const mouthwashScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
-                    const orphanScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
+        for (let key in shipBoxObj) {
+        // check if key is in bagConceptIdList array of conceptIds
+            if (bagConceptIdList.includes(parseInt(key))) {
+                const bagContainerContent = shipBoxObj[key]; 
+                const bloodUrineScan = fieldMapping.tubesBagsCids.biohazardBagScan;
+                const mouthwashScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
+                const orphanScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
 
-                    // Loop through the bagContainerContent to find the collectionId
-                    for (let key in bagContainerContent) {
-                        if (parseInt(key) === bloodUrineScan || 
-                            parseInt(key) === mouthwashScan || 
-                            parseInt(key) === orphanScan) {
-                            if (bagContainerContent[key] !== '') {
-                                // extract the collectionId and push to collectionIdArray
-                                const collectionIdString = bagContainerContent[key].split(" ")[0]
-                                // check if collectionIdString is already in, if it isn't push it
-                                if (!collectionIdArray.includes(collectionIdString)) {
-                                    collectionIdArray.push(collectionIdString);
-                                }
-                                break;
-                            } 
-                        }   
-                    }
+                // Loop through the bagContainerContent to find the collectionId
+                for (let key in bagContainerContent) {
+                    if (parseInt(key) === bloodUrineScan || 
+                        parseInt(key) === mouthwashScan || 
+                        parseInt(key) === orphanScan) {
+                        if (bagContainerContent[key] !== '') {
+                            // extract the collectionId and push to collectionIdArray
+                            const collectionIdString = bagContainerContent[key].split(" ")[0]
+                            // check if collectionIdString is already in, if it isn't push it
+                            if (!collectionIdArray.includes(collectionIdString)) {
+                                collectionIdArray.push(collectionIdString);
+                            }
+                            break;
+                        } 
+                    }   
                 }
             }
-            return collectionIdArray
+        return collectionIdArray;
         } 
     } catch (error) {
         throw new Error("getBiospecimenCollectionIdsFromBox() error.", {cause: error});
     }
 }
+
 /** 
  * return an array of biospecimen documents that match the healthcare provider and collectionId from collectionIdArray
  * calls getBiospecimenCollectionIdsFromBox to get the collectionIdArray
@@ -1319,11 +1319,10 @@ const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
                                 .where(fieldMapping.collectionId.toString(), "in", collectionIdArray).get();
         const biospecimenDocs = [];
 
-        if (snapshot.empty) return;
-        else {
-            for (let document of snapshot.docs) {
-                biospecimenDocs.push(document.data());
-            }
+        if (snapshot.empty) return biospecimenDocs;
+
+        for (let document of snapshot.docs) {
+            biospecimenDocs.push(document.data());
         }
         return biospecimenDocs;
     } catch (error) {
@@ -1462,17 +1461,19 @@ const getLocations = async (institute) => {
 }
 
 const searchBoxes = async (institute, flag) => {
-    let snapshot = ``
-    if (institute === nciCode || institute == nciConceptId) {
+    const boxesCollection = db.collection('boxes');
+    let snapshot = ``;
+
+    if (flag && (institute === nciCode || institute == nciConceptId)) {
         if (flag === `bptl`) {
-            snapshot = await db.collection('boxes').get();
+            snapshot = await boxesCollection.get();
         } else if (flag === `bptlPackagesInTransit`) {
-            snapshot = await db.collection("boxes")
+            snapshot = await boxesCollection
                             .where(fieldMapping.submitShipmentFlag.toString(), "==", fieldMapping.yes)
                             .where(fieldMapping.siteShipmentReceived.toString(), "==", fieldMapping.no).get();
         }
     } else { 
-        snapshot = await db.collection('boxes').where('789843387', '==', institute).get()
+        snapshot = await boxesCollection.where(fieldMapping.loginSite.toString(), '==', institute).get()
     }
 
     if (snapshot.size !== 0){
