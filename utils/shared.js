@@ -822,9 +822,7 @@ const extractCollectionIdsFromBoxes = (boxesList) => {
     for (const box of boxesList) {
         for (const bag of bagConceptIDs) {
             if (box[bag]) {
-                //console.log(box[bag]);
                 const bagId = box[bag]['787237543'] || box[bag]['223999569'] || box[bag]['522094118'];
-                //console.log('bagId', bagId);
                 const collectionId = bagId.split(' ')[0];
                 if (collectionId) {
                     collectionIdSet.add(collectionId);
