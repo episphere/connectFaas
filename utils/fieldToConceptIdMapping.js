@@ -30,7 +30,6 @@ module.exports = {
     loginSite: 789843387,
     collectionId: 820476880,
 
-
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,
         serumSeparatorTube2: 703954371,

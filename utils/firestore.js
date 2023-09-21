@@ -1252,7 +1252,7 @@ const getSiteLocationBox = async (requestedSite, boxId) => {
             boxMatch.push(document.data());
         }
         return boxMatch;
-    } catch(error) {
+    } catch (error) {
         throw new Error(`getSiteLocationBox() error: ${error.message}`);
     }
 }
@@ -1300,7 +1300,7 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
             }
             return collectionIdArray
         } 
-    } catch(error) {
+    } catch (error) {
         throw new Error("getBiospecimenCollectionIdsFromBox() error.", {cause: error});
     }
 }
@@ -1321,12 +1321,12 @@ const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
 
         if (snapshot.empty) return;
         else {
-            for(let document of snapshot.docs) {
+            for (let document of snapshot.docs) {
                 biospecimenDocs.push(document.data());
             }
         }
         return biospecimenDocs;
-    } catch(error) {
+    } catch (error) {
         throw new Error("searchSpecimenBySiteAndBoxId() error.", {cause: error});
     }
 }
