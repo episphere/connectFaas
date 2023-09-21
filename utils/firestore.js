@@ -1239,8 +1239,8 @@ const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
 
 /**
  * getSiteLocationBox returns array of a single box object that matches the site and boxId
- * param {number} requestedSite - site code of the site
- * param {string} boxId - boxId of the box
+ * @param {number} requestedSite - site code of the site
+ * @param {string} boxId - boxId of the box
 */
 const getSiteLocationBox = async (requestedSite, boxId) => {
     try {
@@ -1259,8 +1259,8 @@ const getSiteLocationBox = async (requestedSite, boxId) => {
 
 /**
  * getBiospecimenCollectionIdsFromBox returns an array of collectionIds from the box
- * param {number} requestedSite - site code of the site
- * param {string} boxId - boxId of the box
+ * @param {number} requestedSite - site code of the site
+ * @param {string} boxId - boxId of the box
 */
 const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
     try {
@@ -1308,8 +1308,8 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
  * return an array of biospecimen documents that match the healthcare provider and collectionId from collectionIdArray
  * calls getBiospecimenCollectionIdsFromBox to get the collectionIdArray
  * query the biospecimen collection for documents that match the healthcare provider and collectionIds in collectionIdArray
- * param {number} requestedSite - site code of the site 
- * param {string} boxId - boxId of the box
+ * @param {number} requestedSite - site code of the site 
+ * @param {string} boxId - boxId of the box
 */
 const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
     try {
