@@ -1439,17 +1439,21 @@ const getBoxesPagination = async (siteCode, body) => {
     const startDate = filters.startDate ?? '0';
     const trackingId = filters.trackingId ?? '';
     const endDate = filters.endDate ?? '0';
+    try {
+        let query = db.collection('boxes').where('145971562', '==', 353358909);
 
-    let query = db.collection('boxes').where('145971562', '==', 353358909);
+        query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
 
-    query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
+        query = query.orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage * elementsPerPage);
 
-    query = query.orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage * elementsPerPage);
+        const snapshot = await query.get();
+        const result = snapshot.docs.map(document => document.data());
 
-    const snapshot = await query.get();
-    const result = snapshot.docs.map(document => document.data());
-
-    return result;
+        return result;
+    } catch (error) {
+        console.error(error);
+        return new Error(error)
+    }
 };
 
 
@@ -1459,15 +1463,19 @@ const getNumBoxesShipped = async (siteCode, body) => {
     const startDate = filters.startDate ?? '0';
     const trackingId = filters.trackingId ?? '';
     const endDate = filters.endDate ?? '0';
+    try {
+        let query = db.collection('boxes').where('145971562', '==', 353358909);
 
-    let query = db.collection('boxes').where('145971562', '==', 353358909);
+        query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
 
-    query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
-
-    const snapshot = await query.orderBy('656548982', 'desc').get();
-    const result = snapshot.docs.length;
-    
-    return result;
+        const snapshot = await query.orderBy('656548982', 'desc').get();
+        const result = snapshot.docs.length;
+        
+        return result;
+    } catch (error) {
+        console.error(error);
+        return new Error(error)
+    }
 }
 
 const getNotificationSpecifications = async (notificationType, notificationCategory, scheduleAt) => {
