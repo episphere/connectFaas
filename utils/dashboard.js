@@ -62,7 +62,7 @@ const dashboard = async (req, res) => {
         const {submit} = require('./submission');
         let body = req.body;
         if (!body.uid) {
-            return res.status(500).json(getResponseJSON('Missing UID!', 405));
+            return res.status(405).json(getResponseJSON('Missing UID!', 405));
         }
         let uid = body.uid;
         delete body['uid'];
