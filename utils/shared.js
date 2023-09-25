@@ -838,19 +838,19 @@ const extractCollectionIdsFromBoxes = (boxesList) => {
 }
 
 /**
- * Process fetched specimen collections, filter out tubes that are not received on the receivedTimestamp day.
- * @param {array} specimenCollections - array of specimen collectionIds
+ * process fetched specimen collections, filter out tubes that are not received on the receivedTimestamp day.
+ * @param {array} specimenCollections - array of specimen collection data 
  * @param {*} receivedTimestamp - timestamp of the received date
- * @returns {array} - array of specimen data
+ * @returns {array} - modified specimen collection data array
  */
 const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
     const specimenDataArray = [];
 
     for (const specimenCollection of specimenCollections) {
         let hasSpecimens = false;
-
         const filteredSpecimens = tubeConceptIds.reduce((acc, key) => {
-            const tube = specimenCollection[key];
+            const tube = specimenCollection['data'][key];
+
             if (tube && tube['926457119'] === receivedTimestamp) {
                 acc[key] = tube;
                 hasSpecimens = true;
@@ -861,21 +861,20 @@ const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
         if (hasSpecimens) {
             specimenDataArray.push({
                 'specimens': filteredSpecimens,
-                '820476880': specimenCollection['820476880'],
-                '926457119': specimenCollection['926457119'],
-                '678166505': specimenCollection['678166505'],
-                '827220437': specimenCollection['827220437'],
-                '951355211': specimenCollection['951355211'],
-                '915838974': specimenCollection['915838974'],
-                '650516960': specimenCollection['650516960'],
-                'Connect_ID': specimenCollection['Connect_ID'],
+                '820476880': specimenCollection['data']['820476880'],
+                '926457119': specimenCollection['data']['926457119'],
+                '678166505': specimenCollection['data']['678166505'],
+                '827220437': specimenCollection['data']['827220437'],
+                '951355211': specimenCollection['data']['951355211'],
+                '915838974': specimenCollection['data']['915838974'],
+                '650516960': specimenCollection['data']['650516960'],
+                'Connect_ID': specimenCollection['data']['Connect_ID'],
             });
         }
     }
 
     return specimenDataArray;
 }
-
 
 module.exports = {
     getResponseJSON,

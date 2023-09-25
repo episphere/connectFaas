@@ -514,8 +514,9 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
 
+        if (!req.query.receivedTimestamp) return res.status(400).json(getResponseJSON('Timestamp is missing.', 400));
+        
         const receivedTimestamp = req.query.receivedTimestamp;
-        if (!receivedTimestamp) return res.status(400).json(getResponseJSON('Timestamp is missing.', 400));
 
         try {
             const { getSpecimensByReceivedDate } = require('./firestore');

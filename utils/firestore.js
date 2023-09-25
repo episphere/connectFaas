@@ -2380,7 +2380,7 @@ const getSpecimensByReceivedDate = async (receivedTimestamp) => {
             return [];
         }
 
-        const specimenCollections = await getSpecimensByCollectionIds(collectionIdArray, true);
+        const specimenCollections = await getSpecimensByCollectionIds(collectionIdArray, null, true);
         const specimenData = processSpecimenCollections(specimenCollections, receivedTimestamp);
 
         return specimenData;
@@ -2395,12 +2395,8 @@ const getSpecimensByReceivedDate = async (receivedTimestamp) => {
  * @returns list of boxes received on the given date.
  */
 const getBoxesByReceivedDate = async (receivedTimestamp) => {
-    try {
-        const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
-        return snapshot.docs.map(doc => doc.data());
-    } catch (error) {
-        throw new Error("Error fetching boxes by received date.", { cause: error });
-    }
+    const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
+    return snapshot.docs.map(doc => doc.data());
 }
 
 /**
