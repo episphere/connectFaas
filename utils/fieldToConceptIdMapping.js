@@ -16,8 +16,13 @@ module.exports = {
     yes: 353358909,
     no: 104430631,
     healthCareProvider: 827220437,
+    loginSite: 789843387,
     reportMissingTube: 258745303,
     submitShipmentFlag: 145971562,
+    submitShipmentTimestamp: 656548982,
+    shippingBoxId: 132929440,
+    shipmentCourier: 666553960,
+    shipperEmail: 948887825,
     pinMatch: 948195369,
     verificationStatus: 821247024,
     notVerified: 875007964,
@@ -25,7 +30,8 @@ module.exports = {
     duplicate: 922622075,
     cannotBeVerified: 219863910,
     outreachTimeOut: 160161595,
-    shippingBoxId: 132929440,
+    temperatureProbeInBox: 105891443,
+    boxTrackingNumberScan: 959708259,
 
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,
