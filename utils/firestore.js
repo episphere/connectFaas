@@ -2407,8 +2407,6 @@ const getBoxesByReceivedDate = async (receivedTimestamp) => {
  * @returns {array} - Array of biospecimen data objects.
  * Max 30 disjunctions for 'in' queries: array length <= 30 for BPTL, <= 15 for site due to extra .where() clause in site query 
  */
-// Get biospecimen docs from collectionIdsArray (conceptId: 820476880). Ex: ['CXA123456', 'CXA234567', 'CXA345678']
-// Max 30 disjunctions for 'in' queries: array length <= 30 for BPTL, <= 15 for site due to extra .where() clause in site query 
 const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL = false) => {
     const getSnapshot = (collectionIds) => {
         let query = db.collection('biospecimen').where('820476880', 'in', collectionIds);
