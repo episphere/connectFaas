@@ -2366,8 +2366,11 @@ const getRestrictedFields = async () => {
     return snapshot.docs[0].data().restrictedFields;
 }
 
-// This is for managing received boxes in BPTL only.
-// receivedTimestamp format has year, month, date. Time is not specified. 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'
+/**
+ * This is for managing received boxes in BPTL only.
+ * @param {string} receivedTimestamp - Timestamp of received date in format 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'.
+ * @returns {specimenData} - Array of specimen data objects.
+ */
 const getSpecimensByReceivedDate = async (receivedTimestamp) => {
     const { extractCollectionIdsFromBoxes, processSpecimenCollections } = require('./shared');
     try {
@@ -2382,40 +2385,58 @@ const getSpecimensByReceivedDate = async (receivedTimestamp) => {
 
         return specimenData;
     } catch (error) {
-        error.message = `Error fetching specimens by received date: ${error.message}`;
-        throw error;
+        throw new Error("Error fetching specimens by received date.", { cause: error });
     }
 }
 
-// This is for managing received boxes in BPTL only.
-// receivedTimestamp format has year, month, date. Time is not specified. 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'
+/**
+ * This is for managing received boxes in BPTL only.
+ * @param {string} receivedTimestamp - Timestamp of received date in format 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'. 
+ * @returns list of boxes received on the given date.
+ */
 const getBoxesByReceivedDate = async (receivedTimestamp) => {
     const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
     return snapshot.docs.map(doc => doc.data());
 }
 
+/**
+ * Get biospecimen docs from collectionIdsArray (conceptId: 820476880). Ex: ['CXA123456', 'CXA234567', 'CXA345678']
+ * @param {array} collectionIdsArray - Array of collection ids. Ex: ['CXA123456', 'CXA234567', 'CXA345678'].
+ * @param {string} siteCode - Site code for the healthcare provider.
+ * @param {boolean} isBPTL - True if the request is coming from BPTL, false if from site.
+ * @returns {array} - Array of biospecimen data objects.
+ * Max 30 disjunctions for 'in' queries: array length <= 30 for BPTL, <= 15 for site due to extra .where() clause in site query 
+ */
 // Get biospecimen docs from collectionIdsArray (conceptId: 820476880). Ex: ['CXA123456', 'CXA234567', 'CXA345678']
 // Max 30 disjunctions for 'in' queries: array length <= 30 for BPTL, <= 15 for site due to extra .where() clause in site query 
-const getSpecimensByCollectionIds = async (collectionIdsArray, isBPTL = false, siteCode) => {
+const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL = false) => {
+    const getSnapshot = (collectionIds) => {
+        return isBPTL
+            ? db.collection('biospecimen').where('820476880', 'in', collectionIds).get()
+            : db.collection('biospecimen').where('820476880', 'in', collectionIds).where('827220437', '==', siteCode).get();
+    }
+
     try {
-        if (collectionIdsArray.length <= 30 && isBPTL) {
-            const snapshots = await db.collection('biospecimen').where('820476880', 'in', collectionIdsArray).get()
-            return snapshots.docs.map(doc => doc.data());
-        } else if (collectionIdsArray.length <= 15 && !isBPTL) {
-            const snapshots = await db.collection('biospecimen').where('820476880', 'in', collectionIdsArray).where('827220437', '==', siteCode).get();
-            return snapshots.docs.map(doc => doc.data());
-        } else {
-            const queries = collectionIdsArray.map(collectionId => {
-                return isBPTL
-                    ? db.collection('biospecimen').where('820476880', '==', collectionId).get()
-                    : db.collection('biospecimen').where('820476880', '==', collectionId).where('827220437', '==', siteCode).get();
-            });
-            return (await Promise.all(queries))
-                .map(result => result.docs.map(doc => doc.data()))
-                .flat();
+        const chunkSize = isBPTL ? 30 : 15;
+        let resultsArray = [];
+        let chunksToSend = [];
+
+        for (let i = 0; i < collectionIdsArray.length; i += chunkSize) {
+            chunksToSend.push(collectionIdsArray.slice(i, i + chunkSize));
         }
+
+        const chunkQueries = chunksToSend.map(chunk => getSnapshot(chunk));
+        const snapshots = await Promise.all(chunkQueries);
+
+        snapshots.forEach(snapshot => {
+            const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+            resultsArray.push.apply(resultsArray, docsArray);
+        });
+
+        return resultsArray;
+
     } catch (error) {
-        throw error;
+        throw new Error("Error fetching specimens by received date.", { cause: error });
     }
 }
 

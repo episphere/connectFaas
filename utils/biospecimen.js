@@ -496,13 +496,14 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
 
+        if (!req.query.collectionIdArray) return res.status(400).json(getResponseJSON('CollectionIdArray is missing.', 400));
+
         const collectionIdArray = req.query.collectionIdArray.split(',');
         const isBPTL = req.query.isBPTL ?? false;
-        if (!collectionIdArray) return res.status(400).json(getResponseJSON('CollectionIdArray is missing.', 400));
 
         try {
             const { getSpecimensByCollectionIds } = require('./firestore');
-            const specimensList = await getSpecimensByCollectionIds(collectionIdArray, isBPTL, siteCode);
+            const specimensList = await getSpecimensByCollectionIds(collectionIdArray, siteCode, isBPTL);
             return res.status(200).json({data: specimensList, code:200});
         } catch (error) {
             return res.status(500).json({ message: `Internal Server Error running getSpecimensByCollectionIds(), ${error}`, code: 500 });

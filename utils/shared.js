@@ -814,8 +814,12 @@ const tubeConceptIds = [
     '973670172', // Urine tube 1
 ];
 
-// Extract all the collectionIds from a list of boxes, return an array of unique collectionIds.
-// Bag types: 787237543 (Biohazard Blood/Urine), 223999569 (Biohazard Mouthwash), 522094118 (Orphan)
+/**
+ * Extract collectionIds from a list of boxes
+ * @param {array} boxesList - list of boxes to process
+ * @returns {array} - array of unique collectionIds
+ * Bag types: 787237543 (Biohazard Blood/Urine), 223999569 (Biohazard Mouthwash), 522094118 (Orphan)
+ */
 const extractCollectionIdsFromBoxes = (boxesList) => {
     const { bagConceptIDs } = require('./shared');
     const collectionIdSet = new Set();
@@ -823,9 +827,9 @@ const extractCollectionIdsFromBoxes = (boxesList) => {
         for (const bag of bagConceptIDs) {
             if (box[bag]) {
                 const bagId = box[bag]['787237543'] || box[bag]['223999569'] || box[bag]['522094118'];
-                const collectionId = bagId.split(' ')[0];
-                if (collectionId) {
-                    collectionIdSet.add(collectionId);
+                if (bagId) {
+                    const collectionId = bagId.split(' ')[0];
+                    collectionId && collectionIdSet.add(collectionId);
                 }
             }
         }
@@ -836,7 +840,6 @@ const extractCollectionIdsFromBoxes = (boxesList) => {
 // process fetched specimen collections, filter out tubes that are not received on the receivedTimestamp day.
 // return specimen data array with modified tube data
 const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
-    let tubeCount = 0;
     const specimenDataArray = [];
 
     for (const specimenCollection of specimenCollections) {
@@ -845,7 +848,6 @@ const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
         const filteredSpecimens = tubeConceptIds.reduce((acc, key) => {
             const tube = specimenCollection[key];
             if (tube && tube['926457119'] === receivedTimestamp) {
-                tubeCount++;
                 acc[key] = tube;
                 hasSpecimens = true;
             }
