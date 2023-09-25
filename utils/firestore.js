@@ -1305,44 +1305,58 @@ const updateTempCheckDate = async (institute) => {
         await db.collection('SiteLocations').doc(docId).update({'nextTempMonitor':currDate.toString()});
         //console.log(currDate.toString());
     }
-
 }
 
 /**
  * 
  * @param {Array<string>} boxIdArray - array of box ids to fetch 
  * @param {string} siteCode - site code of the user (number)
- * @param {*} isBPTL - boolean to indicate if the request is from BPTL
- * @param {*} transaction - firestore transation object
+ * @param {transaction} transaction - firestore transation object
  * @returns boxes object with data and docRef
+ * If boxIdArray.length > 15, chunk the array into multiple queries to support the use of 'in' operator.
  */
-const getBoxesByBoxId = async (boxIdArray, siteCode, isBPTL = false, transaction = null) => {
+const getBoxesByBoxId = async (boxIdArray, siteCode, transaction = null) => {
     const shippingBoxId = `${fieldMapping.shippingBoxId}`;
     const loginSite = `${fieldMapping.loginSite}`;
+    const chunkSize = 15;
+
+    const getSnapshot = async (boxIds) => {
+        if (transaction) {
+            return transaction.get(db.collection('boxes')
+                .where(shippingBoxId, 'in', boxIds)
+                .where(loginSite, '==', siteCode));
+        } else {
+            return db.collection('boxes')
+                .where(shippingBoxId, 'in', boxIds)
+                .where(loginSite, '==', siteCode)
+                .get();
+        }
+    };
 
     try {
-        const getSnapshot = (query) => {
-            if (transaction) {
-                return transaction.get(query);
-            } else {
-                return query.get();
-            }
-        };
+        let resultsArray = [];
 
-        if (boxIdArray.length <= 30 && isBPTL) {
-            const snapshot = await getSnapshot(db.collection('boxes').where(shippingBoxId, 'in', boxIdArray));
-            return snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
-        } else if (boxIdArray.length <= 15 && !isBPTL) {
-            const snapshot = await getSnapshot(db.collection('boxes').where(shippingBoxId, 'in', boxIdArray).where(loginSite, '==', siteCode));
-            return snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
-        } else {
-            const queries = boxIdArray.map(boxId => {
-                return db.collection('boxes').where(shippingBoxId, '==', boxId).where(loginSite, '==', siteCode);
+        if (boxIdArray.length > chunkSize) {
+            const chunksToSend = [];
+            for (let i = 0; i < boxIdArray.length; i += chunkSize) {
+                chunksToSend.push(boxIdArray.slice(i, i + chunkSize));
+            }
+
+            const chunkPromises = chunksToSend.map(chunk => getSnapshot(chunk));
+            const snapshots = await Promise.all(chunkPromises);
+
+            snapshots.forEach(snapshot => {
+                const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+                resultsArray.push.apply(resultsArray, docsArray);
             });
-        
-            const boxResults = await Promise.all(queries.map(query => getSnapshot(query)));
-            return boxResults.map(result => result.docs.map(document => ({ data: document.data(), docRef: document.ref }))).flat();
+
+        } else {
+            const snapshot = await getSnapshot(boxIdArray);
+            resultsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
         }
+
+        return resultsArray;
+
     } catch (error) {
         throw new Error(error);
     }
@@ -1365,7 +1379,7 @@ const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
 
     try {
         await db.runTransaction(async (transaction) => {
-            const boxes = await getBoxesByBoxId(boxIdArray, siteCode, false, transaction);
+            const boxes = await getBoxesByBoxId(boxIdArray, siteCode, transaction);
     
             for (const box of boxes) {
                 const boxData = box.data;
@@ -1384,7 +1398,6 @@ const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
         throw new Error(error);
     }
 };
-
 
 const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();

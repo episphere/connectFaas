@@ -368,12 +368,11 @@ const biospecimenAPIs = async (req, res) => {
         const boxIdQuery = req.query.boxIdArray;
         if (!boxIdQuery) return res.status(400).json(getResponseJSON('BoxIdArray is missing.', 400));
         
-        const isBPTL = req.query.isBPTL ?? false;
         const boxIdArray = boxIdQuery.split(',');
 
         try {
             const { getBoxesByBoxId } = require('./firestore');
-            const boxesList = await getBoxesByBoxId(boxIdArray, siteCode, isBPTL);
+            const boxesList = await getBoxesByBoxId(boxIdArray, siteCode);
             return res.status(200).json({data: boxesList, code:200});
         } catch (error) {
             return res.status(500).json({ message: `Internal Server Error running getBoxesById(), ${error}`, code: 500 });
@@ -415,10 +414,10 @@ const biospecimenAPIs = async (req, res) => {
             [fieldMapping.temperatureProbeInBox]: fieldMapping.no,
         };
 
-        const boxIdAndShipmentDataArray = [];
+        let boxIdAndShipmentDataArray = [];
 
         for (const boxId of boxIdArray) {
-            const shipmentData = {
+            let shipmentData = {
                 ...sharedShipmentData,
                 [fieldMapping.boxTrackingNumberScan]: boxIdToTrackingNumberMap[boxId],
             };
@@ -440,7 +439,7 @@ const biospecimenAPIs = async (req, res) => {
             
             return res.status(200).json({ message: 'Success!', code: 200 });
         } catch (error) {
-            console.error(`Error occurred when running shipBatchBoxes(): ${error}`);
+            console.error(`Error occurred when running shipBatchBoxes(). ${error}`);
             return res.status(500).json({ message: `Internal Server Error: ${error}`, code: 500 });
         }    
     }
