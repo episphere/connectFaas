@@ -2395,8 +2395,12 @@ const getSpecimensByReceivedDate = async (receivedTimestamp) => {
  * @returns list of boxes received on the given date.
  */
 const getBoxesByReceivedDate = async (receivedTimestamp) => {
-    const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
-    return snapshot.docs.map(doc => doc.data());
+    try {
+        const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
+        return snapshot.docs.map(doc => doc.data());
+    } catch (error) {
+        throw new Error("Error fetching boxes by received date.", { cause: error });
+    }
 }
 
 /**
@@ -2411,9 +2415,11 @@ const getBoxesByReceivedDate = async (receivedTimestamp) => {
 // Max 30 disjunctions for 'in' queries: array length <= 30 for BPTL, <= 15 for site due to extra .where() clause in site query 
 const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL = false) => {
     const getSnapshot = (collectionIds) => {
-        return isBPTL
-            ? db.collection('biospecimen').where('820476880', 'in', collectionIds).get()
-            : db.collection('biospecimen').where('820476880', 'in', collectionIds).where('827220437', '==', siteCode).get();
+        let query = db.collection('biospecimen').where('820476880', 'in', collectionIds);
+        if (!isBPTL) {
+            query = query.where('827220437', '==', siteCode);
+        }
+        return query.get();
     }
 
     try {
@@ -2436,7 +2442,7 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
         return resultsArray;
 
     } catch (error) {
-        throw new Error("Error fetching specimens by received date.", { cause: error });
+        throw new Error("Error fetching specimens by collectionIds.", { cause: error });
     }
 }
 

@@ -496,9 +496,9 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
 
-        if (!req.query.collectionIdArray) return res.status(400).json(getResponseJSON('CollectionIdArray is missing.', 400));
+        if (!req.query.collectionIdsArray) return res.status(400).json(getResponseJSON('collectionIdsArray is missing.', 400));
 
-        const collectionIdArray = req.query.collectionIdArray.split(',');
+        const collectionIdArray = req.query.collectionIdsArray.split(',');
         const isBPTL = req.query.isBPTL ?? false;
 
         try {

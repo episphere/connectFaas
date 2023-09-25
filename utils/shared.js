@@ -837,8 +837,12 @@ const extractCollectionIdsFromBoxes = (boxesList) => {
     return Array.from(collectionIdSet);
 }
 
-// process fetched specimen collections, filter out tubes that are not received on the receivedTimestamp day.
-// return specimen data array with modified tube data
+/**
+ * Process fetched specimen collections, filter out tubes that are not received on the receivedTimestamp day.
+ * @param {array} specimenCollections - array of specimen collectionIds
+ * @param {*} receivedTimestamp - timestamp of the received date
+ * @returns {array} - array of specimen data
+ */
 const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
     const specimenDataArray = [];
 
