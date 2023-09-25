@@ -1,7 +1,6 @@
 const {BigQuery} = require('@google-cloud/bigquery');
 const bigquery = new BigQuery();
 
-
 const getTable = async (tableName, isParent, siteCode) => {
     try {
         const dataset = bigquery.dataset('stats');
@@ -137,7 +136,30 @@ function convertToFirestoreKey(str) {
   return str.replace(/(?<=^|\.)d_(\d)/g, "$1");
 }
 
+/**
+ * @param {string} tableName
+ * @param {number | number[]} siteCode
+ */
+const getStatsFromBQ = async (tableName, siteCode) => {
+  const query = `SELECT * FROM \`stats.${tableName}\` WHERE siteCode IN UNNEST(@siteCode)`;
+  const options = {
+    query,
+    location: "US",
+    params: { siteCode: Array.isArray(siteCode) ? siteCode : [siteCode] },
+  };
+  
+  let rows = [];
+  try {
+    [rows] = await bigquery.query(options);
+  } catch (error) {
+    console.error("getStatsFromBQ() error.", error);
+  }
+  
+  return rows;
+};
+
 module.exports = {
     getTable,
     getParticipantsForNotificationsBQ,
+    getStatsFromBQ,
 };

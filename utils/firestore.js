@@ -534,27 +534,30 @@ const removeUninvitedParticipants = async () => {
     }
 }
 
+/**
+ * Get site codes of children entities
+ * @param {string} id - Entity ID
+ */
 const getChildren = async (id) => {
     try{
         const snapShot = await db.collection('siteDetails')
                                 .where('state.parentID', 'array-contains', id)
                                 .get();
         if(snapShot.size > 0) {
+            /** @type {number[]} */
             const siteCodes = [];
-            snapShot.docs.map(document => {
+            snapShot.docs.forEach(document => {
                 if(document.data().siteCode){
                     siteCodes.push(document.data().siteCode);
                 }
             });
             return siteCodes;
         }
-        else{
-            return false;
-        };
+        return [];
     }
     catch(error){
         console.error(error);
-        return new Error(error);
+        return [];
     }
 }
 

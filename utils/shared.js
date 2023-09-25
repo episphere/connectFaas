@@ -479,13 +479,13 @@ const SSOConfig = {
 }
 
 const decodingJWT = (token) => {
-    if(token !== null || token !== undefined){
+    if (token) {
         const base64String = token.split('.')[1];
         const decodedValue = JSON.parse(Buffer.from(base64String, 'base64').toString());
         return decodedValue;
     }
     return null;
-}
+};
 
 const SSOValidation = async (dashboardType, idToken) => {
     try {
@@ -526,9 +526,8 @@ const SSOValidation = async (dashboardType, idToken) => {
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
 
-        console.log("SSO Validation Results");
-        console.log("Site Details: " + siteDetails);
-        console.log("Email " + email);
+        console.log("Results in SSOValidation():");
+        console.log("Email: " + email);
         console.log("BPTL User: " + isBPTLUser);
         console.log("BSD User: " + isBiospecimenUser);
         return {siteDetails, email, isBPTLUser, isBiospecimenUser};
@@ -583,18 +582,16 @@ const APIAuthorization = async (req) => {
     }
 }
 
-const isParentEntity = async (authorized) => {
-    
-    const id = authorized.id;
+const isParentEntity = async (siteDetails) => {
     const { getChildren } = require('./firestore');
-    
-    let siteCodes = await getChildren(id);
-    let isParent = siteCodes ? true : false;
-    
-    siteCodes = siteCodes ? siteCodes : authorized.siteCode;
 
-    return {isParent, siteCodes, ...authorized};
-}
+    const id = siteDetails.id;
+    let siteCodes = await getChildren(id);
+    siteCodes = siteCodes.length > 0 ? siteCodes : siteDetails.siteCode;
+    const isParent = siteCodes.length > 0;
+
+    return {...siteDetails, isParent, siteCodes};
+};
 
 const logIPAdddress = (req) => {
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
