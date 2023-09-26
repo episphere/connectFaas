@@ -1411,15 +1411,15 @@ const getSpecimenCollections = async (token, siteCode) => {
 }
 
 const buildQueryWithFilters = (query, trackingId, endDate, startDate, source, siteCode) => {
-    if (trackingId !== '') {
+    if (trackingId) {
         query = query.where('959708259', '==', trackingId);
     }
 
-    if (endDate !== '0') {
+    if (endDate) {
         query = query.where('656548982', '<=', endDate);
     }
 
-    if (startDate !== '0') {
+    if (startDate) {
         query = query.where('656548982', '>=', startDate);
     }
 
@@ -1433,12 +1433,12 @@ const getBoxesPagination = async (siteCode, body) => {
     const currPage = body.pageNumber;
     const orderByField = body.orderBy;
     const elementsPerPage = body.elementsPerPage;
-    const filters = body.filters ?? {};
-    const source = body.source ?? '';
+    const filters = body.filters ?? ``;
+    const source = body.source ?? ``;
 
-    const startDate = filters.startDate ?? '0';
-    const trackingId = filters.trackingId ?? '';
-    const endDate = filters.endDate ?? '0';
+    const startDate = filters.startDate ?? ``;
+    const trackingId = filters.trackingId ?? ``;
+    const endDate = filters.endDate ?? ``;
     try {
         let query = db.collection('boxes').where('145971562', '==', 353358909);
 
@@ -1452,7 +1452,7 @@ const getBoxesPagination = async (siteCode, body) => {
         return result;
     } catch (error) {
         console.error(error);
-        return new Error(error)
+        return []
     }
 };
 
@@ -1460,21 +1460,21 @@ const getBoxesPagination = async (siteCode, body) => {
 const getNumBoxesShipped = async (siteCode, body) => {
     const filters = body;
     const source = body.source ?? ``;
-    const startDate = filters.startDate ?? '0';
-    const trackingId = filters.trackingId ?? '';
-    const endDate = filters.endDate ?? '0';
+    const startDate = filters.startDate ?? ``;
+    const trackingId = filters.trackingId ?? ``;
+    const endDate = filters.endDate ?? ``;
     try {
         let query = db.collection('boxes').where('145971562', '==', 353358909);
 
         query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
 
-        const snapshot = await query.orderBy('656548982', 'desc').get();
+        const snapshot = await query.get();
         const result = snapshot.docs.length;
         
         return result;
     } catch (error) {
         console.error(error);
-        return new Error(error)
+        return []
     }
 }
 
