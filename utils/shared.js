@@ -249,7 +249,8 @@ const moduleConceptsToCollections = {
     "D_299215535" :     "bioSurvey_v1",
     "D_793330426" :     "covid19Survey_v1",
     "D_912367929" :     "menstrualSurvey_v1",
-    "D_826163434" :     "clinicalBioSurvey_v1"
+    "D_826163434" :     "clinicalBioSurvey_v1",
+    "D_166676176" :     "ssn",
 }
 
 const moduleStatusConcepts = {
