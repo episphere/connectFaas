@@ -1268,7 +1268,6 @@ const getSiteLocationBox = async (requestedSite, boxId) => {
 const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
     try {
         const shipBoxMatch = await getSiteLocationBox(requestedSite, boxId);
-
         if (shipBoxMatch === undefined || shipBoxMatch.length === 0) return [];
         
         const shipBoxObj = shipBoxMatch[0];
@@ -1276,13 +1275,12 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
         const bagConceptIdList = Object.values(fieldMapping.bagContainerCids);
 
         for (let key in shipBoxObj) {
-        // check if key is in bagConceptIdList array of conceptIds
+            // check if key is in bagConceptIdList array of conceptIds
             if (bagConceptIdList.includes(parseInt(key))) {
                 const bagContainerContent = shipBoxObj[key]; 
                 const bloodUrineScan = fieldMapping.tubesBagsCids.biohazardBagScan;
                 const mouthwashScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
-                const orphanScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
-
+                const orphanScan = fieldMapping.tubesBagsCids.orphanScan;
                 // Loop through the bagContainerContent to find the collectionId
                 for (let key in bagContainerContent) {
                     if (parseInt(key) === bloodUrineScan || 
@@ -1290,7 +1288,7 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
                         parseInt(key) === orphanScan) {
                         if (bagContainerContent[key] !== '') {
                             // extract the collectionId and push to collectionIdArray
-                            const collectionIdString = bagContainerContent[key].split(" ")[0]
+                            const collectionIdString = bagContainerContent[key].split(" ")[0];
                             // check if collectionIdString is already in, if it isn't push it
                             if (!collectionIdArray.includes(collectionIdString)) {
                                 collectionIdArray.push(collectionIdString);
@@ -1299,9 +1297,9 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
                         } 
                     }   
                 }
-            }
+            } 
+        }
         return collectionIdArray;
-        } 
     } catch (error) {
         throw new Error("getBiospecimenCollectionIdsFromBox() error.", {cause: error});
     }

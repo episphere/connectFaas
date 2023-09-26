@@ -253,7 +253,7 @@ const biospecimenAPIs = async (req, res) => {
                 
             } catch (error) {
                 console.error('Error occurred when running searchSpecimenBySiteAndBoxId:', error);
-                return res.status(500).json({ data: {}, message: error, code: 500 });
+                return res.status(500).json({ data: [], message: error, code: 500 });
             }
         } else {
             const { searchShipments } = require('./firestore');
