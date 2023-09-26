@@ -534,27 +534,30 @@ const removeUninvitedParticipants = async () => {
     }
 }
 
+/**
+ * Get site codes of children entities
+ * @param {string} id - Entity ID
+ */
 const getChildren = async (id) => {
     try{
         const snapShot = await db.collection('siteDetails')
                                 .where('state.parentID', 'array-contains', id)
                                 .get();
         if(snapShot.size > 0) {
+            /** @type {number[]} */
             const siteCodes = [];
-            snapShot.docs.map(document => {
+            snapShot.docs.forEach(document => {
                 if(document.data().siteCode){
                     siteCodes.push(document.data().siteCode);
                 }
             });
             return siteCodes;
         }
-        else{
-            return false;
-        };
+        return [];
     }
     catch(error){
         console.error(error);
-        return new Error(error);
+        return [];
     }
 }
 
@@ -1398,37 +1401,98 @@ const updateTempCheckDate = async (institute) => {
         await db.collection('SiteLocations').doc(docId).update({'nextTempMonitor':currDate.toString()});
         //console.log(currDate.toString());
     }
-
 }
 
 /**
- * Ship a batch of boxes
- * @param {Array} boxIdAndShipmentDataArray
- * @param {number} siteCode 
+ * 
+ * @param {Array<string>} boxIdArray - array of box ids to fetch 
+ * @param {string} siteCode - site code of the user (number)
+ * @param {transaction} transaction - firestore transation object
+ * @returns boxes object with data and docRef
+ * If boxIdArray.length > 15, chunk the array into multiple queries to support the use of 'in' operator.
+ */
+const getBoxesByBoxId = async (boxIdArray, siteCode, transaction = null) => {
+    const shippingBoxId = `${fieldMapping.shippingBoxId}`;
+    const loginSite = `${fieldMapping.loginSite}`;
+    const chunkSize = 15;
+
+    const getSnapshot = async (boxIds) => {
+        if (transaction) {
+            return transaction.get(db.collection('boxes')
+                .where(shippingBoxId, 'in', boxIds)
+                .where(loginSite, '==', siteCode));
+        } else {
+            return db.collection('boxes')
+                .where(shippingBoxId, 'in', boxIds)
+                .where(loginSite, '==', siteCode)
+                .get();
+        }
+    };
+
+    try {
+        let resultsArray = [];
+
+        if (boxIdArray.length > chunkSize) {
+            const chunksToSend = [];
+            for (let i = 0; i < boxIdArray.length; i += chunkSize) {
+                chunksToSend.push(boxIdArray.slice(i, i + chunkSize));
+            }
+
+            const chunkPromises = chunksToSend.map(chunk => getSnapshot(chunk));
+            const snapshots = await Promise.all(chunkPromises);
+
+            snapshots.forEach(snapshot => {
+                const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+                resultsArray.push.apply(resultsArray, docsArray);
+            });
+
+        } else {
+            const snapshot = await getSnapshot(boxIdArray);
+            resultsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+        }
+
+        return resultsArray;
+
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+
+/**
+ * Ship a batch of boxes using a transaction
+ * Transaction: (1) Guarantees atomicity (2) Ensures data integrity (3) Automatically retries on initial failure
+ * @param {Array} boxIdAndShipmentDataArray - array of objects with boxId and shipmentData
+ * @param {number} siteCode - site code of the user (number)
+ * @returns {boolean} true if successful, throws error otherwise
  */
 const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
-  const batch = db.batch();
+    const boxIdToShipmentData = {};
+    boxIdAndShipmentDataArray.forEach(item => {
+        boxIdToShipmentData[item.boxId] = item.shipmentData;
+    });
 
-  for (const { boxId, shipmentData } of boxIdAndShipmentDataArray) {
-    const snapshot = await db
-      .collection('boxes')
-      .where('132929440', '==', boxId)
-      .where('789843387', '==', siteCode)
-      .get();
+    const boxIdArray = Object.keys(boxIdToShipmentData);
 
-    if (snapshot.size !== 1) {
-      return false;
+    try {
+        await db.runTransaction(async (transaction) => {
+            const boxes = await getBoxesByBoxId(boxIdArray, siteCode, transaction);
+    
+            for (const box of boxes) {
+                const boxData = box.data;
+                const shipmentData = boxIdToShipmentData[boxData[fieldMapping.shippingBoxId]];
+
+                if (shipmentData) {
+                    shipmentData[fieldMapping.submitShipmentFlag] = fieldMapping.yes;
+                    Object.assign(boxData, shipmentData);
+                    transaction.update(box.docRef, boxData);
+                }
+            }
+        });
+
+        return true;
+    } catch (error) {
+        throw new Error(error);
     }
-
-    batch.update(snapshot.docs[0].ref, shipmentData);
-  }
-
-  await batch.commit().catch((err) => {
-    console.log('Error occurred when commiting box data:\n', err);
-    return false;
-  });
-
-  return true;
 };
 
 const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
@@ -2405,6 +2469,80 @@ const getRestrictedFields = async () => {
     return snapshot.docs[0].data().restrictedFields;
 }
 
+/**
+ * This is for managing received boxes in BPTL only.
+ * @param {string} receivedTimestamp - Timestamp of received date in format 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'.
+ * @returns {specimenData} - Array of specimen data objects.
+ */
+const getSpecimensByReceivedDate = async (receivedTimestamp) => {
+    const { extractCollectionIdsFromBoxes, processSpecimenCollections } = require('./shared');
+    try {
+        const boxes = await getBoxesByReceivedDate(receivedTimestamp);
+        const collectionIdArray = extractCollectionIdsFromBoxes(boxes);
+        if (collectionIdArray.length === 0) {
+            return [];
+        }
+
+        const specimenCollections = await getSpecimensByCollectionIds(collectionIdArray, null, true);
+        const specimenData = processSpecimenCollections(specimenCollections, receivedTimestamp);
+
+        return specimenData;
+    } catch (error) {
+        throw new Error("Error fetching specimens by received date.", { cause: error });
+    }
+}
+
+/**
+ * This is for managing received boxes in BPTL only.
+ * @param {string} receivedTimestamp - Timestamp of received date in format 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'. 
+ * @returns list of boxes received on the given date.
+ */
+const getBoxesByReceivedDate = async (receivedTimestamp) => {
+    const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
+    return snapshot.docs.map(doc => doc.data());
+}
+
+/**
+ * Get biospecimen docs from collectionIdsArray (conceptId: 820476880). Ex: ['CXA123456', 'CXA234567', 'CXA345678']
+ * @param {array} collectionIdsArray - Array of collection ids. Ex: ['CXA123456', 'CXA234567', 'CXA345678'].
+ * @param {string} siteCode - Site code for the healthcare provider.
+ * @param {boolean} isBPTL - True if the request is coming from BPTL, false if from site.
+ * @returns {array} - Array of biospecimen data objects.
+ * Max 30 disjunctions for 'in' queries: array length <= 30 for BPTL, <= 15 for site due to extra .where() clause in site query 
+ */
+const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL = false) => {
+    const getSnapshot = (collectionIds) => {
+        let query = db.collection('biospecimen').where('820476880', 'in', collectionIds);
+        if (!isBPTL) {
+            query = query.where('827220437', '==', siteCode);
+        }
+        return query.get();
+    }
+
+    try {
+        const chunkSize = isBPTL ? 30 : 15;
+        let resultsArray = [];
+        let chunksToSend = [];
+
+        for (let i = 0; i < collectionIdsArray.length; i += chunkSize) {
+            chunksToSend.push(collectionIdsArray.slice(i, i + chunkSize));
+        }
+
+        const chunkQueries = chunksToSend.map(chunk => getSnapshot(chunk));
+        const snapshots = await Promise.all(chunkQueries);
+
+        snapshots.forEach(snapshot => {
+            const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+            resultsArray.push.apply(resultsArray, docsArray);
+        });
+
+        return resultsArray;
+
+    } catch (error) {
+        throw new Error("Error fetching specimens by collectionIds.", { cause: error });
+    }
+}
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -2508,5 +2646,8 @@ module.exports = {
     queryDailyReportParticipants,
     saveNotificationBatch,
     saveSpecIdsToParticipants,
-    searchSpecimenBySiteAndBoxId
+    getSpecimensByReceivedDate,
+    getSpecimensByCollectionIds,
+    getBoxesByBoxId,
+    searchSpecimenBySiteAndBoxId,
 }

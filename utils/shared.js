@@ -479,13 +479,13 @@ const SSOConfig = {
 }
 
 const decodingJWT = (token) => {
-    if(token !== null || token !== undefined){
+    if (token) {
         const base64String = token.split('.')[1];
         const decodedValue = JSON.parse(Buffer.from(base64String, 'base64').toString());
         return decodedValue;
     }
     return null;
-}
+};
 
 const SSOValidation = async (dashboardType, idToken) => {
     try {
@@ -526,9 +526,8 @@ const SSOValidation = async (dashboardType, idToken) => {
         const { getSiteDetailsWithSignInProvider } = require('./firestore');
         const siteDetails = await getSiteDetailsWithSignInProvider(acronym);
 
-        console.log("SSO Validation Results");
-        console.log("Site Details: " + siteDetails);
-        console.log("Email " + email);
+        console.log("Results in SSOValidation():");
+        console.log("Email: " + email);
         console.log("BPTL User: " + isBPTLUser);
         console.log("BSD User: " + isBiospecimenUser);
         return {siteDetails, email, isBPTLUser, isBiospecimenUser};
@@ -583,18 +582,16 @@ const APIAuthorization = async (req) => {
     }
 }
 
-const isParentEntity = async (authorized) => {
-    
-    const id = authorized.id;
+const isParentEntity = async (siteDetails) => {
     const { getChildren } = require('./firestore');
-    
-    let siteCodes = await getChildren(id);
-    let isParent = siteCodes ? true : false;
-    
-    siteCodes = siteCodes ? siteCodes : authorized.siteCode;
 
-    return {isParent, siteCodes, ...authorized};
-}
+    const id = siteDetails.id;
+    let siteCodes = await getChildren(id);
+    siteCodes = siteCodes.length > 0 ? siteCodes : siteDetails.siteCode;
+    const isParent = siteCodes.length > 0;
+
+    return {...siteDetails, isParent, siteCodes};
+};
 
 const logIPAdddress = (req) => {
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -797,6 +794,85 @@ const redactEmailLoginInfo = (participantEmail) => {
 
 const redactPhoneLoginInfo = (participantPhone) => "***-***-" + participantPhone.slice(-4);
 
+// Note: '223999569' is Biohazard bag (mouthwash) scan, '787237543' is Biohazard bag (blood/urine) scan, '522094118' is Orphan bag scan. These are not tubes.
+const tubeConceptIds = [
+    '143615646', // Mouthwash tube 1
+    '232343615', // Serum separator tube 4
+    '299553921', // Serum separator tube 1
+    '376960806', // Serum separator tube 3
+    '454453939', // EDTA tube 1
+    '589588440', // Serum separator tube 5
+    '652357376', // ACD tube 1
+    '677469051', // EDTA tube 2
+    '683613884', // EDTA tube 3
+    '703954371', // Serum separator tube 2
+    '838567176', // Heparin tube 1
+    '958646668', // Heparin tube 2
+    '973670172', // Urine tube 1
+];
+
+/**
+ * Extract collectionIds from a list of boxes
+ * @param {array} boxesList - list of boxes to process
+ * @returns {array} - array of unique collectionIds
+ * Bag types: 787237543 (Biohazard Blood/Urine), 223999569 (Biohazard Mouthwash), 522094118 (Orphan)
+ */
+const extractCollectionIdsFromBoxes = (boxesList) => {
+    const { bagConceptIDs } = require('./shared');
+    const collectionIdSet = new Set();
+    for (const box of boxesList) {
+        for (const bag of bagConceptIDs) {
+            if (box[bag]) {
+                const bagId = box[bag]['787237543'] || box[bag]['223999569'] || box[bag]['522094118'];
+                if (bagId) {
+                    const collectionId = bagId.split(' ')[0];
+                    collectionId && collectionIdSet.add(collectionId);
+                }
+            }
+        }
+    }
+    return Array.from(collectionIdSet);
+}
+
+/**
+ * process fetched specimen collections, filter out tubes that are not received on the receivedTimestamp day.
+ * @param {array} specimenCollections - array of specimen collection data 
+ * @param {*} receivedTimestamp - timestamp of the received date
+ * @returns {array} - modified specimen collection data array
+ */
+const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
+    const specimenDataArray = [];
+
+    for (const specimenCollection of specimenCollections) {
+        let hasSpecimens = false;
+        const filteredSpecimens = tubeConceptIds.reduce((acc, key) => {
+            const tube = specimenCollection['data'][key];
+
+            if (tube && tube['926457119'] === receivedTimestamp) {
+                acc[key] = tube;
+                hasSpecimens = true;
+            }
+            return acc;
+        }, {});
+
+        if (hasSpecimens) {
+            specimenDataArray.push({
+                'specimens': filteredSpecimens,
+                '820476880': specimenCollection['data']['820476880'],
+                '926457119': specimenCollection['data']['926457119'],
+                '678166505': specimenCollection['data']['678166505'],
+                '827220437': specimenCollection['data']['827220437'],
+                '951355211': specimenCollection['data']['951355211'],
+                '915838974': specimenCollection['data']['915838974'],
+                '650516960': specimenCollection['data']['650516960'],
+                'Connect_ID': specimenCollection['data']['Connect_ID'],
+            });
+        }
+    }
+
+    return specimenDataArray;
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -836,4 +912,7 @@ module.exports = {
     createChunkArray,
     redactEmailLoginInfo,
     redactPhoneLoginInfo,
+    tubeConceptIds,
+    extractCollectionIdsFromBoxes,
+    processSpecimenCollections,
 };
