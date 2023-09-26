@@ -1727,7 +1727,22 @@ const markNotificationAsRead = async (id, collection) => {
 }
 
 const storeSSN = async (data) => {
-    await db.collection('ssn').add(data);
+    try{
+        const response = await db.collection('ssn').where('uid', '==', data.uid).get();
+        if(response.size === 1) {
+            for(let doc of response.docs){
+                await db.collection('ssn').doc(doc.id).update(data);
+                return true;
+            }
+        } else {
+            await db.collection('ssn').add(data);
+        }
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error)
+    }
+    
 }
 
 const getTokenForParticipant = async (uid) => {
