@@ -1736,6 +1736,7 @@ const storeSSN = async (data) => {
             }
         } else {
             await db.collection('ssn').add(data);
+            return true;
         }
     }
     catch(error){
