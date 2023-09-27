@@ -103,33 +103,6 @@ const validateToken = async (req, res, uid) => {
     }
 };
 
-const validateSiteUsers = async (req, res, authObj) => {
-    logIPAdddress(req);
-    setHeaders(res);
-
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-        
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
-    if(authObj) {
-        return res.status(200).json({message: 'Ok', code: 200, isParent: authObj.isParent, coordinatingCenter: authObj.coordinatingCenter, helpDesk: authObj.helpDesk});
-    }
-    else {
-        const { APIAuthorization } = require('./shared');
-        const authorized = await APIAuthorization(req);
-        if(authorized instanceof Error){
-            return res.status(401).json(getResponseJSON(authorized.message, 500));
-        }
-    
-        if(!authorized){
-            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        }
-    
-        return res.status(200).json(getResponseJSON('Ok', 200));
-    }
-}
-
 const getToken = async (req, res) => {
     logIPAdddress(req);
     setHeaders(res);
@@ -534,7 +507,6 @@ const isIsoDate = (str) => {
 module.exports = {
     generateToken,
     validateToken,
-    validateSiteUsers,
     getToken,
     checkDerivedVariables,
     validateUsersEmailPhone,

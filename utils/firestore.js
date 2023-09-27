@@ -534,27 +534,30 @@ const removeUninvitedParticipants = async () => {
     }
 }
 
+/**
+ * Get site codes of children entities
+ * @param {string} id - Entity ID
+ */
 const getChildren = async (id) => {
     try{
         const snapShot = await db.collection('siteDetails')
                                 .where('state.parentID', 'array-contains', id)
                                 .get();
         if(snapShot.size > 0) {
+            /** @type {number[]} */
             const siteCodes = [];
-            snapShot.docs.map(document => {
+            snapShot.docs.forEach(document => {
                 if(document.data().siteCode){
                     siteCodes.push(document.data().siteCode);
                 }
             });
             return siteCodes;
         }
-        else{
-            return false;
-        };
+        return [];
     }
     catch(error){
         console.error(error);
-        return new Error(error);
+        return [];
     }
 }
 
@@ -1237,6 +1240,97 @@ const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
     return {};
 }
 
+/**
+ * getSiteLocationBox returns array of a single box object that matches the site and boxId
+ * @param {number} requestedSite - site code of the site
+ * @param {string} boxId - boxId of the box
+*/
+const getSiteLocationBox = async (requestedSite, boxId) => {
+    try {
+        const snapshot = await db.collection('boxes')
+                                .where(fieldMapping.loginSite.toString(), "==", requestedSite)
+                                .where(fieldMapping.shippingBoxId.toString(), "==", boxId).get();
+        const boxMatch = [];
+        for(let document of snapshot.docs) {
+            boxMatch.push(document.data());
+        }
+        return boxMatch;
+    } catch (error) {
+        throw new Error(`getSiteLocationBox() error: ${error.message}`);
+    }
+}
+
+/**
+ * getBiospecimenCollectionIdsFromBox returns an array of collectionIds from the box
+ * @param {number} requestedSite - site code of the site
+ * @param {string} boxId - boxId of the box
+*/
+const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
+    try {
+        const shipBoxMatch = await getSiteLocationBox(requestedSite, boxId);
+        if (shipBoxMatch === undefined || shipBoxMatch.length === 0) return [];
+        
+        const shipBoxObj = shipBoxMatch[0];
+        const collectionIdArray = [];
+        const bagConceptIdList = Object.values(fieldMapping.bagContainerCids);
+
+        for (let key in shipBoxObj) {
+            // check if key is in bagConceptIdList array of conceptIds
+            if (bagConceptIdList.includes(parseInt(key))) {
+                const bagContainerContent = shipBoxObj[key]; 
+                const bloodUrineScan = fieldMapping.tubesBagsCids.biohazardBagScan;
+                const mouthwashScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
+                const orphanScan = fieldMapping.tubesBagsCids.orphanScan;
+                // Loop through the bagContainerContent to find the collectionId
+                for (let key in bagContainerContent) {
+                    if (parseInt(key) === bloodUrineScan || 
+                        parseInt(key) === mouthwashScan || 
+                        parseInt(key) === orphanScan) {
+                        if (bagContainerContent[key] !== '') {
+                            // extract the collectionId and push to collectionIdArray
+                            const collectionIdString = bagContainerContent[key].split(" ")[0];
+                            // check if collectionIdString is already in, if it isn't push it
+                            if (!collectionIdArray.includes(collectionIdString)) {
+                                collectionIdArray.push(collectionIdString);
+                            }
+                            break;
+                        } 
+                    }   
+                }
+            } 
+        }
+        return collectionIdArray;
+    } catch (error) {
+        throw new Error("getBiospecimenCollectionIdsFromBox() error.", {cause: error});
+    }
+}
+
+/** 
+ * return an array of biospecimen documents that match the healthcare provider and collectionId from collectionIdArray
+ * calls getBiospecimenCollectionIdsFromBox to get the collectionIdArray
+ * query the biospecimen collection for documents that match the healthcare provider and collectionIds in collectionIdArray
+ * @param {number} requestedSite - site code of the site 
+ * @param {string} boxId - boxId of the box
+*/
+const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
+    try {
+        const collectionIdArray = await getBiospecimenCollectionIdsFromBox(requestedSite, boxId);
+        const snapshot = await db.collection('biospecimen')
+                                .where(fieldMapping.healthCareProvider.toString(), "==", requestedSite)
+                                .where(fieldMapping.collectionId.toString(), "in", collectionIdArray).get();
+        const biospecimenDocs = [];
+
+        if (snapshot.empty) return biospecimenDocs;
+
+        for (let document of snapshot.docs) {
+            biospecimenDocs.push(document.data());
+        }
+        return biospecimenDocs;
+    } catch (error) {
+        throw new Error("searchSpecimenBySiteAndBoxId() error.", {cause: error});
+    }
+}
+
 const searchShipments = async (siteCode) => {
     const { reportMissingTube, submitShipmentFlag, no } = fieldMapping;
     const healthCareProvider = fieldMapping.healthCareProvider.toString();
@@ -1305,37 +1399,98 @@ const updateTempCheckDate = async (institute) => {
         await db.collection('SiteLocations').doc(docId).update({'nextTempMonitor':currDate.toString()});
         //console.log(currDate.toString());
     }
-
 }
 
 /**
- * Ship a batch of boxes
- * @param {Array} boxIdAndShipmentDataArray
- * @param {number} siteCode 
+ * 
+ * @param {Array<string>} boxIdArray - array of box ids to fetch 
+ * @param {string} siteCode - site code of the user (number)
+ * @param {transaction} transaction - firestore transation object
+ * @returns boxes object with data and docRef
+ * If boxIdArray.length > 15, chunk the array into multiple queries to support the use of 'in' operator.
+ */
+const getBoxesByBoxId = async (boxIdArray, siteCode, transaction = null) => {
+    const shippingBoxId = `${fieldMapping.shippingBoxId}`;
+    const loginSite = `${fieldMapping.loginSite}`;
+    const chunkSize = 15;
+
+    const getSnapshot = async (boxIds) => {
+        if (transaction) {
+            return transaction.get(db.collection('boxes')
+                .where(shippingBoxId, 'in', boxIds)
+                .where(loginSite, '==', siteCode));
+        } else {
+            return db.collection('boxes')
+                .where(shippingBoxId, 'in', boxIds)
+                .where(loginSite, '==', siteCode)
+                .get();
+        }
+    };
+
+    try {
+        let resultsArray = [];
+
+        if (boxIdArray.length > chunkSize) {
+            const chunksToSend = [];
+            for (let i = 0; i < boxIdArray.length; i += chunkSize) {
+                chunksToSend.push(boxIdArray.slice(i, i + chunkSize));
+            }
+
+            const chunkPromises = chunksToSend.map(chunk => getSnapshot(chunk));
+            const snapshots = await Promise.all(chunkPromises);
+
+            snapshots.forEach(snapshot => {
+                const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+                resultsArray.push.apply(resultsArray, docsArray);
+            });
+
+        } else {
+            const snapshot = await getSnapshot(boxIdArray);
+            resultsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+        }
+
+        return resultsArray;
+
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+
+/**
+ * Ship a batch of boxes using a transaction
+ * Transaction: (1) Guarantees atomicity (2) Ensures data integrity (3) Automatically retries on initial failure
+ * @param {Array} boxIdAndShipmentDataArray - array of objects with boxId and shipmentData
+ * @param {number} siteCode - site code of the user (number)
+ * @returns {boolean} true if successful, throws error otherwise
  */
 const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
-  const batch = db.batch();
+    const boxIdToShipmentData = {};
+    boxIdAndShipmentDataArray.forEach(item => {
+        boxIdToShipmentData[item.boxId] = item.shipmentData;
+    });
 
-  for (const { boxId, shipmentData } of boxIdAndShipmentDataArray) {
-    const snapshot = await db
-      .collection('boxes')
-      .where('132929440', '==', boxId)
-      .where('789843387', '==', siteCode)
-      .get();
+    const boxIdArray = Object.keys(boxIdToShipmentData);
 
-    if (snapshot.size !== 1) {
-      return false;
+    try {
+        await db.runTransaction(async (transaction) => {
+            const boxes = await getBoxesByBoxId(boxIdArray, siteCode, transaction);
+    
+            for (const box of boxes) {
+                const boxData = box.data;
+                const shipmentData = boxIdToShipmentData[boxData[fieldMapping.shippingBoxId]];
+
+                if (shipmentData) {
+                    shipmentData[fieldMapping.submitShipmentFlag] = fieldMapping.yes;
+                    Object.assign(boxData, shipmentData);
+                    transaction.update(box.docRef, boxData);
+                }
+            }
+        });
+
+        return true;
+    } catch (error) {
+        throw new Error(error);
     }
-
-    batch.update(snapshot.docs[0].ref, shipmentData);
-  }
-
-  await batch.commit().catch((err) => {
-    console.log('Error occurred when commiting box data:\n', err);
-    return false;
-  });
-
-  return true;
 };
 
 const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
@@ -1368,17 +1523,24 @@ const getLocations = async (institute) => {
 }
 
 const searchBoxes = async (institute, flag) => {
-    let snapshot = ``
-    if ((institute === nciCode || institute == nciConceptId) && flag === `bptl`) {
-        snapshot = await db.collection('boxes').get()
-    } 
-    else { 
-        snapshot = await db.collection('boxes').where('789843387', '==', institute).get()
+    const boxesCollection = db.collection('boxes');
+    let snapshot = ``;
+
+    if (flag && (institute === nciCode || institute == nciConceptId)) {
+        if (flag === `bptl`) {
+            snapshot = await boxesCollection.get();
+        } else if (flag === `bptlPackagesInTransit`) {
+            snapshot = await boxesCollection
+                            .where(fieldMapping.submitShipmentFlag.toString(), "==", fieldMapping.yes)
+                            .where(fieldMapping.siteShipmentReceived.toString(), "==", fieldMapping.no).get();
+        }
+    } else { 
+        snapshot = await boxesCollection.where(fieldMapping.loginSite.toString(), '==', institute).get()
     }
-    if(snapshot.size !== 0){
+
+    if (snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
-    }
-    else{
+    } else {
         return [];
     }
 }
@@ -1410,137 +1572,72 @@ const getSpecimenCollections = async (token, siteCode) => {
     return [];
 }
 
-const getBoxesPagination = async (siteCode, body) => {
-    let currPage = body.pageNumber;
-    let orderByField = body.orderBy;
-    let elementsPerPage = body.elementsPerPage;
-    let filters = body.filters;
+const buildQueryWithFilters = (query, trackingId, endDate, startDate, source, siteCode) => {
+    if (trackingId) {
+        query = query.where('959708259', '==', trackingId);
+    }
 
-    let startDate = "0";
-    let trackingId = '';
-    let endDate = "0";
+    if (endDate) {
+        query = query.where('656548982', '<=', endDate);
+    }
 
-    if(filters !== undefined){
-        if(filters.hasOwnProperty('startDate')){
-            startDate = filters['startDate']
-        }
-        if(filters.hasOwnProperty('trackingId')){
-            trackingId = filters['trackingId'];
-        }
-        if(filters.hasOwnProperty('endDate')){
-            endDate = filters['endDate']
-        }
+    if (startDate) {
+        query = query.where('656548982', '>=', startDate);
     }
-    let snapshot;
-    if(trackingId !== ''){
-        if(endDate !== "0"){
-            if(startDate !== "0"){
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-            }
-            else{
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-            }
-        }
-        else{
-            if(startDate !== "0"){
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '>=', startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-            }
-            else{
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-            }
-        }
-    }
-    else{
-        if(endDate !== "0"){
-            if(startDate !== "0"){
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', "<=", endDate).where('656548982' ,">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-            }
-            else{
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', "<=", endDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-            }
-        }
-        else{
-            if(startDate !== "0"){
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', ">=", startDate).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-            }
-            else{
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage*elementsPerPage).get();
-            }
-        }
-    }
-    let result = snapshot.docs.map(document => document.data());
-    return result;
-    /*if(snapshot.size !== 0){
-        
-        let arrSnaps = snapshot.docs;
-        let toStart = currPage * elementsPerPage;
-        let toReturnArr = snapshot.splice(toStart, toStart+25 > arrSnaps.length? arrSnaps.length : tStart + 25);
-        let toReturn = [toReturnArr, Math.ceil(arrSnaps.length)]
-        return toReturn;
-    }
-    else{
-        return [[],0]
-    }*/
 
-    
+    if (source !== 'bptlShippingReport') {
+        query = query.where('789843387', '==', siteCode);
+    }
+    return query
 }
 
-const getNumBoxesShipped = async (siteCode, body) => {
-    let filters = body;
+const getBoxesPagination = async (siteCode, body) => {
+    const currPage = body.pageNumber;
+    const orderByField = body.orderBy;
+    const elementsPerPage = body.elementsPerPage;
+    const filters = body.filters ?? ``;
+    const source = body.source ?? ``;
 
-    let startDate = "0";
-    let trackingId = '';
-    let endDate = "0";
-    if(filters.hasOwnProperty('startDate')){
-        startDate = filters['startDate']
+    const startDate = filters.startDate ?? ``;
+    const trackingId = filters.trackingId ?? ``;
+    const endDate = filters.endDate ?? ``;
+    try {
+        let query = db.collection('boxes').where('145971562', '==', 353358909);
+
+        query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
+
+        query = query.orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage * elementsPerPage);
+
+        const snapshot = await query.get();
+        const result = snapshot.docs.map(document => document.data());
+
+        return result;
+    } catch (error) {
+        console.error(error);
+        return []
     }
-    
-    if(filters.hasOwnProperty('trackingId')){
-        trackingId = filters['trackingId'];
+};
+
+
+const getNumBoxesShipped = async (siteCode, body) => {
+    const filters = body;
+    const source = body.source ?? ``;
+    const startDate = filters.startDate ?? ``;
+    const trackingId = filters.trackingId ?? ``;
+    const endDate = filters.endDate ?? ``;
+    try {
+        let query = db.collection('boxes').where('145971562', '==', 353358909);
+
+        query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
+
+        const snapshot = await query.get();
+        const result = snapshot.docs.length;
+        
+        return result;
+    } catch (error) {
+        console.error(error);
+        return []
     }
-    if(filters.hasOwnProperty('endDate')){
-        endDate = filters['endDate']
-    }
-    let snapshot = {'docs':[]};
-    if(trackingId !== ''){ 
-        if(endDate !== "0"){ 
-            if(startDate !== "0"){
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
-            }
-            else{
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '<=', endDate).orderBy('656548982', 'desc').get();
-            }
-      }
-      else{
-          if(startDate !== "0"){
-              snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
-          }
-          else{
-              snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('959708259', '==', trackingId).orderBy('656548982', 'desc').get();
-          }
-      }
-    }
-    else{
-        if(endDate !== "0"){
-            if(startDate !== "0"){
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', '<=', endDate).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
-            }
-            else{
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', '<=', endDate).orderBy('656548982', 'desc').get();
-            }
-        }
-        else{
-            if(startDate !== "0"){
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).where('656548982', '>=', startDate).orderBy('656548982', 'desc').get();
-            }
-            else{
-                snapshot =  await db.collection('boxes').where('789843387', '==', siteCode).where('145971562','==',353358909).orderBy('656548982', 'desc').get();
-            }
-        }
-    }
-    
-    let result = snapshot.docs.length;
-    return result;
 }
 
 const getNotificationSpecifications = async (notificationType, notificationCategory, scheduleAt) => {
@@ -1727,7 +1824,23 @@ const markNotificationAsRead = async (id, collection) => {
 }
 
 const storeSSN = async (data) => {
-    await db.collection('ssn').add(data);
+    try{
+        const response = await db.collection('ssn').where('uid', '==', data.uid).get();
+        if(response.size === 1) {
+            for(let doc of response.docs){
+                await db.collection('ssn').doc(doc.id).update(data);
+                return true;
+            }
+        } else {
+            await db.collection('ssn').add(data);
+            return true;
+        }
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error)
+    }
+    
 }
 
 const getTokenForParticipant = async (uid) => {
@@ -2253,12 +2366,12 @@ const updateUserPhoneSigninMethod = async (phone, uid) => {
  * Queried from Participants & Biospecimen table
  */
 
-const queryDailyReportParticipants = async () => {
+const queryDailyReportParticipants = async (sitecode) => {
     const twoDaysinMilliseconds = 172800000;
     const twoDaysAgo = new Date(new Date().getTime() - (twoDaysinMilliseconds)).toISOString();
     let query = db.collection('participants');
     try {
-        const snapshot = await query.where('331584571.266600170.840048338', '>=', twoDaysAgo).get();
+        const snapshot = await query.where('331584571.266600170.840048338', '>=', twoDaysAgo).where('827220437', '==', sitecode).get();
         if (snapshot.size !== 0) {
             const promises = snapshot.docs.map(async (document) => {
                 return processQueryDailyReportParticipants(document);
@@ -2303,6 +2416,80 @@ const processQueryDailyReportParticipants = async (document) => {
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
     return snapshot.docs[0].data().restrictedFields;
+}
+
+/**
+ * This is for managing received boxes in BPTL only.
+ * @param {string} receivedTimestamp - Timestamp of received date in format 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'.
+ * @returns {specimenData} - Array of specimen data objects.
+ */
+const getSpecimensByReceivedDate = async (receivedTimestamp) => {
+    const { extractCollectionIdsFromBoxes, processSpecimenCollections } = require('./shared');
+    try {
+        const boxes = await getBoxesByReceivedDate(receivedTimestamp);
+        const collectionIdArray = extractCollectionIdsFromBoxes(boxes);
+        if (collectionIdArray.length === 0) {
+            return [];
+        }
+
+        const specimenCollections = await getSpecimensByCollectionIds(collectionIdArray, null, true);
+        const specimenData = processSpecimenCollections(specimenCollections, receivedTimestamp);
+
+        return specimenData;
+    } catch (error) {
+        throw new Error("Error fetching specimens by received date.", { cause: error });
+    }
+}
+
+/**
+ * This is for managing received boxes in BPTL only.
+ * @param {string} receivedTimestamp - Timestamp of received date in format 'YYYY-MM-DDT00:00:00.000Z'. Ex: '2023-08-30T00:00:00.000Z'. 
+ * @returns list of boxes received on the given date.
+ */
+const getBoxesByReceivedDate = async (receivedTimestamp) => {
+    const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
+    return snapshot.docs.map(doc => doc.data());
+}
+
+/**
+ * Get biospecimen docs from collectionIdsArray (conceptId: 820476880). Ex: ['CXA123456', 'CXA234567', 'CXA345678']
+ * @param {array} collectionIdsArray - Array of collection ids. Ex: ['CXA123456', 'CXA234567', 'CXA345678'].
+ * @param {string} siteCode - Site code for the healthcare provider.
+ * @param {boolean} isBPTL - True if the request is coming from BPTL, false if from site.
+ * @returns {array} - Array of biospecimen data objects.
+ * Max 30 disjunctions for 'in' queries: array length <= 30 for BPTL, <= 15 for site due to extra .where() clause in site query 
+ */
+const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL = false) => {
+    const getSnapshot = (collectionIds) => {
+        let query = db.collection('biospecimen').where('820476880', 'in', collectionIds);
+        if (!isBPTL) {
+            query = query.where('827220437', '==', siteCode);
+        }
+        return query.get();
+    }
+
+    try {
+        const chunkSize = isBPTL ? 30 : 15;
+        let resultsArray = [];
+        let chunksToSend = [];
+
+        for (let i = 0; i < collectionIdsArray.length; i += chunkSize) {
+            chunksToSend.push(collectionIdsArray.slice(i, i + chunkSize));
+        }
+
+        const chunkQueries = chunksToSend.map(chunk => getSnapshot(chunk));
+        const snapshots = await Promise.all(chunkQueries);
+
+        snapshots.forEach(snapshot => {
+            const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+            resultsArray.push.apply(resultsArray, docsArray);
+        });
+
+        return resultsArray;
+
+    } catch (error) {
+        throw new Error("Error fetching specimens by collectionIds.", { cause: error });
+    }
 }
 
 module.exports = {
@@ -2408,4 +2595,8 @@ module.exports = {
     queryDailyReportParticipants,
     saveNotificationBatch,
     saveSpecIdsToParticipants,
+    getSpecimensByReceivedDate,
+    getSpecimensByCollectionIds,
+    getBoxesByBoxId,
+    searchSpecimenBySiteAndBoxId,
 }
