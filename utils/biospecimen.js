@@ -507,22 +507,50 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(500).json({message: 'Error removing bag', code:500});
         }
     }
-    
     else if (api === 'getUnshippedBoxes'){
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
 
+        const isBPTL = req.query.isBPTL === 'true';
+
         try {
             const { getUnshippedBoxes } = require('./firestore');
-            const unshippedBoxes = await getUnshippedBoxes(siteCode, req.query.isBPTL);
+            const unshippedBoxes = await getUnshippedBoxes(siteCode, isBPTL);
             return res.status(200).json({data: unshippedBoxes, code:200});
         } catch (error) {
             console.error("Error in getUnshippedBoxes():", error.message);
-            return res.status(500).json({ data: [], message: `Internal Server Error running getUnshippedBoxes(). ${error}`, code: 500 });
+            return res.status(500).json({ data: [], message: `Error running getUnshippedBoxes(). ${error}`, code: 500 });
         }
     }
+    else if (api === 'getSpecimensByBoxedStatus'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
 
+        const boxedStatus = req.query.boxedStatus;
+        if (!boxedStatus || !['notBoxed', 'partiallyBoxed', 'boxed'].includes(boxedStatus)) {
+            return res.status(400).json(getResponseJSON('Boxed status is missing.', 400));
+        }
+
+        const boxedStatusMapping = {
+            notBoxed: fieldMapping.notBoxed,
+            partiallyBoxed: fieldMapping.partiallyBoxed,
+            boxed: fieldMapping.boxed
+        };
+        
+        const boxedStatusConceptId = boxedStatusMapping[boxedStatus];
+        const isBPTL = req.query.isBPTL === 'true';
+
+        try {
+            const { getSpecimensByBoxedStatus } = require('./firestore');
+            const specimens = await getSpecimensByBoxedStatus(siteCode, boxedStatusConceptId, isBPTL);
+            return res.status(200).json({data: specimens, code:200});
+        } catch (error) {
+            console.error("Error in getSpecimensByBoxedStatus():", error.message);
+            return res.status(500).json({ data: [], message: `Error running getSpecimensByBoxedStatus(). ${error}`, code: 500 });
+        }
+    }
     else if (api === 'getSpecimensByCollectionIds'){
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
