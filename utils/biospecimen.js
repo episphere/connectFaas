@@ -262,6 +262,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(200).json({data: response, code:200});
         }
     }
+    
     else if(api === 'getParticipantCollections') {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
@@ -506,6 +507,22 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(500).json({message: 'Error removing bag', code:500});
         }
     }
+    
+    else if (api === 'getUnshippedBoxes'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        try {
+            const { getUnshippedBoxes } = require('./firestore');
+            const unshippedBoxes = await getUnshippedBoxes(siteCode, req.query.isBPTL);
+            return res.status(200).json({data: unshippedBoxes, code:200});
+        } catch (error) {
+            console.error("Error in getUnshippedBoxes():", error.message);
+            return res.status(500).json({ data: [], message: `Internal Server Error running getUnshippedBoxes(). ${error}`, code: 500 });
+        }
+    }
+
     else if (api === 'getSpecimensByCollectionIds'){
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));

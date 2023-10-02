@@ -1106,6 +1106,19 @@ const addBoxAndUpdateSiteDetails = async (data) => {
     }
 }
 
+const getUnshippedBoxes = async (siteCode, isBPTL = false) => {
+    try {
+        let query = db.collection('boxes').where(fieldMapping.submitShipmentFlag.toString(), '==', fieldMapping.no);
+        if(!isBPTL) query = query.where(fieldMapping.loginSite.toString(), '==', siteCode);
+        const snapshot = await query.get();
+        
+        return snapshot.docs.map(document => document.data());
+    } catch (error) {
+        console.error(error);
+        throw new Error(error, { cause: error });
+    }
+}
+
 const updateBox = async (id, data, loginSite) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', id).where('789843387', '==', loginSite).get();
     const docId = snapshot.docs[0].id;
@@ -2599,4 +2612,5 @@ module.exports = {
     getSpecimensByCollectionIds,
     getBoxesByBoxId,
     searchSpecimenBySiteAndBoxId,
+    getUnshippedBoxes,
 }
