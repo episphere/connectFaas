@@ -530,13 +530,13 @@ const biospecimenAPIs = async (req, res) => {
 
         const boxedStatus = req.query.boxedStatus;
         if (!boxedStatus || !['notBoxed', 'partiallyBoxed', 'boxed'].includes(boxedStatus)) {
-            return res.status(400).json(getResponseJSON('Boxed status is missing.', 400));
+            return res.status(400).json(getResponseJSON('Boxed status is missing or invalid.', 400));
         }
 
         const boxedStatusMapping = {
             notBoxed: fieldMapping.notBoxed,
             partiallyBoxed: fieldMapping.partiallyBoxed,
-            boxed: fieldMapping.boxed
+            boxed: fieldMapping.boxed,
         };
         
         const boxedStatusConceptId = boxedStatusMapping[boxedStatus];

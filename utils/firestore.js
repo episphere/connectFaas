@@ -1109,7 +1109,20 @@ const addBoxAndUpdateSiteDetails = async (data) => {
 const getUnshippedBoxes = async (siteCode, isBPTL = false) => {
     try {
         let query = db.collection('boxes').where(fieldMapping.submitShipmentFlag.toString(), '==', fieldMapping.no);
-        if(!isBPTL) query = query.where(fieldMapping.loginSite.toString(), '==', siteCode);
+        if (!isBPTL) query = query.where(fieldMapping.loginSite.toString(), '==', siteCode);
+        const snapshot = await query.get();
+        
+        return snapshot.docs.map(document => document.data());
+    } catch (error) {
+        console.error(error);
+        throw new Error(error, { cause: error });
+    }
+}
+
+const getSpecimensByBoxedStatus = async (siteCode, boxedStatusConceptId, isBPTL = false) => {
+    try {
+        let query = db.collection('biospecimen').where(fieldMapping.boxedStatus.toString(), '==', boxedStatusConceptId);
+        if (!isBPTL) query = query.where(fieldMapping.loginSite.toString(), '==', siteCode);
         const snapshot = await query.get();
         
         return snapshot.docs.map(document => document.data());
@@ -1325,6 +1338,7 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
  * @param {number} requestedSite - site code of the site 
  * @param {string} boxId - boxId of the box
 */
+//TODO: extend to batch query for > 30 items in collectionIdArray
 const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
     try {
         const collectionIdArray = await getBiospecimenCollectionIdsFromBox(requestedSite, boxId);
@@ -2613,4 +2627,5 @@ module.exports = {
     getBoxesByBoxId,
     searchSpecimenBySiteAndBoxId,
     getUnshippedBoxes,
+    getSpecimensByBoxedStatus,
 }
