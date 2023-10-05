@@ -17,7 +17,10 @@ const submit = async (res, data, uid) => {
         ssnObj[447051482] = await encryptAsymmetric(ssn.replace(/-/g, ''));
         ssnObj['uid'] = uid;
         ssnObj['token'] = await getTokenForParticipant(uid);
-        storeSSN(ssnObj);
+        let ssnResponse = storeSSN(ssnObj);
+        if(ssnResponse instanceof Error){
+            return res.status(500).json(getResponseJSON(ssnResponse.message, 500));
+        }
         data[`311580100`] = 353358909;
         data[`454067894`] = new Date().toISOString();
         delete data[`${moduleSSN}.SOCIALSECUR1`]
@@ -33,7 +36,10 @@ const submit = async (res, data, uid) => {
         ssnObj[920333151] = await encryptAsymmetric(ssn.replace(/-/g, ''));
         ssnObj['uid'] = uid;
         ssnObj['token'] = await getTokenForParticipant(uid);
-        storeSSN(ssnObj);
+        let ssnResponse = storeSSN(ssnObj);
+        if(ssnResponse instanceof Error){
+            return res.status(500).json(getResponseJSON(ssnResponse.message, 500));
+        }
         data[`914639140`] = 353358909;
         data[`598680838`] = new Date().toISOString();
         delete data[`${moduleSSN}.SOCIALSECUR2`]
