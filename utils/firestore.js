@@ -1069,11 +1069,6 @@ const updateSpecimen = async (id, data) => {
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
-//TODO: remove this function after Aug 2023 push. Verify addBoxAndUpdateSiteDetails() is live and working as expected.
-const addBox = async (data) => {
-    await db.collection('boxes').add(data);
-}
-
 // atomically create a new box in the 'boxes' collection and update the 'siteDetails' doc with the most recent boxId as a numeric value
 const addBoxAndUpdateSiteDetails = async (data) => {
     try {
@@ -2558,7 +2553,6 @@ module.exports = {
     specimenExists,
     boxExists,
     accessionIdExists,
-    addBox,
     addBoxAndUpdateSiteDetails,
     updateBox,
     searchBoxes,
