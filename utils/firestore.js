@@ -1576,10 +1576,10 @@ const preQueryBuilder = (filters, query, trackingId, endDate, startDate, source,
     if (Object.keys(filters).length === 0 && source === `bptlShippingReport`) {
         const currentDate = new Date(new Date().getTime()).toISOString();
         const dateTwoWeeksAgo = new Date(new Date().getTime() - (1209600000)).toISOString();
-        return query = query.where('656548982', '>=', dateTwoWeeksAgo).where('656548982', '<=', currentDate)
+        return query.where('656548982', '>=', dateTwoWeeksAgo).where('656548982', '<=', currentDate)
     }
     else {
-        return query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
+        return buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
     }
 }
 
