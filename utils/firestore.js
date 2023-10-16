@@ -1655,22 +1655,22 @@ const getSpecimenCollections = async (token, siteCode) => {
     return [];
 }
 
+const preQueryBuilder = (filters, query, trackingId, endDate, startDate, source, siteCode) => {
+    if (Object.keys(filters).length === 0 && source === `bptlShippingReport`) {
+        const currentDate = new Date(new Date().getTime()).toISOString();
+        const dateTwoWeeksAgo = new Date(new Date().getTime() - (1209600000)).toISOString();
+        return query.where('656548982', '>=', dateTwoWeeksAgo).where('656548982', '<=', currentDate)
+    }
+    else {
+        return buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
+    }
+}
+
 const buildQueryWithFilters = (query, trackingId, endDate, startDate, source, siteCode) => {
-    if (trackingId) {
-        query = query.where('959708259', '==', trackingId);
-    }
-
-    if (endDate) {
-        query = query.where('656548982', '<=', endDate);
-    }
-
-    if (startDate) {
-        query = query.where('656548982', '>=', startDate);
-    }
-
-    if (source !== 'bptlShippingReport') {
-        query = query.where('789843387', '==', siteCode);
-    }
+    if (trackingId) query = query.where('959708259', '==', trackingId);
+    if (endDate) query = query.where('656548982', '<=', endDate);
+    if (startDate) query = query.where('656548982', '>=', startDate);
+    if (source !== `bptlShippingReport`) query = query.where('789843387', '==', siteCode);
     return query
 }
 
@@ -1680,46 +1680,39 @@ const getBoxesPagination = async (siteCode, body) => {
     const elementsPerPage = body.elementsPerPage;
     const filters = body.filters ?? ``;
     const source = body.source ?? ``;
-
     const startDate = filters.startDate ?? ``;
     const trackingId = filters.trackingId ?? ``;
     const endDate = filters.endDate ?? ``;
     try {
         let query = db.collection('boxes').where('145971562', '==', 353358909);
-
-        query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
-
+        query = preQueryBuilder(filters, query, trackingId, endDate, startDate, source, siteCode);
         query = query.orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage * elementsPerPage);
-
         const snapshot = await query.get();
         const result = snapshot.docs.map(document => document.data());
-
         return result;
-    } catch (error) {
+    } 
+    catch (error) {
         console.error(error);
-        return []
+        return [];
     }
 };
 
 
 const getNumBoxesShipped = async (siteCode, body) => {
-    const filters = body;
+    const filters = body.filters ?? ``;
     const source = body.source ?? ``;
     const startDate = filters.startDate ?? ``;
     const trackingId = filters.trackingId ?? ``;
     const endDate = filters.endDate ?? ``;
     try {
         let query = db.collection('boxes').where('145971562', '==', 353358909);
-
-        query = buildQueryWithFilters(query, trackingId, endDate, startDate, source, siteCode)
-
+        query = preQueryBuilder(filters, query, trackingId, endDate, startDate, source, siteCode);
         const snapshot = await query.get();
         const result = snapshot.docs.length;
-        
         return result;
     } catch (error) {
         console.error(error);
-        return []
+        return new Error(error)
     }
 }
 
