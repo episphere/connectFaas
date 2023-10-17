@@ -308,12 +308,11 @@ const checkDerivedVariables = async (token, siteCode) => {
         anyRefusalWithdrawal = checkRefusalWithdrawals(data);
     }
 
-
     if(incentiveEligible) {
 
         const incentiveUpdates = {
             '130371375.266600170.731498909': 353358909,
-            '130371375.266600170.222373868': data['827220437'] === 809703864 ? 104430631 : 353358909,
+            '130371375.266600170.222373868': 353358909,
             '130371375.266600170.787567527': new Date().toISOString()
         };
 
