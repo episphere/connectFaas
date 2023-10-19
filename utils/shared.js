@@ -211,6 +211,7 @@ const defaultFlags = {
     912301837: 208325815,
     253883960: 972455046,
     547363263: 972455046,
+    547363263: 972455046,
     949302066: 972455046,
     536735468: 972455046,
     976570371: 972455046,
@@ -251,6 +252,7 @@ const moduleConceptsToCollections = {
     "D_912367929" :     "menstrualSurvey_v1",
     "D_826163434" :     "clinicalBioSurvey_v1",
     "D_166676176" :     "ssn",
+    "D_390351864" :     "mouthwash_v1"
 }
 
 const moduleStatusConcepts = {
@@ -261,7 +263,9 @@ const moduleStatusConcepts = {
     "265193023" :       "bioSurvey",
     "220186468" :       "covid19Survey",
     "459098666" :       "menstrualSurvey",
-    "253883960" :       "clinicalBioSurvey"
+    "253883960" :       "clinicalBioSurvey",
+    "126331570" :       "ssn",
+    "777777778" :       "mouthwash"
 }
 
 const listOfCollectionsRelatedToDataDestruction = [
