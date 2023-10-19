@@ -1069,11 +1069,6 @@ const updateSpecimen = async (id, data) => {
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
-//TODO: remove this function after Aug 2023 push. Verify addBoxAndUpdateSiteDetails() is live and working as expected.
-const addBox = async (data) => {
-    await db.collection('boxes').add(data);
-}
-
 // atomically create a new box in the 'boxes' collection and update the 'siteDetails' doc with the most recent boxId as a numeric value
 const addBoxAndUpdateSiteDetails = async (data) => {
     try {
@@ -1394,7 +1389,7 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
  * @param {number} requestedSite - site code of the site 
  * @param {string} boxId - boxId of the box
 */
-//TODO: extend to batch query for > 30 items in collectionIdArray
+//TODO: extend to batch query for > 15 items in collectionIdArray
 const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
     try {
         const collectionIdArray = await getBiospecimenCollectionIdsFromBox(requestedSite, boxId);
@@ -2330,18 +2325,6 @@ const processBsiData = async (tubeConceptIds, query) => {
     }));
 }
 
-const getQueryBsiData = async (query) => {
-    try {
-        let tubeConceptIds = ['973670172', '838567176', '787237543', '703954371', '652357376', '683613884', '677469051','958646668','454453939', '589588440',
-        '376960806', '232343615' ,'299553921','223999569', '143615646', '505347689']  // grab tube id
-        const holdBiospecimenMatches = await processBsiData(tubeConceptIds, query)
-        return holdBiospecimenMatches
-    }
-    catch(error){
-        return new Error(error);
-    }
-}
-
 const verifyUsersEmailOrPhone = async (req) => {
     const queries = req.query
     if(queries.email) {
@@ -2610,7 +2593,6 @@ module.exports = {
     specimenExists,
     boxExists,
     accessionIdExists,
-    addBox,
     addBoxAndUpdateSiteDetails,
     updateBox,
     searchBoxes,
@@ -2663,7 +2645,6 @@ module.exports = {
     storePackageReceipt,
     getBptlMetrics,
     getBptlMetricsForShipped,
-    getQueryBsiData,
     getRestrictedFields,
     sendClientEmail,
     verifyUsersEmailOrPhone,

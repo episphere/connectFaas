@@ -281,26 +281,6 @@ const biospecimenAPIs = async (req, res) => {
 
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
-    //TODO: remove this endpoint after Aug 2023 push. Verify addBoxAndUpdateSiteDetails is working as expected.
-    else if(api == 'addBox'){
-        if(req.method !== 'POST') {
-            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-        }
-        const requestData = req.body;
-        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
-        if(requestData['132929440']){
-            const boxId = requestData['132929440'];
-            const loginSite = requestData['789843387']
-            const { boxExists } = require('./firestore');
-            const exists = await boxExists(boxId, loginSite);
-            if (exists === true) return res.status(200).json(getResponseJSON('Box already exists!', 200));
-            if (exists === false) {
-                const { addBox } = require('./firestore');
-                await addBox(requestData);
-            }
-        }
-        return res.status(200).json({message: 'Success!', code:200})
-    }
     else if(api === 'addBoxAndUpdateSiteDetails'){
         try {
             if(req.method !== 'POST') {
@@ -764,18 +744,6 @@ const biospecimenAPIs = async (req, res) => {
         }
         const { getBptlMetricsForShipped } = require('./firestore');
         const response = await getBptlMetricsForShipped();
-        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
-        return res.status(200).json({data: response, code:200})
-    }
-
-    else if (api === 'queryBsiData') {
-        if(req.method !== 'GET') {
-            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-        }
-        const query = req.query.type;
-        if(Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include parameter to filter data.', 400));
-        const { getQueryBsiData } = require('./firestore');
-        const response = await getQueryBsiData(query);
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
         return res.status(200).json({data: response, code:200})
     }
