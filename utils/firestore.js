@@ -1204,7 +1204,8 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
         "0003": "838567176",
         "0031": "857757831",
         "0013": "958646668",
-        "0006": "973670172"
+        "0006": "973670172",
+        "0060": "505347689"
     }
     let conceptTube = conversion[tubeId];
 
@@ -2247,7 +2248,7 @@ const processBsiData = async (tubeConceptIds, query) => {
 const getQueryBsiData = async (query) => {
     try {
         let tubeConceptIds = ['973670172', '838567176', '787237543', '703954371', '652357376', '683613884', '677469051','958646668','454453939', '589588440',
-        '376960806', '232343615' ,'299553921','223999569', '143615646']  // grab tube id
+        '376960806', '232343615' ,'299553921','223999569', '143615646', '505347689']  // grab tube id
         const holdBiospecimenMatches = await processBsiData(tubeConceptIds, query)
         return holdBiospecimenMatches
     }
