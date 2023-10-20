@@ -521,7 +521,6 @@ const biospecimenAPIs = async (req, res) => {
         const boxedStatusArray = [fieldMapping.notBoxed, fieldMapping.partiallyBoxed, fieldMapping.boxed];
         const boxedStatus = req.query.boxedStatus;
         const parsedBoxStatus = parseInt(boxedStatus, 10);
-        const isDev = req.query.isDev === 'true';
         const isBPTL = req.query.isBPTL === 'true';
 
         if (!boxedStatus || isNaN(parsedBoxStatus) || !boxedStatusArray.includes(parsedBoxStatus)) {
@@ -530,7 +529,7 @@ const biospecimenAPIs = async (req, res) => {
 
         try {
             const { getSpecimensByBoxedStatus } = require('./firestore');
-            const specimens = await getSpecimensByBoxedStatus(siteCode, parsedBoxStatus, isDev, isBPTL);
+            const specimens = await getSpecimensByBoxedStatus(siteCode, parsedBoxStatus, isBPTL);
             return res.status(200).json({data: specimens, code:200});
         } catch (error) {
             console.error("Error in getSpecimensByBoxedStatus():", error.message);
