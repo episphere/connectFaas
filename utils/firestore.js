@@ -1169,6 +1169,8 @@ const updateBox = async (id, boxAndTubesData, addedTubes, loginSite) => {
             [fieldMapping.strayTubesList]: updatedSpecimenData[fieldMapping.strayTubesList],
         }
         
+        delete boxAndTubesData['addedTubes'];
+        
         const batch = db.batch();
         batch.update(boxDocRef, boxAndTubesData);
         batch.update(specimenDocRef, specimenDataToWrite);

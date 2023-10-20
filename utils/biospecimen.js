@@ -326,7 +326,6 @@ const biospecimenAPIs = async (req, res) => {
                 const boxId = requestData[fieldMapping.shippingBoxId];
                 const loginSite = requestData[fieldMapping.loginSite];
                 const addedTubes = requestData['addedTubes'];
-                delete requestData['addedTubes'];
         
                 if (!addedTubes || addedTubes.length === 0) return res.status(400).json(getResponseJSON('Missing added tubes', 400));
 
