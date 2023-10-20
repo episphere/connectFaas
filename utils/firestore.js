@@ -1114,11 +1114,26 @@ const getUnshippedBoxes = async (siteCode, isBPTL = false) => {
     }
 }
 
-const getSpecimensByBoxedStatus = async (siteCode, boxedStatusConceptId, isBPTL = false) => {
-    console.log('boxedStatusConceptId', boxedStatusConceptId);
+/**
+ * Fetch specimen docs based on boxed status of notBoxed, partiallyBoxed, or boxed.
+ * Stray tube aging: stop fetching stray tubes after 5 weeks from collection finalization date. Skip this if the call is from dev to retain stray tubes for testing.
+ * @param {number} siteCode - Site code of the specimens to fetch.
+ * @param {number} boxedStatusConceptId - Concept ID of the boxedStatus. 
+ * @param {boolean} isDev - Is this a dev call? If yes, don't apply the stray tube aging filter.
+ * @param {boolean} isBPTL - Is this a BPTL call? If yes, don't apply the healthCareProvider filter or the stray tube aging filter.
+ * @returns {array} - Array of specimen docs.
+ */
+const getSpecimensByBoxedStatus = async (siteCode, boxedStatusConceptId, isDev, isBPTL = false) => {
     try {
         let query = db.collection('biospecimen').where(fieldMapping.boxedStatus.toString(), '==', boxedStatusConceptId);
         if (!isBPTL) query = query.where(fieldMapping.healthCareProvider.toString(), '==', siteCode);
+        if (!isBPTL && !isDev && boxedStatusConceptId === fieldMapping.partiallyBoxed) {
+            const today = new Date();
+            const fiveWeeksAgo = new Date();
+            fiveWeeksAgo.setDate(today.getDate() - 35); // 5 weeks ago = 35 days
+            const fiveWeeksAgoIso = fiveWeeksAgo.toISOString().split('T')[0] + 'T00:00:00.000Z';
+            query = query.where(fieldMapping.collectionFinalizedTimestamp.toString(), '>=', fiveWeeksAgoIso);
+        }
         const snapshot = await query.get();
         
         return snapshot.docs.map(document => document.data());

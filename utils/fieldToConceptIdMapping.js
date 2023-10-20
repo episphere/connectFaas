@@ -35,6 +35,7 @@ module.exports = {
     temperatureProbeInBox: 105891443,
     boxTrackingNumberScan: 959708259,
     collectionIsFinalized: 410912345,
+    collectionFinalizedTimestamp: 556788178,
     boxLastModifiedTimestamp: 555611076,
     orphanBagFlag: 255283733,
     boxHasOrphanBag: 842312685,
