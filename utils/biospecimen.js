@@ -330,7 +330,7 @@ const biospecimenAPIs = async (req, res) => {
                 if (!addedTubes || addedTubes.length === 0) return res.status(400).json(getResponseJSON('Missing added tubes', 400));
 
                 const exists = await boxExists(boxId, loginSite, requestData);
-                if (exists !== true) return res.status(400).json(getResponseJSON('Box does not exist!', 400));
+                if (exists !== true) return res.status(404).json(getResponseJSON('Box does not exist!', 404));
                 
                 const updatedSpecimenData = await updateBox(boxId, requestData, addedTubes, loginSite);
                 if (!updatedSpecimenData) {
