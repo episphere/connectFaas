@@ -9,7 +9,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, bagConceptIDs, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
+const { collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -1069,11 +1069,6 @@ const updateSpecimen = async (id, data) => {
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
-//TODO: remove this function after Aug 2023 push. Verify addBoxAndUpdateSiteDetails() is live and working as expected.
-const addBox = async (data) => {
-    await db.collection('boxes').add(data);
-}
-
 // atomically create a new box in the 'boxes' collection and update the 'siteDetails' doc with the most recent boxId as a numeric value
 const addBoxAndUpdateSiteDetails = async (data) => {
     try {
@@ -1106,10 +1101,92 @@ const addBoxAndUpdateSiteDetails = async (data) => {
     }
 }
 
-const updateBox = async (id, data, loginSite) => {
-    const snapshot = await db.collection('boxes').where('132929440', '==', id).where('789843387', '==', loginSite).get();
-    const docId = snapshot.docs[0].id;
-    await db.collection('boxes').doc(docId).update(data);
+const getUnshippedBoxes = async (siteCode, isBPTL = false) => {
+    try {
+        let query = db.collection('boxes').where(fieldMapping.submitShipmentFlag.toString(), '==', fieldMapping.no);
+        if (!isBPTL) query = query.where(fieldMapping.loginSite.toString(), '==', siteCode);
+        const snapshot = await query.get();
+        
+        return snapshot.docs.map(document => document.data());
+    } catch (error) {
+        console.error(error);
+        throw new Error(error, { cause: error });
+    }
+}
+
+/**
+ * Fetch specimen docs based on boxed status of notBoxed, partiallyBoxed, or boxed.
+ * @param {number} siteCode - Site code of the specimens to fetch.
+ * @param {number} boxedStatusConceptId - Concept ID of the boxedStatus. 
+ * @param {boolean} isBPTL - Is this a BPTL call? If yes, don't apply the healthCareProvider filter or the stray tube aging filter.
+ * @returns {array} - Array of specimen docs.
+ */
+const getSpecimensByBoxedStatus = async (siteCode, boxedStatusConceptId, isBPTL = false) => {
+    try {
+        let query = db.collection('biospecimen').where(fieldMapping.boxedStatus.toString(), '==', boxedStatusConceptId);
+        if (!isBPTL) query = query.where(fieldMapping.healthCareProvider.toString(), '==', siteCode);
+
+        const snapshot = await query.get();
+        
+        return snapshot.docs.map(document => document.data());
+    } catch (error) {
+        console.error(error);
+        throw new Error(error, { cause: error });
+    }
+}
+
+/**
+ * Add a bag to the box. Orphan tubes are treated as separate bags.
+ * Also manage/update/maintain the specimen doc's boxedStatus and strayTubeArray fields.
+ * @param {string} id - id of the box to update.
+ * @param {object} boxAndTubesData - data package to update the box and specimen doc.
+ * @param {array<string>} addedTubes - array of collectionIds of the tubes to add to the box. Format: `${collectionId} ${tubeType}`
+ * @param {string} loginSite - the user's site code.
+ */
+const updateBox = async (id, boxAndTubesData, addedTubes, loginSite) => {
+    try {
+        const { manageSpecimenBoxedStatusAddBag } = require('./shared');
+        const addedTubesCollectionId = addedTubes[0].split(' ')[0];
+
+        const snapshotResponse = await Promise.all([
+            db.collection('boxes')
+                .where(fieldMapping.shippingBoxId.toString(), '==', id)
+                .where(fieldMapping.loginSite.toString(), '==', loginSite)
+                .get(),
+            db.collection('biospecimen')
+                .where(fieldMapping.collectionId.toString(), '==', addedTubesCollectionId)
+                .where(fieldMapping.healthCareProvider.toString(), '==', loginSite)
+                .get()
+        ]);
+
+        const boxSnapshot = snapshotResponse[0].docs.map(doc => ({ ref: doc.ref, data: doc.data() }));
+        const specimenSnapshot = snapshotResponse[1].docs.map(doc => ({ ref: doc.ref, data: doc.data() }));
+        
+        if (boxSnapshot.length !== 1 || specimenSnapshot.length !== 1) {
+            throw new Error('Couldn\'t find Matching documents.');
+        }
+
+        const updatedSpecimenData = manageSpecimenBoxedStatusAddBag(specimenSnapshot[0], addedTubes);
+        const boxDocRef = boxSnapshot[0].ref;
+        const specimenDocRef = updatedSpecimenData.ref;
+        delete updatedSpecimenData.ref;
+
+        const specimenDataToWrite = {
+            [fieldMapping.boxedStatus]: updatedSpecimenData[fieldMapping.boxedStatus],
+            [fieldMapping.strayTubesList]: updatedSpecimenData[fieldMapping.strayTubesList],
+        }
+        
+        delete boxAndTubesData['addedTubes'];
+        
+        const batch = db.batch();
+        batch.update(boxDocRef, boxAndTubesData);
+        batch.update(specimenDocRef, specimenDataToWrite);
+        await batch.commit();
+        return updatedSpecimenData;
+    } catch (error) {
+        console.error("Error updating box:", error);
+        throw new Error(error);
+    }
 }
 
 /**
@@ -1119,62 +1196,70 @@ const updateBox = async (id, data, loginSite) => {
  * @returns - Success or Failure message.
  */
 const removeBag = async (siteCode, requestData) => {
-    const boxId = requestData.boxId;
-    const bags = requestData.bags;
-    const currDate = requestData.date;
-    let hasOrphanFlag = 104430631;
-
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
+    const { sortBoxOnBagRemoval, manageSpecimenBoxedStatusRemoveBag } = require('./shared');
     
-    if(snapshot.size === 1){
-      const doc = snapshot.docs[0];
-      const box = doc.data();
-      
-      for (let conceptID of bagConceptIDs) { 
-          const currBag = box[conceptID];
-          if (!currBag) continue;
-          for (let bagID of bags) {               
-              if (currBag['522094118'] === bagID || currBag['787237543'] === bagID || currBag['223999569'] === bagID) {
-                  delete box[conceptID];                   
-              }
-          }
-      }
+    const boxId = requestData.boxId;
+    const bagsToRemove = requestData.bags;
+    const bagCollectionIdArray = bagsToRemove.map(bagId => bagId.split(' ')[0]);
+    const currDate = requestData.date;
 
-      // Create a new sorted box
-      let sortedBox = {};
-      for (let conceptID of bagConceptIDs) {
-          const foundKey = Object.keys(box).find(k => bagConceptIDs.includes(k));
-          if (foundKey) {
-              sortedBox[conceptID] = box[foundKey];
-              delete box[foundKey];
-          }
-      }
+    const boxQuery = db.collection('boxes')
+        .where(fieldMapping.shippingBoxId.toString(), '==', boxId)
+        .where(fieldMapping.loginSite.toString(), '==', siteCode)
+        .get();
 
-      // Merge remaining properties from the original box to the sorted box
-      sortedBox = { ...sortedBox, ...box }
+    const chunkedSpecimenQueries = [];
+    const chunkSize = 15;
 
-      // iterate over all current bag concept Ids and change the value of hasOrphanFlag
-      for(let conceptID of bagConceptIDs) {
-        const currBag = sortedBox[conceptID];
-        if (!currBag) continue;
-        if(currBag['255283733'] == 104430631 ) {
-          hasOrphanFlag = 104430631;
-        } else if (currBag['255283733'] == 353358909) {
-          hasOrphanFlag = 353358909;
-        } else {
-          hasOrphanFlag = 104430631;
+    // Split bagCollectionIdArray into chunks of 15 or fewer elements for use with 'in' operator.
+    for (let i = 0; i < bagCollectionIdArray.length; i += chunkSize) {
+        const specimenCollectionIdChunk = bagCollectionIdArray.slice(i, i + chunkSize);
+        const specimenQuery = db.collection('biospecimen')
+            .where(fieldMapping.collectionId.toString(), 'in', specimenCollectionIdChunk)
+            .where(fieldMapping.healthCareProvider.toString(), '==', siteCode)
+            .get();
+        chunkedSpecimenQueries.push(specimenQuery);
+    }
+
+    const [boxSnapshot, ...specimenSnapshots] = await Promise.all([boxQuery, ...chunkedSpecimenQueries]);
+
+    if (boxSnapshot.size !== 1 || specimenSnapshots.some(snapshot => snapshot.empty)) {
+        throw new Error('Couldn\'t find Matching documents.');
+    }
+
+    const boxData = boxSnapshot.docs[0].data();
+    const boxDocRef = boxSnapshot.docs[0].ref;
+
+    const specimenDataArray = [];
+    for (const snapshot of specimenSnapshots) {
+        snapshot.docs.forEach(doc => {
+            specimenDataArray.push({ data: doc.data(), ref: doc.ref });
+        });
+    }
+
+    // Samples within bag = { collectionId: [sampleId1, sampleId2, ...]}
+    const { updatedBoxData, samplesWithinBag } = sortBoxOnBagRemoval(boxData, bagsToRemove, currDate);    
+    const updatedSpecimenDataArray = manageSpecimenBoxedStatusRemoveBag(specimenDataArray, samplesWithinBag);
+    
+    try {
+        const batch = db.batch();
+        // set the new box data
+        batch.set(boxDocRef, updatedBoxData);
+        // build the specimen update object for each specimen (there will only be > 1 for 'unlabelled' bags)
+        for (const updatedSpecimenData of updatedSpecimenDataArray) {
+            const specimenDocRef = updatedSpecimenData.ref;
+            delete updatedSpecimenData.ref;
+            const specimenDataToWrite = {
+                [fieldMapping.boxedStatus]: updatedSpecimenData[fieldMapping.boxedStatus],
+                [fieldMapping.strayTubesList]: updatedSpecimenData[fieldMapping.strayTubesList]
+            };
+            batch.update(specimenDocRef, specimenDataToWrite);
         }
-      }
-      
-      try {
-        await db.collection('boxes').doc(doc.id).set({ ...sortedBox, '555611076':currDate, '842312685':hasOrphanFlag });
-        return 'Success!';
-      } catch (error) {
+        await batch.commit();
+        return updatedSpecimenDataArray;
+    } catch (error) {
         console.error('Error writing document: ', error);
         throw new Error('Error updating the box in the database.');
-      }
-    } else {
-      return 'Failure! Could not find box mentioned';
     }   
 }
 
@@ -1204,7 +1289,8 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
         "0003": "838567176",
         "0031": "857757831",
         "0013": "958646668",
-        "0006": "973670172"
+        "0006": "973670172",
+        "0060": "505347689",
     }
     let conceptTube = conversion[tubeId];
 
@@ -1312,6 +1398,7 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
  * @param {number} requestedSite - site code of the site 
  * @param {string} boxId - boxId of the box
 */
+//TODO: extend to batch query for > 15 items in collectionIdArray
 const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
     try {
         const collectionIdArray = await getBiospecimenCollectionIdsFromBox(requestedSite, boxId);
@@ -2113,6 +2200,7 @@ const setPackageReceiptUSPS = async (data) => {
 
 const setPackageReceiptFedex = async (data) => {
     try {
+        const { bagConceptIDs } = require('./shared');
         let token = data.scannedBarcode
         let collectionIdHolder = {}
         if ((token).length === 34) token = data.scannedBarcode.slice((data.scannedBarcode).length - 22)
@@ -2124,13 +2212,15 @@ const setPackageReceiptFedex = async (data) => {
         data['959708259'] = token
         delete data.scannedBarcode
         await db.collection("boxes").doc(docId).update(data)
-        const bags = ["650224161", "136341211", "503046679", "313341808", "668816010", "754614551", "174264982", "550020510", 
-        "673090642", "492881559", "536728814", "309413330", "357218702", "945294744", "741697447", "255283733",
-        "842312685", "234868461", "522094118"]                                                     
+        
+        // Updated BagConceptIDs for new 40 bag capacity. Retained these because they were previously included.
+        const additionalBagItems = ["255283733", "842312685", "234868461", "522094118"];
+
+        const allBagsToCheck = [...bagConceptIDs, ...additionalBagItems];
         if (Object.keys(snapshot.docs.length) !== 0) {
              snapshot.docs.map(doc => { 
                 const collectionIdKeys = doc.data(); // grab all the collection ids
-                bags.forEach(async (bag) => {
+                allBagsToCheck.forEach(async (bag) => {
                     if (bag in collectionIdKeys){
                         if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
                             if (collectionIdKeys[bag]['787237543'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
@@ -2242,18 +2332,6 @@ const processBsiData = async (tubeConceptIds, query) => {
             return collectionIdInfo
         }) // push query results to holdBiospecimenMatches array       
     }));
-}
-
-const getQueryBsiData = async (query) => {
-    try {
-        let tubeConceptIds = ['973670172', '838567176', '787237543', '703954371', '652357376', '683613884', '677469051','958646668','454453939', '589588440',
-        '376960806', '232343615' ,'299553921','223999569', '143615646']  // grab tube id
-        const holdBiospecimenMatches = await processBsiData(tubeConceptIds, query)
-        return holdBiospecimenMatches
-    }
-    catch(error){
-        return new Error(error);
-    }
 }
 
 const verifyUsersEmailOrPhone = async (req) => {
@@ -2524,7 +2602,6 @@ module.exports = {
     specimenExists,
     boxExists,
     accessionIdExists,
-    addBox,
     addBoxAndUpdateSiteDetails,
     updateBox,
     searchBoxes,
@@ -2577,7 +2654,6 @@ module.exports = {
     storePackageReceipt,
     getBptlMetrics,
     getBptlMetricsForShipped,
-    getQueryBsiData,
     getRestrictedFields,
     sendClientEmail,
     verifyUsersEmailOrPhone,
@@ -2592,4 +2668,6 @@ module.exports = {
     getSpecimensByCollectionIds,
     getBoxesByBoxId,
     searchSpecimenBySiteAndBoxId,
+    getUnshippedBoxes,
+    getSpecimensByBoxedStatus,
 }

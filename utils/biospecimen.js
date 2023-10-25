@@ -281,26 +281,6 @@ const biospecimenAPIs = async (req, res) => {
 
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
-    //TODO: remove this endpoint after Aug 2023 push. Verify addBoxAndUpdateSiteDetails is working as expected.
-    else if(api == 'addBox'){
-        if(req.method !== 'POST') {
-            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-        }
-        const requestData = req.body;
-        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
-        if(requestData['132929440']){
-            const boxId = requestData['132929440'];
-            const loginSite = requestData['789843387']
-            const { boxExists } = require('./firestore');
-            const exists = await boxExists(boxId, loginSite);
-            if (exists === true) return res.status(200).json(getResponseJSON('Box already exists!', 200));
-            if (exists === false) {
-                const { addBox } = require('./firestore');
-                await addBox(requestData);
-            }
-        }
-        return res.status(200).json({message: 'Success!', code:200})
-    }
     else if(api === 'addBoxAndUpdateSiteDetails'){
         try {
             if(req.method !== 'POST') {
@@ -335,22 +315,34 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
+        
         const requestData = req.body;
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         
-        if(requestData['132929440']){
-            const boxId = requestData['132929440'];
-            const loginSite = requestData['789843387']
-            const { boxExists } = require('./firestore');
-            const exists = await boxExists(boxId, loginSite, requestData);
-            if (exists === false) return res.status(400).json(getResponseJSON('Box does not exist!', 400));
-            if (exists === true) {
-                const { updateBox } = require('./firestore');
-                await updateBox(boxId, requestData, loginSite);
-                return res.status(200).json({message: 'Success!', code:200})
-            }
-        } else {
-            return res.status(400).json({message: 'Error!', code:400});
+        try {
+            const { boxExists, updateBox } = require('./firestore');
+            
+            if (requestData[fieldMapping.shippingBoxId]){
+                const boxId = requestData[fieldMapping.shippingBoxId];
+                const loginSite = requestData[fieldMapping.loginSite];
+                const addedTubes = requestData['addedTubes'];
+        
+                if (!addedTubes || addedTubes.length === 0) return res.status(400).json(getResponseJSON('Missing added tubes', 400));
+
+                const exists = await boxExists(boxId, loginSite, requestData);
+                if (exists !== true) return res.status(404).json(getResponseJSON('Box does not exist!', 404));
+                
+                const updatedSpecimenData = await updateBox(boxId, requestData, addedTubes, loginSite);
+                if (!updatedSpecimenData) {
+                    return res.status(500).json(getResponseJSON('Failed to update box!', 500));
+                }
+                return res.status(200).json({data: updatedSpecimenData, message: 'Success!', code: 200});
+            } else {
+                return res.status(400).json(getResponseJSON('Error: missing boxId', 400));
+            } 
+        } catch (error) {
+                console.error('Error updating box:', error);
+                return res.status(500).json(getResponseJSON(`Error updating box. ${error}`, 500));
         }
     }
     else if (api === 'searchBoxes') {
@@ -490,20 +482,58 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
 
-        const {removeBag} = require('./firestore');
         const requestData = req.body;
-        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
-
+        if (Object.keys(requestData).length === 0) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        
         try {
-            const result = await removeBag(siteCode, requestData);
-            if (result === 'Success!') {
-                return res.status(200).json({message: 'Success!', code:200});
-            } else {
-                return res.status(500).json({message: 'Failure. Could not remove bag.', code:500});
+            const {removeBag} = require('./firestore');
+            const updatedSpecimenDataArray = await removeBag(siteCode, requestData);
+            if (!updatedSpecimenDataArray) {
+                return res.status(500).json(getResponseJSON('Failure. Could not remove bag.', 500));
             }
+            return res.status(200).json({data: updatedSpecimenDataArray, message: 'Success!', code: 200});
         } catch (error) {
             console.error('Error removing bag:', error);
-            return res.status(500).json({message: 'Error removing bag', code:500});
+            return res.status(500).json(getResponseJSON('Error removing bag', 500));
+        }
+    }
+    else if (api === 'getUnshippedBoxes') {
+        if (req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        const isBPTL = req.query.isBPTL === 'true';
+
+        try {
+            const { getUnshippedBoxes } = require('./firestore');
+            const unshippedBoxes = await getUnshippedBoxes(siteCode, isBPTL);
+            return res.status(200).json({data: unshippedBoxes, code:200});
+        } catch (error) {
+            console.error("Error in getUnshippedBoxes():", error.message);
+            return res.status(500).json({ data: [], message: `Error running getUnshippedBoxes(). ${error}`, code: 500 });
+        }
+    }
+    else if (api === 'getSpecimensByBoxedStatus'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        const boxedStatusArray = [fieldMapping.notBoxed, fieldMapping.partiallyBoxed, fieldMapping.boxed];
+        const boxedStatus = req.query.boxedStatus;
+        const parsedBoxStatus = parseInt(boxedStatus, 10);
+        const isBPTL = req.query.isBPTL === 'true';
+
+        if (!boxedStatus || isNaN(parsedBoxStatus) || !boxedStatusArray.includes(parsedBoxStatus)) {
+            return res.status(400).json(getResponseJSON('Boxed status is invalid or missing.', 400));
+        }
+
+        try {
+            const { getSpecimensByBoxedStatus } = require('./firestore');
+            const specimens = await getSpecimensByBoxedStatus(siteCode, parsedBoxStatus, isBPTL);
+            return res.status(200).json({data: specimens, code:200});
+        } catch (error) {
+            console.error("Error in getSpecimensByBoxedStatus():", error.message);
+            return res.status(500).json({ data: [], message: `Error running getSpecimensByBoxedStatus(). ${error}`, code: 500 });
         }
     }
     else if (api === 'getSpecimensByCollectionIds'){
@@ -713,18 +743,6 @@ const biospecimenAPIs = async (req, res) => {
         }
         const { getBptlMetricsForShipped } = require('./firestore');
         const response = await getBptlMetricsForShipped();
-        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
-        return res.status(200).json({data: response, code:200})
-    }
-
-    else if (api === 'queryBsiData') {
-        if(req.method !== 'GET') {
-            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-        }
-        const query = req.query.type;
-        if(Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include parameter to filter data.', 400));
-        const { getQueryBsiData } = require('./firestore');
-        const response = await getQueryBsiData(query);
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
         return res.status(200).json({data: response, code:200})
     }
