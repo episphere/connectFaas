@@ -1,90 +1,85 @@
-const { getResponseJSON } = require("./shared");
 const sgMail = require("@sendgrid/mail");
-
-const uuid = require("uuid");
-
-// Update data to test
-const notificationRecord = {
-    notificationSpecificationsID: "",
-    id: uuid(),
-    notificationType: "email",
-    email: "",
-    notification: {
-        title: "Test SendGrid Event Webhook",
-        body: "<p>Hello World!</p>",
-        time: new Date().toISOString(),
-    },
-    attempt: "1st contact",
-    category: "Notification Testing Email",
-    token: "",
-    uid: "",
-    read: false,
-};
+const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
+const { EventWebhook, EventWebhookHeader } = require("@sendgrid/eventwebhook");
+const { processEventWebhook } = require("./firestore");
+const { getResponseJSON } = require("./shared");
 
 const _testSendEmail = async (res) => {
     console.log("Start sending email");
-    // Add SendGrid apiKey to test
-    sgMail.setApiKey("");
 
-    // Update data to test
-    const msg = {
-        personalizations: [
-            {
-                to: "",
-                custom_args: {
-                    connect_id: "",
-                    token: notificationRecord.token,
-                    notification_id: notificationRecord.id,
-                    attempt: "1",
+    try {
+        // Add SendGrid apiKey to test
+        sgMail.setApiKey("");
+
+        // Update data to test
+        const msg = {
+            personalizations: [
+                {
+                    to: "",
+                    custom_args: {
+                        connect_id: "cnid1",
+                        token: "tk1",
+                        notification_id: "nid1",
+                        gcloud_project: process.env.GCLOUD_PROJECT,
+                        attempt: "1",
+                    },
                 },
+                // {
+                //     to: "",
+                //     custom_args: {
+                //         connect_id: "cnid2",
+                //         token: "tk2",
+                //         notification_id: "nid2",
+                //         gcloud_project: process.env.GCLOUD_PROJECT,
+                //         attempt: "1",
+                //     },
+                // },
+            ],
+            from: {
+                name:
+                    process.env.SG_FROM_NAME ||
+                    "Connect for Cancer Prevention Study",
+                email:
+                    process.env.SG_FROM_EMAIL ||
+                    "donotreply@myconnect.cancer.gov",
             },
-            {
-                to: "",
-                custom_args: {
-                    connect_id: "",
-                    token: notificationRecord.token,
-                    notification_id: notificationRecord.id,
-                    attempt: "1",
+            subject: "Test SendGrid Event Webhook",
+            content: [
+                {
+                    type: "text/html",
+                    value: "<p>Hello World!</p>",
                 },
-            },
-        ],
-        from: {
-            name:
-                process.env.SG_FROM_NAME ||
-                "Connect for Cancer Prevention Study",
-            email:
-                process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
-        },
-        subject: notificationRecord.notification.title,
-        content: [
-            {
-                type: "text/html",
-                value: notificationRecord.notification.body,
-            },
-        ],
-        categories: [notificationRecord.category],
-    };
-
-    sgMail
-        .send(msg)
-        .then(async () => {
-            console.log("Complete sending email");
-
-            await db.collection("notifications").add(notificationRecord);
-            return res.status(200).json({ code: 200 });
-        })
-        .catch((error) => {
-            console.error(error);
-            return res.status(500).json({ code: 500 });
-        });
+            ],
+            categories: ["Test"],
+        };
+        await sgMail.send(msg);
+        console.log("Complete sending email");
+        return res.status(200).json({ code: 200 });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ code: 500 });
+    }
 };
 
 const _receivedEvents = async (req, res) => {
-    const events = req.body;
-    for (let event of events) {
-        await processEventWebhook(event);
+    try {
+        const events = req.body;
+        for (let event of events) {
+            await processEventWebhook(event);
+        }
+        return res.status(200).json({ code: 200 });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ code: 500 });
     }
-    return res.status(200).json({ code: 200 });
+};
+
+const _getSecrets = async () => {
+    const client = new SecretManagerServiceClient();
+    const [version] = await client.accessSecretVersion({
+        name: process.env.GCLOUD_SENDGRID_EVENT_WEBHOOKSECRET,
+    });
+    return version.payload.data.toString();
 };
 
 const sendGridEventWebhook = async (req, res) => {
@@ -96,9 +91,27 @@ const sendGridEventWebhook = async (req, res) => {
     const query = req.query;
 
     if (query.api === "send") {
-        _testSendEmail(res);
+        await _testSendEmail(res);
     } else if (query.api === "receive") {
-        await _receivedEvents(req, res);
+        const publicKey = await _getSecrets();
+        const eventWebhook = new EventWebhook();
+        const ecPublicKey = eventWebhook.convertPublicKeyToECDSA(publicKey);
+        const payload = req.rawBody;
+        const signature = req.get(EventWebhookHeader.SIGNATURE());
+        const timestamp = req.get(EventWebhookHeader.TIMESTAMP());
+
+        const verification = eventWebhook.verifySignature(
+            ecPublicKey,
+            payload,
+            signature,
+            timestamp
+        );
+
+        if (verification) {
+            await _receivedEvents(req, res);
+        } else {
+            res.status(403).send("Forbidden");
+        }
     } else return res.status(400).json(getResponseJSON("Bad request!", 400));
 };
 
