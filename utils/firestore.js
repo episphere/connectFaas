@@ -2809,6 +2809,50 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
     }
 }
 
+const processEventWebhook = async (event) => {
+    const date = new Date(event.timestamp * 1000).toISOString();
+    console.log("Processing event at " + date);
+    console.log(event);
+
+    const response = await db
+        .collection("sendgridTracking")
+        .where("sg_message_id", "==", event.sg_message_id)
+        .get();
+        
+    if (response.size > 0) {
+        for (let doc of response.docs) {
+            const eventRecord = {
+                [`${event.event}_status`]: true,
+                [`${event.event}_date`]: date,
+                [`${event.event}_timestamp`]: event.timestamp,
+            };
+            if (["bounce", "dropped"].includes(event.event)) {
+                eventRecord[`${event.event}_reason`] = event.reason;
+            }
+            await db
+                .collection("sendgridTracking")
+                .doc(doc.id)
+                .update(eventRecord);
+        }
+    } else {
+        const eventRecord = {
+            [`${event.event}_status`]: true,
+            [`${event.event}_date`]: date,
+            [`${event.event}_timestamp`]: event.timestamp,
+            connect_id: event.connect_id,
+            email: event.email,
+            notification_id: event.notification_id,
+            sg_event_id: event.sg_event_id,
+            sg_message_id: event.sg_message_id,
+            token: event.token,
+        };
+        if (["bounce", "dropped"].includes(event.event)) {
+            eventRecord[`${event.event}_reason`] = event.reason;
+        }
+        await db.collection("sendgridTracking").add(eventRecord);
+    }
+};
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -2923,5 +2967,6 @@ module.exports = {
     confirmShipmentKit,
     storeKitReceipt,
     addKitStatusToParticipant,
-    eligibleParticipantsForKitAssignment
+    eligibleParticipantsForKitAssignment,
+    processEventWebhook
 }
