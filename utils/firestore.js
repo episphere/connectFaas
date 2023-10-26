@@ -2810,6 +2810,8 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
 }
 
 const processEventWebhook = async (event) => {
+    if (event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
+
     const date = new Date(event.timestamp * 1000).toISOString();
     console.log("Processing event at " + date);
     console.log(event);
@@ -2818,7 +2820,7 @@ const processEventWebhook = async (event) => {
         .collection("sendgridTracking")
         .where("sg_message_id", "==", event.sg_message_id)
         .get();
-        
+
     if (response.size > 0) {
         for (let doc of response.docs) {
             const eventRecord = {
