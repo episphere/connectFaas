@@ -62,7 +62,6 @@ module.exports = {
         heparinTube1: 838567176,
         edtaTube1: 454453939,
         acdTube1: 652357376,
-        streckTube1: 505347689,
         urineTube1: 973670172,
         mouthwashTube1: 143615646,
         biohazardBagScan: 787237543,
