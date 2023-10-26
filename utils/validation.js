@@ -227,7 +227,7 @@ const checkDerivedVariables = async (token, siteCode) => {
                     if(baselineResearchCollections.length != 0) {
                         baselineResearchCollections.forEach(collection => {
                             
-                            const researchBloodTubes = ['299553921', '703954371', '838567176', '454453939', '652357376'];
+                            const researchBloodTubes = ['299553921', '703954371', '838567176', '454453939', '652357376', '505347689'];
                             
                             researchBloodTubes.forEach(tube => {
                                 if(collection[tube] && collection[tube][883732523] && collection[tube][883732523] != 681745422) {
