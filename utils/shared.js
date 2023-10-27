@@ -211,7 +211,6 @@ const defaultFlags = {
     912301837: 208325815,
     253883960: 972455046,
     547363263: 972455046,
-    547363263: 972455046,
     949302066: 972455046,
     536735468: 972455046,
     976570371: 972455046,
@@ -265,7 +264,7 @@ const moduleStatusConcepts = {
     "459098666" :       "menstrualSurvey",
     "253883960" :       "clinicalBioSurvey",
     "126331570" :       "ssn",
-    "777777778" :       "mouthwash"
+    "547363263" :       "mouthwash"
 }
 
 const listOfCollectionsRelatedToDataDestruction = [
