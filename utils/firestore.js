@@ -9,7 +9,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
+const { tubeKeyToNum, tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -2172,12 +2172,12 @@ const shipKits = async (data) => {
     }
 }
 
-const storePackageReceipt =  (data) => {
+const storePackageReceipt = async (data) => {
     if (data.scannedBarcode.length === 12 || data.scannedBarcode.length === 34) {  
-        const response = setPackageReceiptFedex(data);
+        const response = await setPackageReceiptFedex(data);
         return response;
     } else { 
-        const response = setPackageReceiptUSPS(data);
+        const response = await setPackageReceiptUSPS(data);
         return response; 
     }
 
@@ -2201,72 +2201,73 @@ const setPackageReceiptUSPS = async (data) => {
 const setPackageReceiptFedex = async (data) => {
     try {
         const { bagConceptIDs } = require('./shared');
-        let token = data.scannedBarcode
+        let trackingNumber = data.scannedBarcode
         let collectionIdHolder = {}
-        if ((token).length === 34) token = data.scannedBarcode.slice((data.scannedBarcode).length - 22)
-        const snapshot = await db.collection("boxes").where('959708259', '==', token).get(); // find related box using barcode
-        if (snapshot.empty) {
-            return false
-        }
-        const docId = snapshot.docs[0].id;
-        data['959708259'] = token
-        delete data.scannedBarcode
-        await db.collection("boxes").doc(docId).update(data)
+        if (trackingNumber.length === 34) trackingNumber = trackingNumber.slice(12);
+        const snapshot = await db.collection("boxes").where('959708259', '==', trackingNumber).get(); // find related box using tracking number
         
-        // Updated BagConceptIDs for new 40 bag capacity. Retained these because they were previously included.
-        const additionalBagItems = ["255283733", "842312685", "234868461", "522094118"];
+        if (snapshot.empty) return false;
+        
+        const docId = snapshot.docs[0].id;
+        data['959708259'] = trackingNumber
+        delete data.scannedBarcode
 
-        const allBagsToCheck = [...bagConceptIDs, ...additionalBagItems];
-        if (Object.keys(snapshot.docs.length) !== 0) {
-             snapshot.docs.map(doc => { 
-                const collectionIdKeys = doc.data(); // grab all the collection ids
-                allBagsToCheck.forEach(async (bag) => {
-                    if (bag in collectionIdKeys){
-                        if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
-                            if (collectionIdKeys[bag]['787237543'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
-                                collectionIdHolder[bag] = collectionIdKeys[bag]['787237543'].split(' ')[0]
-                            }
-                            if (collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
-                                collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0]
-                            }
-                            if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['787237543'] === `` ) {
-                                collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0]
-                            }
+        await db.collection("boxes").doc(docId).update(data); // using the docids update the box with the received date
+        
+        for (const boxData of snapshot.docs) {
+            const collectionIdKeys = boxData.data(); // grab all the collection ids
+            for (const bag of bagConceptIDs) {
+                if (bag in collectionIdKeys){
+                    if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
+                        if (collectionIdKeys[bag]['787237543'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
+                            collectionIdHolder[bag] = collectionIdKeys[bag]['787237543'].split(' ')[0]
+                        }
+                        if (collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
+                            collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0]
+                        }
+                        if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['787237543'] === `` ) {
+                            collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0]
                         }
                     }
-                })
-                processReceiptData(collectionIdHolder, collectionIdKeys, data['926457119'])
-              })
-         }
+                }
+            };
+            await processReceiptData(collectionIdHolder, collectionIdKeys, data['926457119']);
+        };
         return true;
-         }
-    catch(error){
+    } catch(error){
         return new Error(error);
     }
 }
 
-/**
- * mutex implementation source: www.nodejsdesignpatterns.com/blog/node-js-race-conditions/
-   Using  mutex allows us to have concurrent calls to processReceiptData() & are queued to be executed sequentially.
-*/ 
-
-let mutex = Promise.resolve(); // assign mutex globally to reuse same version of mutex for multiple calls to processReceiptData()
-
 const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
-    for (let key in collectionIdHolder) {
+    const miscTubeIdSet = new Set(['0050', '0051', '0052', '0053', '0054']);
+
+    for (const key in collectionIdHolder) {
         try {
-            const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id change this
-            const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
+            let updateObject = {};
+            const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id
+            const docId = secondSnapshot.docs[0].id;
+            const specimenData = secondSnapshot.docs[0].data();
+
+            updateObject['926457119'] = dateTimeStamp;
+
             for (const element of collectionIdKeys[key]['234868461']) {
+                //grab tube ids & map them to appropriate concept ids. If it's a misc tube (0050-0054), find tube's location in specimen to get the concept id.
                 const tubeId = element.split(' ')[1];
-                const conceptTube = collectionIdConversion[tubeId]; // grab tube ids & map them to appropriate concept ids
+                
+                let conceptTube;
+                if (miscTubeIdSet.has(tubeId)) {
+                    const tubeKey = Object.keys(specimenData).find(tubeKey => tubeConceptIds.includes(tubeKey) && specimenData[tubeKey][fieldMapping.objectId] === element);
+                    conceptTube = tubeKeyToNum[tubeKey];
+                } else {
+                    conceptTube = collectionIdConversion[tubeId]; 
+                }
+
                 const conceptIdTubes = `${conceptTube}.926457119`
-                mutex = mutex.then(() => { // reassign mutex to syncronize the next execution of the promise
-                    return db.collection("biospecimen").doc(docId).update({ 
-                                                        "926457119": dateTimeStamp, 
-                                                        [conceptIdTubes] : dateTimeStamp }) // using the docids update the biospecimen with the received date
-                })
+                updateObject[conceptIdTubes] = dateTimeStamp;
             }
+
+            await db.collection("biospecimen").doc(docId).update(updateObject);
         }
         catch(error){
             return new Error(error);

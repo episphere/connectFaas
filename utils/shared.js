@@ -611,6 +611,25 @@ const initializeTimestamps = {
     }
 }
 
+const tubeKeytoNum = {
+    299553921: '0001',
+    703954371: '0002',
+    838567176: '0003',
+    454453939: '0004',
+    652357376: '0005',
+    973670172: '0006',
+    143615646: '0007',
+    787237543: '0008',
+    223999569: '0009',
+    376960806: '0011',
+    232343615: '0012',
+    589588440: '0021',
+    958646668: '0013',
+    677469051: '0014',
+    683613884: '0024',
+    505347689: '0060',
+  };
+
 const collectionIdConversion = {
     "0007": "143615646",
     "0009": "223999569",
@@ -1132,6 +1151,7 @@ module.exports = {
     logIPAdddress,
     decodingJWT,
     initializeTimestamps,
+    tubeKeytoNum,
     collectionIdConversion,
     sites, 
     bagConceptIDs,
