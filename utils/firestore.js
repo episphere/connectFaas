@@ -2231,7 +2231,7 @@ const setPackageReceiptFedex = async (data) => {
                     }
                 }
             };
-            await processReceiptData(collectionIdHolder, collectionIdKeys, data['926457119'])
+            await processReceiptData(collectionIdHolder, collectionIdKeys, data['926457119']);
         };
         return true;
     } catch(error){
