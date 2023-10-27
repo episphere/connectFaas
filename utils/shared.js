@@ -265,7 +265,7 @@ const moduleStatusConcepts = {
     "459098666" :       "menstrualSurvey",
     "253883960" :       "clinicalBioSurvey",
     "126331570" :       "ssn",
-    "777777778" :       "mouthwash"
+    "547363263" :       "mouthwash"
 }
 
 const listOfCollectionsRelatedToDataDestruction = [
