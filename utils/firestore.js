@@ -2203,7 +2203,7 @@ const setPackageReceiptFedex = async (data) => {
         const { bagConceptIDs } = require('./shared');
         let trackingNumber = data.scannedBarcode
         let collectionIdHolder = {}
-        if ((trackingNumber).length === 34) trackingNumber = data.scannedBarcode.slice((data.scannedBarcode).length - 22)
+        if (trackingNumber.length === 34) trackingNumber = trackingNumber.slice(12);
         const snapshot = await db.collection("boxes").where('959708259', '==', trackingNumber).get(); // find related box using tracking number
         
         if (snapshot.empty) return false;
@@ -2214,8 +2214,8 @@ const setPackageReceiptFedex = async (data) => {
 
         await db.collection("boxes").doc(docId).update(data); // using the docids update the box with the received date
         
-        for (const doc of snapshot.docs) {
-            const collectionIdKeys = doc.data(); // grab all the collection ids
+        for (const boxData of snapshot.docs) {
+            const collectionIdKeys = boxData.data(); // grab all the collection ids
             for (const bag of bagConceptIDs) {
                 if (bag in collectionIdKeys){
                     if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
