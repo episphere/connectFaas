@@ -2246,8 +2246,8 @@ const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTime
         try {
             let updateObject = {};
             const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id
-            const docId = secondSnapshot.docs[0].id; // grab the docID to update the biospecimen
-            const specimenData = secondSnapshot.docs[0].data(); // grab the data to update the biospecimen
+            const docId = secondSnapshot.docs[0].id;
+            const specimenData = secondSnapshot.docs[0].data();
 
             updateObject['926457119'] = dateTimeStamp;
 
