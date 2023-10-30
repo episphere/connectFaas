@@ -227,7 +227,7 @@ const checkDerivedVariables = async (token, siteCode) => {
                     if(baselineResearchCollections.length != 0) {
                         baselineResearchCollections.forEach(collection => {
                             
-                            const researchBloodTubes = ['299553921', '703954371', '838567176', '454453939', '652357376'];
+                            const researchBloodTubes = ['299553921', '703954371', '838567176', '454453939', '652357376', '505347689'];
                             
                             researchBloodTubes.forEach(tube => {
                                 if(collection[tube] && collection[tube][883732523] && collection[tube][883732523] != 681745422) {
@@ -308,12 +308,11 @@ const checkDerivedVariables = async (token, siteCode) => {
         anyRefusalWithdrawal = checkRefusalWithdrawals(data);
     }
 
-
     if(incentiveEligible) {
 
         const incentiveUpdates = {
             '130371375.266600170.731498909': 353358909,
-            '130371375.266600170.222373868': data['827220437'] === 809703864 ? 104430631 : 353358909,
+            '130371375.266600170.222373868': 353358909,
             '130371375.266600170.787567527': new Date().toISOString()
         };
 
