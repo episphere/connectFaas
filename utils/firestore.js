@@ -2255,11 +2255,9 @@ const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTime
                 //grab tube ids & map them to appropriate concept ids. If it's a misc tube (0050-0054), find tube's location in specimen to get the concept id.
                 const tubeId = element.split(' ')[1];
                 
-                let conceptTube;
+                let conceptTube = collectionIdConversion[tubeId]; 
                 if (miscTubeIdSet.has(tubeId)) {
                     conceptTube = Object.keys(specimenData).find(tubeKey => tubeConceptIds.includes(tubeKey) && specimenData[tubeKey][fieldMapping.objectId] === element);
-                } else {
-                    conceptTube = collectionIdConversion[tubeId]; 
                 }
 
                 if (conceptTube) {
