@@ -2257,16 +2257,16 @@ const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTime
                 
                 let conceptTube;
                 if (miscTubeIdSet.has(tubeId)) {
-                    const tubeKey = Object.keys(specimenData).find(tubeKey => tubeConceptIds.includes(tubeKey) && specimenData[tubeKey][fieldMapping.objectId] === element);
-                    conceptTube = tubeKeyToNum[tubeKey];
+                    conceptTube = Object.keys(specimenData).find(tubeKey => tubeConceptIds.includes(tubeKey) && specimenData[tubeKey][fieldMapping.objectId] === element);
                 } else {
                     conceptTube = collectionIdConversion[tubeId]; 
                 }
 
-                const conceptIdTubes = `${conceptTube}.926457119`
-                updateObject[conceptIdTubes] = dateTimeStamp;
+                if (conceptTube) {
+                    const conceptIdTubes = `${conceptTube}.926457119`
+                    updateObject[conceptIdTubes] = dateTimeStamp;
+                }
             }
-
             await db.collection("biospecimen").doc(docId).update(updateObject);
         }
         catch(error){
