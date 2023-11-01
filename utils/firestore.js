@@ -2035,6 +2035,16 @@ const updateKitAssemblyData = async (data) => {
     }
 }
 
+const checkCollectionUniqueness = async (id) => {
+    try {
+        const snapShot = await db.collection('kitAssembly').where('259846815', '==', id).get();
+        if (snapShot.docs.length === 0) { return true }
+        else { return false }
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
 const getKitAssemblyData = async () => {
     try {
         const snapshot = await db.collection("kitAssembly").get();
@@ -2721,5 +2731,6 @@ module.exports = {
     getSpecimensByBoxedStatus,
     addKitAssemblyData,
     updateKitAssemblyData,
-    queryTotalAddressesToPrint
+    queryTotalAddressesToPrint,
+    checkCollectionUniqueness
 }

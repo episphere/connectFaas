@@ -617,8 +617,8 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data:response, code:200});
     }
 
-    else if(api == 'addKitData'){
-        if(req.method !== 'POST') {
+    else if (api === 'addKitData'){
+        if (req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         const requestData = req.body;
@@ -629,8 +629,8 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({message: `Success!`, code:200})
     }
 
-    else if(api == 'updateKitData'){
-        if(req.method !== 'POST') {
+    else if (api === 'updateKitData'){
+        if (req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         const requestData = req.body;
@@ -639,6 +639,18 @@ const biospecimenAPIs = async (req, res) => {
         const response = await updateKitAssemblyData(requestData);
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
         return res.status(200).json({message: `Success!`, code:200})
+    }
+
+    else if (api === 'collectionUniqueness'){
+        if( req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const query = req.query.id;
+        if (Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include id to check uniqueness.', 400));
+        const { checkCollectionUniqueness } = require('./firestore');
+        const response = await checkCollectionUniqueness(query);
+        if (!response) return res.status(500).json({data: response, code:500});
+        return res.status(200).json({data: response, code:200})
     }
 
     else if(api == 'getKitData'){
