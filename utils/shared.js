@@ -251,6 +251,7 @@ const moduleConceptsToCollections = {
     "D_912367929" :     "menstrualSurvey_v1",
     "D_826163434" :     "clinicalBioSurvey_v1",
     "D_166676176" :     "ssn",
+    "D_390351864" :     "mouthwash_v1"
 }
 
 const moduleStatusConcepts = {
@@ -261,7 +262,9 @@ const moduleStatusConcepts = {
     "265193023" :       "bioSurvey",
     "220186468" :       "covid19Survey",
     "459098666" :       "menstrualSurvey",
-    "253883960" :       "clinicalBioSurvey"
+    "253883960" :       "clinicalBioSurvey",
+    "126331570" :       "ssn",
+    "547363263" :       "mouthwash"
 }
 
 const listOfCollectionsRelatedToDataDestruction = [
@@ -608,6 +611,25 @@ const initializeTimestamps = {
     }
 }
 
+const tubeKeytoNum = {
+    299553921: '0001',
+    703954371: '0002',
+    838567176: '0003',
+    454453939: '0004',
+    652357376: '0005',
+    973670172: '0006',
+    143615646: '0007',
+    787237543: '0008',
+    223999569: '0009',
+    376960806: '0011',
+    232343615: '0012',
+    589588440: '0021',
+    958646668: '0013',
+    677469051: '0014',
+    683613884: '0024',
+    505347689: '0060',
+  };
+
 const collectionIdConversion = {
     "0007": "143615646",
     "0009": "223999569",
@@ -626,7 +648,8 @@ const collectionIdConversion = {
     "0003": "838567176",
     "0031": "857757831",
     "0013": "958646668",
-    "0006": "973670172"
+    "0006": "973670172",
+    "0060": "505347689",
 }
 
 const sites = {
@@ -661,6 +684,31 @@ const bagConceptIDs = [
   '357218702', // bag13
   '945294744', // bag14
   '741697447', // bag15
+  '125739724', // bag16
+  '989380048', // bag17
+  '446995300', // bag18
+  '137286816', // bag19
+  '977670846', // bag20
+  '563435337', // bag21
+  '807530964', // bag22
+  '898078094', // bag23
+  '866824332', // bag24
+  '456471969', // bag25
+  '288387838', // bag26
+  '335054951', // bag27
+  '235683703', // bag28
+  '390934489', // bag29
+  '753716110', // bag30
+  '669598671', // bag31
+  '699864022', // bag32
+  '986589527', // bag33
+  '417623038', // bag34
+  '725915890', // bag35
+  '956354350', // bag36
+  '925165180', // bag37
+  '832614280', // bag38
+  '301569492', // bag39
+  '685888031', // bag40
 ];
 
 const checkDefaultFlags = async (data, uid) => {
@@ -810,6 +858,13 @@ const tubeConceptIds = [
     '838567176', // Heparin tube 1
     '958646668', // Heparin tube 2
     '973670172', // Urine tube 1
+    '505347689', // Streck tube 1
+];
+
+const bagTypeConceptIds = [
+    fieldMapping.tubesBagsCids.orphanScan,
+    fieldMapping.tubesBagsCids.biohazardBagScan,
+    fieldMapping.tubesBagsCids.biohazardMouthwashBagScan
 ];
 
 /**
@@ -874,6 +929,203 @@ const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
     return specimenDataArray;
 }
 
+/**
+ * Manage the specimen's boxedStatus and strayTubesList fields when a bag is added.
+ * @param {object} specimenData - the current specimen data from firestore. Only one item can be added at a time.
+ * @param {array<string>} tubesAddedToBox - the tubes being added to the box.
+ * @returns {object} - the specimen's new boxedStatus and strayTubesList.
+ * If current status is notBoxed, compare tubesAddedToBox to all tubes in specimen.
+ * If current status is partiallyBoxed, compare tubesAddedToBox to strayTubesList.
+ * If current status is boxed, something has gone wrong. These tubes should not be available to add.
+ *      -Log an error but continue to allow the operation using strayTubesList.
+ */
+const manageSpecimenBoxedStatusAddBag = (specimenData, tubesAddedToBox) => {
+    const currentBoxedStatus = specimenData.data[fieldMapping.boxedStatus] || fieldMapping.notBoxed;
+    const currentStrayTubesList = specimenData.data[fieldMapping.strayTubesList] || [];
+    const allTubesInSpecimen = extractUsableTubesFromSpecimen(specimenData);
+
+    const getUpdatedStatusAndTubes = (tubesList) => {
+        const updatedStrayTubesList = tubesList.filter(tube => !tubesAddedToBox.includes(tube));
+        const updatedBoxedStatus = updatedStrayTubesList.length === 0 ? fieldMapping.boxed : fieldMapping.partiallyBoxed;
+
+        return {
+            ref: specimenData.ref,
+            [fieldMapping.collectionId]: specimenData.data[fieldMapping.collectionId],
+            [fieldMapping.boxedStatus]: updatedBoxedStatus,
+            [fieldMapping.strayTubesList]: updatedStrayTubesList,
+        }
+    };
+
+    const boxedStatusMapping = {
+        [fieldMapping.notBoxed]: () => getUpdatedStatusAndTubes(allTubesInSpecimen.data),
+        [fieldMapping.partiallyBoxed]: () => getUpdatedStatusAndTubes(currentStrayTubesList),
+        [fieldMapping.boxed]: () => {
+            console.error('Error in specimen management: Specimen is boxed but tubes are being added to a new box.');
+            return getUpdatedStatusAndTubes(currentStrayTubesList);
+        },
+    };
+
+    return boxedStatusMapping[currentBoxedStatus]();
+}
+
+/**
+ * Iterate through specimen collections and extract the usable tubes. Filter out tubes that are not usable (missing or discard deviations).
+ * @param {object} specimenData - specimen data object from firestore where .data is the specimen data and .ref is the firestore document reference.
+ * @returns {object} usableSpecimensDataList - specimen data object where .data is an array of usable tubes and .ref is the firestore document reference.
+ */
+const extractUsableTubesFromSpecimen = (specimenData) => {
+    const tubeDeviationFlags = [
+        fieldMapping.tubeBrokenDeviation,
+        fieldMapping.tubeDiscardDeviation,
+        fieldMapping.tubeInsufficientVolumeDeviation,
+        fieldMapping.tubeMislabelledDeviation,
+        fieldMapping.tubeNotFoundDeviation,
+    ];
+
+    const isTubeUsable = (tube) => {
+        if (!tube || !tube[fieldMapping.objectId]) {
+            return false;
+        }
+
+        if (tube[fieldMapping.tubeDiscardFlag] === fieldMapping.yes) {
+            return false;
+        }
+
+        if (tube[fieldMapping.tubeIsMissing] === fieldMapping.yes) {
+            return false;
+        }
+
+        const tubeDeviation = tube[fieldMapping.tubeDeviationObject];
+
+        for (const deviationFlag of tubeDeviationFlags) {
+            if (tubeDeviation?.[deviationFlag] === fieldMapping.yes) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+    const specimenCollectionData = specimenData.data;
+    const usableTubesArray = tubeConceptIds
+        .map(tubeKey => specimenCollectionData[tubeKey])
+        .filter(isTubeUsable)
+        .map(tube => tube[fieldMapping.objectId]);
+
+    return {
+        data: usableTubesArray,
+        ref: specimenData.ref,
+    };
+}
+
+/**
+ * Update the specimen's boxedStatus and strayTubesList fields when a bag is removed from a box.
+ * @param {array<object>} specimenDataArray - array of specimen data objects from firestore where .data is the specimen data and .ref is the firestore document reference.
+ * @param {object} samplesWithinBag - object where key is collectionId and value is an array of specimens being removed. { collectionId: [specimen1, specimen2, ...]}.
+ * @returns {array<object>} - array of specimen data objects with updated boxedStatus and strayTubesList fields, and a firestore doc ref.
+ */
+const manageSpecimenBoxedStatusRemoveBag = (specimenDataArray, samplesWithinBag) => {
+    const updatedSpecimenDataArray = [];
+
+    // If tubes and allTubesInSpecimen are identical, return true. Else return false.
+    // True means a collection is not boxed. False means a collection is partially boxed.
+    const getIsCollectionNotBoxed = (tubes, allTubesInSpecimen) => {
+        return tubes.length === allTubesInSpecimen.length &&
+        allTubesInSpecimen.every(tube => tubes.includes(tube)) &&
+        tubes.every(tube => allTubesInSpecimen.includes(tube));
+    }
+
+    // Update the boxedStatus and strayTubeList for the specimen
+    // Unboxed specimens have the notBoxed status and an empty strayTubesList.
+    const updateBoxedStatusAndStrayTubesArray = (isAllUsableTubes, tubes) => {
+        return {
+            updatedBoxedStatus: isAllUsableTubes ? fieldMapping.notBoxed : fieldMapping.partiallyBoxed,
+            updatedStrayTubesList: isAllUsableTubes ? [] : tubes,
+        };
+    };
+
+    for (const specimenDataDoc of specimenDataArray) {
+        const specimenData = specimenDataDoc.data;
+        const specimenCollectionId = specimenData[fieldMapping.collectionId];
+        const currentBoxedStatus = specimenData[fieldMapping.boxedStatus] || fieldMapping.partiallyBoxed;
+        const currentStrayTubesList = specimenData[fieldMapping.strayTubesList] || [];
+        const allTubesInSpecimenObj = extractUsableTubesFromSpecimen(specimenDataDoc);
+        const tubesRemovedFromBox = samplesWithinBag[specimenCollectionId] ?? [];
+    
+        // currentStrayTubeList will be populated when partiallyBoxed, and empty when boxed.
+        const tubesInBagAndStrays = [...tubesRemovedFromBox, ...currentStrayTubesList];
+        const isAllUsableTubes = getIsCollectionNotBoxed(tubesInBagAndStrays, allTubesInSpecimenObj.data);
+        const {updatedBoxedStatus, updatedStrayTubesList} = updateBoxedStatusAndStrayTubesArray(isAllUsableTubes, tubesInBagAndStrays);
+
+        if (currentBoxedStatus === fieldMapping.notBoxed) {
+            console.error('Error in specimen management: Specimen is not boxed but tubes are being removed from a bag.');
+        }
+    
+        updatedSpecimenDataArray.push({
+            ref: specimenDataDoc.ref,
+            [fieldMapping.collectionId]: specimenCollectionId,
+            [fieldMapping.boxedStatus]: updatedBoxedStatus,
+            [fieldMapping.strayTubesList]: updatedStrayTubesList,
+        });
+    }
+    return updatedSpecimenDataArray;
+}
+
+const sortBoxOnBagRemoval = (boxData, bagsToRemove, currDate) => {
+    const samplesWithinBag = {};
+    let hasOrphanFlag = fieldMapping.no;
+
+    for (const conceptID of bagConceptIDs) { 
+        const currBag = boxData[conceptID];
+        if (!currBag) continue;
+        for (const bagID of bagsToRemove) {               
+            if (bagTypeConceptIds.some(scan => currBag[scan] === bagID)) {
+                const collectionId = bagID.split(' ')[0];
+                if (!samplesWithinBag[collectionId]) {
+                    samplesWithinBag[collectionId] = boxData[conceptID][fieldMapping.samplesWithinBag] || [];
+                } else {
+                    samplesWithinBag[collectionId] = [...samplesWithinBag[collectionId], ...boxData[conceptID][fieldMapping.samplesWithinBag]];
+                }
+                delete boxData[conceptID];
+            }
+        }
+    }
+
+    // Create a new sorted box
+    let sortedBox = {};
+    for (const conceptID of bagConceptIDs) {
+        if (conceptID in boxData) {
+            sortedBox[conceptID] = boxData[conceptID];
+            delete boxData[conceptID];
+        }
+    }
+
+    // Merge remaining properties from the original box to the sorted box
+    sortedBox = { ...sortedBox, ...boxData }
+    delete sortedBox['addedTubes'];
+
+    // iterate over all current bag concept Ids and change the value of hasOrphanFlag
+    for(const conceptID of bagConceptIDs) {
+        const currBag = sortedBox[conceptID];
+        if (!currBag) continue;
+
+        hasOrphanFlag = (currBag[fieldMapping.orphanBagFlag] == fieldMapping.yes) 
+            ? fieldMapping.yes 
+            : fieldMapping.no;
+    }
+
+    const updatedBoxData = {
+        ...sortedBox,
+        [fieldMapping.boxLastModifiedTimestamp]: currDate,
+        [fieldMapping.boxHasOrphanBag]: hasOrphanFlag,
+    }
+
+    return {
+        updatedBoxData,
+        samplesWithinBag,
+    };
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -899,6 +1151,7 @@ module.exports = {
     logIPAdddress,
     decodingJWT,
     initializeTimestamps,
+    tubeKeytoNum,
     collectionIdConversion,
     sites, 
     bagConceptIDs,
@@ -914,6 +1167,10 @@ module.exports = {
     redactEmailLoginInfo,
     redactPhoneLoginInfo,
     tubeConceptIds,
+    bagTypeConceptIds,
     extractCollectionIdsFromBoxes,
     processSpecimenCollections,
+    manageSpecimenBoxedStatusAddBag,
+    manageSpecimenBoxedStatusRemoveBag,
+    sortBoxOnBagRemoval,
 };
