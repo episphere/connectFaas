@@ -2060,9 +2060,11 @@ const getKitAssemblyData = async () => {
 const queryTotalAddressesToPrint = async () => {
     try {
         const snapShot = await db.collection('participants')
-        .where('747006172', '==', 104430631)
-        .where('987563196', '==', 104430631)
-        .where('827220437', '==', 125001209)
+        .where('747006172', '==', 104430631) // withdraw consent
+        .where('987563196', '==', 104430631) // deceased
+        .where('827220437', '==', 125001209) // KPCO
+        .where('685002411.277479354', '==', 104430631) // mouthwash refusal
+        .where('173836415.266600170.156605577', '==', 353358909) // Blood or Urine Collected
         .get();
         return snapShot.docs.map(document => processParticipantData(document.data()));
     } catch (error) {
@@ -2180,37 +2182,78 @@ const getParticipantSelection = async (filter) => {
     }
 }
 
-const assignKitToParticipants = async (data) => {
+const assignKitToParticipant = async (data) => {
     try {
-        const snapshot = await db.collection("kitAssembly").where('supplyKitId', '==', data.supply_kitId).where('supplyKitIdUtilized', '==', false).get();
-        if (Object.keys(snapshot.docs).length !== 0) {
-            snapshot.docs.map(doc => {
-                data['collection_cardId'] = doc.data().collectionCardId
-                data['collection_cupId'] = doc.data().collectionCupId
-                data['specimen_kitId'] = doc.data().specimenKitId
-                data['specimen_kit_usps_trackingNum'] = doc.data().uspsTrackingNumber
-            })
+        const snapshot = await db.collection("kitAssembly").where('690210658', '==', data['690210658']).where('221592017', '==', '517216441').get();
+        if(snapshot.size > 0) {
+            data['687158491'] = snapshot.docs[0].data()[687158491];
             const docId = snapshot.docs[0].id;
             await db.collection("kitAssembly").doc(docId).update(
-            { 
-                supplyKitIdUtilized: true
+            {
+                '531858099': data['531858099'],
+                '221592017': '241974920'
             })
-            await db.collection("participantSelection").doc(data.id).update(
+            const secondSnapShot = await db.collection("participants").where('Connect_ID', '==', parseInt(data['Connect_ID'])).get();
+            const secondSnapShotDocId = secondSnapShot.docs[0].id;
+            const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170];
+            await db.collection("participants").doc(secondSnapShotDocId).update(
             { 
-                kit_status: "assigned",
-                usps_trackingNum: data.usps_trackingNum,
-                supply_kitId: data.supply_kitId,
-                collection_cardId: data.collection_cardId,
-                collection_cupId: data.collection_cupId,
-                specimen_kitId: data.specimen_kitId,
-                specimen_kit_usps_trackingNum: data.specimen_kit_usps_trackingNum
+                '173836415': {
+                    '266600170': {
+                        ...prevParticipantObject,
+                        '915179629': '534621077',
+                        '379252329': 'Mouthwash',
+                        '221592017': '241974920',
+                        '687158491': data['687158491']
+                    }
+                }
             })
-            await kitStatusCounterVariation('assigned', 'addressPrinted');
             return true;
         } else {
             return false;
-        } }
+        } 
+    }
     catch(error){
+        return new Error(error);
+    }
+}
+
+const confirmShippmentKit = async (shipmentData) => {
+    try {
+        const snapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
+        const docId = snapshot.docs[0].id;
+        await db.collection("kitAssembly").doc(docId).update(
+            {
+                '221592017': '277438316'
+            })
+        const secondSnapShot = await db.collection("participants").where('173836415.266600170.687158491', '==', shipmentData['687158491']).get();
+        const secondSnapShotDocId = secondSnapShot.docs[0].id;
+        const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170];
+        await db.collection("participants").doc(secondSnapShotDocId).update(
+            { 
+                '173836415': {
+                    '266600170': {
+                        ...prevParticipantObject,
+                        '221592017': '277438316',
+                        '661940160': shipmentData['661940160']
+                    }
+                }
+            })
+        return true
+    }
+    catch (error) {
+        return new Error(error);
+    }
+}
+
+const processVerifyScannedCode = async (id) => {
+    try {
+        const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', '241974920').get();
+        if (snapShot.docs.length === 1) {
+            return { valid: true, UKID: snapShot.docs[0].data()[687158491] }
+        }
+        else { return false }
+    } catch (error) {
         return new Error(error);
     }
 }
@@ -2732,5 +2775,8 @@ module.exports = {
     addKitAssemblyData,
     updateKitAssemblyData,
     queryTotalAddressesToPrint,
-    checkCollectionUniqueness
+    checkCollectionUniqueness,
+    processVerifyScannedCode,
+    assignKitToParticipant,
+    confirmShippmentKit
 }
