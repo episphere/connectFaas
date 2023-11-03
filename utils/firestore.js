@@ -2004,12 +2004,43 @@ const getNotification = async (id) => {
 
 const addKitAssemblyData = async (data) => {
     try {
-        data['supplyKitIdUtilized'] = false
         await db.collection('kitAssembly').add(data);
         return true;
     }
     catch(error){
         console.error(error);
+        return new Error(error);
+    }
+}
+
+const updateKitAssemblyData = async (data) => {
+    try {
+        const snapShot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
+
+        if (snapShot.empty) return false
+        const docId = snapShot.docs[0].id;
+ 
+        await db.collection('kitAssembly').doc(docId).update({
+            '194252513': data['194252513'],
+            '259846815': data['259846815'],
+            '531858099': data['531858099'],
+            '690210658': data['690210658'],
+            '786397882': data['786397882']
+        })
+        return true;
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const checkCollectionUniqueness = async (id) => {
+    try {
+        const snapShot = await db.collection('kitAssembly').where('259846815', '==', id).get();
+        if (snapShot.docs.length === 0) { return true }
+        else { return false }
+    } catch (error) {
         return new Error(error);
     }
 }
@@ -2024,6 +2055,34 @@ const getKitAssemblyData = async () => {
         console.error(error);
         return new Error(error);
     }
+}
+
+const queryTotalAddressesToPrint = async () => {
+    try {
+        const snapShot = await db.collection('participants')
+        .where('747006172', '==', 104430631)
+        .where('987563196', '==', 104430631)
+        .where('827220437', '==', 125001209)
+        .get();
+        return snapShot.docs.map(document => processParticipantData(document.data()));
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+const processParticipantData = (record) => {
+    const processedRecord = {
+        first_name: record['399159511'],
+        last_name: record['996038075'],
+        address_1: record['521824358'],
+        address_2: record['442166669'] || '',
+        city: record['703385619'],
+        state: record['634434746'],
+        zip_code: record['892050548'],
+        study_site: 'KPCO', // update when new sites are added
+    };
+
+    return processedRecord;
 }
 
 const storeSiteNotifications = async (reminder) => {
@@ -2638,7 +2697,6 @@ module.exports = {
     getNotificationsCategories,
     getNotification,
     getEmailNotifications,
-    addKitAssemblyData,
     getKitAssemblyData,
     storeSiteNotifications,
     getCoordinatingCenterEmail,
@@ -2669,4 +2727,8 @@ module.exports = {
     searchSpecimenBySiteAndBoxId,
     getUnshippedBoxes,
     getSpecimensByBoxedStatus,
+    addKitAssemblyData,
+    updateKitAssemblyData,
+    queryTotalAddressesToPrint,
+    checkCollectionUniqueness
 }
