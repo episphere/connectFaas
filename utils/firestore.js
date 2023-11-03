@@ -2825,5 +2825,6 @@ module.exports = {
     checkCollectionUniqueness,
     processVerifyScannedCode,
     assignKitToParticipant,
-    confirmShippmentKit
+    confirmShippmentKit,
+    storeKitReceipt
 }
