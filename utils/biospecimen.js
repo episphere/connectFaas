@@ -649,8 +649,13 @@ const biospecimenAPIs = async (req, res) => {
         if (Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include id to check uniqueness.', 400));
         const { checkCollectionUniqueness } = require('./firestore');
         const response = await checkCollectionUniqueness(query);
-        if (!response) return res.status(500).json({data: response, code:500});
-        return res.status(200).json({data: response, code:200})
+        if(!response) {
+            return res.status(404).json({data: response, code:404});
+        } else if (response instanceof Error) {
+           return res.status(500).json({data: response, code: 500});
+        } else {
+            return res.status(200).json({data: response, code:200});
+        }
     }
 
     else if(api == 'assignKit'){
@@ -661,8 +666,13 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         const { assignKitToParticipant } = require('./firestore');
         const response = await assignKitToParticipant(requestData);
-        if(!response) return res.status(500).json({data: response, code:500});
-        return res.status(200).json({data: response, code:200})
+        if(!response) {
+            return res.status(404).json({data: response, code:404});
+        } else if (response instanceof Error) {
+           return res.status(500).json({data: response, code: 500});
+        } else {
+            return res.status(200).json({data: response, code:200});
+        }
     }
 
     else if(api == 'verifyScannedCode'){
@@ -673,8 +683,13 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include id to verify scanned code.', 400));
         const { processVerifyScannedCode } = require('./firestore');
         const response = await processVerifyScannedCode(query);
-        if(!response) return res.status(500).json({data: response, code:500});
-        return res.status(200).json({data: response, code:200})
+        if(!response) {
+            return res.status(404).json({data: response, code:404});
+        } else if (response instanceof Error) {
+           return res.status(500).json({data: response, code: 500});
+        } else {
+            return res.status(200).json({data: response, code:200});
+        }
     }
 
     else if(api === 'confirmShippment'){
@@ -720,6 +735,18 @@ const biospecimenAPIs = async (req, res) => {
         const response = await queryTotalAddressesToPrint();
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
         return res.status(200).json({data: response, code:200})
+    }
+
+    else if(api === 'kitStatusToParticipant') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const requestData = req.body;
+        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
+        const { addKitStatusToParticipant } = require('./firestore');
+        const response = await addKitStatusToParticipant(requestData);
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({message: `Success!`, code:200})
     }
 
      // Participant Selection with filter GET- BPTL 
@@ -772,10 +799,15 @@ const biospecimenAPIs = async (req, res) => {
         }
         let requestData = req.body;
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
-        const { assignKitToParticipants } = require('./firestore');
-        const response = await assignKitToParticipants(requestData);
-        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
-        return res.status(200).json({message: `Success!`, code:200})
+        const { assignKitToParticipant } = require('./firestore');
+        const response = await assignKitToParticipant(requestData);
+        if(!response) {
+            return res.status(404).json({data: response, code:404});
+        } else if (response instanceof Error) {
+           return res.status(500).json({data: response, code: 500});
+        } else {
+            return res.status(200).json({data: response, code:200});
+        }
     }
 
         // Shipped POST- BPTL

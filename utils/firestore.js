@@ -2013,6 +2013,7 @@ const addKitAssemblyData = async (data) => {
     }
 }
 
+
 const updateKitAssemblyData = async (data) => {
     try {
         const snapShot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
@@ -2021,11 +2022,12 @@ const updateKitAssemblyData = async (data) => {
         const docId = snapShot.docs[0].id;
  
         await db.collection('kitAssembly').doc(docId).update({
-            '194252513': data['194252513'],
-            '259846815': data['259846815'],
-            '531858099': data['531858099'],
-            '690210658': data['690210658'],
-            '786397882': data['786397882']
+            '194252513': data[fieldMapping.returnKitId],
+            '259846815': data[fieldMapping.collectionCupId],
+            '972453354': data[fieldMapping.supplyKitTrackingNum],
+            '690210658': data[fieldMapping.supplyKitId],
+            '786397882': data[fieldMapping.collectionCardId],
+            // '379252329': data[fieldMapping.kitTypeMouthwash]
         })
         return true;
     }
@@ -2085,6 +2087,39 @@ const processParticipantData = (record) => {
     };
 
     return processedRecord;
+}
+
+
+const addKitStatusToParticipant = async (participantsCID) => {
+    try {
+        participantsCID.forEach(async participantCID => {
+            const snapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(participantCID)).get();
+            if(snapshot.size > 0) {
+                const docId = snapshot.docs[0].id;
+                const prevParticipantObject = snapshot.docs[0].data()[173836415][266600170];
+                await db.collection("participants").doc(docId).update(
+                    { 
+                        '173836415': {
+                            '266600170': {
+                                ...prevParticipantObject,
+                                '915179629': '664882224',
+                                'mouthwash': {
+                                    '221592017': '849527480'
+                                }
+                            }
+                        }
+                    })
+            } 
+            else {
+                return false;
+            }
+        })
+        return true;
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error);
+    }
 }
 
 const storeSiteNotifications = async (reminder) => {
@@ -2203,10 +2238,11 @@ const assignKitToParticipant = async (data) => {
                 '173836415': {
                     '266600170': {
                         ...prevParticipantObject,
-                        '915179629': '664882224',
-                        '379252329': 'Mouthwash',
-                        '221592017': '241974920',
-                        '687158491': data['687158491']
+                        'mouthwash': {
+                            '379252329': '390351864',                // mouthwash
+                            '221592017': '241974920',
+                            '687158491': data['687158491'],
+                        }
                     }
                 }
             })
@@ -2219,7 +2255,6 @@ const assignKitToParticipant = async (data) => {
         return new Error(error);
     }
 }
-
 const confirmShippmentKit = async (shipmentData) => {
     try {
         const snapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
@@ -2229,16 +2264,18 @@ const confirmShippmentKit = async (shipmentData) => {
                 '221592017': '277438316',
                 '661940160': shipmentData['661940160']
             })
-        const secondSnapShot = await db.collection("participants").where('173836415.266600170.687158491', '==', shipmentData['687158491']).get();
+        const secondSnapShot = await db.collection("participants").where('173836415.266600170.mouthwash.687158491', '==', shipmentData['687158491']).get();
         const secondSnapShotDocId = secondSnapShot.docs[0].id;
-        const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170];
+        const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170]['mouthwash'];
         await db.collection("participants").doc(secondSnapShotDocId).update(
             { 
                 '173836415': {
                     '266600170': {
                         ...prevParticipantObject,
-                        '221592017': '277438316',
-                        '661940160': shipmentData['661940160']
+                        'mouthwash': {
+                            '221592017': '277438316',
+                            '661940160': shipmentData['661940160']
+                        }
                     }
                 }
             })
@@ -2248,6 +2285,7 @@ const confirmShippmentKit = async (shipmentData) => {
         return new Error(error);
     }
 }
+
 
 const processVerifyScannedCode = async (id) => {
     try {
@@ -2265,13 +2303,14 @@ const storeKitReceipt = async (package) => {
     try {
         const snapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).get();
         const docId = snapshot.docs[0].id;
+        const Connect_ID = snapshot.docs[0].data()['Connect_ID']
         await db.collection("kitAssembly").doc(docId).update(
             {
                 '221592017': '375535639',
                 '826941471': package['826941471'],
                 '633640710': package['633640710']
             })
-        const secondSnapShot = await db.collection("participants").where('173836415.266600170.687158491', '==', snapshot.docs[0].data()[687158491]).get();
+        const secondSnapShot = await db.collection("participants").where('173836415.266600170.mouthwash.687158491', '==', snapshot.docs[0].data()[687158491]).get();
         const secondSnapShotDocId = secondSnapShot.docs[0].id;
         const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170];
         await db.collection("participants").doc(secondSnapShotDocId).update(
@@ -2279,8 +2318,10 @@ const storeKitReceipt = async (package) => {
                 '173836415': {
                     '266600170': {
                         ...prevParticipantObject,
-                        '221592017': '375535639',
-                        '826941471': package['826941471']
+                        'mouthwash': {
+                            '221592017': '375535639',
+                            '826941471': package['826941471']
+                        }
                     }
                 }
             })
@@ -2292,11 +2333,14 @@ const storeKitReceipt = async (package) => {
                 '825582494': package['259846815'].split(' ')[1],
                 '826941471': package['826941471']
             },
-            '678166505': package['678166505'],
-            'Connect_ID': snapshot.docs[0].data()['Connect_ID']
+
         }
 
-        await db.collection("biospecimen").add(biospecPkg)        
+        const thirdSnapShot = await db.collection("biospecimen").where('Connect_ID','==', Connect_ID).get()
+        const thirdSnapShotDocId = thirdSnapShot.docs[0].id
+        await db.collection('biospecimen').doc(thirdSnapShotDocId).update({
+            biospecPkg
+        })    
         return true
     }
     catch (error) {
@@ -2796,7 +2840,6 @@ module.exports = {
     retrieveSiteNotifications,
     addPrintAddressesParticipants,
     getParticipantSelection,
-    assignKitToParticipants,
     shipKits,
     storePackageReceipt,
     getBptlMetrics,
@@ -2824,5 +2867,6 @@ module.exports = {
     processVerifyScannedCode,
     assignKitToParticipant,
     confirmShippmentKit,
-    storeKitReceipt
+    storeKitReceipt,
+    addKitStatusToParticipant
 }
