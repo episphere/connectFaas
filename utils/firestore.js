@@ -2258,28 +2258,33 @@ const assignKitToParticipant = async (data) => {
 const confirmShippmentKit = async (shipmentData) => {
     try {
         const snapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
-        const docId = snapshot.docs[0].id;
-        await db.collection("kitAssembly").doc(docId).update(
-            {
-                '221592017': '277438316',
-                '661940160': shipmentData['661940160']
-            })
-        const secondSnapShot = await db.collection("participants").where('173836415.266600170.mouthwash.687158491', '==', shipmentData['687158491']).get();
-        const secondSnapShotDocId = secondSnapShot.docs[0].id;
-        const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170]['mouthwash'];
-        await db.collection("participants").doc(secondSnapShotDocId).update(
-            { 
-                '173836415': {
-                    '266600170': {
-                        ...prevParticipantObject,
-                        'mouthwash': {
-                            '221592017': '277438316',
-                            '661940160': shipmentData['661940160']
+        if(snapshot.size > 0) {
+            const docId = snapshot.docs[0].id;
+            await db.collection("kitAssembly").doc(docId).update(
+                {
+                    '221592017': '277438316',
+                    '661940160': shipmentData['661940160']
+                })
+            const secondSnapShot = await db.collection("participants").where('173836415.266600170.mouthwash.687158491', '==', shipmentData['687158491']).get();
+            const secondSnapShotDocId = secondSnapShot.docs[0].id;
+            const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170]['mouthwash'];
+            await db.collection("participants").doc(secondSnapShotDocId).update(
+                { 
+                    '173836415': {
+                        '266600170': {
+                            ...prevParticipantObject,
+                            'mouthwash': {
+                                '221592017': '277438316',
+                                '661940160': shipmentData['661940160']
+                            }
                         }
                     }
-                }
-            })
-        return true
+                })
+            return true
+            }
+        else {
+            return false
+        }
     }
     catch (error) {
         return new Error(error);
@@ -2302,46 +2307,51 @@ const processVerifyScannedCode = async (id) => {
 const storeKitReceipt = async (package) => {
     try {
         const snapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).get();
-        const docId = snapshot.docs[0].id;
-        const Connect_ID = snapshot.docs[0].data()['Connect_ID']
-        await db.collection("kitAssembly").doc(docId).update(
-            {
-                '221592017': '375535639',
-                '826941471': package['826941471'],
-                '633640710': package['633640710']
-            })
-        const secondSnapShot = await db.collection("participants").where('173836415.266600170.mouthwash.687158491', '==', snapshot.docs[0].data()[687158491]).get();
-        const secondSnapShotDocId = secondSnapShot.docs[0].id;
-        const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170];
-        await db.collection("participants").doc(secondSnapShotDocId).update(
-            { 
-                '173836415': {
-                    '266600170': {
-                        ...prevParticipantObject,
-                        'mouthwash': {
-                            '221592017': '375535639',
-                            '826941471': package['826941471']
+        if(snapshot.size > 0) {
+            const docId = snapshot.docs[0].id;
+            const Connect_ID = snapshot.docs[0].data()['Connect_ID']
+            await db.collection("kitAssembly").doc(docId).update(
+                {
+                    '221592017': '375535639',
+                    '826941471': package['826941471'],
+                    '633640710': package['633640710']
+                })
+            const secondSnapShot = await db.collection("participants").where('173836415.266600170.mouthwash.687158491', '==', snapshot.docs[0].data()[687158491]).get();
+            const secondSnapShotDocId = secondSnapShot.docs[0].id;
+            const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170];
+            await db.collection("participants").doc(secondSnapShotDocId).update(
+                { 
+                    '173836415': {
+                        '266600170': {
+                            ...prevParticipantObject,
+                            'mouthwash': {
+                                '221592017': '375535639',
+                                '826941471': package['826941471']
+                            }
                         }
                     }
-                }
-            })
-        const biospecPkg = {
-            '820476880': package['259846815'],
-            '260133861': package['260133861'],
-            '143615646': {
-                '593843561': package['259846815'].split(' ')[0],
-                '825582494': package['259846815'].split(' ')[1],
-                '826941471': package['826941471']
-            },
+                })
+            const biospecPkg = {
+                '820476880': package['259846815'],
+                '260133861': package['260133861'],
+                '143615646': {
+                    '593843561': package['259846815'].split(' ')[0],
+                    '825582494': package['259846815'].split(' ')[1],
+                    '826941471': package['826941471']
+                },
 
+            }
+
+            const thirdSnapShot = await db.collection("biospecimen").where('Connect_ID','==', Connect_ID).get()
+            const thirdSnapShotDocId = thirdSnapShot.docs[0].id
+            await db.collection('biospecimen').doc(thirdSnapShotDocId).add({
+                biospecPkg
+            })    
+            return true
         }
-
-        const thirdSnapShot = await db.collection("biospecimen").where('Connect_ID','==', Connect_ID).get()
-        const thirdSnapShotDocId = thirdSnapShot.docs[0].id
-        await db.collection('biospecimen').doc(thirdSnapShotDocId).update({
-            biospecPkg
-        })    
-        return true
+        else {
+            return false
+        }
     }
     catch (error) {
         return new Error(error);
