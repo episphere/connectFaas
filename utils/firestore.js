@@ -2064,17 +2064,34 @@ const queryTotalAddressesToPrint = async () => {
         const snapShot = await db.collection('participants')
         .where('747006172', '==', 104430631) // withdraw consent
         .where('987563196', '==', 104430631) // deceased
-        .where('827220437', '==', 125001209) // KPCO
+       //.where('827220437', '==', 125001209) // KPCO
         .where('685002411.277479354', '==', 104430631) // mouthwash refusal
         .where('173836415.266600170.156605577', '==', 353358909) // Blood or Urine Collected
+        // .where('173836415.266600170.184451682', '>=', '2023-12-01T00:00:00.000Z') // Date/timestamp for Blood or Urine Collected
+        // .orderBy('173836415.266600170.184451682', 'desc')
         .get();
-        return snapShot.docs.map(document => processParticipantData(document.data()));
+        return snapShot.docs.map(document => processParticipantData(document.data(), true));
     } catch (error) {
         return new Error(error);
     }
 }
 
-const processParticipantData = (record) => {
+const eligibleParticipantsForKitAssignment = async () => {
+    try {
+        const snapshot = await db.collection("participants").where('173836415.266600170.803510566.221592017', '==', '849527480').get();
+
+        if(snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
+        else return false;
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error);
+    }
+}
+
+const processParticipantData = (record, printLabel) => {
+    const hasMouthwash = record[173836415][266600170][803510566] !== undefined;
+
     const processedRecord = {
         first_name: record['399159511'],
         last_name: record['996038075'],
@@ -2083,12 +2100,12 @@ const processParticipantData = (record) => {
         city: record['703385619'],
         state: record['634434746'],
         zip_code: record['892050548'],
-        study_site: 'KPCO', // update when new sites are added
+        connect_id: record['Connect_ID'],
     };
-
-    return processedRecord;
+    if ((!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)) {
+        return processedRecord;
+    }
 }
-
 
 const addKitStatusToParticipant = async (participantsCID) => {
     try {
@@ -2103,7 +2120,7 @@ const addKitStatusToParticipant = async (participantsCID) => {
                             '266600170': {
                                 ...prevParticipantObject,
                                 '915179629': '664882224',
-                                'mouthwash': {
+                                '803510566': {
                                     '221592017': '849527480'
                                 }
                             }
@@ -2238,7 +2255,7 @@ const assignKitToParticipant = async (data) => {
                 '173836415': {
                     '266600170': {
                         ...prevParticipantObject,
-                        'mouthwash': {
+                        '803510566': {
                             '379252329': '390351864',                // mouthwash
                             '221592017': '241974920',
                             '687158491': data['687158491'],
@@ -2265,15 +2282,15 @@ const confirmShippmentKit = async (shipmentData) => {
                     '221592017': '277438316',
                     '661940160': shipmentData['661940160']
                 })
-            const secondSnapShot = await db.collection("participants").where('173836415.266600170.mouthwash.687158491', '==', shipmentData['687158491']).get();
+            const secondSnapShot = await db.collection("participants").where('173836415.266600170.803510566.687158491', '==', shipmentData['687158491']).get();
             const secondSnapShotDocId = secondSnapShot.docs[0].id;
-            const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170]['mouthwash'];
+            const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170][803510566];
             await db.collection("participants").doc(secondSnapShotDocId).update(
                 { 
                     '173836415': {
                         '266600170': {
                             ...prevParticipantObject,
-                            'mouthwash': {
+                            '803510566': {
                                 '221592017': '277438316',
                                 '661940160': shipmentData['661940160']
                             }
@@ -2310,21 +2327,24 @@ const storeKitReceipt = async (package) => {
         if(snapshot.size > 0) {
             const docId = snapshot.docs[0].id;
             const Connect_ID = snapshot.docs[0].data()['Connect_ID']
+            const token = snapshot.docs[0].data()['token']
+            const uid = snapshot.docs[0].data()['state.uid']
+            const site = snapshot.docs[0].data()['827220437']
             await db.collection("kitAssembly").doc(docId).update(
                 {
                     '221592017': '375535639',
                     '826941471': package['826941471'],
                     '633640710': package['633640710']
                 })
-            const secondSnapShot = await db.collection("participants").where('173836415.266600170.mouthwash.687158491', '==', snapshot.docs[0].data()[687158491]).get();
-            const secondSnapShotDocId = secondSnapShot.docs[0].id;
-            const prevParticipantObject = secondSnapShot.docs[0].data()[173836415][266600170];
-            await db.collection("participants").doc(secondSnapShotDocId).update(
+            const participantSnapShot = await db.collection("participants").where('173836415.266600170.803510566.687158491', '==', snapshot.docs[0].data()[687158491]).get();
+            const participantSnapShotDocId = participantSnapShot.docs[0].id;
+            const prevParticipantObject = participantSnapShot.docs[0].data()[173836415][266600170];
+            await db.collection("participants").doc(participantSnapShotDocId).update(
                 { 
                     '173836415': {
                         '266600170': {
                             ...prevParticipantObject,
-                            'mouthwash': {
+                            '803510566': {
                                 '221592017': '375535639',
                                 '826941471': package['826941471']
                             }
@@ -2339,14 +2359,12 @@ const storeKitReceipt = async (package) => {
                     '825582494': package['259846815'].split(' ')[1],
                     '826941471': package['826941471']
                 },
-
+                'Connect_ID': Connect_ID,
+                '827220437': site,
+                'token': token,
+                'uid': uid
             }
-
-            const thirdSnapShot = await db.collection("biospecimen").where('Connect_ID','==', Connect_ID).get()
-            const thirdSnapShotDocId = thirdSnapShot.docs[0].id
-            await db.collection('biospecimen').doc(thirdSnapShotDocId).add({
-                biospecPkg
-            })    
+            await db.collection('biospecimen').add(biospecPkg);
             return true
         }
         else {
@@ -2878,5 +2896,6 @@ module.exports = {
     assignKitToParticipant,
     confirmShippmentKit,
     storeKitReceipt,
-    addKitStatusToParticipant
+    addKitStatusToParticipant,
+    eligibleParticipantsForKitAssignment
 }

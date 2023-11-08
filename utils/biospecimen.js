@@ -769,6 +769,16 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({message: `Success!`, code:200})
     }
 
+    else if(api === 'getElgiblePtsForAssignment') {
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        const { eligibleParticipantsForKitAssignment } = require('./firestore');
+        const response = await eligibleParticipantsForKitAssignment();
+        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
+        return res.status(200).json({data: response, code:200})
+    }
+
      // Participant Selection with filter GET- BPTL 
     else if(api === 'getParticipantSelection') {
         if(req.method !== 'GET') {
