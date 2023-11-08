@@ -148,9 +148,6 @@ const eligibleForIncentive = async (req, res) => {
 
     const {isParent, siteCodes} = await isParentEntity(authorized);
     
-    if(Array.isArray(siteCodes) && siteCodes.indexOf(809703864) !== -1) {
-        siteCodes.splice(siteCodes.indexOf(809703864), 1) // remove UoC from Sites list
-    }
     
     const { retrieveParticipantsEligibleForIncentives } = require('./firestore');
     const data = await retrieveParticipantsEligibleForIncentives(siteCodes, round, isParent, limit, page);
