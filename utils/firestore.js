@@ -2327,9 +2327,6 @@ const storeKitReceipt = async (package) => {
         if(snapshot.size > 0) {
             const docId = snapshot.docs[0].id;
             const Connect_ID = snapshot.docs[0].data()['Connect_ID']
-            const token = snapshot.docs[0].data()['token']
-            const uid = snapshot.docs[0].data()['state.uid']
-            const site = snapshot.docs[0].data()['827220437']
             await db.collection("kitAssembly").doc(docId).update(
                 {
                     '221592017': '375535639',
@@ -2338,7 +2335,10 @@ const storeKitReceipt = async (package) => {
                 })
             const participantSnapShot = await db.collection("participants").where('173836415.266600170.803510566.687158491', '==', snapshot.docs[0].data()[687158491]).get();
             const participantSnapShotDocId = participantSnapShot.docs[0].id;
-            const prevParticipantObject = participantSnapShot.docs[0].data()[173836415][266600170];
+            const token = participantSnapShot.docs[0].data()['token']
+            const uid = participantSnapShot.docs[0].data()['state']['uid']
+            const site = participantSnapShot.docs[0].data()['827220437']
+            const prevParticipantObject = participantSnapShot.docs[0].data()[173836415][266600170][803510566];
             await db.collection("participants").doc(participantSnapShotDocId).update(
                 { 
                     '173836415': {
