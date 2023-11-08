@@ -625,8 +625,13 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         const { addKitAssemblyData } = require('./firestore');
         const response = await addKitAssemblyData(requestData);
-        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
-        return res.status(200).json({message: `Success!`, code:200})
+        if(!response) {
+            return res.status(404).json({data: response, code:404});
+        } else if (response instanceof Error) {
+            return res.status(500).json({data: response, code: 500});
+        } else {
+            return res.status(200).json({message: `Success!`, code:200})
+        }
     }
 
     else if (api === 'updateKitData'){
@@ -637,8 +642,13 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         const { updateKitAssemblyData } = require('./firestore');
         const response = await updateKitAssemblyData(requestData);
-        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
-        return res.status(200).json({message: `Success!`, code:200})
+        if(!response) {
+            return res.status(404).json({data: response, code:404});
+        } else if (response instanceof Error) {
+            return res.status(500).json({data: response, code: 500});
+        } else {
+            return res.status(200).json({message: `Success!`, code:200})
+        }
     }
 
     else if (api === 'collectionUniqueness'){
@@ -700,8 +710,13 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         const { confirmShippmentKit } = require('./firestore');
         const response = await confirmShippmentKit(requestData);
-        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
-        return res.status(200).json({message: `Success!`, code:200})
+        if(!response) {
+            return res.status(404).json({data: response, code:404});
+        } else if (response instanceof Error) {
+            return res.status(500).json({data: response, code: 500});
+        } else {
+            return res.status(200).json({message: `Success!`, code:200})
+        }
     }
 
     else if(api === 'kitReceipt') {
@@ -712,8 +727,13 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         const { storeKitReceipt } = require('./firestore');
         const response = await storeKitReceipt(requestData);
-        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
-        return res.status(200).json({message: `Success!`, code:200});
+        if(!response) {
+            return res.status(404).json({data: response, code:404});
+        } else if (response instanceof Error) {
+            return res.status(500).json({data: response, code: 500});
+        } else {
+            return res.status(200).json({message: `Success!`, code:200})
+        }
     }
 
 
