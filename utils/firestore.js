@@ -2055,8 +2055,8 @@ const queryTotalAddressesToPrint = async () => {
        //.where('827220437', '==', 125001209) // KPCO
         .where('685002411.277479354', '==', 104430631) // mouthwash refusal
         .where('173836415.266600170.156605577', '==', 353358909) // Blood or Urine Collected
-        // .where('173836415.266600170.184451682', '>=', '2023-12-01T00:00:00.000Z') // Date/timestamp for Blood or Urine Collected
-        // .orderBy('173836415.266600170.184451682', 'desc')
+        .where('173836415.266600170.740582332', '>=', '2023-10-01T00:00:00.000Z') // Date/timestamp for Blood or Urine Collected
+        .orderBy('173836415.266600170.740582332', 'desc')
         .get();
         return snapShot.docs.map(document => processParticipantData(document.data(), true));
     } catch (error) {
