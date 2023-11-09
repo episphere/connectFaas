@@ -2139,6 +2139,7 @@ const assignKitToParticipant = async (data) => {
         }
 
         const kitDoc = kitSnapshot.docs[0];
+        data['687158491'] = kitDoc.data()[687158491];
         const kitData = {
             '531858099': data['531858099'],
             '221592017': '241974920',
@@ -2161,6 +2162,7 @@ const assignKitToParticipant = async (data) => {
             '173836415': {
                 '266600170': {
                     ...prevParticipantObject,
+                    '915179629': '534621077',
                     '803510566': {
                         '379252329': '390351864', // mouthwash
                         '221592017': '241974920',
@@ -2263,6 +2265,7 @@ const storeKitReceipt = async (package) => {
                 '825582494': package['259846815'].split(' ')[1],
                 '826941471': package['826941471']
             },
+            '678166505': package['678166505'],
             'Connect_ID': Connect_ID,
             '827220437': site,
             'token': token,
