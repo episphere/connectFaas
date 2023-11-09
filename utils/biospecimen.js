@@ -702,7 +702,7 @@ const biospecimenAPIs = async (req, res) => {
         }
     }
 
-    else if(api === 'confirmShippment'){
+    else if(api === 'confirmShipment'){
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
