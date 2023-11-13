@@ -893,6 +893,7 @@ const filterDB = async (queries, siteCode, isParent) => {
             if (key === 'token') participantQuery = participantQuery.where('token', '==', queries.token);
             if (key === 'studyId') participantQuery = participantQuery.where('state.studyId', '==', queries.studyId);
             if (key === 'checkedIn') participantQuery = participantQuery.where('331584571.266600170.135591601', '==', 353358909);
+            if (key === 'birthMonth') participantQuery = participantQuery.where(`${fieldMapping.birthMonth}`, '==', queries.birthMonth);
         }
 
         return participantQuery;
