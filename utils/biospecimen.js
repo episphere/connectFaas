@@ -711,7 +711,7 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { confirmShipmentKit } = require('./firestore');
             const response = await confirmShipmentKit(requestData);
-            return res.status(200).json({data: response, code:200});
+            return res.status(200).json({response, code:200});
         }
         catch {
             console.error(error);
@@ -728,7 +728,7 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { storeKitReceipt } = require('./firestore');
             const response = await storeKitReceipt(requestData);
-            return res.status(200).json({data: response, code:200});
+            return res.status(200).json({response, code:200});
         }
         catch {
             console.error(error);

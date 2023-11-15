@@ -2237,7 +2237,7 @@ const confirmShipmentKit = async (shipmentData) => {
         };
 
         await participantDoc.ref.update(updatedParticipantObject);
-        return { status: true, Connect_ID, token, uid, prefEmail, ptName, surveyStatus };
+        return { status: true, Connect_ID, token, uid, prefEmail, ptName };
 
     } catch (error) {
         console.error(error);
