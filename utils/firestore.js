@@ -1067,7 +1067,7 @@ const updateSpecimen = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
     const docId = snapshot.docs[0].id;
 
-    if (!data[fieldMapping.tubesBagsCids.streckTube]) {
+    if (!data[fieldMapping.tubesBagsCids.streckTube]) { // Check for streck data due to intermittent null streck values in Firestore (11/2023).
         const { buildStreckPlaceholderData } = require('./shared');
         buildStreckPlaceholderData(data[fieldMapping.collectionId], data[fieldMapping.tubesBagsCids.streckTube] = {});
     }
