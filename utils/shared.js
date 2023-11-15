@@ -1126,6 +1126,191 @@ const sortBoxOnBagRemoval = (boxData, bagsToRemove, currDate) => {
     };
 }
 
+const flattenObject = (obj, parentPath = '') => {
+    const flattened = {};
+    const arrayPaths = [];
+
+    const traverse = (currentObj, currentPath) => {
+        for (const key in currentObj) {
+            const value = currentObj[key];
+            const newPath = currentPath ? `${currentPath}.${key}` : key;
+
+            if (value && typeof value === 'object') {
+                if (Array.isArray(value)) {
+                    arrayPaths.push(newPath); // Array path for firestore handling.
+                    value.forEach((item, index) => {
+                        traverse(item, `${newPath}[${index}]`);
+                    });
+                } else {
+                    traverse(value, newPath);
+                }
+            } else {
+                flattened[newPath] = value; // Assign scalar values.
+            }
+        }
+    };
+
+    traverse(obj, parentPath);
+    return { flattened, arrayPaths };
+};
+
+const flatValidationHandler = (newData, existingData, rules, validationFunction) => {
+    let errors = [];
+    for (let [path, value] of Object.entries(newData)) {
+        const validationPath = path.replace(/\[\d+\]/g, '[]'); // Handling array rules
+        const rule = rules[validationPath];
+
+        // console.log(`Validating: ${path}`);
+        // console.log(`New Data:`, value);
+        // console.log(`Existing Data:`, existingData[path]);
+
+        // If a rule exists for the data point, validate.
+        if (rule) {
+            const error = validationFunction(value, existingData[path], validationPath, rule);
+            if (error) errors.push(error);
+        }
+    }
+    return errors;
+}
+
+const validateUpdateData = (value, existingValue, path, rule) => {
+    // console.log('---');
+    // console.log('path', path);
+    // console.log('rule', rule);
+    // console.log('VALUE', value);
+    // console.log('EXISTING VALUE', existingValue);
+
+    if (rule.mustExist && (existingValue === undefined || existingValue === null)) {
+        return `Key (${path}) must exist before updating.`;
+    }
+
+    switch(rule.dataType) {
+        case 'string':
+            if (typeof value !== 'string') {
+                return `Data mismatch: ${path} must be a string.`;
+            } else if (rule.maxLength && value.length > rule.maxLength) {
+                return `Data mismatch: ${path} must be less than ${rule.maxLength} characters. It is currently ${value.length} characters.`;
+            }
+            break;
+        case 'number':
+            if (typeof value !== 'number') {
+                return `Data mismatch: ${path} must be a number.`;
+            }
+            if (!rule?.values.includes(value)) {
+                return `Data mismatch: ${path} must be one of the following values: ${rule.values.join(', ')}.`;
+            }
+            break;
+        case 'ISO':
+            if (typeof value !== 'string' || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(value))) {
+                return `Data mismatch: ${path} must be ISO 8601 string. Example: '2023-12-15T12:45:52.123Z'`;
+            }
+            break;
+        case 'array':
+            if (!Array.isArray(value)) {
+                return `Data mismatch: ${path} must be an array.`;
+            }
+            break;
+        case 'object':
+            if (typeof value !== 'object' || Array.isArray(value)) {
+                return `Data mismatch: ${path} must be an object.`;
+            }
+            break;
+        default:
+            if (typeof value !== rule.dataType) {
+                return `Data mismatch: ${path} must be a ${rule.dataType}.`;
+            }
+            break;
+    }
+    return null;
+}
+
+/**
+ * Validate and update the data object for the cancer occurrences field (637153953) in the participant profile.
+ * @param {object} dataObj - the update object for the participant profile. 
+ * @param {*} existingOccurrences - existing cancer occurrences from the participant profile.
+ * @returns {object} - an object with an error flag = true and message if validation fails.
+ */
+const handleCancerOccurrences = (flatDataObj, dataObj, existingOccurrences) => {
+    const newOccurrences = dataObj[fieldMapping.cancerOccurrence];
+    for (const occurrence of newOccurrences) {
+        const isCancerSiteSpecified = validateOccurrence(occurrence[fieldMapping.primaryCancerSite]);
+        if (!isCancerSiteSpecified) {
+            return { error: true, message: 'No primary cancer site identified.' };
+        }
+    }
+
+    flatDataObj[fieldMapping.cancerOccurrence] = [...existingOccurrences, ...newOccurrences];
+
+    return { error: false };
+}
+
+/**
+ * Validate that at least one cancer site in the Occurrence object (740819233) has a value of 'yes'.
+ * @param {object} cancerSitesObject - property (740819233) in the cancer occurrence object (637153953) from the participant profile.
+ * @returns {boolean} - true if at least one cancer site has a value of 'yes'. false otherwise.
+ */
+const validateOccurrence = (cancerSitesObject) => {
+    for (const key in cancerSitesObject) {
+        if (key === fieldMapping.cancerSitesMap.anotherTypeOfCancer.toString() && cancerSitesObject[key] && typeof cancerSitesObject[key] === 'string') {
+            return true;
+        } 
+        else if (cancerSitesObject[key] === fieldMapping.yes) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Name updates required special handling because the query.firstName and query.lastName arrays are used for participant search, but these will not be updated in the API call.
+ * @param {string} newName - the updated name.
+ * @param {string} oldName - the existing name.
+ * @param {array<string>} queryNameArray - the array of existing names (query.firstName or query.lastName in the participant record).
+ * @returns {array<string>} - the updated queryNameArray.
+ */
+const updateQueryNameArray = (newName, oldName, queryNameArray) => {
+    newName = typeof newName === 'string' ? newName.toLowerCase() : '';
+    oldName = oldName && typeof oldName === 'string' ? oldName.toLowerCase() : '';
+
+    const oldNameIndex = oldName ? queryNameArray.indexOf(oldName) : -1;
+    if (oldNameIndex !== -1) {
+        queryNameArray.splice(oldNameIndex, 1);
+    }
+
+    if (!queryNameArray.includes(newName)) {
+        queryNameArray.push(newName);
+    }
+}
+
+/**
+ * We've had an intermittnt issue with Streck tube data not being added to the specimen data structure (11/2023). 
+ * This is a safety net to ensure the data is added. Build the object literal since we only need to do this for streck tubes.
+ * @param {object} streckTubeData - the streck tube data object (empty placeholder passed in for assignment by reference).
+ */
+const buildStreckPlaceholderData = (collectionId, streckTubeData) => {
+    Object.assign(streckTubeData, {
+        [fieldMapping.tubeIsCollected]: fieldMapping.no,
+        [fieldMapping.tubeIsDeviated]: fieldMapping.no,
+        [fieldMapping.tubeDiscardFlag]: fieldMapping.no,
+        [fieldMapping.tubeDeviationObject]: {
+            [fieldMapping.tubeDeviationHemolyzed]: fieldMapping.no,
+            [fieldMapping.tubeDeviationMislabeledResolved]: fieldMapping.no,
+            [fieldMapping.tubeDeviationOuterTubeContaminated]: fieldMapping.no,
+            [fieldMapping.tubeDeviationOther]: fieldMapping.no,
+            [fieldMapping.tubeBrokenDeviation]: fieldMapping.no,
+            [fieldMapping.tubeDeviationLowTemp]: fieldMapping.no,
+            [fieldMapping.tubeMislabelledDeviation]: fieldMapping.no,
+            [fieldMapping.tubeDeviationHighTemp]: fieldMapping.no,
+            [fieldMapping.tubeDeviationLowVolume]: fieldMapping.no,
+            [fieldMapping.tubeDeviationLeakedSpilled]: fieldMapping.no,
+            [fieldMapping.tubeDeviationUnexpectedTubeSize]: fieldMapping.no,
+            [fieldMapping.tubeDiscardDeviation]: fieldMapping.no,
+            [fieldMapping.tubeNotFoundDeviation]: fieldMapping.no,
+        },
+    });
+    console.error(`Issue found in updateSpecimen() (ConnectFaas): Streck Tube not found in biospecimenData for collection Id ${collectionId}. Building placeholder data.`);
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -1173,4 +1358,10 @@ module.exports = {
     manageSpecimenBoxedStatusAddBag,
     manageSpecimenBoxedStatusRemoveBag,
     sortBoxOnBagRemoval,
+    flattenObject,
+    flatValidationHandler,
+    validateUpdateData,
+    updateQueryNameArray,
+    handleCancerOccurrences,
+    buildStreckPlaceholderData,
 };
