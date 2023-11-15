@@ -4,20 +4,20 @@ const {Storage} = require('@google-cloud/storage');
 
 const collectionNameArray = ['participants','biospecimen', 'boxes', 'module1_v1', 'module1_v2', 'module2_v1', 'module2_v2', 'module3_v1', 'module4_v1', 'bioSurvey_v1', 'menstrualSurvey_v1', 'clinicalBioSurvey_v1','covid19Survey_v1', 'kitAssembly'];
 
-const firestoreExport = async (event, context) => {
+const firestoreExport = async (eventData, context) => {
   await exportCollectionsToBucket(collectionNameArray);
 };
 
-const importToBigQuery = async (gcsEvent, context) => {
-  await importCollectionsToBigQuery(gcsEvent, collectionNameArray);
+const importToBigQuery = async (eventData, context) => {
+  await importCollectionsToBigQuery(eventData, collectionNameArray);
 };
 
-const exportNotificationsToBucket = async (event, context) => {
+const exportNotificationsToBucket = async (eventData, context) => {
   await exportCollectionsToBucket(["notifications"]);
 };
 
-const importNotificationsToBigquery = async (gcsEvent, context) => {
-  await importCollectionsToBigQuery(gcsEvent, ["notifications"]);
+const importNotificationsToBigquery = async (eventData, context) => {
+  await importCollectionsToBigQuery(eventData, ["notifications"]);
 };
 
 /**
