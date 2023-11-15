@@ -83,36 +83,43 @@ const _getSecrets = async () => {
 };
 
 const sendGridEventWebhook = async (req, res) => {
-    if (req.method !== "POST") {
-        return res
-            .status(405)
-            .json(getResponseJSON("Only POST requests are accepted!", 405));
-    }
-    const query = req.query;
-
-    if (query.api === "send") {
-        await _testSendEmail(res);
-    } else if (query.api === "receive") {
-        const publicKey = await _getSecrets();
-        const eventWebhook = new EventWebhook();
-        const ecPublicKey = eventWebhook.convertPublicKeyToECDSA(publicKey);
-        const payload = req.rawBody;
-        const signature = req.get(EventWebhookHeader.SIGNATURE());
-        const timestamp = req.get(EventWebhookHeader.TIMESTAMP());
-
-        const verification = eventWebhook.verifySignature(
-            ecPublicKey,
-            payload,
-            signature,
-            timestamp
-        );
-
-        if (verification) {
-            await _receivedEvents(req, res);
-        } else {
-            res.status(403).send("Forbidden");
+    try {
+        if (req.method !== "POST") {
+            return res
+                .status(405)
+                .json(getResponseJSON("Only POST requests are accepted!", 405));
         }
-    } else return res.status(400).json(getResponseJSON("Bad request!", 400));
+        const query = req.query;
+
+        if (query.api === "send") {
+            await _testSendEmail(res);
+        } else if (query.api === "receive") {
+            const publicKey = await _getSecrets();
+            const eventWebhook = new EventWebhook();
+            const ecPublicKey = eventWebhook.convertPublicKeyToECDSA(publicKey);
+            const payload = req.rawBody;
+            const signature = req.get(EventWebhookHeader.SIGNATURE());
+            const timestamp = req.get(EventWebhookHeader.TIMESTAMP());
+
+            const verification = eventWebhook.verifySignature(
+                ecPublicKey,
+                payload,
+                signature,
+                timestamp
+            );
+
+            if (verification) {
+                await _receivedEvents(req, res);
+            } else {
+                res.status(403).send("Forbidden");
+            }
+        } else return res.status(400).json(getResponseJSON("Bad request!", 400));
+
+    } catch (error) {
+        console.error('sendGridEventWebhook error', error);
+        return res.status(500).json(getResponseJSON("Internal Server Error!", 500));
+    }
+
 };
 
 module.exports = {
