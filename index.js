@@ -9,6 +9,7 @@ const { dashboard } = require('./utils/dashboard');
 const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport, exportNotificationsToBucket, importNotificationsToBigquery } = require('./utils/events');
 const { participantDataCleanup } = require('./utils/participantDataCleanup');
+const { sendGridEventWebhook } = require('./utils/sendGridEventWebhook');
 
 // API End-Points for Sites
 
@@ -61,3 +62,7 @@ exports.importNotificationsToBigquery = importNotificationsToBigquery;
 // End-Points for Participant Data Cleaning
 
 exports.participantDataCleanup = participantDataCleanup
+
+// End-Points for SendGrid Event Webhook
+
+exports.sendGridEventWebhook = sendGridEventWebhook
