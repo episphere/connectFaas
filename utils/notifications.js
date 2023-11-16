@@ -163,7 +163,7 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
 
   let htmlContainsToken = false;
   let htmlContainsLoginDetails = false;
-  let fieldsToFetch = ["Connect_ID", "token", "state.uid"];
+  let fieldsToFetch = ["token", "state.uid"];
   firstNameField && fieldsToFetch.push(firstNameField);
   preferredNameField && fieldsToFetch.push(preferredNameField);
   emailField && fieldsToFetch.push(emailField);
@@ -232,22 +232,15 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
         notificationBody = notificationBody.replace("{{token}}", fetchedData.token);
       }
 
-      const notification_id = uuid();
       personalizationArray.push({
         to: fetchedData[emailField],
         substitutions,
-        custom_args: {
-          connect_id: fetchedData.Connect_ID,
-          token: fetchedData.token,
-          notification_id,
-          gcloud_project: process.env.GCLOUD_PROJECT
-        },
       });
       participantTokenArray.push(fetchedData.token);
 
       const notificationRecord = {
         notificationSpecificationsID: notificationSpecId,
-        id: notification_id,
+        id: uuid(),
         notificationType: notificationSpec.notificationType[0],
         email: fetchedData[emailField],
         notification: {
