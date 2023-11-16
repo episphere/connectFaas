@@ -2024,7 +2024,7 @@ const updateKitAssemblyData = async (data) => {
         await db.collection('kitAssembly').doc(docId).update({
             '194252513': data[fieldMapping.returnKitId],
             '259846815': data[fieldMapping.collectionCupId],
-            '972453354': data[fieldMapping.supplyKitTrackingNum],
+            '972453354': data[fieldMapping.returnKitTrackingNum],
             '690210658': data[fieldMapping.supplyKitId],
             '786397882': data[fieldMapping.collectionCardId]
         })
@@ -2036,16 +2036,21 @@ const updateKitAssemblyData = async (data) => {
     }
 }
 
-const checkCollectionUniqueness = async (id) => {
+const checkCollectionUniqueness = async (supplyId, collectionId) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('259846815', '==', id).get();
-        if (snapShot.docs.length === 0) { return true }
-        else { return false }
+        const supplySnapShot = await db.collection('kitAssembly').where('690210658', '==', supplyId).get();
+        const collectionSnapShot = await db.collection('kitAssembly').where('259846815', '==', collectionId).get();
+        if (supplySnapShot.docs.length === 0 && collectionSnapShot.docs.length === 0) {
+            return true;
+        } else if (supplySnapShot.docs.length !== 0) {
+            return 'duplicate supplykit id';
+        } else if (collectionSnapShot.docs.length !== 0) {
+            return 'duplicate collection id';
+        }
     } catch (error) {
-        console.error(error);
-        return new Error('Error while looking for Collection ID!', { cause: error })
+        return new Error(error);
     }
-}
+};
 
 const queryTotalAddressesToPrint = async () => {
     try {
@@ -2261,8 +2266,8 @@ const storeKitReceipt = async (package) => {
             '820476880': package['259846815'],
             '260133861': package['260133861'],
             '143615646': {
-                '593843561': package['259846815'].split(' ')[0],
-                '825582494': package['259846815'].split(' ')[1],
+                '593843561': package['259846815'].split(' ')[0] || package['259846815'],
+                '825582494': package['259846815'].split(' ')[1] || package['259846815'],
                 '826941471': package['826941471']
             },
             '678166505': package['678166505'],
