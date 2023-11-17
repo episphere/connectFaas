@@ -2089,11 +2089,11 @@ const addKitStatusToParticipant = async (participantsCID) => {
         const updatePromises = participantsCID.map(async (participantCID) => {
             const snapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(participantCID)).get();
             if (snapshot.size === 0) {
-                // No matching document found, continue with the update
+                // No matching document found, stop the update
                 return false;
             }
             const docId = snapshot.docs[0].id;
-            const prevParticipantObject = snapshot.docs[0].data()[173836415][266600170];
+            const prevParticipantObject = snapshot.docs[0].data()?.[173836415]?.[266600170];
             await db.collection("participants").doc(docId).update({
                 '173836415': {
                     '266600170': {
@@ -2119,7 +2119,6 @@ const addKitStatusToParticipant = async (participantsCID) => {
 
 const processParticipantData = (record, printLabel) => {
     const hasMouthwash = record[173836415][266600170][803510566] !== undefined;
-
     const processedRecord = {
         first_name: record['399159511'],
         last_name: record['996038075'],
@@ -2132,6 +2131,9 @@ const processParticipantData = (record, printLabel) => {
     };
     if ((!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)) {
         return processedRecord;
+    }
+    else {
+        return [];
     }
 }
 
@@ -2161,7 +2163,7 @@ const assignKitToParticipant = async (data) => {
         }
 
         const participantDoc = participantSnapshot.docs[0];
-        const prevParticipantObject = participantDoc.data()[173836415][266600170];
+        const prevParticipantObject = participantDoc.data()?.[173836415]?.[266600170];
         
         const updatedParticipantObject = {
             '173836415': {

@@ -625,10 +625,10 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         try {
             const { addKitAssemblyData } = require('./firestore');
-            await addKitAssemblyData(requestData);
-            return res.status(200).json({message: `Success!`, code:200});
+            const response = await addKitAssemblyData(requestData);
+            return res.status(200).json({ response, code:200 });
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -643,9 +643,9 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { updateKitAssemblyData } = require('./firestore');
             const response = await updateKitAssemblyData(requestData);
-            return res.status(200).json({data: response, code:200});
+            return res.status(200).json({ response, code:200 });
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -662,7 +662,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await checkCollectionUniqueness(supplyQuery, collectionQuery);
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -677,9 +677,9 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { assignKitToParticipant } = require('./firestore');
             const response = await assignKitToParticipant(requestData);
-            return res.status(200).json({data: response, code:200});
+            return res.status(200).json({ response, code:200 });
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -696,7 +696,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await processVerifyScannedCode(query);
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -713,7 +713,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await confirmShipmentKit(requestData);
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -730,7 +730,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await storeKitReceipt(requestData);
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -745,7 +745,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await queryTotalAddressesToPrint();
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -762,7 +762,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await addKitStatusToParticipant(requestData);
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
