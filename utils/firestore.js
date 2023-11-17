@@ -2219,6 +2219,11 @@ const confirmShipmentKit = async (shipmentData) => {
 
         const participantDoc = participantSnapshot.docs[0];
         const prevParticipantObject = participantDoc.data()[173836415][266600170][803510566];
+        const uid = participantDoc.data()['state']['uid'];
+        const Connect_ID = participantDoc.data()['Connect_ID'];
+        const prefEmail = participantDoc.data()['869588347'];
+        const token = participantDoc.data()['token'];
+        const ptName =  participantDoc.data()['153211406'] || participantDoc.data()['399159511']
 
         const updatedParticipantObject = {
             '173836415': {
@@ -2233,8 +2238,8 @@ const confirmShipmentKit = async (shipmentData) => {
         };
 
         await participantDoc.ref.update(updatedParticipantObject);
+        return { status: true, Connect_ID, token, uid, prefEmail, ptName };
 
-        return true;
     } catch (error) {
         console.error(error);
         return new Error('Error confirming shippment!', { cause: error });
@@ -2255,6 +2260,9 @@ const storeKitReceipt = async (package) => {
         const token = participantDoc.data()['token'];
         const uid = participantDoc.data()['state']['uid'];
         const site = participantDoc.data()['827220437'];
+        const prefEmail = participantDoc.data()['869588347'];
+        const ptName =  participantDoc.data()['153211406'] || participantDoc.data()['399159511']
+        const surveyStatus = participantDoc.data()['547363263']
 
         const prevParticipantObject = participantDoc.data()[173836415][266600170][803510566];
 
@@ -2293,7 +2301,8 @@ const storeKitReceipt = async (package) => {
             }
         });
 
-        return true;
+        return { status: true, Connect_ID, token, uid, prefEmail, ptName, surveyStatus };
+
         } 
         catch (error) {
             console.error(error);
