@@ -2073,7 +2073,7 @@ const queryTotalAddressesToPrint = async () => {
 
 const eligibleParticipantsForKitAssignment = async () => {
     try {
-        const snapshot = await db.collection("participants").where('173836415.266600170.8583443674.221592017', '==', '849527480').get();
+        const snapshot = await db.collection("participants").where('173836415.266600170.8583443674.221592017', '==', 849527480).get();
 
         if(snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
         else return false;
@@ -2099,9 +2099,9 @@ const addKitStatusToParticipant = async (participantsCID) => {
                 '173836415': {
                     '266600170': {
                         ...prevParticipantObject,
-                        '915179629': '664882224',
+                        '915179629': 664882224,
                         '8583443674': {
-                            '221592017': '849527480'
+                            '221592017': 849527480
                         }
                     }
                 }
@@ -2140,7 +2140,7 @@ const processParticipantData = (record, printLabel) => {
 
 const assignKitToParticipant = async (data) => {
     try {
-        const kitSnapshot = await db.collection("kitAssembly").where('690210658', '==', data['690210658']).where('221592017', '==', '517216441').get();
+        const kitSnapshot = await db.collection("kitAssembly").where('690210658', '==', data['690210658']).where('221592017', '==', 517216441).get();
 
         if (kitSnapshot.size !== 1) {
             return false;
@@ -2150,8 +2150,8 @@ const assignKitToParticipant = async (data) => {
         data['687158491'] = kitDoc.data()[687158491];
         const kitData = {
             '531858099': data['531858099'],
-            '221592017': '241974920',
-            '418571751': '266600170',
+            '221592017': 241974920,
+            '418571751': 266600170,
             'Connect_ID': parseInt(data['Connect_ID'])
         };
 
@@ -2170,10 +2170,10 @@ const assignKitToParticipant = async (data) => {
             '173836415': {
                 '266600170': {
                     ...prevParticipantObject,
-                    '915179629': '534621077',
+                    '915179629': 534621077,
                     '8583443674': {
-                        '379252329': '390351864', // mouthwash
-                        '221592017': '241974920',
+                        '379252329': 390351864, // mouthwash
+                        '221592017': 241974920,
                         '687158491': data['687158491'],
                     }
                 }
@@ -2191,7 +2191,7 @@ const assignKitToParticipant = async (data) => {
 
 const processVerifyScannedCode = async (id) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', '241974920').get();
+        const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
         if (snapShot.docs.length === 1) {
             return { valid: true, UKID: snapShot.docs[0].data()[687158491] }
         }
@@ -2212,7 +2212,7 @@ const confirmShipmentKit = async (shipmentData) => {
 
         const kitDoc = kitSnapshot.docs[0];
         const kitData = {
-            '221592017': '277438316',
+            '221592017': 277438316,
             '661940160': shipmentData['661940160']
         };
 
@@ -2237,7 +2237,7 @@ const confirmShipmentKit = async (shipmentData) => {
                 '266600170': {
                     '8583443674': {
                         ...prevParticipantObject,
-                        '221592017': '277438316',
+                        '221592017': 277438316,
                         '661940160': shipmentData['661940160']
                     }
                 }
@@ -2299,7 +2299,7 @@ const storeKitReceipt = async (package) => {
         await db.collection('biospecimen').add(biospecPkg);
 
         await kitDoc.ref.update({
-            '221592017': '375535639',
+            '221592017': 375535639,
             '826941471': package['826941471'],
             '633640710': package['633640710']
         });
@@ -2311,7 +2311,7 @@ const storeKitReceipt = async (package) => {
             '173836415.266600170.448660695': package['678166505'],
             '173836415.266600170.8583443674': {
                 ...prevParticipantObject,
-                '221592017': '375535639',
+                '221592017': 375535639,
                 '826941471': package['826941471']
             }
         });
