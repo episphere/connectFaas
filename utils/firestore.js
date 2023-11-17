@@ -2073,7 +2073,7 @@ const queryTotalAddressesToPrint = async () => {
 
 const eligibleParticipantsForKitAssignment = async () => {
     try {
-        const snapshot = await db.collection("participants").where('173836415.266600170.803510566.221592017', '==', '849527480').get();
+        const snapshot = await db.collection("participants").where('173836415.266600170.8583443674.221592017', '==', '849527480').get();
 
         if(snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
         else return false;
@@ -2100,7 +2100,7 @@ const addKitStatusToParticipant = async (participantsCID) => {
                     '266600170': {
                         ...prevParticipantObject,
                         '915179629': '664882224',
-                        '803510566': {
+                        '8583443674': {
                             '221592017': '849527480'
                         }
                     }
@@ -2119,7 +2119,7 @@ const addKitStatusToParticipant = async (participantsCID) => {
 };
 
 const processParticipantData = (record, printLabel) => {
-    const hasMouthwash = record[173836415][266600170][803510566] !== undefined;
+    const hasMouthwash = record[173836415][266600170][8583443674] !== undefined;
     const processedRecord = {
         first_name: record['399159511'],
         last_name: record['996038075'],
@@ -2171,7 +2171,7 @@ const assignKitToParticipant = async (data) => {
                 '266600170': {
                     ...prevParticipantObject,
                     '915179629': '534621077',
-                    '803510566': {
+                    '8583443674': {
                         '379252329': '390351864', // mouthwash
                         '221592017': '241974920',
                         '687158491': data['687158491'],
@@ -2218,14 +2218,14 @@ const confirmShipmentKit = async (shipmentData) => {
 
         await kitDoc.ref.update(kitData);
 
-        const participantSnapshot = await db.collection("participants").where('173836415.266600170.803510566.687158491', '==', shipmentData['687158491']).get();
+        const participantSnapshot = await db.collection("participants").where('173836415.266600170.8583443674.687158491', '==', shipmentData['687158491']).get();
 
         if (participantSnapshot.size === 0) {
             return false;
         }
 
         const participantDoc = participantSnapshot.docs[0];
-        const prevParticipantObject = participantDoc.data()[173836415][266600170][803510566];
+        const prevParticipantObject = participantDoc.data()[173836415][266600170][8583443674];
         const uid = participantDoc.data()['state']['uid'];
         const Connect_ID = participantDoc.data()['Connect_ID'];
         const prefEmail = participantDoc.data()['869588347'];
@@ -2235,7 +2235,7 @@ const confirmShipmentKit = async (shipmentData) => {
         const updatedParticipantObject = {
             '173836415': {
                 '266600170': {
-                    '803510566': {
+                    '8583443674': {
                         ...prevParticipantObject,
                         '221592017': '277438316',
                         '661940160': shipmentData['661940160']
@@ -2262,7 +2262,7 @@ const storeKitReceipt = async (package) => {
         const kitDoc = kitSnapshot.docs[0];
         const Connect_ID = kitDoc.data()['Connect_ID'];
    
-        const participantSnapshot = await db.collection("participants").where('173836415.266600170.803510566.687158491', '==', kitDoc.data()[687158491]).get();
+        const participantSnapshot = await db.collection("participants").where('173836415.266600170.8583443674.687158491', '==', kitDoc.data()[687158491]).get();
         const participantDoc = participantSnapshot.docs[0];
         const token = participantDoc.data()['token'];
         const uid = participantDoc.data()['state']['uid'];
@@ -2271,7 +2271,7 @@ const storeKitReceipt = async (package) => {
         const ptName =  participantDoc.data()['153211406'] || participantDoc.data()['399159511']
         const surveyStatus = participantDoc.data()['547363263']
 
-        const prevParticipantObject = participantDoc.data()[173836415][266600170][803510566];
+        const prevParticipantObject = participantDoc.data()[173836415][266600170][8583443674];
         const collectionId = package['259846815']?.split(' ')[0]
         const objectId = package['259846815']?.split(' ')[1]
         
@@ -2307,7 +2307,7 @@ const storeKitReceipt = async (package) => {
             '254109640': 353358909,
             '173836415.266600170.915179629': 103209024,
             '173836415.266600170.448660695': package['678166505'],
-            '173836415.266600170.803510566': {
+            '173836415.266600170.8583443674': {
                 ...prevParticipantObject,
                 '221592017': '375535639',
                 '826941471': package['826941471']
