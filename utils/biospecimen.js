@@ -655,7 +655,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         const supplyQuery = req.query.supplyKitId;
-        const collectionQuery = (req.query.ollectionId?.slice(0, -4) || "") + " " + (req.query.ollectionId?.slice(-4) || ""); // add space to collection
+        const collectionQuery = (req.query.collectionId?.slice(0, -4) || "") + " " + (req.query.collectionId?.slice(-4) || ""); // add space to collection
         if (Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include id to check uniqueness.', 400));
         if (collectionQuery.length < 14) return res.status(200).json({data: 'Check Collection ID', code:200});
         try {
