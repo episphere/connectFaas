@@ -2272,24 +2272,26 @@ const storeKitReceipt = async (package) => {
         const surveyStatus = participantDoc.data()['547363263']
 
         const prevParticipantObject = participantDoc.data()[173836415][266600170][8583443674];
-        const collectionId = package['259846815']?.split(' ')[0]
-        const objectId = package['259846815']?.split(' ')[1]
+        const collectionId = package['259846815']?.split(' ')[0];
+        const objectId = package['259846815']?.split(' ')[1];
         
         if (objectId === undefined || collectionId === undefined) {
             return { status: 'Check Collection ID' }
         }
 
         const biospecPkg = {
-            '820476880': package['259846815'],
-            '260133861': package['260133861'],
+            '137401245': package['137401245'] === true ? 353358909 : 103209024,
             '143615646': {
+                '260133861': package['260133861'],
                 '593843561': collectionId,
                 '825582494': objectId,
                 '826941471': package['826941471']
             },
             '678166505': package['678166505'],
-            'Connect_ID': Connect_ID,
+            '820476880': package['259846815'],
+            '870456401': package['870456401'],
             '827220437': site,
+            'Connect_ID': Connect_ID,
             'token': token,
             'uid': uid
         }
