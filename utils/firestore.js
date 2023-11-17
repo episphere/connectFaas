@@ -2009,7 +2009,7 @@ const addKitAssemblyData = async (data) => {
     }
     catch(error){
         console.error(error);
-        return new Error('Error while adding kit data', { cause: error });
+        return new Error(error);
     }
 }
 
@@ -2032,7 +2032,7 @@ const updateKitAssemblyData = async (data) => {
     }
     catch(error){
         console.error(error);
-        return new Error('Error while updating kit data', { cause: error })
+        return new Error(error);
     }
 }
 
@@ -2066,7 +2066,7 @@ const queryTotalAddressesToPrint = async () => {
         return snapShot.docs.map(document => processParticipantData(document.data(), true));
     } catch (error) {
         console.error(error);
-        return new Error('Error querying participants!', { cause: error })
+        return new Error(error);
     }
 }
 
@@ -2079,7 +2079,7 @@ const eligibleParticipantsForKitAssignment = async () => {
     }
     catch(error){
         console.error(error);
-        return new Error('Error querying participants!', { cause: error })
+        return new Error(error);
     }
 }
 
@@ -2113,7 +2113,7 @@ const addKitStatusToParticipant = async (participantsCID) => {
         return true;
     } catch (error) {
         console.error(error);
-        return new Error('Error adding kit status to participant(s)!', { cause: error })
+        return new Error(error);
     }
 };
 
@@ -2184,7 +2184,7 @@ const assignKitToParticipant = async (data) => {
         return true;
     } catch (error) {
         console.error(error);
-        return new Error('Error while assigning kit to a participant!', { cause: error });
+        return new Error(error);
     }
 };
 
@@ -2197,7 +2197,7 @@ const processVerifyScannedCode = async (id) => {
         else { return false }
     } catch (error) {
         console.error(error);
-        return new Error('Error while looking for barcode!', { cause: error })
+        return new Error(error);
     }
 }
 
@@ -2243,7 +2243,7 @@ const confirmShipmentKit = async (shipmentData) => {
         return true;
     } catch (error) {
         console.error(error);
-        return new Error('Error confirming shippment!', { cause: error });
+        return new Error(error);
     }
 };
 
@@ -2263,13 +2263,18 @@ const storeKitReceipt = async (package) => {
         const site = participantDoc.data()['827220437'];
 
         const prevParticipantObject = participantDoc.data()[173836415][266600170][803510566];
-
+        const collectId = package['259846815'].split(' ')[0];
+        const objectId = package['259846815'].split(' ')[1];
+        
+        if (objectId === undefined || collectId === undefined) {
+            return { status: 'Check Collection ID' }
+        }
         const biospecPkg = {
             '820476880': package['259846815'],
             '260133861': package['260133861'],
             '143615646': {
-                '593843561': package['259846815'].split(' ')[0] || package['259846815'],
-                '825582494': package['259846815'].split(' ')[1] || package['259846815'],
+                '593843561': collectId,
+                '825582494': objectId,
                 '826941471': package['826941471']
             },
             '678166505': package['678166505'],
@@ -2303,7 +2308,7 @@ const storeKitReceipt = async (package) => {
         } 
         catch (error) {
             console.error(error);
-            return new Error('Error receipting kit!', { cause: error });
+            return new Error(error);
         }
     }
 
