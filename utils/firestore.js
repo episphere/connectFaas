@@ -2265,13 +2265,19 @@ const storeKitReceipt = async (package) => {
         const surveyStatus = participantDoc.data()['547363263']
 
         const prevParticipantObject = participantDoc.data()[173836415][266600170][803510566];
+        const collectionId = package['259846815']?.split(' ')[0]
+        const objectId = package['259846815']?.split(' ')[1]
+        
+        if (objectId === undefined || collectionId === undefined) {
+            return { status: 'Check Collection ID' }
+        }
 
         const biospecPkg = {
             '820476880': package['259846815'],
             '260133861': package['260133861'],
             '143615646': {
-                '593843561': package['259846815'].split(' ')[0],
-                '825582494': package['259846815'].split(' ')[1],
+                '593843561': collectionId,
+                '825582494': objectId,
                 '826941471': package['826941471']
             },
             '678166505': package['678166505'],
@@ -2290,9 +2296,9 @@ const storeKitReceipt = async (package) => {
         });
 
         await participantDoc.ref.update({
-            '684635302': '353358909',
-            '254109640': '353358909',
-            '173836415.266600170.915179629': '103209024',
+            '684635302': 353358909,
+            '254109640': 353358909,
+            '173836415.266600170.915179629': 103209024,
             '173836415.266600170.448660695': package['678166505'],
             '173836415.266600170.803510566': {
                 ...prevParticipantObject,
