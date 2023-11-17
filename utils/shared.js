@@ -1129,6 +1129,7 @@ const sortBoxOnBagRemoval = (boxData, bagsToRemove, currDate) => {
 /**
  * We've had an intermittnt issue with Streck tube data not being added to the specimen data structure (11/2023). 
  * This is a safety net to ensure the data is added. Build the object literal since we only need to do this for streck tubes.
+ * @param {string} collectionId - the collection Id of the specimen.
  * @param {object} streckTubeData - the streck tube data object (empty placeholder passed in for assignment by reference).
  */
 const buildStreckPlaceholderData = (collectionId, streckTubeData) => {
