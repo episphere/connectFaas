@@ -625,10 +625,10 @@ const biospecimenAPIs = async (req, res) => {
         if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
         try {
             const { addKitAssemblyData } = require('./firestore');
-            await addKitAssemblyData(requestData);
-            return res.status(200).json({message: `Success!`, code:200});
+            const response = await addKitAssemblyData(requestData);
+            return res.status(200).json({ response, code:200 });
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -643,26 +643,27 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { updateKitAssemblyData } = require('./firestore');
             const response = await updateKitAssemblyData(requestData);
-            return res.status(200).json({data: response, code:200});
+            return res.status(200).json({ response, code:200 });
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
     }
-
     else if (api === 'collectionUniqueness'){
         if( req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        const query = req.query.id.slice(0, -3) + " " + req.query.id.slice(-3); // add space to collection
+        const supplyQuery = req.query.supplyKitId;
+        const collectionQuery = (req.query.collectionId?.slice(0, -4) || "") + " " + (req.query.collectionId?.slice(-4) || ""); // add space to collection
         if (Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include id to check uniqueness.', 400));
+        if (collectionQuery.length < 14) return res.status(200).json({data: 'Check Collection ID', code:200});
         try {
             const { checkCollectionUniqueness } = require('./firestore');
-            const response = await checkCollectionUniqueness(query);
+            const response = await checkCollectionUniqueness(supplyQuery, collectionQuery);
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -677,9 +678,9 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { assignKitToParticipant } = require('./firestore');
             const response = await assignKitToParticipant(requestData);
-            return res.status(200).json({data: response, code:200});
+            return res.status(200).json({ response, code:200 });
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -696,7 +697,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await processVerifyScannedCode(query);
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -713,7 +714,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await confirmShipmentKit(requestData);
             return res.status(200).json({response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -730,7 +731,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await storeKitReceipt(requestData);
             return res.status(200).json({response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -745,7 +746,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await queryTotalAddressesToPrint();
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -762,7 +763,7 @@ const biospecimenAPIs = async (req, res) => {
             const response = await addKitStatusToParticipant(requestData);
             return res.status(200).json({data: response, code:200});
         }
-        catch {
+        catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
