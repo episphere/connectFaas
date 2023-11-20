@@ -278,7 +278,7 @@ const updateParticipantData = async (req, res, authObj) => {
         const { initializeTimestamps } = require('./shared')
         const keysForTimestampGeneration = Object.keys(initializeTimestamps);
         for (const key of keysForTimestampGeneration) {
-            if (initializeTimestamps[key] && flatDataObj[key] != null) {
+            if (flatDataObj[key] != null) {
                 if (initializeTimestamps[key].value && initializeTimestamps[key].value === flatDataObj[key]) {
                     Object.assign(flatDataObj, initializeTimestamps[key].initialize);
                 }
@@ -286,7 +286,8 @@ const updateParticipantData = async (req, res, authObj) => {
         }
 
         // Handle the array paths: Firestore writes are nuanced for arrays. We either need to manage the array or use FieldValue.arrayUnion & FieldValue.arrayRemove.
-        // Manage the array to post entire update with one object. Remove dot notated array data, add complete array data (prepare for Firestore update). Data is already validated. 
+        // Otherwise, existing array data will be overwritten in firestore when we want a merge operation. Manage the array to post entire update with one object.
+        // Remove dot notated array data, merge server-side, then add the updated array back to flatDocData (prepare for Firestore update). Data is already validated.
         for (const path of flatArrayPaths) {
             let isKeyFound = false;
             for (const key in flatDataObj) {
@@ -343,7 +344,7 @@ const updateParticipantData = async (req, res, authObj) => {
         console.log("UPDATED DATA");
         console.log(flatDataObj);
 
-        if (Object.keys(dataObj).length > 0) {
+        if (Object.keys(flatDataObj).length > 0) {
             const { updateParticipantData } = require('./firestore');
             const { checkDerivedVariables } = require('./validation');
             await updateParticipantData(docID, flatDataObj);

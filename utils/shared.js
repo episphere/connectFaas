@@ -1144,7 +1144,7 @@ const flattenObject = (obj, parentPath = '') => {
 
             if (value && typeof value === 'object') {
                 if (Array.isArray(value)) {
-                    arrayPaths.push(newPath); // Array path for firestore handling.
+                    arrayPaths.push(newPath); // Array path for firestore array handling.
                     value.forEach((item, index) => {
                         traverse(item, `${newPath}[${index}]`);
                     });
