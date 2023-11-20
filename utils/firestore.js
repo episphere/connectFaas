@@ -9,7 +9,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { tubeKeyToNum, tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -893,6 +893,7 @@ const filterDB = async (queries, siteCode, isParent) => {
             if (key === 'token') participantQuery = participantQuery.where('token', '==', queries.token);
             if (key === 'studyId') participantQuery = participantQuery.where('state.studyId', '==', queries.studyId);
             if (key === 'checkedIn') participantQuery = participantQuery.where('331584571.266600170.135591601', '==', 353358909);
+            if (key === 'birthMonth') participantQuery = participantQuery.where(`${fieldMapping.birthMonth}`, '==', queries.birthMonth);
         }
 
         return participantQuery;
@@ -1066,6 +1067,12 @@ const storeSpecimen = async (data) => {
 const updateSpecimen = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
     const docId = snapshot.docs[0].id;
+
+    if (!data[fieldMapping.tubesBagsCids.streckTube]) { // Check for streck data due to intermittent null streck values in Firestore (11/2023).
+        const { buildStreckPlaceholderData } = require('./shared');
+        buildStreckPlaceholderData(data[fieldMapping.collectionId], data[fieldMapping.tubesBagsCids.streckTube] = {});
+    }
+
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
@@ -2009,7 +2016,7 @@ const addKitAssemblyData = async (data) => {
     }
     catch(error){
         console.error(error);
-        return new Error('Error while adding kit data', { cause: error });
+        return new Error(error);
     }
 }
 
@@ -2024,7 +2031,7 @@ const updateKitAssemblyData = async (data) => {
         await db.collection('kitAssembly').doc(docId).update({
             '194252513': data[fieldMapping.returnKitId],
             '259846815': data[fieldMapping.collectionCupId],
-            '972453354': data[fieldMapping.supplyKitTrackingNum],
+            '972453354': data[fieldMapping.returnKitTrackingNum],
             '690210658': data[fieldMapping.supplyKitId],
             '786397882': data[fieldMapping.collectionCardId]
         })
@@ -2032,20 +2039,25 @@ const updateKitAssemblyData = async (data) => {
     }
     catch(error){
         console.error(error);
-        return new Error('Error while updating kit data', { cause: error })
+        return new Error(error);
     }
 }
 
-const checkCollectionUniqueness = async (id) => {
+const checkCollectionUniqueness = async (supplyId, collectionId) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('259846815', '==', id).get();
-        if (snapShot.docs.length === 0) { return true }
-        else { return false }
+        const supplySnapShot = await db.collection('kitAssembly').where('690210658', '==', supplyId).get();
+        const collectionSnapShot = await db.collection('kitAssembly').where('259846815', '==', collectionId).get();
+        if (supplySnapShot.docs.length === 0 && collectionSnapShot.docs.length === 0) {
+            return true;
+        } else if (supplySnapShot.docs.length !== 0) {
+            return 'duplicate supplykit id';
+        } else if (collectionSnapShot.docs.length !== 0) {
+            return 'duplicate collection id';
+        }
     } catch (error) {
-        console.error(error);
-        return new Error('Error while looking for Collection ID!', { cause: error })
+        return new Error(error);
     }
-}
+};
 
 const queryTotalAddressesToPrint = async () => {
     try {
@@ -2061,20 +2073,20 @@ const queryTotalAddressesToPrint = async () => {
         return snapShot.docs.map(document => processParticipantData(document.data(), true));
     } catch (error) {
         console.error(error);
-        return new Error('Error querying participants!', { cause: error })
+        return new Error(error);
     }
 }
 
 const eligibleParticipantsForKitAssignment = async () => {
     try {
-        const snapshot = await db.collection("participants").where('173836415.266600170.803510566.221592017', '==', '849527480').get();
+        const snapshot = await db.collection("participants").where('173836415.266600170.8583443674.221592017', '==', 849527480).get();
 
         if(snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
         else return false;
     }
     catch(error){
         console.error(error);
-        return new Error('Error querying participants!', { cause: error })
+        return new Error(error);
     }
 }
 
@@ -2084,18 +2096,18 @@ const addKitStatusToParticipant = async (participantsCID) => {
         const updatePromises = participantsCID.map(async (participantCID) => {
             const snapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(participantCID)).get();
             if (snapshot.size === 0) {
-                // No matching document found, continue with the update
+                // No matching document found, stop the update
                 return false;
             }
             const docId = snapshot.docs[0].id;
-            const prevParticipantObject = snapshot.docs[0].data()[173836415][266600170];
+            const prevParticipantObject = snapshot.docs[0].data()?.[173836415]?.[266600170];
             await db.collection("participants").doc(docId).update({
                 '173836415': {
                     '266600170': {
                         ...prevParticipantObject,
-                        '915179629': '664882224',
-                        '803510566': {
-                            '221592017': '849527480'
+                        '915179629': 664882224,
+                        '8583443674': {
+                            '221592017': 849527480
                         }
                     }
                 }
@@ -2108,13 +2120,12 @@ const addKitStatusToParticipant = async (participantsCID) => {
         return true;
     } catch (error) {
         console.error(error);
-        return new Error('Error adding kit status to participant(s)!', { cause: error })
+        return new Error(error);
     }
 };
 
 const processParticipantData = (record, printLabel) => {
-    const hasMouthwash = record[173836415][266600170][803510566] !== undefined;
-
+    const hasMouthwash = record[173836415][266600170][8583443674] !== undefined;
     const processedRecord = {
         first_name: record['399159511'],
         last_name: record['996038075'],
@@ -2128,11 +2139,14 @@ const processParticipantData = (record, printLabel) => {
     if ((!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)) {
         return processedRecord;
     }
+    else {
+        return [];
+    }
 }
 
 const assignKitToParticipant = async (data) => {
     try {
-        const kitSnapshot = await db.collection("kitAssembly").where('690210658', '==', data['690210658']).where('221592017', '==', '517216441').get();
+        const kitSnapshot = await db.collection("kitAssembly").where('690210658', '==', data['690210658']).where('221592017', '==', 517216441).get();
 
         if (kitSnapshot.size !== 1) {
             return false;
@@ -2142,8 +2156,8 @@ const assignKitToParticipant = async (data) => {
         data['687158491'] = kitDoc.data()[687158491];
         const kitData = {
             '531858099': data['531858099'],
-            '221592017': '241974920',
-            '418571751': '266600170',
+            '221592017': 241974920,
+            '418571751': 266600170,
             'Connect_ID': parseInt(data['Connect_ID'])
         };
 
@@ -2156,16 +2170,16 @@ const assignKitToParticipant = async (data) => {
         }
 
         const participantDoc = participantSnapshot.docs[0];
-        const prevParticipantObject = participantDoc.data()[173836415][266600170];
+        const prevParticipantObject = participantDoc.data()?.[173836415]?.[266600170];
         
         const updatedParticipantObject = {
             '173836415': {
                 '266600170': {
                     ...prevParticipantObject,
-                    '915179629': '534621077',
-                    '803510566': {
-                        '379252329': '390351864', // mouthwash
-                        '221592017': '241974920',
+                    '915179629': 664882224,
+                    '8583443674': {
+                        '379252329': 390351864, // mouthwash
+                        '221592017': 241974920,
                         '687158491': data['687158491'],
                     }
                 }
@@ -2177,20 +2191,20 @@ const assignKitToParticipant = async (data) => {
         return true;
     } catch (error) {
         console.error(error);
-        return new Error('Error while assigning kit to a participant!', { cause: error });
+        return new Error(error);
     }
 };
 
 const processVerifyScannedCode = async (id) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', '241974920').get();
+        const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
         if (snapShot.docs.length === 1) {
             return { valid: true, UKID: snapShot.docs[0].data()[687158491] }
         }
         else { return false }
     } catch (error) {
         console.error(error);
-        return new Error('Error while looking for barcode!', { cause: error })
+        return new Error(error);
     }
 }
 
@@ -2204,27 +2218,32 @@ const confirmShipmentKit = async (shipmentData) => {
 
         const kitDoc = kitSnapshot.docs[0];
         const kitData = {
-            '221592017': '277438316',
+            '221592017': 277438316,
             '661940160': shipmentData['661940160']
         };
 
         await kitDoc.ref.update(kitData);
 
-        const participantSnapshot = await db.collection("participants").where('173836415.266600170.803510566.687158491', '==', shipmentData['687158491']).get();
+        const participantSnapshot = await db.collection("participants").where('173836415.266600170.8583443674.687158491', '==', shipmentData['687158491']).get();
 
         if (participantSnapshot.size === 0) {
             return false;
         }
 
         const participantDoc = participantSnapshot.docs[0];
-        const prevParticipantObject = participantDoc.data()[173836415][266600170][803510566];
+        const prevParticipantObject = participantDoc.data()[173836415][266600170][8583443674];
+        const uid = participantDoc.data()['state']['uid'];
+        const Connect_ID = participantDoc.data()['Connect_ID'];
+        const prefEmail = participantDoc.data()['869588347'];
+        const token = participantDoc.data()['token'];
+        const ptName =  participantDoc.data()['153211406'] || participantDoc.data()['399159511']
 
         const updatedParticipantObject = {
             '173836415': {
                 '266600170': {
-                    '803510566': {
+                    '8583443674': {
                         ...prevParticipantObject,
-                        '221592017': '277438316',
+                        '221592017': 277438316,
                         '661940160': shipmentData['661940160']
                     }
                 }
@@ -2232,42 +2251,53 @@ const confirmShipmentKit = async (shipmentData) => {
         };
 
         await participantDoc.ref.update(updatedParticipantObject);
+        return { status: true, Connect_ID, token, uid, prefEmail, ptName };
 
-        return true;
     } catch (error) {
         console.error(error);
-        return new Error('Error confirming shippment!', { cause: error });
+        return new Error(error);
     }
 };
 
 const storeKitReceipt = async (package) => {
     try {
-        const kitSnapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).get();
+        const kitSnapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).where('221592017', '==', 277438316).get();
         if (kitSnapshot.size === 0) {
             return false;
         }
         const kitDoc = kitSnapshot.docs[0];
         const Connect_ID = kitDoc.data()['Connect_ID'];
    
-        const participantSnapshot = await db.collection("participants").where('173836415.266600170.803510566.687158491', '==', kitDoc.data()[687158491]).get();
+        const participantSnapshot = await db.collection("participants").where('173836415.266600170.8583443674.687158491', '==', kitDoc.data()[687158491]).get();
         const participantDoc = participantSnapshot.docs[0];
         const token = participantDoc.data()['token'];
         const uid = participantDoc.data()['state']['uid'];
         const site = participantDoc.data()['827220437'];
+        const prefEmail = participantDoc.data()['869588347'];
+        const ptName =  participantDoc.data()['153211406'] || participantDoc.data()['399159511']
+        const surveyStatus = participantDoc.data()['547363263']
 
-        const prevParticipantObject = participantDoc.data()[173836415][266600170][803510566];
+        const prevParticipantObject = participantDoc.data()[173836415][266600170][8583443674];
+        const collectionId = package['259846815']?.split(' ')[0];
+        const objectId = package['259846815']?.split(' ')[1];
+        
+        if (objectId === undefined || collectionId === undefined) {
+            return { status: 'Check Collection ID' }
+        }
 
         const biospecPkg = {
-            '820476880': package['259846815'],
-            '260133861': package['260133861'],
+            '137401245': package['137401245'] === true ? 353358909 : 103209024,
             '143615646': {
-                '593843561': package['259846815'].split(' ')[0],
-                '825582494': package['259846815'].split(' ')[1],
+                '260133861': package['260133861'],
+                '593843561': collectionId,
+                '825582494': objectId,
                 '826941471': package['826941471']
             },
             '678166505': package['678166505'],
-            'Connect_ID': Connect_ID,
+            '820476880': package['259846815'],
+            '870456401': package['870456401'],
             '827220437': site,
+            'Connect_ID': Connect_ID,
             'token': token,
             'uid': uid
         }
@@ -2275,24 +2305,29 @@ const storeKitReceipt = async (package) => {
         await db.collection('biospecimen').add(biospecPkg);
 
         await kitDoc.ref.update({
-            '221592017': '375535639',
+            '221592017': 375535639,
             '826941471': package['826941471'],
             '633640710': package['633640710']
         });
 
         await participantDoc.ref.update({
-            '173836415.266600170.803510566': {
+            '684635302': 353358909,
+            '254109640': 353358909,
+            '173836415.266600170.915179629': 103209024,
+            '173836415.266600170.448660695': package['678166505'],
+            '173836415.266600170.8583443674': {
                 ...prevParticipantObject,
-                '221592017': '375535639',
+                '221592017': 375535639,
                 '826941471': package['826941471']
             }
         });
 
-        return true;
+        return { status: true, Connect_ID, token, uid, prefEmail, ptName, surveyStatus };
+
         } 
         catch (error) {
             console.error(error);
-            return new Error('Error receipting kit!', { cause: error });
+            return new Error(error);
         }
     }
 
@@ -2809,6 +2844,52 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
     }
 }
 
+const processEventWebhook = async (event) => {
+    if (event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
+
+    const date = new Date(event.timestamp * 1000).toISOString();
+    console.log("Processing event at " + date);
+    console.log(event);
+
+    const response = await db
+        .collection("sendgridTracking")
+        .where("sg_message_id", "==", event.sg_message_id)
+        .get();
+
+    if (response.size > 0) {
+        for (let doc of response.docs) {
+            const eventRecord = {
+                [`${event.event}_status`]: true,
+                [`${event.event}_date`]: date,
+                [`${event.event}_timestamp`]: event.timestamp,
+            };
+            if (["bounce", "dropped"].includes(event.event)) {
+                eventRecord[`${event.event}_reason`] = event.reason;
+            }
+            await db
+                .collection("sendgridTracking")
+                .doc(doc.id)
+                .update(eventRecord);
+        }
+    } else {
+        const eventRecord = {
+            [`${event.event}_status`]: true,
+            [`${event.event}_date`]: date,
+            [`${event.event}_timestamp`]: event.timestamp,
+            connect_id: event.connect_id,
+            email: event.email,
+            notification_id: event.notification_id,
+            sg_event_id: event.sg_event_id,
+            sg_message_id: event.sg_message_id,
+            token: event.token,
+        };
+        if (["bounce", "dropped"].includes(event.event)) {
+            eventRecord[`${event.event}_reason`] = event.reason;
+        }
+        await db.collection("sendgridTracking").add(eventRecord);
+    }
+};
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -2923,5 +3004,6 @@ module.exports = {
     confirmShipmentKit,
     storeKitReceipt,
     addKitStatusToParticipant,
-    eligibleParticipantsForKitAssignment
+    eligibleParticipantsForKitAssignment,
+    processEventWebhook
 }

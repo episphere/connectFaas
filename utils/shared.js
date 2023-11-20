@@ -1298,6 +1298,36 @@ const updateQueryNameArray = (newName, oldName, queryNameArray) => {
     }
 }
 
+/**
+ * We've had an intermittnt issue with Streck tube data not being added to the specimen data structure (11/2023). 
+ * This is a safety net to ensure the data is added. Build the object literal since we only need to do this for streck tubes.
+ * @param {string} collectionId - the collection Id of the specimen.
+ * @param {object} streckTubeData - the streck tube data object (empty placeholder passed in for assignment by reference).
+ */
+const buildStreckPlaceholderData = (collectionId, streckTubeData) => {
+    Object.assign(streckTubeData, {
+        [fieldMapping.tubeIsCollected]: fieldMapping.no,
+        [fieldMapping.tubeIsDeviated]: fieldMapping.no,
+        [fieldMapping.tubeDiscardFlag]: fieldMapping.no,
+        [fieldMapping.tubeDeviationObject]: {
+            [fieldMapping.tubeDeviationHemolyzed]: fieldMapping.no,
+            [fieldMapping.tubeDeviationMislabeledResolved]: fieldMapping.no,
+            [fieldMapping.tubeDeviationOuterTubeContaminated]: fieldMapping.no,
+            [fieldMapping.tubeDeviationOther]: fieldMapping.no,
+            [fieldMapping.tubeBrokenDeviation]: fieldMapping.no,
+            [fieldMapping.tubeDeviationLowTemp]: fieldMapping.no,
+            [fieldMapping.tubeMislabelledDeviation]: fieldMapping.no,
+            [fieldMapping.tubeDeviationHighTemp]: fieldMapping.no,
+            [fieldMapping.tubeDeviationLowVolume]: fieldMapping.no,
+            [fieldMapping.tubeDeviationLeakedSpilled]: fieldMapping.no,
+            [fieldMapping.tubeDeviationUnexpectedTubeSize]: fieldMapping.no,
+            [fieldMapping.tubeDiscardDeviation]: fieldMapping.no,
+            [fieldMapping.tubeNotFoundDeviation]: fieldMapping.no,
+        },
+    });
+    console.error(`Issue found in updateSpecimen() (ConnectFaas): Streck Tube not found in biospecimenData for collection Id ${collectionId}. Building placeholder data.`);
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -1350,4 +1380,5 @@ module.exports = {
     validateUpdateData,
     updateQueryNameArray,
     handleCancerOccurrences,
+    buildStreckPlaceholderData,
 };
