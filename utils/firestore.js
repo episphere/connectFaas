@@ -2170,7 +2170,7 @@ const assignKitToParticipant = async (data) => {
             '173836415': {
                 '266600170': {
                     ...prevParticipantObject,
-                    '915179629': 534621077,
+                    '915179629': 664882224,
                     '8583443674': {
                         '379252329': 390351864, // mouthwash
                         '221592017': 241974920,
@@ -2255,7 +2255,7 @@ const confirmShipmentKit = async (shipmentData) => {
 
 const storeKitReceipt = async (package) => {
     try {
-        const kitSnapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).get();
+        const kitSnapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).where('221592017', '==', 277438316).get();
         if (kitSnapshot.size === 0) {
             return false;
         }
