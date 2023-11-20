@@ -212,7 +212,7 @@ const updateParticipantData = async (req, res, authObj) => {
     let error = false;
 
     // Iterate dataArray, Fetching each participant record from firestore by token.
-    for(let dataObj of dataArray) {
+    participantLoop: for(let dataObj of dataArray) {
         if(dataObj.token === undefined) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': 'UNDEFINED', 'Errors': 'Token not defined in data object.'}});
@@ -256,11 +256,11 @@ const updateParticipantData = async (req, res, authObj) => {
 
         // Flatten dataObj and docData for comparison & validation.
         const { flattened: flatDataObj, arrayPaths: flatArrayPaths } = flattenObject(dataObj);
-        const { flattened: flatDocData  } = flattenObject(docData);
+        const { flattened: flatDocData } = flattenObject(docData);
 
         // Delete primary identifiers from dataObj if they exist. There is no reason to update these through this API.
         const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid'];
-        for(const identifier of primaryIdentifiers) {
+        for (const identifier of primaryIdentifiers) {
             delete flatDataObj[identifier];
         }
 
@@ -277,9 +277,9 @@ const updateParticipantData = async (req, res, authObj) => {
         // Check initializeTimestamps and init on match. Currently, only one key exists in initializeTimestamps.
         const { initializeTimestamps } = require('./shared')
         const keysForTimestampGeneration = Object.keys(initializeTimestamps);
-        for(const key of keysForTimestampGeneration) {
-            if(initializeTimestamps[key] && flatDataObj[key] != null) {
-                if(initializeTimestamps[key].value && initializeTimestamps[key].value === flatDataObj[key]) {
+        for (const key of keysForTimestampGeneration) {
+            if (initializeTimestamps[key] && flatDataObj[key] != null) {
+                if (initializeTimestamps[key].value && initializeTimestamps[key].value === flatDataObj[key]) {
                     Object.assign(flatDataObj, initializeTimestamps[key].initialize);
                 }
             }
@@ -295,24 +295,27 @@ const updateParticipantData = async (req, res, authObj) => {
                     isKeyFound = true;
                 }
             }
-            // Then add the array data to flatDataObj.
+
             if (isKeyFound) {
-                // Handle cancer occurrences: validate and concatenate new occurrences with existing occurrences.
+                // Add the array. Handle cancer occurrences: validate cancer site responses and concatenate new occurrences with existing occurrences.
                 if (path === fieldMapping.cancerOccurrence.toString()) {
                     if (dataObj[fieldMapping.cancerOccurrence]) {
                         const existingOccurrences = docData[fieldMapping.cancerOccurrence] || [];
-                        const occurrenceResult = handleCancerOccurrences(flatDataObj, dataObj, existingOccurrences);
+                        const requiredOccurrenceRules = Object.keys(rules).filter(key => key.startsWith(fieldMapping.cancerOccurrence.toString()) && rules[key].required);
+                        const occurrenceResult = handleCancerOccurrences(flatDataObj, dataObj, existingOccurrences, requiredOccurrenceRules);
                         if (occurrenceResult.error) {
                             error = true;
                             responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': occurrenceResult.message}});
-                            continue;
+                            continue participantLoop;
                         }
                     }
+                    // TODO: extend for userProfile history.
                 } else {
                     flatDataObj[path] = [...docData[path], ...dataObj[path]];
                 }
             }
         }
+
         
         // Handle updates to query.firstName and query.lastName arrays (these are used for participant search). firstName, prefName, and lastName. Consent name does not get updated.
         // Note: Name fields can be updated directly. Query.name fields are managed. Do not allow direct updates to query.name fields. Add the updated query array to flatDataObj.

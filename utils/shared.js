@@ -1189,7 +1189,7 @@ const validateUpdateData = (value, existingValue, path, rule) => {
         return `Key (${path}) must exist before updating.`;
     }
 
-    switch(rule.dataType) {
+    switch (rule.dataType) {
         case 'string':
             if (typeof value !== 'string') {
                 return `Data mismatch: ${path} must be a string.`;
@@ -1231,13 +1231,25 @@ const validateUpdateData = (value, existingValue, path, rule) => {
 
 /**
  * Validate and update the data object for the cancer occurrences field (637153953) in the participant profile.
+ * @param {object} flatDataObj - the flattened data object for the participant profile.
  * @param {object} dataObj - the update object for the participant profile. 
  * @param {*} existingOccurrences - existing cancer occurrences from the participant profile.
+ * @param {*} requiredOccurrenceRules - the required fields for each cancer occurrence.
  * @returns {object} - an object with an error flag = true and message if validation fails.
  */
-const handleCancerOccurrences = (flatDataObj, dataObj, existingOccurrences) => {
+const handleCancerOccurrences = (flatDataObj, dataObj, existingOccurrences, requiredOccurrenceRules) => {
     const newOccurrences = dataObj[fieldMapping.cancerOccurrence];
-    for (const occurrence of newOccurrences) {
+    for (let i = 0; i < newOccurrences.length; i++) {
+        const occurrence = newOccurrences[i];
+
+        for (const rule of requiredOccurrenceRules) {
+            const [, propertyKey] = rule.split('.'); // Example: Splitting '637153953[0]' and '345545422'
+
+            if (!occurrence || !occurrence[propertyKey]) {
+                return { error: true, message: `Missing required field: ${propertyKey} in occurrence ${i}` };
+            }
+        }
+
         const isCancerSiteSpecified = validateOccurrence(occurrence[fieldMapping.primaryCancerSite]);
         if (!isCancerSiteSpecified) {
             return { error: true, message: 'No primary cancer site identified.' };
@@ -1245,7 +1257,6 @@ const handleCancerOccurrences = (flatDataObj, dataObj, existingOccurrences) => {
     }
 
     flatDataObj[fieldMapping.cancerOccurrence] = [...existingOccurrences, ...newOccurrences];
-
     return { error: false };
 }
 

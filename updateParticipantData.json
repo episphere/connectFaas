@@ -423,7 +423,8 @@
 	}, 
 	"637153953[].345545422": {
 		"dataType": "ISO",
-		"mustExist": false
+		"mustExist": false,
+		"required": true
 	},
 	"637153953[].457270069": {
 		"dataType": "string",
@@ -565,4 +566,3 @@
 		"maxLength": 800
 	}
 }
-	
