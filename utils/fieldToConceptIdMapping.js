@@ -56,6 +56,16 @@ module.exports = {
     tubeInsufficientVolumeDeviation: 956345366,
     tubeMislabelledDeviation: 684617815,
     tubeNotFoundDeviation: 982885431,
+    tubeIsCollected: 593843561,
+    tubeDeviationHemolyzed: 242307474,
+    tubeDeviationMislabeledResolved: 283900611,
+    tubeDeviationOuterTubeContaminated: 313097539,
+    tubeDeviationOther: 453343022,
+    tubeDeviationLowTemp: 550088682,
+    tubeDeviationHighTemp: 690540566,
+    tubeDeviationLowVolume: 728366619,
+    tubeDeviationLeakedSpilled: 757246707,
+    tubeDeviationUnexpectedTubeSize: 777486216,
 
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,

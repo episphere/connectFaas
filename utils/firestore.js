@@ -9,7 +9,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { tubeKeyToNum, tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -1067,6 +1067,12 @@ const storeSpecimen = async (data) => {
 const updateSpecimen = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
     const docId = snapshot.docs[0].id;
+
+    if (!data[fieldMapping.tubesBagsCids.streckTube]) { // Check for streck data due to intermittent null streck values in Firestore (11/2023).
+        const { buildStreckPlaceholderData } = require('./shared');
+        buildStreckPlaceholderData(data[fieldMapping.collectionId], data[fieldMapping.tubesBagsCids.streckTube] = {});
+    }
+
     await db.collection('biospecimen').doc(docId).update(data);
 }
 
