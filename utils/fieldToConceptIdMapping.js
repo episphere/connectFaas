@@ -129,6 +129,9 @@ module.exports = {
         bag39: 301569492,
         bag40: 685888031,
     },
+    firstName: 399159511,
+    preferredName: 153211404,
+    lastName: 996038075,
     participantMap: {
         uninvitedRecruits: 288972510,
         destroyData: 831041022,
@@ -168,4 +171,39 @@ module.exports = {
      collectionDateTimeStamp: 678166505,
      collectionCardFlag: 137401245,
      collectionAddtnlNotes: 260133861,
+
+    /**
+    * cancerSite concept IDs. Each describes a site where cancer has been found in a participant.
+    * Participant profile -> occurrences {object} (637153953) -> primary site of cancer (740819233). Null until participant diagnosed with cancer.
+    */
+    cancerOccurrence: 637153953,
+    primaryCancerSite: 740819233,
+    cancerSitesMap: {
+        anal: 939782495,
+        bladder: 135725957,
+        brain: 518416174,
+        breast: 847945207,
+        cervical: 283025574,
+        colon: 942970912, // Colon/Rectal
+        espohageal: 596122041,
+        headAndNeck: 489400183, // Head and neck (Including cancers of the mouth, sinuses, nose, or throat. Not including brain or skin cancers)
+        kidney: 863246236,
+        leukemia: 607793249, // Leukemia (blood and bone marrow)
+        liver: 532172400,
+        lung: 754745617, // Lung or Bronchial
+        nonHodgkinsLymphoma: 665036297, // Non-Hodgkin's Lymphoma
+        lymphoma: 200837530, // Lymphoma
+        skinMelanoma: 990319383, // Melanoma (skin)
+        skinNonMelanoma: 487917585, // Non-melanoma skin (basal or squamous)
+        ovarian: 603181162,
+        pancreatic: 482225200,
+        prostate: 295976386,
+        stomach: 764891959,
+        testicular: 248374037,
+        thyroid: 139822395,
+        uterine: 723614811,
+        other: 807835037,
+        unavailableUnknown: 178420302,
+        anotherTypeOfCancer: 868006655,
+    },
 };

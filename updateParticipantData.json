@@ -407,5 +407,162 @@
 	"173836415.266600170.110349197": {
 		"dataType": "array",
 		"mustExist": false
+	},
+	"525972260": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953": {
+		"dataType": "array",
+		"mustExist": false
+	}, 
+	"637153953[]": {
+		"dataType": "object",
+		"mustExist": false
+	}, 
+	"637153953[].345545422": {
+		"dataType": "ISO",
+		"mustExist": false,
+		"required": true
+	},
+	"637153953[].457270069": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 800
+	},
+	"637153953[].740819233": {
+		"dataType": "object",
+		"mustExist": false
+	},
+	"637153953[].740819233.939782495": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.135725957": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.518416174": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.847945207": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.283025574": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.942970912": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.596122041": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.489400183": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.863246236": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.607793249": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.532172400": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.754745617": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.665036297": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.200837530": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.990319383": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.487917585": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.603181162": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.482225200": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.295976386": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.764891959": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.248374037": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.139822395": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.723614811": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.807835037": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.178420302": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.868006655": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 800
 	}
 }
