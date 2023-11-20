@@ -2099,7 +2099,6 @@ const addKitStatusToParticipant = async (participantsCID) => {
                 '173836415': {
                     '266600170': {
                         ...prevParticipantObject,
-                        '915179629': 664882224,
                         '8583443674': {
                             '221592017': 849527480
                         }
@@ -2170,7 +2169,6 @@ const assignKitToParticipant = async (data) => {
             '173836415': {
                 '266600170': {
                     ...prevParticipantObject,
-                    '915179629': 664882224,
                     '8583443674': {
                         '379252329': 390351864, // mouthwash
                         '221592017': 241974920,
@@ -2226,6 +2224,7 @@ const confirmShipmentKit = async (shipmentData) => {
 
         const participantDoc = participantSnapshot.docs[0];
         const prevParticipantObject = participantDoc.data()[173836415][266600170][8583443674];
+        const baselineParticipantObject = participantDoc.data()[173836415][266600170];
         const uid = participantDoc.data()['state']['uid'];
         const Connect_ID = participantDoc.data()['Connect_ID'];
         const prefEmail = participantDoc.data()['869588347'];
@@ -2235,6 +2234,7 @@ const confirmShipmentKit = async (shipmentData) => {
         const updatedParticipantObject = {
             '173836415': {
                 '266600170': {
+                    ...baselineParticipantObject,
                     '8583443674': {
                         ...prevParticipantObject,
                         '221592017': 277438316,
