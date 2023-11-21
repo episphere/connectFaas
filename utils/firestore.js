@@ -2229,13 +2229,14 @@ const confirmShipmentKit = async (shipmentData) => {
         }
 
         const participantDoc = participantSnapshot.docs[0];
-        const prevParticipantObject = participantDoc.data()[173836415][266600170][8583443674];
-        const baselineParticipantObject = participantDoc.data()[173836415][266600170];
-        const uid = participantDoc.data()['state']['uid'];
-        const Connect_ID = participantDoc.data()['Connect_ID'];
-        const prefEmail = participantDoc.data()['869588347'];
-        const token = participantDoc.data()['token'];
-        const ptName =  participantDoc.data()['153211406'] || participantDoc.data()['399159511']
+        const participantDocData = participantDoc.data();
+        const prevParticipantObject = participantDocData[173836415][266600170][8583443674];
+        const baselineParticipantObject = participantDocData[173836415][266600170];
+        const uid = participantDocData['state']['uid'];
+        const Connect_ID = participantDocData['Connect_ID'];
+        const prefEmail = participantDocData['869588347'];
+        const token = participantDocData['token'];
+        const ptName = participantDocData['153211406'] || participantDocData['399159511']
 
         const updatedParticipantObject = {
             '173836415': {
@@ -2270,14 +2271,16 @@ const storeKitReceipt = async (package) => {
    
         const participantSnapshot = await db.collection("participants").where('173836415.266600170.8583443674.687158491', '==', kitDoc.data()[687158491]).get();
         const participantDoc = participantSnapshot.docs[0];
-        const token = participantDoc.data()['token'];
-        const uid = participantDoc.data()['state']['uid'];
-        const site = participantDoc.data()['827220437'];
-        const prefEmail = participantDoc.data()['869588347'];
-        const ptName =  participantDoc.data()['153211406'] || participantDoc.data()['399159511']
-        const surveyStatus = participantDoc.data()['547363263']
+        const participantDocData = participantSnapshot.docs[0].data();
 
-        const prevParticipantObject = participantDoc.data()[173836415][266600170][8583443674];
+        const token = participantDocData['token'];
+        const uid = participantDocData['state']['uid'];
+        const site = participantDocData['827220437'];
+        const prefEmail = participantDocData['869588347'];
+        const ptName = participantDocData['153211406'] || participantDocData['399159511']
+        const surveyStatus = participantDocData['547363263']
+
+        const prevParticipantObject = participantDocData[173836415][266600170][8583443674];
         const collectionId = package['259846815']?.split(' ')[0];
         const objectId = package['259846815']?.split(' ')[1];
         
