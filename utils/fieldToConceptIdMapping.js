@@ -43,6 +43,7 @@ module.exports = {
     notBoxed: 657483796,
     partiallyBoxed: 775512390,
     boxed: 210720511,
+    birthMonth: 564964481,
     samplesWithinBag: 234868461,
     strayTubesList: 742186726,
     objectId: 825582494,
@@ -55,6 +56,16 @@ module.exports = {
     tubeInsufficientVolumeDeviation: 956345366,
     tubeMislabelledDeviation: 684617815,
     tubeNotFoundDeviation: 982885431,
+    tubeIsCollected: 593843561,
+    tubeDeviationHemolyzed: 242307474,
+    tubeDeviationMislabeledResolved: 283900611,
+    tubeDeviationOuterTubeContaminated: 313097539,
+    tubeDeviationOther: 453343022,
+    tubeDeviationLowTemp: 550088682,
+    tubeDeviationHighTemp: 690540566,
+    tubeDeviationLowVolume: 728366619,
+    tubeDeviationLeakedSpilled: 757246707,
+    tubeDeviationUnexpectedTubeSize: 777486216,
 
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,
@@ -118,6 +129,9 @@ module.exports = {
         bag39: 301569492,
         bag40: 685888031,
     },
+    firstName: 399159511,
+    preferredName: 153211404,
+    lastName: 996038075,
     participantMap: {
         uninvitedRecruits: 288972510,
         destroyData: 831041022,
@@ -125,5 +139,71 @@ module.exports = {
         destroyDataCategorical: 883668444,
         requestedAndSign: 704529432,
         dataHasBeenDestroyed: 861639549,
+    },
+     // home collection
+     returnKitTrackingNum: 972453354,
+     supplyKitTrackingNum: 531858099,
+     supplyKitId: 690210658,
+     returnKitId: 194252513,
+     collectionCupId: 259846815,
+     collectionCardId: 786397882,
+     UKID: 687158491,
+     kitType: 379252329,
+     kitStatus: 221592017,
+     pending: 517216441,
+     addressPrinted: 849527480,
+     assigned: 241974920,
+     shipped: 277438316,
+     received: 375535639,
+     pendingDateTimeStamp: 341636034,
+     shippedDateTime: 661940160,
+     pkgReceiptConditions: 633640710,
+     pkgGoodCondition: 950521660,
+     pkgCrushed: 545319575,
+     pkgImproperPackaging: 938338155,
+     pkgCollectionCupDamaged: 205954477,
+     pkgCollectionCupLeaked: 289239334,
+     pkgEmptyCupReturned: 992420392,
+     pkgIncorrectMaterialType: 541085383,
+     pkgCollectionCupNotReturned: 427719697,
+     pkgOther: 100618603,
+     receivedDateTime: 826941471,
+     collectionDateTimeStamp: 678166505,
+     collectionCardFlag: 137401245,
+     collectionAddtnlNotes: 260133861,
+
+    /**
+    * cancerSite concept IDs. Each describes a site where cancer has been found in a participant.
+    * Participant profile -> occurrences {object} (637153953) -> primary site of cancer (740819233). Null until participant diagnosed with cancer.
+    */
+    cancerOccurrence: 637153953,
+    primaryCancerSite: 740819233,
+    cancerSitesMap: {
+        anal: 939782495,
+        bladder: 135725957,
+        brain: 518416174,
+        breast: 847945207,
+        cervical: 283025574,
+        colon: 942970912, // Colon/Rectal
+        espohageal: 596122041,
+        headAndNeck: 489400183, // Head and neck (Including cancers of the mouth, sinuses, nose, or throat. Not including brain or skin cancers)
+        kidney: 863246236,
+        leukemia: 607793249, // Leukemia (blood and bone marrow)
+        liver: 532172400,
+        lung: 754745617, // Lung or Bronchial
+        nonHodgkinsLymphoma: 665036297, // Non-Hodgkin's Lymphoma
+        lymphoma: 200837530, // Lymphoma
+        skinMelanoma: 990319383, // Melanoma (skin)
+        skinNonMelanoma: 487917585, // Non-melanoma skin (basal or squamous)
+        ovarian: 603181162,
+        pancreatic: 482225200,
+        prostate: 295976386,
+        stomach: 764891959,
+        testicular: 248374037,
+        thyroid: 139822395,
+        uterine: 723614811,
+        other: 807835037,
+        unavailableUnknown: 178420302,
+        anotherTypeOfCancer: 868006655,
     },
 };
