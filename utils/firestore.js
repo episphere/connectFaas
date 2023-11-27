@@ -2289,13 +2289,12 @@ const storeKitReceipt = async (package) => {
         }
 
         const biospecPkg = {
-            '137401245': package['137401245'] === true ? 353358909 : 103209024,
             '143615646': {
-                '260133861': package['260133861'],
                 '593843561': 353358909,
                 '825582494': package['259846815'],
                 '826941471': package['826941471']
             },
+            '260133861': package['260133861'],
             '678166505': package['678166505'],
             '820476880': package['259846815'],
             '870456401': package['870456401'],
@@ -2308,9 +2307,11 @@ const storeKitReceipt = async (package) => {
         await db.collection('biospecimen').add(biospecPkg);
 
         await kitDoc.ref.update({
+            '137401245': package['137401245'] === true ? 353358909 : 103209024,
             '221592017': 375535639,
-            '826941471': package['826941471'],
-            '633640710': package['633640710']
+            '633640710': package['633640710'],
+            '755095663': package['755095663'],
+            '826941471': package['826941471']
         });
 
         await participantDoc.ref.update({
