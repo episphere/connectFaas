@@ -2295,7 +2295,7 @@ const storeKitReceipt = async (package) => {
                 '826941471': package['826941471']
             },
             '260133861': package['260133861'],
-            '678166505': package['678166505'],
+            '678166505': processPackageConditions(package['678166505']),
             '820476880': package['259846815'],
             '827220437': site,
             'Connect_ID': Connect_ID,
@@ -2333,6 +2333,17 @@ const storeKitReceipt = async (package) => {
             return new Error(error);
         }
     }
+
+const processPackageConditions = (pkgConditions) => {
+    const keys = [950521660, 545319575, 938338155, 205954477, 289239334, 992420392, 541085383, 427719697, 100618603];
+    const result = {};
+    
+    for (const key of keys) {
+        result[key] = pkgConditions.includes(String(key)) ? 353358909 : 103209024;
+    }
+
+    return result;
+}
 
 const getKitAssemblyData = async () => {
     try {
