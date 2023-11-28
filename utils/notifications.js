@@ -237,8 +237,6 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
         to: fetchedData[emailField],
         substitutions,
         custom_args: {
-          connect_id: fetchedData.Connect_ID,
-          token: fetchedData.token,
           notification_id,
           gcloud_project: process.env.GCLOUD_PROJECT
         },
