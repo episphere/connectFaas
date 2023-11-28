@@ -2308,7 +2308,7 @@ const storeKitReceipt = async (package) => {
         await kitDoc.ref.update({
             '137401245': package['137401245'] === true ? 353358909 : 103209024,
             '221592017': 375535639,
-            '633640710': package['633640710'],
+            '633640710': processPackageConditions(package['633640710']),
             '755095663': package['755095663'],
             '826941471': package['826941471']
         });
@@ -2333,6 +2333,17 @@ const storeKitReceipt = async (package) => {
             return new Error(error);
         }
     }
+
+const processPackageConditions = (pkgConditions) => {
+    const keys = [950521660, 545319575, 938338155, 205954477, 289239334, 992420392, 541085383, 427719697, 100618603];
+    const result = {};
+    
+    for (const key of keys) {
+        result[key] = pkgConditions.includes(String(key)) ? 353358909 : 103209024;
+    }
+
+    return result;
+}
 
 const getKitAssemblyData = async () => {
     try {
