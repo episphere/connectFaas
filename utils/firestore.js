@@ -2291,12 +2291,12 @@ const storeKitReceipt = async (package) => {
         const biospecPkg = {
             '143615646': {
                 '593843561': 353358909,
-                '825582494': collectionId,
-                '826941471': package['826941471']
+                '825582494': package['259846815'],
+                '926457119': package['826941471']
             },
             '260133861': package['260133861'],
             '678166505': package['678166505'],
-            '820476880': package['259846815'],
+            '820476880':  collectionId,
             '827220437': site,
             'Connect_ID': Connect_ID,
             'token': token,
