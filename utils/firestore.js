@@ -2295,7 +2295,7 @@ const storeKitReceipt = async (package) => {
                 '826941471': package['826941471']
             },
             '260133861': package['260133861'],
-            '678166505': processPackageConditions(package['678166505']),
+            '678166505': package['678166505'],
             '820476880': package['259846815'],
             '827220437': site,
             'Connect_ID': Connect_ID,
@@ -2308,7 +2308,7 @@ const storeKitReceipt = async (package) => {
         await kitDoc.ref.update({
             '137401245': package['137401245'] === true ? 353358909 : 103209024,
             '221592017': 375535639,
-            '633640710': package['633640710'],
+            '633640710': processPackageConditions(package['633640710']),
             '755095663': package['755095663'],
             '826941471': package['826941471']
         });
