@@ -43,7 +43,6 @@ module.exports = {
     notBoxed: 657483796,
     partiallyBoxed: 775512390,
     boxed: 210720511,
-    birthMonth: 564964481,
     samplesWithinBag: 234868461,
     strayTubesList: 742186726,
     objectId: 825582494,
