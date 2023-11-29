@@ -2175,7 +2175,7 @@ const assignKitToParticipant = async (data) => {
                 '266600170': {
                     ...prevParticipantObject,
                     '8583443674': {
-                        '379252329': 390351864, // mouthwash
+                        '379252329': 976461859, // mouthwash
                         '221592017': 241974920,
                         '687158491': data['687158491'],
                     }
