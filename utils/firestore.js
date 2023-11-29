@@ -2306,7 +2306,7 @@ const storeKitReceipt = async (package) => {
         await db.collection('biospecimen').add(biospecPkg);
 
         await kitDoc.ref.update({
-            '137401245': package['137401245'] === true ? 353358909 : 103209024,
+            '137401245': package['137401245'] === true ? 353358909 : 104430631,
             '221592017': 375535639,
             '633640710': processPackageConditions(package['633640710']),
             '755095663': package['755095663'],
@@ -2339,7 +2339,7 @@ const processPackageConditions = (pkgConditions) => {
     const result = {};
     
     for (const key of keys) {
-        result[key] = pkgConditions.includes(String(key)) ? 353358909 : 103209024;
+        result[key] = pkgConditions.includes(String(key)) ? 353358909 : 104430631;
     }
 
     return result;
