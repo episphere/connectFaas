@@ -251,7 +251,7 @@ const moduleConceptsToCollections = {
     "D_912367929" :     "menstrualSurvey_v1",
     "D_826163434" :     "clinicalBioSurvey_v1",
     "D_166676176" :     "ssn",
-    "D_390351864" :     "mouthwash_v1"
+    "D_976461859" :     "mouthwash_v1"
 }
 
 const moduleStatusConcepts = {
