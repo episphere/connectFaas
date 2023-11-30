@@ -893,7 +893,6 @@ const filterDB = async (queries, siteCode, isParent) => {
             if (key === 'token') participantQuery = participantQuery.where('token', '==', queries.token);
             if (key === 'studyId') participantQuery = participantQuery.where('state.studyId', '==', queries.studyId);
             if (key === 'checkedIn') participantQuery = participantQuery.where('331584571.266600170.135591601', '==', 353358909);
-            if (key === 'birthMonth') participantQuery = participantQuery.where(`${fieldMapping.birthMonth}`, '==', queries.birthMonth);
         }
 
         return participantQuery;
@@ -2176,7 +2175,7 @@ const assignKitToParticipant = async (data) => {
                 '266600170': {
                     ...prevParticipantObject,
                     '8583443674': {
-                        '379252329': 390351864, // mouthwash
+                        '379252329': 976461859, // mouthwash
                         '221592017': 241974920,
                         '687158491': data['687158491'],
                     }
@@ -2289,16 +2288,14 @@ const storeKitReceipt = async (package) => {
         }
 
         const biospecPkg = {
-            '137401245': package['137401245'] === true ? 353358909 : 103209024,
             '143615646': {
-                '260133861': package['260133861'],
-                '593843561': collectionId,
-                '825582494': objectId,
+                '593843561': 353358909,
+                '825582494': package['259846815'],
                 '826941471': package['826941471']
             },
+            '260133861': package['260133861'],
             '678166505': package['678166505'],
-            '820476880': package['259846815'],
-            '870456401': package['870456401'],
+            '820476880':  collectionId,
             '827220437': site,
             'Connect_ID': Connect_ID,
             'token': token,
@@ -2308,9 +2305,11 @@ const storeKitReceipt = async (package) => {
         await db.collection('biospecimen').add(biospecPkg);
 
         await kitDoc.ref.update({
+            '137401245': package['137401245'] === true ? 353358909 : 104430631,
             '221592017': 375535639,
-            '826941471': package['826941471'],
-            '633640710': package['633640710']
+            '633640710': processPackageConditions(package['633640710']),
+            '755095663': package['755095663'],
+            '826941471': package['826941471']
         });
 
         await participantDoc.ref.update({
@@ -2333,6 +2332,17 @@ const storeKitReceipt = async (package) => {
             return new Error(error);
         }
     }
+
+const processPackageConditions = (pkgConditions) => {
+    const keys = [950521660, 545319575, 938338155, 205954477, 289239334, 992420392, 541085383, 427719697, 100618603];
+    const result = {};
+    
+    for (const key of keys) {
+        result[key] = pkgConditions.includes(String(key)) ? 353358909 : 104430631;
+    }
+
+    return result;
+}
 
 const getKitAssemblyData = async () => {
     try {
