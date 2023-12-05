@@ -10,7 +10,11 @@ steps:
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'importNotificationsToBigquery', '--trigger-resource=${_RESOURCE}', '--trigger-event=${_EVENT}', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}', '--env-vars-file=config/prod/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'exportNotificationsToBucket', '--trigger-topic=${_TOPIC}', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}', '--env-vars-file=config/prod/.env.yaml'] 
+  args: ['functions', 'deploy', 'exportNotificationsToBucket', '--trigger-topic=${_TOPIC}', '--runtime=${_RUNTIME}', '--timeout=480s', '--source=${_SOURCE}', '--env-vars-file=config/prod/.env.yaml']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'sendGridEventWebhook', '--trigger-http', '--runtime=${_RUNTIME}', '--timeout=240s', '--memory=1024MB',  '--source=${_SOURCE}', '--env-vars-file=config/prod/.env.yaml']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'add-iam-policy-binding', 'sendGridEventWebhook', '--member=allUsers', '--role=${_ROLE}'] 
 substitutions:
   _SOURCE: https://source.developers.google.com/projects/nih-nci-dceg-connect-prod-6d04/repos/github_episphere_connectfaas
   _RUNTIME: nodejs14
