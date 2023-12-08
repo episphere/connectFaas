@@ -2537,8 +2537,6 @@ const setPackageReceiptFedex = async (boxUpdateData) => {
         const boxDocRef = boxListData[0].boxDocRef;
         const boxData = boxListData[0].boxData;
 
-        console.log('boxUpdateData: ', boxUpdateData);
-
         // snapshotReceivedTimestamp should be null. If not null, box has already been received.
         // Handle box already received and forceWriteOverride property. This has happened by mistake in production.
         const snapshotReceivedTimestamp = boxData[fieldMapping.shipmentReceivedTimestamp];
@@ -2622,7 +2620,7 @@ const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) 
                     updateObject[conceptIdTubes] = receivedTimestamp;
                 }
             }
-            console.log(collectionIdHolder[key], 'updateObject', updateObject);
+            
             batch.update(specimenDocRef, updateObject);
         }
 
