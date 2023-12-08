@@ -2477,15 +2477,15 @@ const shipKits = async (data) => {
 }
 
 const storePackageReceipt = async (data) => {
-    if (data.scannedBarcode.length === 12 || data.scannedBarcode.length === 34) {  
-        const response = await setPackageReceiptFedex(data);
-        return response;
-    } else { 
-        const response = await setPackageReceiptUSPS(data);
-        return response; 
+    try {
+        if (data.scannedBarcode.length === 12 || data.scannedBarcode.length === 34) return await setPackageReceiptFedex(data); 
+        else return await setPackageReceiptUSPS(data);
+    } catch (error) {
+        console.error(`Error in the package receipt process: ${error.message}`, { cause: error });
+        throw error;
     }
-
 } 
+
 
 const setPackageReceiptUSPS = async (data) => {
     try {
@@ -2502,78 +2502,136 @@ const setPackageReceiptUSPS = async (data) => {
     }
 }
 
-const setPackageReceiptFedex = async (data) => {
+const setPackageReceiptFedex = async (boxUpdateData) => {
     try {
-        const { bagConceptIDs } = require('./shared');
-        let trackingNumber = data.scannedBarcode
-        let collectionIdHolder = {}
+        const { bagConceptIDs, validIso8601Format } = require('./shared');        
+        let trackingNumber = boxUpdateData.scannedBarcode;
         if (trackingNumber.length === 34) trackingNumber = trackingNumber.slice(12);
-        const snapshot = await db.collection("boxes").where('959708259', '==', trackingNumber).get(); // find related box using tracking number
-        
-        if (snapshot.empty) return false;
-        
-        const docId = snapshot.docs[0].id;
-        data['959708259'] = trackingNumber
-        delete data.scannedBarcode
 
-        await db.collection("boxes").doc(docId).update(data); // using the docids update the box with the received date
+        // Find related box using the tracking number. The shipmentTimestamp field is generated for the request when duplicate tracking numners are found.
+        let query = db.collection("boxes").where(fieldMapping.boxTrackingNumberScan.toString(), '==', trackingNumber);
+        if (boxUpdateData['shipmentTimestamp']) {
+            query = query.where(fieldMapping.submitShipmentTimestamp.toString(), '==', boxUpdateData['shipmentTimestamp']);
+            delete boxUpdateData['shipmentTimestamp'];
+        }
         
-        for (const boxData of snapshot.docs) {
-            const collectionIdKeys = boxData.data(); // grab all the collection ids
-            for (const bag of bagConceptIDs) {
-                if (bag in collectionIdKeys){
-                    if (collectionIdKeys[bag]['787237543'] !== undefined || collectionIdKeys[bag]['223999569'] !== undefined || collectionIdKeys[bag]['522094118'] !== undefined) {
-                        if (collectionIdKeys[bag]['787237543'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
-                            collectionIdHolder[bag] = collectionIdKeys[bag]['787237543'].split(' ')[0]
-                        }
-                        if (collectionIdKeys[bag]['223999569'] !== `` && collectionIdKeys[bag]['787237543'] === `` && collectionIdKeys[bag]['522094118'] === ``) {
-                            collectionIdHolder[bag] = collectionIdKeys[bag]['223999569'].split(' ')[0]
-                        }
-                        if (collectionIdKeys[bag]['522094118'] !== `` && collectionIdKeys[bag]['223999569'] === `` && collectionIdKeys[bag]['787237543'] === `` ) {
-                            collectionIdHolder[bag] = collectionIdKeys[bag]['522094118'].split(' ')[0]
-                        }
+        const boxSnapshot = await query.get();
+        
+        if (boxSnapshot.empty) {
+            console.error('Box not found');
+            return { message: 'Box Not Found', data: null };
+        }
+
+        const boxListData = boxSnapshot.docs.map(doc => ({
+            boxDocRef: doc.ref,
+            boxData: doc.data(),
+        }));
+
+        // If multiple boxes found, return list and trigger selection modal in BPTL dashboard.
+        // This has happened in production when a site used the same tracking number twice by mistake. Fedex also reuses tracking numbers.
+        if (boxListData.length > 1) {
+            return { message: 'Multiple Results', data: boxListData };
+        }
+
+        // Beyond this point, we only have one box to handle.
+        const boxDocRef = boxListData[0].boxDocRef;
+        const boxData = boxListData[0].boxData;
+
+        console.log('boxUpdateData: ', boxUpdateData);
+
+        // snapshotReceivedTimestamp should be null. If not null, box has already been received.
+        // Handle box already received and forceWriteOverride property. This has happened by mistake in production.
+        const snapshotReceivedTimestamp = boxData[fieldMapping.shipmentReceivedTimestamp];
+        if (snapshotReceivedTimestamp && validIso8601Format.test(snapshotReceivedTimestamp)) {
+            if (boxUpdateData['forceWriteOverride'] !== true) {
+                console.error('Box already received', boxData[fieldMapping.shippingBoxId], snapshotReceivedTimestamp);
+                return { message: 'Box Already Received', data: boxData };
+            }
+        }
+
+        boxUpdateData[fieldMapping.boxTrackingNumberScan] = trackingNumber;
+        delete boxUpdateData.scannedBarcode;
+
+        let collectionIdHolder = {};
+        const bagKeysInBox = Object.keys(boxData).filter(key => bagConceptIDs.includes(key));
+        for (const bag of bagKeysInBox) {
+            const bagId = boxData[bag][fieldMapping.tubesBagsCids.biohazardBagScan] || boxData[bag][fieldMapping.tubesBagsCids.biohazardMouthwashBagScan] || boxData[bag][fieldMapping.tubesBagsCids.orphanScan];
+            if (bagId){
+                const collectionId = bagId.split(' ')[0];
+                if (collectionId) {
+                    if (!collectionIdHolder[collectionId]) {
+                        collectionIdHolder[collectionId] = [];
                     }
+                    collectionIdHolder[collectionId] = collectionIdHolder[collectionId].concat(boxData[bag][fieldMapping.samplesWithinBag]);
                 }
-            };
-            await processReceiptData(collectionIdHolder, collectionIdKeys, data['926457119']);
-        };
-        return true;
+            }
+        }
+        await processReceiptData(collectionIdHolder, boxUpdateData, boxDocRef);
+        return ({message: 'Success!', data: null});
     } catch(error){
-        return new Error(error);
+        throw new Error(`setPackageReceiptFedex error. ${error.message}`, { cause: error });
     }
 }
 
-const processReceiptData = async (collectionIdHolder, collectionIdKeys, dateTimeStamp) => {
+const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) => {
     const miscTubeIdSet = new Set(['0050', '0051', '0052', '0053', '0054']);
+    try {
+        const specimenDocsToFetch = Object.keys(collectionIdHolder).map(key => {
+            return db.collection("biospecimen").where(fieldMapping.collectionId.toString(), '==', key).get();
+        });
 
-    for (const key in collectionIdHolder) {
-        try {
+        const specimenQuerySnapshots = await Promise.all(specimenDocsToFetch);
+        let specimenDocs = [];
+        specimenQuerySnapshots.forEach(snapshot => {
+            snapshot.docs.forEach(specimenDoc => {
+                specimenDocs.push({
+                    ref: specimenDoc.ref,
+                    data: specimenDoc.data()
+                });
+            });
+        });
+
+        let batch = db.batch();
+        const receivedTimestamp = boxUpdateData[fieldMapping.shipmentReceivedTimestamp];
+
+        for (const key in collectionIdHolder) {
+            const specimenDoc = specimenDocs.find(specimenDoc => specimenDoc.data[fieldMapping.collectionId] === key);
+            const specimenDocRef = specimenDoc.ref;
+            const specimenData = specimenDoc.data;
+
             let updateObject = {};
-            const secondSnapshot = await db.collection("biospecimen").where('820476880', '==', collectionIdHolder[key]).get(); // find related biospecimen using collection id
-            const docId = secondSnapshot.docs[0].id;
-            const specimenData = secondSnapshot.docs[0].data();
 
-            updateObject['926457119'] = dateTimeStamp;
+            // only update the specimen level received timestamp if it is not already set. Important so stray tubes don't update the specimen level received timestamp.
+            if (!specimenData[fieldMapping.shipmentReceivedTimestamp]) {
+                updateObject[fieldMapping.shipmentReceivedTimestamp] = receivedTimestamp;
+            }
 
-            for (const element of collectionIdKeys[key]['234868461']) {
-                //grab tube ids & map them to appropriate concept ids. If it's a misc tube (0050-0054), find tube's location in specimen to get the concept id.
+            // Map tube ids to concept ids. If misc tube (0050-0054), find tube's location in specimen to get the concept id.
+            for (const element of collectionIdHolder[key]) {
                 const tubeId = element.split(' ')[1];
-                
-                let conceptTube = collectionIdConversion[tubeId]; 
+
+                let tubeConceptId = collectionIdConversion[tubeId]; 
                 if (miscTubeIdSet.has(tubeId)) {
-                    conceptTube = Object.keys(specimenData).find(tubeKey => tubeConceptIds.includes(tubeKey) && specimenData[tubeKey][fieldMapping.objectId] === element);
+                    tubeConceptId = Object.keys(specimenData).find(tubeKey => tubeConceptIds.includes(tubeKey) && specimenData[tubeKey][fieldMapping.objectId] === element);
                 }
 
-                if (conceptTube) {
-                    const conceptIdTubes = `${conceptTube}.926457119`
-                    updateObject[conceptIdTubes] = dateTimeStamp;
+                if (!tubeConceptId) {
+                    console.error('tube concept ID not found for', element);
+                } else {
+                    const conceptIdTubes = `${tubeConceptId}.926457119`;
+                    updateObject[conceptIdTubes] = receivedTimestamp;
                 }
             }
-            await db.collection("biospecimen").doc(docId).update(updateObject);
+            console.log(collectionIdHolder[key], 'updateObject', updateObject);
+            batch.update(specimenDocRef, updateObject);
         }
-        catch(error){
-            return new Error(error);
-        }}
+
+        batch.update(boxDocRef, boxUpdateData);
+        await batch.commit();
+    } catch(error){
+        console.error('processReceiptData error:', error);
+        throw new Error(`processReceiptData error: ${error.message}`, { cause: error });
+    }
 }
 
 const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
