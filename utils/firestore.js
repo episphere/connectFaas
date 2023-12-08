@@ -2076,6 +2076,15 @@ const queryTotalAddressesToPrint = async () => {
     }
 }
 
+const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
+    try {
+        const snapShot = await db.collection('biospecimen').where('143615646.826941471', '==', receivedDateTimestamp).get();
+        return snapShot.docs.map(document => document.data());
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
 const eligibleParticipantsForKitAssignment = async () => {
     try {
         const snapshot = await db.collection("participants").where('173836415.266600170.8583443674.221592017', '==', 849527480).get();
@@ -3018,5 +3027,6 @@ module.exports = {
     storeKitReceipt,
     addKitStatusToParticipant,
     eligibleParticipantsForKitAssignment,
-    processEventWebhook
+    processEventWebhook,
+    queryKitsByReceivedDate
 }
