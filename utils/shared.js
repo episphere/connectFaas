@@ -915,7 +915,7 @@ const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
             specimenDataArray.push({
                 'specimens': filteredSpecimens,
                 '820476880': specimenCollection['data']['820476880'],
-                '926457119': specimenCollection['data']['926457119'],
+                '926457119': receivedTimestamp, // Tube-level (not specimen-level) data required for this field. They can be different values.
                 '678166505': specimenCollection['data']['678166505'],
                 '827220437': specimenCollection['data']['827220437'],
                 '951355211': specimenCollection['data']['951355211'],
