@@ -1261,7 +1261,7 @@ const updateQueryArray = (newData, oldData, queryArray) => {
  * userProfileHistory is an array of objects. Each object has a timestamp and a set of fields that were updated.
  */
 const updateUserProfileHistory = (dataObj, existingDocData, siteCodes) => {
-    const userProfileHistory = existingDocData[fieldMapping.userProfileHistory] ? [...existingDocData[fieldMapping.userProfileHistory]] : [];
+    const userProfileHistory = existingDocData[fieldMapping.userProfileHistory] || [];
 
     // This data is always added to the update object.
     let updateObject = {
