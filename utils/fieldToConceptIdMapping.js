@@ -21,6 +21,7 @@ module.exports = {
     submitShipmentFlag: 145971562,
     siteShipmentReceived: 333524031,
     submitShipmentTimestamp: 656548982,
+    shipmentReceivedTimestamp: 926457119,
     shippingBoxId: 132929440,
     shipmentCourier: 666553960,
     shipperEmail: 948887825,
