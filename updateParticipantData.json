@@ -407,5 +407,110 @@
 	"173836415.266600170.110349197": {
 		"dataType": "array",
 		"mustExist": false
-	}
+	},
+	"857217152": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909],
+        "required": true
+    },
+    "772354119": {
+        "dataType": "ISO",
+        "mustExist": false,
+        "required": true
+    },
+	"388711124": {
+        "dataType": "phone",
+        "mustExist": false
+    },
+    "438643922": {
+        "dataType": "phone",
+        "mustExist": false
+    },
+    "793072415": {
+        "dataType": "phone",
+        "mustExist": false
+    },
+    "271757434": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "187894482": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "983278853": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "646873644": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "869588347": {
+        "dataType": "email",
+        "mustExist": false
+    },
+    "849786503": {
+        "dataType": "email",
+        "mustExist": false
+    },
+    "635101039": {
+        "dataType": "email",
+        "mustExist": false
+    },
+    "399159511": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "153211406": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "231676651": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "996038075": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "506826178": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 5
+    },
+    "521824358": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "442166669": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "703385619": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "634434746": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 25
+    },
+    "892050548": {
+        "dataType": "zipCode",
+        "mustExist": false,
+        "maxLength": 5
+    }
 }

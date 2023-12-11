@@ -167,4 +167,66 @@ module.exports = {
      collectionDateTimeStamp: 678166505,
      collectionCardFlag: 137401245,
      collectionAddtnlNotes: 260133861,
+
+     // participant deceased data
+    participantDeceased: 857217152,
+    participantDeceasedNORC: 987563196,
+    participantDeceasedTimestamp: 772354119,
+
+    // participant profile
+    firstName: 399159511,
+    preferredName: 153211406,
+    middleName: 231676651,
+    lastName: 996038075,
+    suffix: 506826178,
+    homePhone: 438643922,
+    cellPhone: 388711124,
+    otherPhone: 793072415,
+    prefEmail: 869588347,
+    additionalEmail1: 849786503,
+    additionalEmail2: 635101039,
+    address1: 521824358,
+    address2: 442166669,
+    city: 703385619,    
+    state: 634434746,
+    zip: 892050548,
+    canWeVoicemailMobile: 271757434,
+    canWeVoicemailHome: 187894482,
+    canWeVoicemailOther: 983278853,
+    canWeText: 646873644,
+    userProfileHistory: 569151507,
+    userProfileHistoryTimestamp: 371303487,
+    profileChangeRequestedBy: 611005658,
+
+    // Primary cancer site IDs. participant profile -> occurrences {object} (637153953) -> primary site of cancer (740819233). Null until participant diagnosed with cancer.
+    cancerOccurrence: 637153953,
+    primaryCancerSite: 740819233,
+    cancerSites: {
+        anal: 939782495,
+        bladder: 135725957,
+        brain: 518416174,
+        breast: 847945207,
+        cervical: 283025574,
+        colon: 942970912, // Colon/Rectal
+        espohageal: 596122041,
+        headAndNeck: 489400183, // Head and neck (Including cancers of the mouth, sinuses, nose, or throat. Not including brain or skin cancers)
+        kidney: 863246236,
+        leukemia: 607793249, // Leukemia (blood and bone marrow)
+        liver: 532172400,
+        lung: 754745617, // Lung or Bronchial
+        nonHodgkinsLymphoma: 665036297, // Non-Hodgkin's Lymphoma
+        lymphoma: 200837530, // Lymphoma
+        skinMelanoma: 990319383, // Melanoma (skin)
+        skinNonMelanoma: 487917585, // Non-melanoma skin (basal or squamous)
+        ovarian: 603181162,
+        pancreatic: 482225200,
+        prostate: 295976386,
+        stomach: 764891959,
+        testicular: 248374037,
+        thyroid: 139822395,
+        uterine: 723614811,
+        other: 807835037,
+        unavailableUnknown: 178420302,
+        anotherTypeOfCancer: 868006655,
+    },
 };
