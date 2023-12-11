@@ -509,7 +509,7 @@
         "maxLength": 25
     },
     "892050548": {
-        "dataType": "zip",
+        "dataType": "zipCode",
         "mustExist": false,
         "maxLength": 5
     }

@@ -1217,11 +1217,11 @@ const updateQueryListFields = (dataObj, existingDocData) => {
                 if (dataObj[field]) {
                     currentQueryArray = updateQueryArray(dataObj[field], existingDocData?.[field], currentQueryArray);
                 }
-
-                if (currentQueryArray.length > 0) {
-                    updatedQueryObj[queryField] = currentQueryArray;
-                }
             });
+
+            if (currentQueryArray.length > 0) {
+                updatedQueryObj[queryField] = currentQueryArray;
+            }
         }
     }
 
@@ -1238,20 +1238,22 @@ const updateQueryListFields = (dataObj, existingDocData) => {
  * @returns {array<string>} - the updated queryArray.
  */
 const updateQueryArray = (newData, oldData, queryArray) => {
+    let updatedQueryArray = [...queryArray];
+
     newData = typeof newData === 'string' ? newData.toLowerCase() : '';
     oldData = oldData && typeof oldData === 'string' ? oldData.toLowerCase() : '';
 
-    const oldDataIndex = oldData ? queryArray.indexOf(oldData) : -1;
+    const oldDataIndex = oldData ? updatedQueryArray.indexOf(oldData) : -1;
     if (oldDataIndex !== -1) {
-        queryArray.splice(oldDataIndex, 1);
+        updatedQueryArray.splice(oldDataIndex, 1);
     }
 
-    if (!queryArray.includes(newData)) {
-        queryArray.push(newData);
+    if (!updatedQueryArray.includes(newData)) {
+        updatedQueryArray.push(newData);
     }
 
-    return queryArray;
-}
+    return updatedQueryArray;
+};
 
 /**
  * If any of the fields in userProfileHistoryKeys are in dataObj, update the userProfileHistory object in the participant profile.

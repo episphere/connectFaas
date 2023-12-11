@@ -324,7 +324,7 @@ const updateParticipantData = async (req, res, authObj) => {
         // Note: Query fields can't be updated directly, they are derived.
         if (dataObj['query']) {
             error = true;
-                responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Query variables cannot be directly updated through this API. The expected values will be derived automatically.'}});
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Query variables cannot be directly updated through this API. The expected values will be derived automatically.'}});
                 continue;
         }
 
@@ -355,7 +355,7 @@ const updateParticipantData = async (req, res, authObj) => {
             responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
         } catch (e) {
             // Alert the user about the error for this participant but continue to process the rest of the participants.
-            console.error(e);
+            console.error(`Server error updating participant at updateParticipantData & checkDerivedVariables. ${e}`);
             error = true;
             responseArray.push({'Server Error': {'Token': participantToken, 'Errors': `Please retry this participant. Error: ${e}`}});
             continue;
@@ -394,7 +394,7 @@ const qc = (newData, existingData, rules) => {
                         errors.push(`Data mismatch: ${key} must be an email address. Example: abc@xyz.com`);
                     }
                 }
-                else if (rules[key].dataType === 'zip') {
+                else if (rules[key].dataType === 'zipCode') {
                     if (typeof newData[key] !== 'string' || newData[key].length !== 5) {
                         errors.push(`Data mismatch: ${key} zip code must be a 5 character string. Example: '12345'`);
                     }
