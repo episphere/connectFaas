@@ -343,11 +343,9 @@ const updateParticipantData = async (req, res, authObj) => {
             updatedData[fieldMapping.userProfileHistory] = updateUserProfileHistory(dataObj, docData, siteCodes);
         }
 
-        console.log("UPDATED DATA");
-        console.log(updatedData);
 
         try {
-            if(Object.keys(updatedData).length > 0) {
+            if (Object.keys(updatedData).length > 0) {
                 await Promise.all([
                     updateParticipantData(docID, updatedData),
                     checkDerivedVariables(participantToken, docData['827220437']),
@@ -355,11 +353,11 @@ const updateParticipantData = async (req, res, authObj) => {
             }
             
             responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
-        } catch (error) {
+        } catch (e) {
             // Alert the user about the error for this participant but continue to process the rest of the participants.
-            console.error(error);
+            console.error(e);
             error = true;
-            responseArray.push({'Server Error': {'Token': participantToken, 'Errors': `Please retry this participant. Error: ${error}`}});
+            responseArray.push({'Server Error': {'Token': participantToken, 'Errors': `Please retry this participant. Error: ${e}`}});
             continue;
         }
     }

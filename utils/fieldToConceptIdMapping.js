@@ -201,7 +201,7 @@ module.exports = {
     // Primary cancer site IDs. participant profile -> occurrences {object} (637153953) -> primary site of cancer (740819233). Null until participant diagnosed with cancer.
     cancerOccurrence: 637153953,
     primaryCancerSite: 740819233,
-    cancerSitesMap: {
+    cancerSites: {
         anal: 939782495,
         bladder: 135725957,
         brain: 518416174,
