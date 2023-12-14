@@ -302,23 +302,13 @@ const updateParticipantData = async (req, res, authObj) => {
             }
         }
 
-        // Handle deceased data. participantDeceased === yes && participantDeceasedTimestamp req'd. Derive participantDeceasedNORC === fieldMapping.yes.
-        // Ignore and delete deceased data if participantDeceased === no. Return error for incomplete submission.
-        if (updatedData[fieldMapping.participantDeceased] === fieldMapping.yes && updatedData[fieldMapping.participantDeceasedTimestamp]) {
+        // Handle deceased data. If participantDeceased === yes, derive participantDeceasedNORC === fieldMapping.yes.
+        // Ignore and delete deceased data if participantDeceased === no. There is no error case (data already validated).
+        if (updatedData[fieldMapping.participantDeceased] === fieldMapping.yes) {
             updatedData[fieldMapping.participantDeceasedNORC] = fieldMapping.yes;
         } else if (updatedData[fieldMapping.participantDeceased] === fieldMapping.no) {
             delete updatedData[fieldMapping.participantDeceased];
             delete updatedData[fieldMapping.participantDeceasedTimestamp];
-        } else if (updatedData[fieldMapping.participantDeceased] || updatedData[fieldMapping.participantDeceasedTimestamp]) {
-            error = true;
-            responseArray.push({
-                "Invalid Request": {
-                    "Token": participantToken,
-                    "Errors": "Invalid participant deceased data. Deceased variable 857217152 and deceased timestamp 772354119 must be provided together. " +
-                    "Example: {'857217152': 353358909, '772354119': '2023-12-01T00:00:00.000Z'}. Omit 'no' values."
-                }
-            });
-            continue;
         }
 
         // Note: Query fields can't be updated directly, they are derived.
