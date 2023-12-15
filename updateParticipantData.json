@@ -411,13 +411,11 @@
 	"857217152": {
         "dataType": "number",
         "mustExist": false,
-        "values": [104430631, 353358909],
-        "required": true
+        "values": [104430631, 353358909]
     },
     "772354119": {
         "dataType": "ISO",
-        "mustExist": false,
-        "required": true
+        "mustExist": false
     },
 	"388711124": {
         "dataType": "phone",
