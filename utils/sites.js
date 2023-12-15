@@ -172,6 +172,10 @@ const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
 }
 
 const updateParticipantData = async (req, res, authObj) => {
+    const { getParticipantData, updateParticipantData } = require('./firestore');
+    const { checkForQueryFields, initializeTimestamps, userProfileHistoryKeys } = require('./shared');
+    const { checkDerivedVariables } = require('./validation');
+
     logIPAdddress(req);
     setHeaders(res);
     
@@ -220,7 +224,6 @@ const updateParticipantData = async (req, res, authObj) => {
         } 
 
         const participantToken = dataObj.token;
-        const { getParticipantData } = require('./firestore');
         const record = await getParticipantData(participantToken, siteCodes, isParent);
 
         if(!record) {
@@ -291,8 +294,6 @@ const updateParticipantData = async (req, res, authObj) => {
             }
         }
 
-        const { initializeTimestamps } = require('./shared')
-
         for(let key in updatedData) {
             if(initializeTimestamps[key]) {
                 if(initializeTimestamps[key].value && initializeTimestamps[key].value === updatedData[key]) {
@@ -301,28 +302,61 @@ const updateParticipantData = async (req, res, authObj) => {
             }
         }
 
-        if(updatedData['399159511']) updatedData[`query.firstName`] = dataObj['399159511'].toLowerCase();
-        if(updatedData['996038075']) updatedData[`query.lastName`] = dataObj['996038075'].toLowerCase();
+        // Handle deceased data. If participantDeceased === yes, derive participantDeceasedNORC === fieldMapping.yes.
+        // Ignore and delete deceased data if participantDeceased === no. There is no error case (data already validated).
+        if (updatedData[fieldMapping.participantDeceased] === fieldMapping.yes) {
+            updatedData[fieldMapping.participantDeceasedNORC] = fieldMapping.yes;
+        } else if (updatedData[fieldMapping.participantDeceased] === fieldMapping.no) {
+            delete updatedData[fieldMapping.participantDeceased];
+            delete updatedData[fieldMapping.participantDeceasedTimestamp];
+        }
 
-        console.log("UPDATED DATA");
-        console.log(updatedData);
+        // Note: Query fields can't be updated directly, they are derived.
+        if (dataObj['query']) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Query variables cannot be directly updated through this API. The expected values will be derived automatically.'}});
+                continue;
+        }
 
-        if(Object.keys(updatedData).length > 0) {
+        // Handle updates to query.firstName, query.lastName, query.allPhoneNo, and query.allEmails arrays (these are used for participant search). Derive and add the updated query array to flatDataObj.
+        const shouldUpdateQueryFields = checkForQueryFields(dataObj);
+        if (shouldUpdateQueryFields) {
+            const { updateQueryListFields } = require('./shared');
+            if (!updatedData['query']) updatedData['query'] = {};
+            updatedData['query'] = updateQueryListFields(dataObj, docData);
+        }
 
-            const { updateParticipantData } = require('./firestore');
-            const { checkDerivedVariables } = require('./validation');
+        // Handle updates to user profile history. userProfileHistory is an array of objects. Each object has a timestamp and a userProfile object.
+        const shouldUpdateUserProfileHistory = userProfileHistoryKeys.some(key => key in updatedData);
+        if (shouldUpdateUserProfileHistory) {
+            const { updateUserProfileHistory } = require('./shared');
+            updatedData[fieldMapping.userProfileHistory] = updateUserProfileHistory(dataObj, docData, siteCodes);
+        }
 
-            await updateParticipantData(docID, updatedData);
-            await checkDerivedVariables(participantToken, docData['827220437']);
-        } 
 
-        responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
+        try {
+            if (Object.keys(updatedData).length > 0) {
+                await Promise.all([
+                    updateParticipantData(docID, updatedData),
+                    checkDerivedVariables(participantToken, docData['827220437']),
+                ]);
+            }
+            
+            responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
+        } catch (e) {
+            // Alert the user about the error for this participant but continue to process the rest of the participants.
+            console.error(`Server error updating participant at updateParticipantData & checkDerivedVariables. ${e}`);
+            error = true;
+            responseArray.push({'Server Error': {'Token': participantToken, 'Errors': `Please retry this participant. Error: ${e}`}});
+            continue;
+        }
     }
 
     return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
 }
 
 const qc = (newData, existingData, rules) => {
+    const { validPhoneFormat, validEmailFormat } = require('./shared');
     let errors = [];
     for(key in newData) {
         if(key == 'token') continue;
@@ -337,7 +371,22 @@ const qc = (newData, existingData, rules) => {
             if(rules[key].dataType) {
                 if(rules[key].dataType === 'ISO') {
                     if(typeof newData[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(newData[key]))) {
-                        errors.push(" Invalid data type / format for Key (" + key + ")");
+                        errors.push(`Data mismatch: ${key} must be ISO 8601 string. Example: '2023-12-15T12:45:52.123Z'` );
+                    }
+                }
+                else if (rules[key].dataType === 'phone') {
+                    if (typeof newData[key] !== 'string' || !validPhoneFormat.test(newData[key])) {
+                        errors.push(`Data mismatch: ${key} must be a phone number. 10 character string, no spaces, no dashes. Example: '1234567890'`);
+                    }
+                }
+                else if (rules[key].dataType === 'email') {
+                    if (typeof newData[key] !== 'string' || !validEmailFormat.test(newData[key])) {
+                        errors.push(`Data mismatch: ${key} must be an email address. Example: abc@xyz.com`);
+                    }
+                }
+                else if (rules[key].dataType === 'zipCode') {
+                    if (typeof newData[key] !== 'string' || newData[key].length !== 5) {
+                        errors.push(`Data mismatch: ${key} zip code must be a 5 character string. Example: '12345'`);
                     }
                 }
                 else if(rules[key].dataType === 'array') {
