@@ -226,6 +226,22 @@ const biospecimenAPIs = async (req, res) => {
 
         return res.status(200).json({message: 'Success!', code:200});
     }
+    else if (api === 'getSpecimenAndParticipant') {
+        if (req.method !== 'GET') return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        if (!req.query.collectionId) return res.status(400).json(getResponseJSON('Collection ID is missing.', 400));
+
+        const collectionId = req.query.collectionId;
+        const isBPTL = req.query.isBPTL === 'true';
+
+        try {
+            const { getSpecimenAndParticipant } = require('./firestore');
+            const { specimenData, participantData } = await getSpecimenAndParticipant(collectionId, siteCode, isBPTL);
+            return res.status(200).json({ data: [specimenData, participantData], message: 'Success!', code: 200 });
+        } catch (error) {
+            console.error(`Error in getSpecimenAndParticipant(). ${error.message}`);
+            return res.status(500).json({ data: [], message: `Error in getSpecimenAndParticipant(). ${error}`, code: 500 });
+        }
+    }
     else if (api === 'searchSpecimen') {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
