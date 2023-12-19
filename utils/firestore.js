@@ -2930,8 +2930,8 @@ const processEventWebhook = async (event) => {
     console.log(event);
 
     const response = await db
-        .collection("notifications")
-        .where("id", "==", event.notification_id)
+        .collection("sendgridTracking")
+        .where("sg_message_id", "==", event.sg_message_id)
         .get();
 
     if (response.size > 0) {
@@ -2945,11 +2945,27 @@ const processEventWebhook = async (event) => {
                 eventRecord[`${event.event}_reason`] = event.reason;
             }
             await db
-                .collection("notifications")
+                .collection("sendgridTracking")
                 .doc(doc.id)
                 .update(eventRecord);
         }
-    } 
+    } else {
+        const eventRecord = {
+            [`${event.event}_status`]: true,
+            [`${event.event}_date`]: date,
+            [`${event.event}_timestamp`]: event.timestamp,
+            connect_id: event.connect_id,
+            email: event.email,
+            notification_id: event.notification_id,
+            sg_event_id: event.sg_event_id,
+            sg_message_id: event.sg_message_id,
+            token: event.token,
+        };
+        if (["bounce", "dropped"].includes(event.event)) {
+            eventRecord[`${event.event}_reason`] = event.reason;
+        }
+        await db.collection("sendgridTracking").add(eventRecord);
+    }
 };
 
 module.exports = {

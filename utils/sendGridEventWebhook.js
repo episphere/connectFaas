@@ -1,55 +1,39 @@
 const sgMail = require("@sendgrid/mail");
 const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const { EventWebhook, EventWebhookHeader } = require("@sendgrid/eventwebhook");
-const uuid = require('uuid')
-const admin = require('firebase-admin');
-const db = admin.firestore();
 const { processEventWebhook } = require("./firestore");
 const { getResponseJSON } = require("./shared");
-
-
-const _getSecrets = async (envName) => {
-    const client = new SecretManagerServiceClient();
-    const [version] = await client.accessSecretVersion({
-        name: envName
-    });
-    return version.payload.data.toString();
-};
 
 const _testSendEmail = async (res) => {
     console.log("Start sending email");
 
     try {
-        const notificationRecord = {
-            notificationSpecificationsID: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-            id: uuid(),
-            notificationType: 'email',
-            email: '', // Update your data to test
-            notification: {
-              title: 'Test SendGrid Event Webhook',
-              body: '<p>Hello World!</p>',
-              time: new Date().toISOString(),
-            },
-            attempt: '3rd contact',
-            category: 'sendgrid',
-            token: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-            uid: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-            read: false,
-          };
-          await db.collection("notifications").add(notificationRecord)
+        // Add SendGrid apiKey to test
+        sgMail.setApiKey("");
 
-        const apiKey = await _getSecrets(process.env.GCLOUD_SENDGRID_SECRET);
-        sgMail.setApiKey(apiKey);
-
+        // Update data to test
         const msg = {
             personalizations: [
                 {
-                    to: notificationRecord.email,
+                    to: "",
                     custom_args: {
-                        notification_id: notificationRecord.id,
+                        connect_id: "cnid1",
+                        token: "tk1",
+                        notification_id: "nid1",
                         gcloud_project: process.env.GCLOUD_PROJECT,
+                        attempt: "1",
                     },
                 },
+                // {
+                //     to: "",
+                //     custom_args: {
+                //         connect_id: "cnid2",
+                //         token: "tk2",
+                //         notification_id: "nid2",
+                //         gcloud_project: process.env.GCLOUD_PROJECT,
+                //         attempt: "1",
+                //     },
+                // },
             ],
             from: {
                 name:
@@ -59,14 +43,14 @@ const _testSendEmail = async (res) => {
                     process.env.SG_FROM_EMAIL ||
                     "donotreply@myconnect.cancer.gov",
             },
-            subject: notificationRecord.notification.title,
+            subject: "Test SendGrid Event Webhook",
             content: [
                 {
                     type: "text/html",
-                    value: notificationRecord.notification.body,
+                    value: "<p>Hello World!</p>",
                 },
             ],
-            categories: [notificationRecord.category],
+            categories: ["Test"],
         };
         await sgMail.send(msg);
         console.log("Complete sending email");
@@ -90,6 +74,14 @@ const _receivedEvents = async (req, res) => {
     }
 };
 
+const _getSecrets = async () => {
+    const client = new SecretManagerServiceClient();
+    const [version] = await client.accessSecretVersion({
+        name: process.env.GCLOUD_SENDGRID_EVENT_WEBHOOKSECRET,
+    });
+    return version.payload.data.toString();
+};
+
 const sendGridEventWebhook = async (req, res) => {
     try {
         if (req.method !== "POST") {
@@ -102,7 +94,7 @@ const sendGridEventWebhook = async (req, res) => {
         if (query.api === "send") {
             await _testSendEmail(res);
         } else if (query.api === "receive") {
-            const publicKey = await _getSecrets(process.env.GCLOUD_SENDGRID_EVENT_WEBHOOKSECRET);
+            const publicKey = await _getSecrets();
             const eventWebhook = new EventWebhook();
             const ecPublicKey = eventWebhook.convertPublicKeyToECDSA(publicKey);
             const payload = req.rawBody;
