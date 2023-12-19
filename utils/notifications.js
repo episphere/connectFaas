@@ -171,7 +171,7 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
   htmlTemplate = htmlTemplate.replace("<firstName>", "{{firstName}}");
   if (htmlTemplate.includes("${token}")) {
     htmlContainsToken = true;
-    htmlTemplate = htmlTemplate.replaceAll("${token}", "{{token}}");
+    htmlTemplate = htmlTemplate.replace("${token}", "{{token}}");
   }
 
   if (htmlTemplate.includes("<loginDetails>")) {
@@ -229,7 +229,7 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
 
       if (htmlContainsToken) {
         substitutions.token = fetchedData.token;
-        notificationBody = notificationBody.replaceAll("{{token}}", fetchedData.token);
+        notificationBody = notificationBody.replace("{{token}}", fetchedData.token);
       }
 
       const notification_id = uuid();
