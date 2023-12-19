@@ -171,7 +171,7 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
   htmlTemplate = htmlTemplate.replace("<firstName>", "{{firstName}}");
   if (htmlTemplate.includes("${token}")) {
     htmlContainsToken = true;
-    htmlTemplate = htmlTemplate.replace("${token}", "{{token}}");
+    htmlTemplate = htmlTemplate.replaceAll("${token}", "{{token}}");
   }
 
   if (htmlTemplate.includes("<loginDetails>")) {
@@ -229,7 +229,7 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
 
       if (htmlContainsToken) {
         substitutions.token = fetchedData.token;
-        notificationBody = notificationBody.replace("{{token}}", fetchedData.token);
+        notificationBody = notificationBody.replaceAll("{{token}}", fetchedData.token);
       }
 
       const notification_id = uuid();
@@ -237,6 +237,8 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
         to: fetchedData[emailField],
         substitutions,
         custom_args: {
+          connect_id: fetchedData.Connect_ID,
+          token: fetchedData.token,
           notification_id,
           gcloud_project: process.env.GCLOUD_PROJECT
         },
