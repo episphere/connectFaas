@@ -915,7 +915,7 @@ const processSpecimenCollections = (specimenCollections, receivedTimestamp) => {
             specimenDataArray.push({
                 'specimens': filteredSpecimens,
                 '820476880': specimenCollection['data']['820476880'],
-                '926457119': specimenCollection['data']['926457119'],
+                '926457119': receivedTimestamp, // Tube-level (not specimen-level) data required for this field. They can be different values.
                 '678166505': specimenCollection['data']['678166505'],
                 '827220437': specimenCollection['data']['827220437'],
                 '951355211': specimenCollection['data']['951355211'],
@@ -1156,6 +1156,137 @@ const buildStreckPlaceholderData = (collectionId, streckTubeData) => {
     console.error(`Issue found in updateSpecimen() (ConnectFaas): Streck Tube not found in biospecimenData for collection Id ${collectionId}. Building placeholder data.`);
 }
 
+const validIso8601Format = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/;
+const validEmailFormat = /^[a-zA-Z0-9.!#$%&'*+"\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,63}$/;
+const validPhoneFormat = /^\d{10}$/;
+
+const queryListFields = {
+    firstName: [fieldMapping.firstName, fieldMapping.preferredName],
+    lastName: [fieldMapping.lastName],
+    allPhoneNo: [fieldMapping.homePhone, fieldMapping.cellPhone, fieldMapping.otherPhone],
+    allEmails: [fieldMapping.prefEmail, fieldMapping.additionalEmail1, fieldMapping.additionalEmail2],
+}
+
+const userProfileHistoryKeys = [
+    fieldMapping.firstName,
+    fieldMapping.middleName,
+    fieldMapping.lastName,
+    fieldMapping.suffix,
+    fieldMapping.preferredName,
+    fieldMapping.cellPhone,
+    fieldMapping.canWeVoicemailMobile,
+    fieldMapping.canWeText,
+    fieldMapping.homePhone,
+    fieldMapping.canWeVoicemailHome,
+    fieldMapping.otherPhone,
+    fieldMapping.canWeVoicemailOther,
+    fieldMapping.address1,
+    fieldMapping.address2,
+    fieldMapping.city,
+    fieldMapping.state,
+    fieldMapping.zip,
+  ];
+
+
+/**
+ * Check whether dataObj contains any of the fields in participantQueryListFields. If yes, handle the query list fields in the participant profile.
+ * @param {object} dataObj - the update object for the participant profile.
+ * @returns - true if any of the fields in participantQueryListFields are in dataObj. false otherwise.
+ */
+const checkForQueryFields = (dataObj) => {
+    for (const key in queryListFields) {
+        // Check if any field in the array for this key exists in dataObj
+        const hasQueryField = queryListFields[key].some(field => dataObj[field] !== undefined);
+        if (hasQueryField) {
+            return true;
+        }
+    }
+    return false; 
+}
+
+const updateQueryListFields = (dataObj, existingDocData) => {
+    let updatedQueryObj = existingDocData['query'] ? {...existingDocData['query']} : {};
+
+    for (const queryField in queryListFields) {
+        const isFieldPresentInDataObj = queryListFields[queryField].some(field => dataObj[field]);
+        
+        if (isFieldPresentInDataObj) {
+            let currentQueryArray = updatedQueryObj?.[queryField] ? [...updatedQueryObj[queryField]] : [];
+            
+            queryListFields[queryField].forEach(field => {
+                if (dataObj[field]) {
+                    currentQueryArray = updateQueryArray(dataObj[field], existingDocData?.[field], currentQueryArray);
+                }
+            });
+
+            if (currentQueryArray.length > 0) {
+                updatedQueryObj[queryField] = currentQueryArray;
+            }
+        }
+    }
+
+    return updatedQueryObj;
+}
+
+/**
+ * Name, Phone number, and email updates require special handling because the query.firstName, query.lastName, query.allEmails, and query.allPhoneNo arrays are used for participant search.
+ * These can not be directly updated in the API call. We need to derive them just like we do in SMDB & PWA.
+ * If oldData is present, remove it from the queryArray and replace with newData. If oldData is not present, add newData to the queryArray.
+ * @param {string} newData - the updated query data point.
+ * @param {string} oldData - the existing query data point.
+ * @param {array<string>} queryArray - the array of existing data (query.firstName, query.lastName, query.allPhoneNo, or query.allEmails in the participant record).
+ * @returns {array<string>} - the updated queryArray.
+ */
+const updateQueryArray = (newData, oldData, queryArray) => {
+    let updatedQueryArray = [...queryArray];
+
+    newData = typeof newData === 'string' ? newData.toLowerCase() : '';
+    oldData = oldData && typeof oldData === 'string' ? oldData.toLowerCase() : '';
+
+    const oldDataIndex = oldData ? updatedQueryArray.indexOf(oldData) : -1;
+    if (oldDataIndex !== -1) {
+        updatedQueryArray.splice(oldDataIndex, 1);
+    }
+
+    if (!updatedQueryArray.includes(newData)) {
+        updatedQueryArray.push(newData);
+    }
+
+    return updatedQueryArray;
+};
+
+/**
+ * If any of the fields in userProfileHistoryKeys are in dataObj, update the userProfileHistory object in the participant profile.
+ * @param {object} dataObj - the incoming user profile data object. This is a partial object with update data only, not the complete profile.
+ * @param {object} existingDocData - the existing user profile data object from firestore.
+ * @param {array<string>} siteCodes - the site codes for the user profile update.
+ * userProfileHistory is an array of objects. Each object has a timestamp and a set of fields that were updated.
+ */
+const updateUserProfileHistory = (dataObj, existingDocData, siteCodes) => {
+    const userProfileHistory = existingDocData[fieldMapping.userProfileHistory] || [];
+
+    // This data is always added to the update object.
+    let updateObject = {
+        [fieldMapping.userProfileHistoryTimestamp]: new Date().toISOString(),
+        [fieldMapping.profileChangeRequestedBy]: `Site ${siteCodes.toString()}: updateParticipantData API`
+    };
+
+    // If any of the fields in userProfileHistoryKeys are in dataObj, add the existing fields from existingDocData to the updateObject.
+    for (const key of userProfileHistoryKeys) {
+        if (dataObj[key] && existingDocData[key] && dataObj[key] !== existingDocData[key]) {
+            updateObject[key] = existingDocData[key];
+        }
+    }
+
+    // If the updateObject has more than just the timestamp and profileChangeRequestedBy fields, add it to the userProfileHistory array. Else discard.
+    if (Object.keys(updateObject).length > 2) {
+        userProfileHistory.push(updateObject);
+    }
+
+    return userProfileHistory;
+}
+
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -1204,4 +1335,12 @@ module.exports = {
     manageSpecimenBoxedStatusRemoveBag,
     sortBoxOnBagRemoval,
     buildStreckPlaceholderData,
+    validIso8601Format,
+    validEmailFormat,
+    validPhoneFormat,
+    queryListFields,
+    userProfileHistoryKeys,
+    checkForQueryFields,
+    updateQueryListFields,
+    updateUserProfileHistory,
 };
