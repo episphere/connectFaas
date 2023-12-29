@@ -1940,12 +1940,13 @@ const getSiteDetailsWithSignInProvider = async (acronym) => {
 }
 
 const retrieveNotificationSchemaByID = async (id) => {
-    const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
-    if(snapshot.size === 1) {
-        return snapshot.docs[0].id;
-    }
-    else return new Error('Invalid notification Id!!')
-}
+  const snapshot = await db.collection("notificationSpecifications").where("id", "==", id).get();
+  if (snapshot.size === 1) {
+    return snapshot.docs[0].id;
+  }
+
+  return "";
+};
 
 const retrieveNotificationSchemaByCategory = async (category) => {
     let query = db.collection('notificationSpecifications')

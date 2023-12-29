@@ -168,15 +168,15 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
   preferredNameField && fieldsToFetch.push(preferredNameField);
   emailField && fieldsToFetch.push(emailField);
 
-  htmlTemplate = htmlTemplate.replace("<firstName>", "{{firstName}}");
+  htmlTemplate = htmlTemplate.replace(/<firstName>/g, "{{firstName}}");
   if (htmlTemplate.includes("${token}")) {
     htmlContainsToken = true;
-    htmlTemplate = htmlTemplate.replace("${token}", "{{token}}");
+    htmlTemplate = htmlTemplate.replace(/\$\{token\}/g, "{{token}}");
   }
 
   if (htmlTemplate.includes("<loginDetails>")) {
     htmlContainsLoginDetails = true;
-    htmlTemplate = htmlTemplate.replace("<loginDetails>", "{{loginDetails}}");
+    htmlTemplate = htmlTemplate.replace(/<loginDetails>/g, "{{loginDetails}}");
     fieldsToFetch.push("995036844", "348474836", "421823980");
   }
 
@@ -302,37 +302,39 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
-    logIPAdddress(req);
-    setHeaders(res);
+  logIPAdddress(req);
+  setHeaders(res);
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-        
-    if(req.method !== 'POST') return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+  if (req.method === "OPTIONS") return res.status(200).json({ code: 200 });
 
-    if(!authObj) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+  if (req.method !== "POST") return res.status(405).json(getResponseJSON("Only POST requests are accepted!", 405));
 
-    if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
+  if (!authObj) return res.status(401).json(getResponseJSON("Authorization failed!", 401));
 
-    const data = req.body.data;
-    if(data.id) {
-        const { retrieveNotificationSchemaByID } = require('./firestore');
-        const docID = await retrieveNotificationSchemaByID(data.id);
-        if(docID instanceof Error) return res.status(404).json(getResponseJSON(docID.message, 404));
-        const { updateNotificationSchema } = require('./firestore');
-        data['modifiedAt'] = new Date().toISOString();
-        if(authObj.userEmail) data['modifiedBy'] = authObj.userEmail;
-        await updateNotificationSchema(docID, data);
-    }
-    else {
-        const uuid = require('uuid')
-        data['id'] = uuid();
-        const { storeNewNotificationSchema } = require('./firestore');
-        data['createdAt'] = new Date().toISOString();
-        if(authObj.userEmail) data['createdBy'] = authObj.userEmail;
-        await storeNewNotificationSchema(data);
-    }
-    return res.status(200).json(getResponseJSON('Ok', 200));
-}
+  if (req.body.data === undefined || Object.keys(req.body.data).length < 1)
+    return res.status(400).json(getResponseJSON("Bad requuest.", 400));
+
+  const schema = req.body.data;
+  if (schema.id) {
+    const { retrieveNotificationSchemaByID } = require("./firestore");
+    const docID = await retrieveNotificationSchemaByID(schema.id);
+    if (docID === "") return res.status(404).json(getResponseJSON("Invalid notification Id.", 404));
+
+    const { updateNotificationSchema } = require("./firestore");
+    schema["modifiedAt"] = new Date().toISOString();
+    if (authObj.userEmail) schema["modifiedBy"] = authObj.userEmail;
+    await updateNotificationSchema(docID, schema);
+  } else {
+    const uuid = require("uuid");
+    schema["id"] = uuid();
+    const { storeNewNotificationSchema } = require("./firestore");
+    schema["createdAt"] = new Date().toISOString();
+    if (authObj.userEmail) schema["createdBy"] = authObj.userEmail;
+    await storeNewNotificationSchema(schema);
+  }
+
+  return res.status(200).json(getResponseJSON("Ok", 200));
+};
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
     logIPAdddress(req);
