@@ -1348,8 +1348,7 @@ const getSpecimenAndParticipant = async (collectionId, siteCode, isBPTL) => {
 
         return { specimenData, participantData };
     } catch (error) {
-        console.error(error);
-        throw new Error(`Error in getSpecimenAndParticipant(). ${error}`, { cause: error });
+        throw new Error(error, { cause: error });
     }
 }
 

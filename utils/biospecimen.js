@@ -239,7 +239,7 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(200).json({ data: [specimenData, participantData], message: 'Success!', code: 200 });
         } catch (error) {
             console.error(`Error in getSpecimenAndParticipant(). ${error.message}`);
-            return res.status(500).json({ data: [], message: `Error in getSpecimenAndParticipant(). ${error}`, code: 500 });
+            return res.status(500).json({ data: [], message: `Error in getSpecimenAndParticipant(). ${error.message}`, code: 500 });
         }
     }
     else if (api === 'searchSpecimen') {
