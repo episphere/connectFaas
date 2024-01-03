@@ -205,6 +205,7 @@ module.exports = {
     cancerOccurrenceTimestamp: 345545422,
     isCancerDiagnosis: 525972260,
     primaryCancerSite: 740819233,
+    preliminaryStageInformation: 457270069,
     cancerSites: {
         anal: 939782495,
         bladder: 135725957,

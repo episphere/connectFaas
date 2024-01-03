@@ -1302,6 +1302,10 @@ const finalizeCancerOccurrenceData = (occurrenceData, participantToken, particip
         }
     }
 
+    if (!finalizedOccurrenceData[fieldMapping.preliminaryStageInformation]) {
+        finalizedOccurrenceData[fieldMapping.preliminaryStageInformation] = '';
+    }
+
     return finalizedOccurrenceData;
 
 }
