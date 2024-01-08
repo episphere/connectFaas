@@ -5,47 +5,6 @@ const submit = async (res, data, uid) => {
     const { lockedAttributes } = require('./shared');
     lockedAttributes.forEach(atr => delete data[atr]);
 
-    const {moduleConcepts} = require('./shared');
-    const moduleSSN = moduleConcepts.moduleSSN;
-
-    // SSN 9 digits
-    if(data[`${moduleSSN}.SOCIALSECUR1`] || (data[moduleSSN] && data[moduleSSN]['SOCIALSECUR1'])) {
-        const ssn = data[`${moduleSSN}.SOCIALSECUR1`] || data[moduleSSN]['SOCIALSECUR1'];
-        const ssnObj = {};
-        const { encryptAsymmetric } = require('./encrypt');
-        const { getTokenForParticipant, storeSSN } = require('./firestore');
-        ssnObj[447051482] = await encryptAsymmetric(ssn.replace(/-/g, ''));
-        ssnObj['uid'] = uid;
-        ssnObj['token'] = await getTokenForParticipant(uid);
-        let ssnResponse = storeSSN(ssnObj);
-        if(ssnResponse instanceof Error){
-            return res.status(500).json(getResponseJSON(ssnResponse.message, 500));
-        }
-        data[`311580100`] = 353358909;
-        data[`454067894`] = new Date().toISOString();
-        delete data[`${moduleSSN}.SOCIALSECUR1`]
-        delete data[moduleSSN]
-    }
-
-    // SSN last 4 digits
-    if(data[`${moduleSSN}.SOCIALSECUR2`] || (data[moduleSSN] && data[moduleSSN]['SOCIALSECUR2'])) { 
-        const ssn = data[`${moduleSSN}.SOCIALSECUR2`] || data[moduleSSN]['SOCIALSECUR2'];
-        const ssnObj = {};
-        const { encryptAsymmetric } = require('./encrypt');
-        const { getTokenForParticipant, storeSSN } = require('./firestore');
-        ssnObj[920333151] = await encryptAsymmetric(ssn.replace(/-/g, ''));
-        ssnObj['uid'] = uid;
-        ssnObj['token'] = await getTokenForParticipant(uid);
-        let ssnResponse = storeSSN(ssnObj);
-        if(ssnResponse instanceof Error){
-            return res.status(500).json(getResponseJSON(ssnResponse.message, 500));
-        }
-        data[`914639140`] = 353358909;
-        data[`598680838`] = new Date().toISOString();
-        delete data[`${moduleSSN}.SOCIALSECUR2`]
-        delete data[moduleSSN];
-    }
-
     // generate Connect_ID if Consent form submitted
     if(data[919254129] !== undefined && data[919254129] === 353358909) {
         const { generateConnectID } = require('./shared');
@@ -164,6 +123,58 @@ const recruitSubmit = async (req, res, uid) => {
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
     return submit(res, data, uid);
+}
+
+const submitSocial = async (req, res, uid) => {
+    if(req.method !== 'POST') {
+        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+    }
+
+    const data = req.body;
+    if(Object.keys(data).length <= 0){
+        return res.status(400).json(getResponseJSON('Bad request!', 400));
+    }
+
+    const {moduleConcepts} = require('./shared');
+    const moduleSSN = moduleConcepts.moduleSSN;
+
+    // SSN 9 digits
+    if(data[`${moduleSSN}.SOCIALSECUR1`] || (data[moduleSSN] && data[moduleSSN]['SOCIALSECUR1'])) {
+        const ssn = data[`${moduleSSN}.SOCIALSECUR1`] || data[moduleSSN]['SOCIALSECUR1'];
+        const ssnObj = {};
+        const { encryptAsymmetric } = require('./encrypt');
+        const { getTokenForParticipant, storeSSN } = require('./firestore');
+        ssnObj[447051482] = await encryptAsymmetric(ssn.replace(/-/g, ''));
+        ssnObj['uid'] = uid;
+        ssnObj['token'] = await getTokenForParticipant(uid);
+        let ssnResponse = storeSSN(ssnObj);
+        if(ssnResponse instanceof Error){
+            return res.status(500).json(getResponseJSON(ssnResponse.message, 500));
+        }
+        data[`311580100`] = 353358909;
+        data[`454067894`] = new Date().toISOString();
+        delete data[`${moduleSSN}.SOCIALSECUR1`]
+        delete data[moduleSSN]
+    }
+
+    // SSN last 4 digits
+    if(data[`${moduleSSN}.SOCIALSECUR2`] || (data[moduleSSN] && data[moduleSSN]['SOCIALSECUR2'])) { 
+        const ssn = data[`${moduleSSN}.SOCIALSECUR2`] || data[moduleSSN]['SOCIALSECUR2'];
+        const ssnObj = {};
+        const { encryptAsymmetric } = require('./encrypt');
+        const { getTokenForParticipant, storeSSN } = require('./firestore');
+        ssnObj[920333151] = await encryptAsymmetric(ssn.replace(/-/g, ''));
+        ssnObj['uid'] = uid;
+        ssnObj['token'] = await getTokenForParticipant(uid);
+        let ssnResponse = storeSSN(ssnObj);
+        if(ssnResponse instanceof Error){
+            return res.status(500).json(getResponseJSON(ssnResponse.message, 500));
+        }
+        data[`914639140`] = 353358909;
+        data[`598680838`] = new Date().toISOString();
+        delete data[`${moduleSSN}.SOCIALSECUR2`]
+        delete data[moduleSSN];
+    }
 }
 
 const getParticipants = async (req, res, authObj) => {
@@ -456,6 +467,7 @@ const getUserCollections = async (req, res, uid) => {
 module.exports = {
     submit,
     recruitSubmit,
+    submitSocial,
     getParticipants,
     identifyParticipant,
     getUserSurveys,
