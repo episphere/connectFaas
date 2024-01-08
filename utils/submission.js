@@ -1,4 +1,6 @@
 const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const fieldMapping = require('./fieldToConceptIdMapping');
+
 const submit = async (res, data, uid) => {
     
     // Remove locked attributes.
@@ -135,12 +137,16 @@ const submitSocial = async (req, res, uid) => {
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
 
+    if (!data['ssnNineDigits'] && !data['ssnFourDigits']) {
+        return res.status(400).json(getResponseJSON('Bad request!', 400));
+    }
+
     // SSN 9 digits
-    if(data[`${fieldMapping.ssnModule}.SOCIALSECUR1`] || (data[fieldMapping.ssnModule] && data[fieldMapping.ssnModule]['SOCIALSECUR1'])) {
+    if(data['ssnNineDigits']) {
         const { encryptAsymmetric } = require('./encrypt');
         const { getTokenForParticipant, storeSSN } = require('./firestore');
 
-        const ssn = data[`${fieldMapping.ssnModule}.SOCIALSECUR1`] || data[fieldMapping.ssnModule]['SOCIALSECUR1'];
+        const ssn = data['ssnNineDigits'];
         const ssnObj = {};
 
         ssnObj[fieldMapping.ssnFullValue] = await encryptAsymmetric(ssn.replace(/-/g, ''));
@@ -156,15 +162,15 @@ const submitSocial = async (req, res, uid) => {
         data[fieldMapping.ssnFullGiven] = 353358909;
         data[fieldMapping.ssnFullGivenTime] = new Date().toISOString();
 
-        delete data[fieldMapping.ssnModule];
+        delete data['ssnNineDigits'];
     }
 
     // SSN last 4 digits
-    if(data[`${fieldMapping.ssnModule}.SOCIALSECUR2`] || (data[fieldMapping.ssnModule] && data[fieldMapping.ssnModule]['SOCIALSECUR2'])) { 
+    if(data['ssnFourDigits']) { 
         const { encryptAsymmetric } = require('./encrypt');
         const { getTokenForParticipant, storeSSN } = require('./firestore');
 
-        const ssn = data[`${fieldMapping.ssnModule}.SOCIALSECUR2`] || data[fieldMapping.ssnModule]['SOCIALSECUR2'];
+        const ssn = data['ssnFourDigits'];
         const ssnObj = {};
 
         ssnObj[fieldMapping.ssnPartialValue] = await encryptAsymmetric(ssn.replace(/-/g, ''));
@@ -180,8 +186,22 @@ const submitSocial = async (req, res, uid) => {
         data[fieldMapping.ssnPartialGiven] = 353358909;
         data[fieldMapping.ssnPartialGivenTime] = new Date().toISOString();
 
-        delete data[fieldMapping.ssnModule];
+        delete data['ssnFourDigits'];
     }
+
+    data[fieldMapping.ssnCompleteTs] = new Date().toISOString();
+    data[fieldMapping.ssnStatusFlag] = 231311385;
+
+    const { updateResponse } = require('./firestore');
+    const response = await updateResponse(data, uid);
+
+    if(response instanceof Error){
+        return res.status(500).json(getResponseJSON(response.message, 500));
+    }
+    if(!response) {
+        return res.status(500).json(getResponseJSON("Can't add/update data!", 500));
+    }
+    return res.status(200).json(getResponseJSON('Data stored successfully!', 200));
 }
 
 const getParticipants = async (req, res, authObj) => {
