@@ -233,6 +233,8 @@ module.exports = {
 
     // SSN Variables
     ssnModule: 'D_166676176',
+    ssnCompleteTs: 315032037,
+    ssnStatusFlag: 126331570,
     ssnFullValue: 447051482,
     ssnFullGiven: 311580100,
     ssnFullGivenTime: 454067894,
