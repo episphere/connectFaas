@@ -2003,6 +2003,22 @@ const getEmailNotifications = async (scheduleAt) => {
     return notifications;
 }
 
+/**
+ * Get all notification specifications that are not drafts and match the scheduleAt time.
+ * @param {string} scheduleAt Time of day to send notifications, eg. '15:00'
+ * @returns 
+ */
+const getScheduledNotifications = async (scheduleAt) => {
+  const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  let notificationSpecArray = [];
+  for (const doc of snapshot.docs) {
+    const docData = doc.data();
+    if (!docData.isDraft && docData.id) notificationSpecArray.push(docData);
+  }
+
+  return notificationSpecArray;
+};
+
 const getNotification = async (id) => {
     const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
 
@@ -3045,6 +3061,7 @@ module.exports = {
     getNotificationsCategories,
     getNotification,
     getEmailNotifications,
+    getScheduledNotifications,
     getKitAssemblyData,
     storeSiteNotifications,
     getCoordinatingCenterEmail,

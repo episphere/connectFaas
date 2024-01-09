@@ -2,8 +2,26 @@ const uuid = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo} = require("./shared");
-const {getEmailNotifications, saveNotificationBatch, saveSpecIdsToParticipants} = require("./firestore");
+const {getScheduledNotifications, saveNotificationBatch, saveSpecIdsToParticipants} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
+const conceptIds = require("./fieldToConceptIdMapping");
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+const twilioClient = require("twilio")(accountSid, authToken);
+
+const sendSmsBatch = async (smsDataArray) => {
+  await Promise.all(
+    smsDataArray.map((smsData) =>
+      twilioClient.messages.create({
+        body: smsData.body,
+        to: smsData.to,
+        messagingServiceSid,
+      })
+    )
+  );
+};
 
 const subscribeToNotification = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -68,16 +86,6 @@ const retrieveNotifications = async (req, res, uid) => {
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
 }
 
-const sendSms = (phoneNo) => {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const client = require('twilio')(accountSid, authToken);
-
-    client.messages
-        .create({body: 'Thanks for joining Connect', from: process.env.from_phone_no, to: phoneNo})
-        .then(message => console.log(message.sid));
-}
-
 const getSecrets = async () => {
     const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
     const client = new SecretManagerServiceClient();
@@ -113,7 +121,7 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
 async function notificationHandler(message) {
   console.log("Received message:", JSON.stringify(message));
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
-  const notificationSpecArray = await getEmailNotifications(scheduleAt);
+  const notificationSpecArray = await getScheduledNotifications(scheduleAt);
   if (notificationSpecArray.length === 0) return;
   const apiKey = await getSecrets();
   sgMail.setApiKey(apiKey);
@@ -142,42 +150,47 @@ async function handleNotificationSpec(notificationSpec) {
     paramObj = {...paramObj, cutoffTimeStr: cutoffTime.toISOString(), timeField: primaryField};
   }
 
-  await getParticipantsAndSendEmails(paramObj);
+  await getParticipantsAndSendNotifications(paramObj);
 }
 
-async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, timeField}) {
+async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr, timeField }) {
   const notificationSpecId = notificationSpec.id;
-  if (!notificationSpecId) return;
   const conditions = notificationSpec.conditions;
-  const messageBody = notificationSpec.email.body;
-  const messageSubject = notificationSpec.email.subject;
-  const emailField = notificationSpec.emailField;
+  const emailSubject = notificationSpec.email?.subject ?? "";
+  const emailBody = notificationSpec.email?.body ?? "";
+  const emailField = notificationSpec.emailField ?? "";
+  const smsBody = notificationSpec.sms?.body ?? "";
+  const phoneField = notificationSpec.phoneField ?? "";
   const firstNameField = notificationSpec.firstNameField;
   const preferredNameField = notificationSpec.preferredNameField;
 
-  let htmlTemplate = messageBody;
-  if (notificationSpec.category !== "newsletter") {
+  let emailHtmlTemplate = emailBody;
+  if (emailBody && notificationSpec.category !== "newsletter") {
     const converter = new showdown.Converter();
-    htmlTemplate = converter.makeHtml(messageBody);
+    emailHtmlTemplate = converter.makeHtml(emailBody);
   }
 
-  let htmlContainsToken = false;
-  let htmlContainsLoginDetails = false;
+  let emailContainsToken = false;
+  let emailContainsLoginDetails = false;
   let fieldsToFetch = ["Connect_ID", "token", "state.uid"];
   firstNameField && fieldsToFetch.push(firstNameField);
   preferredNameField && fieldsToFetch.push(preferredNameField);
   emailField && fieldsToFetch.push(emailField);
+  phoneField && fieldsToFetch.push(phoneField);
+  smsBody && fieldsToFetch.push(conceptIds.canWeText);
 
-  htmlTemplate = htmlTemplate.replace(/<firstName>/g, "{{firstName}}");
-  if (htmlTemplate.includes("${token}")) {
-    htmlContainsToken = true;
-    htmlTemplate = htmlTemplate.replace(/\$\{token\}/g, "{{token}}");
-  }
+  if (emailHtmlTemplate) {
+    emailHtmlTemplate = emailHtmlTemplate.replace(/<firstName>/g, "{{firstName}}");
+    if (emailHtmlTemplate.includes("${token}")) {
+      emailContainsToken = true;
+      emailHtmlTemplate = emailHtmlTemplate.replace(/\${token}/g, "{{token}}");
+    }
 
-  if (htmlTemplate.includes("<loginDetails>")) {
-    htmlContainsLoginDetails = true;
-    htmlTemplate = htmlTemplate.replace(/<loginDetails>/g, "{{loginDetails}}");
-    fieldsToFetch.push("995036844", "348474836", "421823980");
+    if (emailHtmlTemplate.includes("<loginDetails>")) {
+      emailContainsLoginDetails = true;
+      emailHtmlTemplate = emailHtmlTemplate.replace(/<loginDetails>/g, "{{loginDetails}}");
+      fieldsToFetch.push(conceptIds.signInMechanism, conceptIds.authenticationPhone, conceptIds.authenticationEmail);
+    }
   }
 
   const limit = 1000; // SendGrid has a batch limit of 1000
@@ -185,9 +198,10 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
   let hasNext = true;
   let fetchedDataArray = [];
   let emailCount = 0;
+  let smsCount = 0;
 
   while (hasNext) {
-    ({fetchedDataArray, hasNext} = await getParticipantsForNotificationsBQ({
+    ({ fetchedDataArray, hasNext } = await getParticipantsForNotificationsBQ({
       notificationSpecId,
       conditions,
       cutoffTimeStr,
@@ -197,64 +211,21 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
       offset,
     }));
     if (fetchedDataArray.length === 0) break;
-    let participantTokenArray = [];
-    let notificationRecordArray = [];
-    let personalizationArray = [];
+    // let participantTokenArray = []; // todo: remove this.
+    let emailRecordArray = [];
+    let emailPersonalizationArray = [];
+    let smsRecordArray = [];
+    let smsDataArray = [];
 
     for (const fetchedData of fetchedDataArray) {
-      if (!fetchedData[emailField]) continue;
-      let notificationBody = htmlTemplate;
-      let substitutions = {};
-      if (htmlContainsLoginDetails) {
-        let loginDetails = "";
+      if (!fetchedData[emailField] && !fetchedData[phoneField]) continue;
 
-        if (fetchedData[995036844] === "phone" && fetchedData[348474836]) {
-          loginDetails = redactPhoneLoginInfo(fetchedData[348474836]);
-        } else if (fetchedData[995036844] === "password" && fetchedData[421823980]) {
-          loginDetails = redactEmailLoginInfo(fetchedData[421823980]);
-        } else if (fetchedData[995036844] === 'passwordAndPhone' && fetchedData[421823980] && fetchedData[348474836]) {
-          loginDetails = redactEmailLoginInfo(fetchedData[421823980]) + " or " + redactPhoneLoginInfo(fetchedData[348474836]);
-        } else {
-          console.log("No login details found for participant with token:", fetchedData.token);
-          continue;
-        }
-
-        substitutions.loginDetails = loginDetails;
-        notificationBody = notificationBody.replace("{{loginDetails}}", loginDetails);
-      }
-
+      const recordId = uuid();
+      const currDateTime = new Date().toISOString();
       const firstName = fetchedData[preferredNameField] || fetchedData[firstNameField];
-      substitutions.firstName = firstName;
-      notificationBody = notificationBody.replace("{{firstName}}", firstName);
-
-      if (htmlContainsToken) {
-        substitutions.token = fetchedData.token;
-        notificationBody = notificationBody.replace("{{token}}", fetchedData.token);
-      }
-
-      const notification_id = uuid();
-      personalizationArray.push({
-        to: fetchedData[emailField],
-        substitutions,
-        custom_args: {
-          connect_id: fetchedData.Connect_ID,
-          token: fetchedData.token,
-          notification_id,
-          gcloud_project: process.env.GCLOUD_PROJECT
-        },
-      });
-      participantTokenArray.push(fetchedData.token);
-
-      const notificationRecord = {
+      const recordCommonData = {
         notificationSpecificationsID: notificationSpecId,
-        id: notification_id,
-        notificationType: notificationSpec.notificationType[0],
-        email: fetchedData[emailField],
-        notification: {
-          title: messageSubject,
-          body: notificationBody,
-          time: new Date().toISOString(),
-        },
+        id: recordId,
         attempt: notificationSpec.attempt,
         category: notificationSpec.category,
         token: fetchedData.token,
@@ -262,43 +233,131 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
         read: false,
       };
 
-      notificationRecordArray.push(notificationRecord);
+      if (emailHtmlTemplate) {
+        let substitutions = { firstName };
+        let currEmailBody = emailHtmlTemplate.replace(/{{firstName}}/g, firstName);
+
+        if (emailContainsLoginDetails) {
+          let loginDetails = "";
+          if (fetchedData[conceptIds.signInMechanism] === "phone" && fetchedData[conceptIds.authenticationPhone]) {
+            loginDetails = redactPhoneLoginInfo(fetchedData[conceptIds.authenticationPhone]);
+          } else if (fetchedData[conceptIds.signInMechanism] === "password" && fetchedData[conceptIds.authenticationEmail]) {
+            loginDetails = redactEmailLoginInfo(fetchedData[conceptIds.authenticationEmail]);
+          } else if (
+            fetchedData[conceptIds.signInMechanism] === "passwordAndPhone" &&
+            fetchedData[conceptIds.authenticationEmail] &&
+            fetchedData[conceptIds.authenticationPhone]
+          ) {
+            loginDetails =
+              redactEmailLoginInfo(fetchedData[conceptIds.authenticationEmail]) + " or " + redactPhoneLoginInfo(fetchedData[conceptIds.authenticationPhone]);
+          } else {
+            console.log("No login details found for participant with token:", fetchedData.token);
+            continue;
+          }
+
+          substitutions.loginDetails = loginDetails;
+          currEmailBody = currEmailBody.replace(/{{loginDetails}}/g, loginDetails);
+        }
+
+        if (emailContainsToken) {
+          substitutions.token = fetchedData.token;
+          currEmailBody = currEmailBody.replace(/{{token}}/g, fetchedData.token);
+        }
+
+        emailPersonalizationArray.push({
+          to: fetchedData[emailField],
+          substitutions,
+          custom_args: {
+            connect_id: fetchedData.Connect_ID,
+            token: fetchedData.token,
+            notification_id: recordId,
+            gcloud_project: process.env.GCLOUD_PROJECT,
+          },
+        });
+        // participantTokenArray.push(fetchedData.token); // todo: remove this.
+
+        const currEmailRecord = {
+          ...recordCommonData,
+          notificationType: "email",
+          email: fetchedData[emailField],
+          notification: {
+            title: emailSubject,
+            body: currEmailBody,
+            time: currDateTime,
+          },
+        };
+        emailRecordArray.push(currEmailRecord);
+      }
+
+      if (smsBody && fetchedData[conceptIds.canWeText] === conceptIds.yes) {
+        // todo: participant agrees to receive sms
+        const currSmsBody = smsBody.replace(/<firstName>/g, firstName);
+        const currSmsRecord = {
+          ...recordCommonData,
+          notificationType: "sms",
+          phone: fetchedData[phoneField],
+          notification: {
+            body: currSmsBody,
+            time: currDateTime,
+          },
+        };
+        smsRecordArray.push(currSmsRecord);
+        smsDataArray.push({ body: currSmsBody, to: fetchedData[phoneField]});
+      }
+    }
+ 
+    if (emailPersonalizationArray.length === 0 && smsDataArray.length === 0) continue;
+
+    if (emailPersonalizationArray.length > 0) {
+      const emailBatch = {
+        from: {
+          name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
+          email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
+        },
+        subject: emailSubject,
+        html: emailHtmlTemplate,
+        personalizations: emailPersonalizationArray,
+      };
+
+      try {
+        await sgMail.send(emailBatch);
+      } catch (error) {
+        console.error(`Error sending emails for ${notificationSpecId}(${emailSubject}).`, error);
+        break;
+      }
+      emailCount += emailRecordArray.length;
     }
 
-    if (personalizationArray.length === 0) continue;
-
-    const msgBatch = {
-      from: {
-        name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
-        email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
-      },
-      subject: messageSubject,
-      html: htmlTemplate,
-      personalizations: personalizationArray,
-    };
-
-    try {
-      await sgMail.send(msgBatch);
-    } catch (error) {
-      console.error(`Error sending emails for ${notificationSpecId}(${messageSubject}).`, error);
-      break;
+    if (smsDataArray.length > 0) {
+      try {
+         await sendSmsBatch(smsDataArray);
+      } catch (error) {
+        console.error(`Error sending sms for ${notificationSpecId}(${emailSubject}).`, error);
+        break;
+      }
+     
+      smsCount += smsDataArray.length;
     }
 
-    emailCount += personalizationArray.length;
-
     try {
-      await Promise.all([
-        saveNotificationBatch(notificationRecordArray),
-        saveSpecIdsToParticipants(notificationSpecId, participantTokenArray),
-      ]);
+      await saveNotificationBatch([...emailRecordArray, ...smsRecordArray]);
+      // await Promise.all([
+      //   saveNotificationBatch([...emailRecordArray, ...smsRecordArray]),
+      //   // saveSpecIdsToParticipants(notificationSpecId, participantTokenArray), // todo: remove this.
+      // ]);
     } catch (error) {
-      console.error(`Error saving data for ${notificationSpecId}(${messageSubject}).`, error);
+      console.error(`Error saving data for ${notificationSpecId}(${emailSubject}).`, error);
       break;
     }
 
     offset += limit;
   }
-  console.log(`Finished notification spec: ${notificationSpecId}(${messageSubject}), emails sent: ${emailCount}`);
+
+  if (emailCount === 0 && smsCount === 0) {
+    console.log(`Finished notification spec: ${notificationSpecId}(${emailSubject}). No emails or sms sent.`);
+  } else {
+    console.log(`Finished notification spec: ${notificationSpecId}(${emailSubject}), emails sent: ${emailCount}, sms sent: ${smsCount}`);
+  }
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {

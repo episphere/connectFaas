@@ -61,33 +61,26 @@ async function getParticipantsForNotificationsBQ({
     bqConditionArray.push(`${bqTimeField} <= "${cutoffTimeStr}"`);
   }
 
-  const queryStrCommon = `SELECT ${
-    bqFieldArray.length === 0 ? "*" : bqFieldArray.join(", ")
-  } FROM \`Connect.participants\` WHERE ${bqConditionArray.join(" AND ")}`;
-
   try {
-    const queryStr = `${queryStrCommon} AND query.notificationSpecIdsUsed.${bqNotificationSpecId} IS NOT true LIMIT ${limit} OFFSET ${offset}`;
+    const queryStr = `SELECT ${bqFieldArray.length === 0 ? "*" : bqFieldArray.join(", ")}
+    FROM \`Connect.participants\` 
+    LEFT JOIN (
+      SELECT DISTINCT token, TRUE AS isSent
+      FROM
+        \`Connect.notifications\`
+      WHERE
+        notificationSpecificationsID = "${bqNotificationSpecId}")
+    USING(token)
+    WHERE ${bqConditionArray.length === 0 ? "1=1" : bqConditionArray.join(" AND ")}
+    AND isSent IS NOT TRUE LIMIT ${limit} OFFSET ${offset}`;
+
     const [rows] = await bigquery.query(queryStr);
     if (rows.length === 0) return result;
 
     result.hasNext = rows.length === limit;
     result.fetchedDataArray = rows.map(convertToFirestoreData);
   } catch (error) {
-    // Error occurs on missing field(s) in BQ table.
-    if (error.message.includes(`Field name ${bqNotificationSpecId} does not exist`)) {
-      try {
-        const queryStr = `${queryStrCommon} LIMIT ${limit} OFFSET ${offset}`;
-        const [rows] = await bigquery.query(queryStr);
-        if (rows.length === 0) return result;
-
-        result.hasNext = rows.length === limit;
-        result.fetchedDataArray = rows.map(convertToFirestoreData);
-      } catch (err) {
-        console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, err);
-      }
-    } else {
-      console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, error);
-    }
+    console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, error);
   }
 
   return result;

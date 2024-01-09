@@ -1,6 +1,5 @@
 module.exports = {
-
-    siteLoginMap : {
+    siteLoginMap: {
         kaiserPermanenteGeorgia: 327912200,
         sanfordHealth: 657167265,
         universityOfChicagoMedicine: 809703864,
@@ -198,6 +197,9 @@ module.exports = {
     userProfileHistory: 569151507,
     userProfileHistoryTimestamp: 371303487,
     profileChangeRequestedBy: 611005658,
+    authenticationEmail: 421823980,
+    authenticationPhone: 348474836,
+    signInMechanism: 995036844,
 
     // Primary cancer site IDs. participant profile -> occurrences {object} (637153953) -> primary site of cancer (740819233). Null until participant diagnosed with cancer.
     cancerOccurrence: 637153953,
