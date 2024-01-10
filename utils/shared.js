@@ -1286,6 +1286,31 @@ const updateUserProfileHistory = (dataObj, existingDocData, siteCodes) => {
     return userProfileHistory;
 }
 
+/**
+ * Return selected Concept ID fields for each object in a list of data objects.
+ * Fields with nested data include all sub-data.
+ * @param {array<object>} dataObjArray - the array of data objects to filter.
+ * @param {array<string>} selectedFieldsArray - the array of concept ID fields to return. Top-level (non-nested) fields only.
+ * @returns {array<object>} - the filtered array of data objects.
+ */
+const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
+    
+    const handleNestedData = (obj, path) => {
+        return path.split('.').reduce((currentObj, key) => currentObj ? currentObj[key] : undefined, obj);
+    }
+
+    return dataObjArray.map(dataObj => {
+        const filteredData = { 'Connect_ID': dataObj['Connect_ID'] };        
+        for (const field of selectedFieldsArray) {
+            const fieldValue = handleNestedData(dataObj, field);
+            if (fieldValue !== undefined) {
+                filteredData[field] = fieldValue;
+            }
+        }
+        return filteredData;
+    });
+}
+
 
 module.exports = {
     getResponseJSON,
@@ -1343,4 +1368,5 @@ module.exports = {
     checkForQueryFields,
     updateQueryListFields,
     updateUserProfileHistory,
+    filterSelectedFields,
 };
