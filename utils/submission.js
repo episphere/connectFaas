@@ -128,80 +128,77 @@ const recruitSubmit = async (req, res, uid) => {
 }
 
 const submitSocial = async (req, res, uid) => {
-    if(req.method !== 'POST') {
+    
+    if (req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
 
     const data = req.body;
-    if(Object.keys(data).length <= 0){
+    const ssnNineDigits = data['ssnNineDigits'];
+    const ssnFourDigits = data['ssnFourDigits'];
+
+    delete data['ssnNineDigits'];
+    delete data['ssnFourDigits'];
+
+    if (Object.keys(data).length <= 0){
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
 
-    if (!data['ssnNineDigits'] && !data['ssnFourDigits']) {
+    if (!ssnNineDigits && !ssnFourDigits) {
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
 
-    // SSN 9 digits
-    if(data['ssnNineDigits']) {
-        const { encryptAsymmetric } = require('./encrypt');
-        const { getTokenForParticipant, storeSSN } = require('./firestore');
+    const { encryptAsymmetric } = require('./encrypt');
+    const { getTokenForParticipant, storeSSN } = require('./firestore');
 
-        const ssn = data['ssnNineDigits'];
-        const ssnObj = {};
+    const ssnObj = {};
 
-        ssnObj[fieldMapping.ssnFullValue] = await encryptAsymmetric(ssn.replace(/-/g, ''));
-        ssnObj[fieldMapping.ssnQcStatus] = fieldMapping.ssnNoCheckRan;
-        ssnObj['uid'] = uid;
-        ssnObj['token'] = await getTokenForParticipant(uid);
+    ssnNineDigits ? ssnObj[fieldMapping.ssnFullValue] = await encryptAsymmetric(ssnNineDigits.replace(/-/g, '')) : null;
+    ssnFourDigits ? ssnObj[fieldMapping.ssnPartialValue] = await encryptAsymmetric(ssnFourDigits.replace(/-/g, '')) : null;
 
-        let ssnResponse = storeSSN(ssnObj);
-        if(ssnResponse instanceof Error){
-            return res.status(500).json(getResponseJSON(ssnResponse.message, 500));
+    ssnObj[fieldMapping.ssnQcStatus] = fieldMapping.ssnNoCheckRan;
+    ssnObj['uid'] = uid;
+    ssnObj['token'] = await getTokenForParticipant(uid);
+
+    try {
+        const response = storeSSN(ssnObj);
+
+        if(!response) {
+            return res.status(500).json(getResponseJSON("Can't add/update data!", 500));
         }
+    }
+    catch (error) {
+        return res.status(500).json(getResponseJSON(error.message, 500));
+    }
 
+    if (ssnNineDigits) {
         data[fieldMapping.ssnFullGiven] = 353358909;
         data[fieldMapping.ssnFullGivenTime] = new Date().toISOString();
-
-        delete data['ssnNineDigits'];
+    
     }
 
-    // SSN last 4 digits
-    if(data['ssnFourDigits']) { 
-        const { encryptAsymmetric } = require('./encrypt');
-        const { getTokenForParticipant, storeSSN } = require('./firestore');
-
-        const ssn = data['ssnFourDigits'];
-        const ssnObj = {};
-
-        ssnObj[fieldMapping.ssnPartialValue] = await encryptAsymmetric(ssn.replace(/-/g, ''));
-        ssnObj[fieldMapping.ssnQcStatus] = fieldMapping.ssnNoCheckRan;
-        ssnObj['uid'] = uid;
-        ssnObj['token'] = await getTokenForParticipant(uid);
-
-        let ssnResponse = storeSSN(ssnObj);
-        if(ssnResponse instanceof Error){
-            return res.status(500).json(getResponseJSON(ssnResponse.message, 500));
-        }
-
+    if (ssnFourDigits) {
         data[fieldMapping.ssnPartialGiven] = 353358909;
         data[fieldMapping.ssnPartialGivenTime] = new Date().toISOString();
-
-        delete data['ssnFourDigits'];
     }
 
     data[fieldMapping.ssnCompleteTs] = new Date().toISOString();
     data[fieldMapping.ssnStatusFlag] = 231311385;
 
-    const { updateResponse } = require('./firestore');
-    const response = await updateResponse(data, uid);
+    
+    try {
+        const { updateResponse } = require('./firestore');
+        const response = await updateResponse(data, uid);
 
-    if(response instanceof Error){
-        return res.status(500).json(getResponseJSON(response.message, 500));
+        if (!response) {
+            return res.status(500).json(getResponseJSON("Can't add/update data!", 500));
+        }
+
+        return res.status(200).json(getResponseJSON('Data stored successfully!', 200));
     }
-    if(!response) {
-        return res.status(500).json(getResponseJSON("Can't add/update data!", 500));
+    catch (error) {
+        return res.status(500).json(getResponseJSON(error.message, 500));
     }
-    return res.status(200).json(getResponseJSON('Data stored successfully!', 200));
 }
 
 const getParticipants = async (req, res, authObj) => {
