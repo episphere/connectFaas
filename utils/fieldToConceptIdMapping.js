@@ -169,7 +169,7 @@ module.exports = {
      collectionCardFlag: 137401245,
      collectionAddtnlNotes: 260133861,
 
-     // participant deceased data
+     // EMR participant deceased data
     participantDeceased: 857217152,
     participantDeceasedNORC: 987563196,
     participantDeceasedTimestamp: 772354119,
@@ -198,6 +198,8 @@ module.exports = {
     userProfileHistory: 569151507,
     userProfileHistoryTimestamp: 371303487,
     profileChangeRequestedBy: 611005658,
+    participationStatus: 912301837,
+    participationStatusDeceased: 618686157,
 
     // cancer occurrences
     occurrenceNumber: 793981056,
