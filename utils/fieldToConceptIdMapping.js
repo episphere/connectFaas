@@ -199,9 +199,13 @@ module.exports = {
     userProfileHistoryTimestamp: 371303487,
     profileChangeRequestedBy: 611005658,
 
-    // Primary cancer site IDs. participant profile -> occurrences {object} (637153953) -> primary site of cancer (740819233). Null until participant diagnosed with cancer.
+    // cancer occurrences
+    occurrenceNumber: 793981056,
     cancerOccurrence: 637153953,
+    cancerOccurrenceTimestamp: 345545422,
+    isCancerDiagnosis: 525972260,
     primaryCancerSite: 740819233,
+    preliminaryStageInformation: 457270069,
     cancerSites: {
         anal: 939782495,
         bladder: 135725957,

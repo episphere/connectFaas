@@ -3001,6 +3001,34 @@ const processEventWebhook = async (event) => {
     }
 };
 
+const getParticipantCancerOccurrences = async (participantToken) => {
+    try {
+        const snapshot = await db.collection('cancerOccurrence').where('token', '==', participantToken).get();
+        return snapshot.docs.map(doc => doc.data());
+    } catch (error) {
+        throw new Error("Error fetching cancer occurrences.", { cause: error });
+    }
+}
+
+/**
+ * Write cancer occurrence object data to Firestore. 
+ * @param {array<object>} cancerOccurrenceArray - Array of cancer occurrence objects.
+ */
+const writeCancerOccurrences = async (cancerOccurrenceArray) => {
+    try {
+        const batch = db.batch();
+        for (const occurrence of cancerOccurrenceArray) {
+            const docRef = db.collection('cancerOccurrence').doc();
+            batch.set(docRef, occurrence);
+        }
+        await batch.commit();
+    } catch (error) {
+        throw new Error("Error writing cancer occurrences.", { cause: error });
+    }
+}
+
+
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3118,5 +3146,7 @@ module.exports = {
     eligibleParticipantsForKitAssignment,
     processEventWebhook,
     getSpecimenAndParticipant,
-    queryKitsByReceivedDate
+    queryKitsByReceivedDate,
+    getParticipantCancerOccurrences,
+    writeCancerOccurrences,
 }
