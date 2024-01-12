@@ -1324,6 +1324,39 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
 
 }
 
+/**
+ * Collection ID editing uses the specimen collection doc and the participant doc when an unfinalized collection's tube details are edited.
+ * @param {string} collectionId - the collectionId of the specimen to retrieve.
+ * @param {string} siteCode - Site code of the site that collected the specimen.
+ * @param {boolean} isBPTL - Is this a BPTL call? If yes, don't apply the healthCareProvider filter.
+ * @returns {object, object} - the specimenCollection and the attached participant. Used in Biospecimen Collection editing screen from Collection ID search.
+ */
+const getSpecimenAndParticipant = async (collectionId, siteCode, isBPTL) => {
+    try {
+        // Fetch the specimen
+        let query = db.collection('biospecimen').where(fieldMapping.collectionId.toString(), '==', collectionId);
+        if (!isBPTL) query = query.where(fieldMapping.healthCareProvider.toString(), '==', siteCode);
+        const specimenSnapshot = await query.get();
+
+        if (specimenSnapshot.size !== 1) {
+            throw new Error('Couldn\'t find matching specimen document.');
+        }
+        const specimenData = specimenSnapshot.docs[0].data();
+
+        // Use the Connect_ID in the specimen doc to fetch the participant
+        const participantSnapshot = await db.collection('participants').where('Connect_ID', '==', specimenData['Connect_ID']).get();
+
+        if (participantSnapshot.size !== 1) {
+            throw new Error('Couldn\'t find matching participant document.');
+        }
+        const participantData = participantSnapshot.docs[0].data();
+
+        return { specimenData, participantData };
+    } catch (error) {
+        throw new Error(error, { cause: error });
+    }
+}
+
 const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).get();
     if (snapshot.size === 1) {
@@ -2973,6 +3006,34 @@ const processEventWebhook = async (event) => {
     }
 };
 
+const getParticipantCancerOccurrences = async (participantToken) => {
+    try {
+        const snapshot = await db.collection('cancerOccurrence').where('token', '==', participantToken).get();
+        return snapshot.docs.map(doc => doc.data());
+    } catch (error) {
+        throw new Error("Error fetching cancer occurrences.", { cause: error });
+    }
+}
+
+/**
+ * Write cancer occurrence object data to Firestore. 
+ * @param {array<object>} cancerOccurrenceArray - Array of cancer occurrence objects.
+ */
+const writeCancerOccurrences = async (cancerOccurrenceArray) => {
+    try {
+        const batch = db.batch();
+        for (const occurrence of cancerOccurrenceArray) {
+            const docRef = db.collection('cancerOccurrence').doc();
+            batch.set(docRef, occurrence);
+        }
+        await batch.commit();
+    } catch (error) {
+        throw new Error("Error writing cancer occurrences.", { cause: error });
+    }
+}
+
+
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3089,5 +3150,8 @@ module.exports = {
     addKitStatusToParticipant,
     eligibleParticipantsForKitAssignment,
     processEventWebhook,
-    queryKitsByReceivedDate
+    getSpecimenAndParticipant,
+    queryKitsByReceivedDate,
+    getParticipantCancerOccurrences,
+    writeCancerOccurrences,
 }
