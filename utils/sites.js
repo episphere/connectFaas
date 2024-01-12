@@ -295,6 +295,7 @@ const updateParticipantData = async (req, res, authObj) => {
         // Ignore and delete deceased data if participantDeceased === no. There is no error case (data already validated).
         if (flatUpdateObj[fieldMapping.participantDeceased] === fieldMapping.yes) {
             flatUpdateObj[fieldMapping.participantDeceasedNORC] = fieldMapping.yes;
+            flatUpdateObj[fieldMapping.participationStatus] = fieldMapping.participationStatusDeceased;
         } else if (flatUpdateObj[fieldMapping.participantDeceased] === fieldMapping.no) {
             delete flatUpdateObj[fieldMapping.participantDeceased];
             delete flatUpdateObj[fieldMapping.participantDeceasedTimestamp];
