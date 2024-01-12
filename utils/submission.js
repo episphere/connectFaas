@@ -233,18 +233,20 @@ const getParticipants = async (req, res, authObj) => {
         }
     }
     else if(req.query.type === 'filter') {
+        const filterDeprecationWarning = "IMPORTANT: this type == 'filter' API is deprecated. Please use the new 'getFilteredParticipants' API. " + 
+            "Ex: .../getFilteredParticipants?firstName=John&lastName=Doe | API notes & documentation: https://github.com/episphere/connect/issues/817#issuecomment-1883893946";
         const queries = req.query;
         delete queries.type;
-        if(Object.keys(queries).length === 0) return res.status(400).json(getResponseJSON('Please include parameters to filter data.', 400));
+        if(Object.keys(queries).length === 0) return res.status(400).json(getResponseJSON(`Please include parameters to filter data. ${filterDeprecationWarning}`, 400));
         const { filterData } = require('./shared');
         let result = await filterData(queries, siteCodes, isParent);
         if(result instanceof Error){
-            return res.status(500).json(getResponseJSON(result.message, 500));
+            return res.status(500).json(getResponseJSON(`${filterDeprecationWarning} ${result.message}`, 500));
         }
         // Remove module data from participant records.
         if(result.length > 0) result = removeRestrictedFields(result, restriectedFields, isParent);
         
-        return res.status(200).json({data: result, code: 200})
+        return res.status(200).json({data: result, message: filterDeprecationWarning, code: 200})
     }
     else if (req.query.type === 'refusalswithdrawals') {
         
@@ -299,6 +301,87 @@ const removeRestrictedFields = (data, restriectedFields, isParent) => {
         })
     }
     else return data;
+}
+
+/**
+ * Get participants based on the provided query parameters. Supports filtering by 'firstName', 'lastName', 'email', 'phone', 'dob', 'connectId', 'token', 'studyId', 'checkedIn'.
+ * selectedFields is an optional array of concept IDs that limits returned data to the specified concept IDs. Nested data can be quieried with dot notation. Data nested under selectedField is returned.
+ * Ex: 'selectedFields=399159511,996038075' returns firstName & lastName. Connect ID is always returned.
+ * @param {object} req - The request object.
+ * @param {object} res - The response object.
+ * @param {object} authObj - Optional. Provided on access from SMDB or Biospecimen. If provided, the requester is a parent entity and the authObj contains the site codes.
+ * @returns {array<object>} - A filtered array of participant data objects.
+ */
+const getFilteredParticipants = async (req, res, authObj) => {
+    logIPAdddress(req);
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+    if(req.method !== 'GET') return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+
+    let obj = {};
+    if(authObj) {
+        obj = authObj;
+    } else {
+        const { APIAuthorization } = require('./shared');
+        const authorized = await APIAuthorization(req);
+        if(authorized instanceof Error){
+            return res.status(500).json(getResponseJSON(authorized.message, 500));
+        }
+    
+        if(!authorized){
+            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+        }
+    
+        const { isParentEntity } = require('./shared');
+        obj = await isParentEntity(authorized);
+    }
+    const isParent = obj.isParent;
+    const siteCodes = obj.siteCodes;
+    
+    if (req.query.type) return res.status(404).json(getResponseJSON(`The 'type' parameter is not used in this API. ${helpMessage}`, 400));
+    if (req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
+
+    const filterableParams = ['firstName', 'lastName', 'email', 'phone', 'dob', 'connectId', 'token', 'studyId', 'checkedIn'];
+    const helpMessage = "Filterable params include: 'firstName', 'lastName', 'email', 'phone', 'dob', 'connectId', 'token', 'studyId', and 'checkedIn'. The optional 'selectedFields' " +
+    "param narrows results to specific fields. Omit selectedFields to return all data. Use dot notation to query nested data with selectedFields. Ex: 'selectedFields=399159511,996038075,130371375.266600170' " +
+    "returns firstName, lastName, and data nested in payment round -> baseline. Connect ID is always returned. Typos are ignored. | API notes & documentation: https://github.com/episphere/connect/issues/817#issuecomment-1883893946"
+
+    const queries = req.query;
+
+    // Separate selectedFields from filter queries. These are handled separately, after the fetch operation.
+    let selectedFields = [];
+    if (queries.selectedFields) {
+        selectedFields = queries.selectedFields.split(',');
+        delete queries.selectedFields;
+    }
+
+    if (Object.keys(queries).length === 0) return res.status(400).json(getResponseJSON(`Please include parameters to filter data. ${helpMessage}`, 400));
+    if (!Object.keys(queries).every(param => filterableParams.includes(param))) return res.status(400).json(getResponseJSON(`Invalid filter parameter. ${helpMessage}`, 400));
+
+    // Future extension: the onlyActive and onlyVerified values may vary depending on the requester once integrated with SMDB and Biospecimen.
+    queries['onlyVerified'] = true;
+    queries['onlyActive'] = true;
+
+    try {
+        const { filterDB } = require('./firestore');
+        const { filterSelectedFields } = require('./shared');
+
+        let foundParticipantList = await filterDB(queries, siteCodes, isParent);
+
+        if(foundParticipantList instanceof Error){
+            return res.status(500).json(getResponseJSON(`${foundParticipantList.message} ${helpMessage}`, 500));
+        }
+
+        // Filter selected fields if selectedFields param is present. Otherwise, return all data.
+        if(selectedFields.length > 0 && foundParticipantList.length > 0) {
+            foundParticipantList = filterSelectedFields(foundParticipantList, selectedFields);
+        }
+
+        return res.status(200).json({data: foundParticipantList, code: 200});
+    } catch (error) {
+        return res.status(500).json({ data: [], message: `Error in getFilteredParticipants. ${error.message} | ${helpMessage}`, code: 500 });
+    }
 }
 
 const identifyParticipant = async (req, res, site) => {
@@ -456,6 +539,7 @@ const getUserCollections = async (req, res, uid) => {
 module.exports = {
     submit,
     recruitSubmit,
+    getFilteredParticipants,
     getParticipants,
     identifyParticipant,
     getUserSurveys,

@@ -1,5 +1,5 @@
 const { getToken } = require('./utils/validation');
-const { getParticipants, identifyParticipant } = require('./utils/submission');
+const { getFilteredParticipants, getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
 const { notificationHandler } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
@@ -18,6 +18,8 @@ exports.incentiveCompleted = incentiveCompleted;
 exports.participantsEligibleForIncentive = eligibleForIncentive;
 
 exports.getParticipantToken = getToken;
+
+exports.getFilteredParticipants = getFilteredParticipants;
 
 exports.getParticipants = getParticipants;
 
