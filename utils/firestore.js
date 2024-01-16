@@ -2101,10 +2101,9 @@ const queryTotalAddressesToPrint = async () => {
         const snapShot = await db.collection('participants')
         .where('747006172', '==', 104430631) // withdraw consent
         .where('987563196', '==', 104430631) // deceased
-       //.where('827220437', '==', 125001209) // KPCO
         .where('685002411.277479354', '==', 104430631) // mouthwash refusal
         .where('173836415.266600170.156605577', '==', 353358909) // Blood or Urine Collected
-        .where('173836415.266600170.740582332', '>=', '2023-10-01T00:00:00.000Z') // Date/timestamp for Blood or Urine Collected
+        .where('173836415.266600170.740582332', '>=', '2024-01-01T00:00:00.000Z') // Date/timestamp for Blood or Urine Collected
         .orderBy('173836415.266600170.740582332', 'desc')
         .get();
         return snapShot.docs.map(document => processParticipantData(document.data(), true));
