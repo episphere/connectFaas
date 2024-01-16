@@ -3176,5 +3176,8 @@ module.exports = {
     eligibleParticipantsForKitAssignment,
     processEventWebhook,
     getSpecimenAndParticipant,
-    queryKitsByReceivedDate
+    queryKitsByReceivedDate,
+    getParticipantCancerOccurrences,
+    writeCancerOccurrences,
+    updateParticipantCorrection
 }
