@@ -13,7 +13,7 @@ const generateToken = async (req, res, uid) => {
     if(userAlreadyExists){
         return res.status(401).json(getResponseJSON('Account already exists', 401));
     }
-    const uuid = require('uuid');
+    const { v4: uuid } = require('uuid');
     const { defaultFlags, defaultStateFlags } = require('./shared');
     const obj = {
         state: { 
@@ -126,7 +126,7 @@ const getToken = async (req, res) => {
 
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request!', 400));
     if(req.body.data.length > 0){
-        const uuid = require('uuid');
+        const { v4: uuid } = require('uuid');
         let responseArray = [];
         if(req.body.data.length > 999) return res.status(400).json(getResponseJSON('Bad request!', 400));
         const data = req.body.data;

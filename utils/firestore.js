@@ -1864,7 +1864,7 @@ const notificationAlreadySent = async (token, notificationSpecificationsID) => {
 const sendClientEmail = async (data) => {
 
     const { sendEmail } = require('./notifications');
-    const uuid  = require('uuid');
+    const { v4: uuid }  = require('uuid');
 
     const reminder = {
         id: uuid(),
@@ -2460,7 +2460,7 @@ const getSiteMostRecentBoxId = async (siteCode) => {
 
 const addPrintAddressesParticipants = async (data) => {
     try {
-        const uuid = require('uuid');
+        const { v4: uuid } = require('uuid');
         const currentDate = new Date().toISOString();
         const batch = db.batch();
         await data.map(async (i) => {

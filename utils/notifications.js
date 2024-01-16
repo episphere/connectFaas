@@ -1,4 +1,4 @@
-const uuid = require("uuid");
+const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo} = require("./shared");
@@ -324,7 +324,7 @@ const storeNotificationSchema = async (req, res, authObj) => {
         await updateNotificationSchema(docID, data);
     }
     else {
-        const uuid = require('uuid')
+        const { v4: uuid } = require('uuid')
         data['id'] = uuid();
         const { storeNewNotificationSchema } = require('./firestore');
         data['createdAt'] = new Date().toISOString();
