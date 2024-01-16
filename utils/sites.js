@@ -1,6 +1,6 @@
 const rules = require("../updateParticipantData.json");
 const submitRules = require("../submitParticipantData.json");
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submitParticipantsData = async (req, res, site) => {
@@ -172,8 +172,8 @@ const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
 }
 
 const updateParticipantData = async (req, res, authObj) => {
-    const { getParticipantData, updateParticipantData } = require('./firestore');
-    const { checkForQueryFields, initializeTimestamps, userProfileHistoryKeys } = require('./shared');
+    const { getParticipantData, updateParticipantData, writeCancerOccurrences } = require('./firestore');
+    const { checkForQueryFields, flattenObject, initializeTimestamps, userProfileHistoryKeys } = require('./shared');
     const { checkDerivedVariables } = require('./validation');
 
     logIPAdddress(req);
@@ -203,16 +203,12 @@ const updateParticipantData = async (req, res, authObj) => {
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
 
-    console.log(req.body.data);
-
     if(req.body.data === undefined) return res.status(400).json(getResponseJSON('Bad request. Data is not defined in request body.', 400));
     if(!Array.isArray(req.body.data)) return res.status(400).json(getResponseJSON('Bad request. Data must be an array.', 400));
     if(req.body.data.length === undefined || req.body.data.length < 1) return res.status(400).json(getResponseJSON('Bad request. Data array does not have any elements.', 400));
     if(req.body.data.length > 100) return res.status(400).json(getResponseJSON('Bad request. Data contains more than acceptable limit of 100 records.', 400));
 
     const dataArray = req.body.data;
-    const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid'];
-
     let responseArray = [];
     let error = false;
 
@@ -235,43 +231,22 @@ const updateParticipantData = async (req, res, authObj) => {
         const docID = record.id;
         const docData = record.data;
 
-        const dataHasBeenDestroyed =
-            fieldMapping.participantMap.dataHasBeenDestroyed.toString();
+        // Reject if participant has opted for data descruction.
+        const dataHasBeenDestroyed = fieldMapping.participantMap.dataHasBeenDestroyed.toString();
         if (docData[dataHasBeenDestroyed] === fieldMapping.yes) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Data Destroyed'}});
             continue;
         }
 
-        const flat = (obj, att, attribute) => {
-            for(let k in obj) {
-                if(typeof(obj[k]) === 'object' && !Array.isArray(obj[k])) flat(obj[k], att, attribute ? `${attribute}.${k}`: k)
-                else {
-                    if(att === 'newData' && primaryIdentifiers.indexOf(attribute ? `${attribute}.${k}`: k) !== -1) continue;
-                    flattened[att][attribute ? `${attribute}.${k}`: k] = obj[k]
-                }
-            }
+        // Reject if query key is included. Those values are derived.
+        if (dataObj['query']) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': '\'Query\' variables not accepted. The expected values will be derived automatically.'}});
+                continue;
         }
 
-        let updatedData = {};
-        let flattened = {
-            newData: {},
-            docData: {}
-        };
-
-        flat(docData, 'docData');
-
-        for(let key in dataObj) {
-        
-            if(primaryIdentifiers.indexOf(key) !== -1) continue;
-
-            if(typeof(dataObj[key]) === 'object' && !Array.isArray(dataObj[key])) flat(dataObj[key], 'newData', key);
-            else flattened['newData'][key] = dataObj[key];
-
-            updatedData = {...updatedData, ...flattened.newData}
-        }
-
-        // Handle Site Notifications
+        // Handle site notifications
         if(dataObj['831041022'] && dataObj['747006172'] && dataObj['773707518'] && dataObj['831041022'] === 353358909 && dataObj['747006172'] === 353358909 && dataObj['773707518'] === 353358909){ // Data Destruction
             await siteNotificationsHandler(docData['Connect_ID'], '831041022', docData['827220437'], obj);
         }
@@ -284,63 +259,90 @@ const updateParticipantData = async (req, res, authObj) => {
         else if (dataObj['987563196'] && dataObj['987563196'] === 353358909) {
             await siteNotificationsHandler(docData['Connect_ID'], '987563196', docData['827220437'], obj);
         }
+        
+        // Flatten dataObj and docData for comparison & validation with JSON file.
+        const flatUpdateObj = flattenObject(dataObj);
+        const flatDocData = flattenObject(docData);
 
+        // Delete primary identifiers from flatUpdateObj if they exist. There is no reason to update these through this API.
+        const primaryIdentifiers = ['token', 'pin', 'Connect_ID', 'state.uid'];
+        for (const identifier of primaryIdentifiers) {
+            delete flatUpdateObj[identifier];
+        }
+        
+        // Note: Data is validated in this function. Anything beyond this can be treated as valid.
+        // Validate incoming flatDataObj data. flatDocData is only used to check the 'mustExist' property in some rules.
         if(!authObj) {
-            const errors = qc(updatedData, flattened.docData, rules);
+            const errors = flatValidationHandler(flatUpdateObj, flatDocData, rules, validateUpdateParticipantData);
             if(errors.length !== 0) {
                 error = true;
                 responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': errors}});
                 continue;
             }
         }
-
-        for(let key in updatedData) {
-            if(initializeTimestamps[key]) {
-                if(initializeTimestamps[key].value && initializeTimestamps[key].value === updatedData[key]) {
-                    updatedData = {...updatedData, ...initializeTimestamps[key].initialize}
+        
+        // Check initializeTimestamps and init on match. Currently, only one key exists in initializeTimestamps.
+        const keysForTimestampGeneration = Object.keys(initializeTimestamps);
+        for (const key of keysForTimestampGeneration) {
+            if (flatUpdateObj[key] != null) {
+                if (initializeTimestamps[key].value && initializeTimestamps[key].value === flatUpdateObj[key]) {
+                    Object.assign(flatUpdateObj, initializeTimestamps[key].initialize);
                 }
             }
         }
 
         // Handle deceased data. If participantDeceased === yes, derive participantDeceasedNORC === fieldMapping.yes.
         // Ignore and delete deceased data if participantDeceased === no. There is no error case (data already validated).
-        if (updatedData[fieldMapping.participantDeceased] === fieldMapping.yes) {
-            updatedData[fieldMapping.participantDeceasedNORC] = fieldMapping.yes;
-        } else if (updatedData[fieldMapping.participantDeceased] === fieldMapping.no) {
-            delete updatedData[fieldMapping.participantDeceased];
-            delete updatedData[fieldMapping.participantDeceasedTimestamp];
+        if (flatUpdateObj[fieldMapping.participantDeceased] === fieldMapping.yes) {
+            flatUpdateObj[fieldMapping.participantDeceasedNORC] = fieldMapping.yes;
+            flatUpdateObj[fieldMapping.participationStatus] = fieldMapping.participationStatusDeceased;
+        } else if (flatUpdateObj[fieldMapping.participantDeceased] === fieldMapping.no) {
+            delete flatUpdateObj[fieldMapping.participantDeceased];
+            delete flatUpdateObj[fieldMapping.participantDeceasedTimestamp];
         }
 
-        // Note: Query fields can't be updated directly, they are derived.
-        if (dataObj['query']) {
-            error = true;
-            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Query variables cannot be directly updated through this API. The expected values will be derived automatically.'}});
+        // Handle cancer occurrence data. This gets validated and directed to the Firestore cancerOccurrence collection. One occurrence per doc.
+        const incomingCancerOccurrenceArray = dataObj[fieldMapping.cancerOccurrence] || [];
+        let finalizedCancerOccurrenceArray = [];
+        if (incomingCancerOccurrenceArray.length > 0) { 
+            // delete flatUpdateObj keys that start with '637153953' (cancerOccurrence). These are handled separately.
+            Object.keys(flatUpdateObj)
+                .filter(key => key.startsWith(fieldMapping.cancerOccurrence.toString()))
+                .forEach(key => delete flatUpdateObj[key]);
+
+            const { handleCancerOccurrences } = require('./shared');
+            const requiredOccurrenceRules = Object.keys(rules).filter(key => rules[key].required && key.startsWith(fieldMapping.cancerOccurrence.toString()));
+            const participantConnectId = docData['Connect_ID'];
+            const occurrenceResult = await handleCancerOccurrences(incomingCancerOccurrenceArray, requiredOccurrenceRules, participantToken, participantConnectId);
+            if (occurrenceResult.error) {
+                error = true;
+                responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': occurrenceResult.message}});
                 continue;
+            }
+            finalizedCancerOccurrenceArray = occurrenceResult.data;
         }
 
         // Handle updates to query.firstName, query.lastName, query.allPhoneNo, and query.allEmails arrays (these are used for participant search). Derive and add the updated query array to flatDataObj.
         const shouldUpdateQueryFields = checkForQueryFields(dataObj);
         if (shouldUpdateQueryFields) {
             const { updateQueryListFields } = require('./shared');
-            if (!updatedData['query']) updatedData['query'] = {};
-            updatedData['query'] = updateQueryListFields(dataObj, docData);
+            if (!flatUpdateObj['query']) flatUpdateObj['query'] = {};
+            flatUpdateObj['query'] = updateQueryListFields(dataObj, docData);
         }
 
         // Handle updates to user profile history. userProfileHistory is an array of objects. Each object has a timestamp and a userProfile object.
-        const shouldUpdateUserProfileHistory = userProfileHistoryKeys.some(key => key in updatedData);
+        const shouldUpdateUserProfileHistory = userProfileHistoryKeys.some(key => key in flatUpdateObj);
         if (shouldUpdateUserProfileHistory) {
             const { updateUserProfileHistory } = require('./shared');
-            updatedData[fieldMapping.userProfileHistory] = updateUserProfileHistory(dataObj, docData, siteCodes);
+            flatUpdateObj[fieldMapping.userProfileHistory] = updateUserProfileHistory(dataObj, docData, siteCodes);
         }
-
-
+        
         try {
-            if (Object.keys(updatedData).length > 0) {
-                await Promise.all([
-                    updateParticipantData(docID, updatedData),
-                    checkDerivedVariables(participantToken, docData['827220437']),
-                ]);
-            }
+            const promises = [];
+            if (Object.keys(flatUpdateObj).length > 0) promises.push(updateParticipantData(docID, flatUpdateObj));
+            if (finalizedCancerOccurrenceArray.length > 0) promises.push(writeCancerOccurrences(finalizedCancerOccurrenceArray));
+            await Promise.all(promises);
+            await checkDerivedVariables(participantToken, docData['827220437']);
             
             responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
         } catch (e) {
@@ -355,72 +357,98 @@ const updateParticipantData = async (req, res, authObj) => {
     return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
 }
 
-const qc = (newData, existingData, rules) => {
-    const { validPhoneFormat, validEmailFormat } = require('./shared');
+/**
+ * Delegate validation and return errors.
+ * @param {object} newData - the new data object to validate.
+ * @param {object} existingData - the existing data object to validate against.
+ * @param {object} rules - the validation rules object (imported from JSON file).
+ * @param {function} validationFunction - the validation function to use.
+ * @returns {array} - an array of errors. Success if empty.
+ */
+const flatValidationHandler = (newData, existingData, rules, validationFunction) => {
     let errors = [];
-    for(key in newData) {
-        if(key == 'token') continue;
+    for (const [path, value] of Object.entries(newData)) {
+        const validationPath = path.replace(/\[\d+\]/g, '[]'); // Handling array rules
+        const rule = rules[validationPath];
 
-        if(rules[key]) {
-
-            if(rules[key].mustExist && existingData[key] === undefined) {
-                errors.push(" Key (" + key + ") must exist before updating");
-                continue;
-            }
-
-            if(rules[key].dataType) {
-                if(rules[key].dataType === 'ISO') {
-                    if(typeof newData[key] !== "string" || !(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(newData[key]))) {
-                        errors.push(`Data mismatch: ${key} must be ISO 8601 string. Example: '2023-12-15T12:45:52.123Z'` );
-                    }
-                }
-                else if (rules[key].dataType === 'phone') {
-                    if (typeof newData[key] !== 'string' || !validPhoneFormat.test(newData[key])) {
-                        errors.push(`Data mismatch: ${key} must be a phone number. 10 character string, no spaces, no dashes. Example: '1234567890'`);
-                    }
-                }
-                else if (rules[key].dataType === 'email') {
-                    if (typeof newData[key] !== 'string' || !validEmailFormat.test(newData[key])) {
-                        errors.push(`Data mismatch: ${key} must be an email address. Example: abc@xyz.com`);
-                    }
-                }
-                else if (rules[key].dataType === 'zipCode') {
-                    if (typeof newData[key] !== 'string' || newData[key].length !== 5) {
-                        errors.push(`Data mismatch: ${key} zip code must be a 5 character string. Example: '12345'`);
-                    }
-                }
-                else if(rules[key].dataType === 'array') {
-                    if(Array.isArray(newData[key])) {
-                        for(const element of newData[key]) {
-                            if(typeof element !== 'string') {
-                                errors.push(" Invalid data type / format in array element for Key (" + key + ")");
-                                break;
-                            }
-                        }
-                    }
-                    else {
-                        errors.push(" Invalid data type / format for Key (" + key + ")");
-                    }
-                }
-                else {
-                    if(rules[key].dataType !== typeof newData[key]) {
-                        errors.push(" Invalid data type for Key (" + key + ")");
-                    }
-                    else {
-                        if(rules[key].values) {
-                            if(rules[key].values.filter(value => value.toString() === newData[key].toString()).length == 0) {
-                                errors.push(" Invalid value for Key (" + key + ")");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else {
-            errors.push(" Key (" + key + ") not found");
+        // If a rule exists for the data point, validate.
+        if (rule) {
+            const error = validationFunction(value, existingData[path], validationPath, rule);
+            if (error) errors.push(error);
+        } else {
+            errors.push(`Error: No validation rule exists for "${path}".`); // Reject POST request if no rule is established.
+            return errors;
         }
     }
     return errors;
+}
+
+/**
+ * Validate data submitted to the updateParticipantData endpoint.
+ * @param {string|number|array|object} value - The value to validate. From a key:value pair submitted in the POST request.
+ * @param {string|number|array|object} existingValue - The existing value to validate against. From the existing participant data in the database.
+ * @param {string} path - The flattened path to the value in the data object. Example: 'state.123456789' or '637153953[].457270069' <- where [] is an array with any index value.
+ * @param {object} rule - The validation rule to use from updateParticipantData.json. Example: { "dataType": "string", "maxLength": 100 }
+ * @returns null for success, or an error message for failure.
+ */
+const validateUpdateParticipantData = (value, existingValue, path, rule) => {
+    if (rule.mustExist && (existingValue === undefined || existingValue === null)) {
+        return `Key (${path}) must exist before updating.`;
+    }
+
+    switch (rule.dataType) {
+        case 'string':
+            if (typeof value !== 'string') {
+                return `Data mismatch: ${path} must be a string.`;
+            } else if (rule.maxLength && value.length > rule.maxLength) {
+                return `Data mismatch: ${path} must be less than ${rule.maxLength} characters. It is currently ${value.length} characters.`;
+            }
+            break;
+        case 'number':
+            if (typeof value !== 'number') {
+                return `Data mismatch: ${path} must be a number.`;
+            }
+            if (!rule?.values.includes(value)) {
+                return `Data mismatch: ${path} must be one of the following values: ${rule.values.join(', ')}.`;
+            }
+            break;
+        case 'ISO':
+            if (typeof value !== 'string' || !(validIso8601Format.test(value))) {
+                return `Data mismatch: ${path} must be ISO 8601 string. Example: '2023-12-15T12:45:52.123Z'`;
+            }
+            break;
+        case 'phone':
+            if (typeof value !== 'string' || !validPhoneFormat.test(value)) {
+                return `Data mismatch: ${path} must be a valid phone number. 10 character string, no spaces, no dashes. Example: '1234567890'`;
+            }
+            break;
+        case 'email':
+            if (typeof value !== 'string' || !validEmailFormat.test(value)) {
+                return `Data mismatch: ${path} must be a valid email address. Example: abc@xyz.com`;
+            }
+            break;
+        case 'zipCode':
+            if (typeof value !== 'string' || value.length !== 5) {
+                return `Data mismatch: ${path} zip code must be a 5 character string.`;
+            }
+            break;
+        case 'array':
+            if (!Array.isArray(value)) {
+                return `Data mismatch: ${path} must be an array.`;
+            }
+            break;
+        case 'object':
+            if (typeof value !== 'object' || Array.isArray(value)) {
+                return `Data mismatch: ${path} must be an object.`;
+            }
+            break;
+        default:
+            if (typeof value !== rule.dataType) {
+                return `Data mismatch: ${path} must be a ${rule.dataType}.`;
+            }
+            break;
+    }
+    return null;
 }
 
 const updateUserAuthentication = async (req, res, authObj) => {

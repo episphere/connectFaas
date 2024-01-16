@@ -834,6 +834,10 @@ const retrieveSiteNotifications = async (siteId, isParent) => {
  * If name is in the query, we handle the typeof(participantDoc.query.firstName) === 'array' case with firestore's 'array-contains' operator.
  * Only one 'array-contains' operation can be done per query, so separate queries are required if both firstName and lastName are in the query.
  * We also use array-contains for email and phone number. Note: only email or phone can be included in a query, not both.
+ * @param {Object} queries - The query object.
+ * @param {string} siteCode - The site code.
+ * @param {boolean} isParent - regulates access based on Whether the user is a parent or not.
+ * @returns {Array<object>} - An array of participant objects.
  */
 const filterDB = async (queries, siteCode, isParent) => {
 
@@ -876,23 +880,24 @@ const filterDB = async (queries, siteCode, isParent) => {
     // Generate the queries.
     const generateQuery = (queryKeys) => {
         let participantQuery = collection;
-
-        for (let key in queryKeys) {
+        for (const key in queryKeys) {
             if (key === 'firstName' || key === 'lastName') {
                 const path = `query.${key}`;
                 const queryValue = key === 'firstName' ? queries.firstName : queries.lastName;
                 participantQuery = participantQuery.where(path, 'array-contains', queryValue);
             }
-            if (key === 'email' || key === 'phone') {
+            else if (key === 'email' || key === 'phone') {
                 const path = `query.${key === 'email' ? 'allEmails' : 'allPhoneNo'}`;
                 const queryValue = key === 'email' ? queries.email : queries.phone;
                 participantQuery = participantQuery.where(path, 'array-contains', queryValue);
             }
-            if (key === 'dob') participantQuery = participantQuery.where('371067537', '==', queries.dob);
-            if (key === 'connectId') participantQuery = participantQuery.where('Connect_ID', '==', parseInt(queries.connectId));
-            if (key === 'token') participantQuery = participantQuery.where('token', '==', queries.token);
-            if (key === 'studyId') participantQuery = participantQuery.where('state.studyId', '==', queries.studyId);
-            if (key === 'checkedIn') participantQuery = participantQuery.where('331584571.266600170.135591601', '==', 353358909);
+            else if (key === 'dob') participantQuery = participantQuery.where('371067537', '==', queries.dob);
+            else if (key === 'connectId') participantQuery = participantQuery.where('Connect_ID', '==', parseInt(queries.connectId));
+            else if (key === 'token') participantQuery = participantQuery.where('token', '==', queries.token);
+            else if (key === 'studyId') participantQuery = participantQuery.where('state.studyId', '==', queries.studyId);
+            else if (key === 'checkedIn') participantQuery = participantQuery.where('331584571.266600170.135591601', '==', 353358909);
+            else if (key === 'onlyActive' && queries[key] === true) participantQuery = participantQuery.where('747006172', '==', 104430631);
+            else if (key === 'onlyVerified' && queries[key] === true) participantQuery = participantQuery.where('821247024', '==', 197316935);
         }
 
         return participantQuery;
@@ -1859,7 +1864,7 @@ const notificationAlreadySent = async (token, notificationSpecificationsID) => {
 const sendClientEmail = async (data) => {
 
     const { sendEmail } = require('./notifications');
-    const uuid  = require('uuid');
+    const { v4: uuid }  = require('uuid');
 
     const reminder = {
         id: uuid(),
@@ -2096,10 +2101,9 @@ const queryTotalAddressesToPrint = async () => {
         const snapShot = await db.collection('participants')
         .where('747006172', '==', 104430631) // withdraw consent
         .where('987563196', '==', 104430631) // deceased
-       //.where('827220437', '==', 125001209) // KPCO
         .where('685002411.277479354', '==', 104430631) // mouthwash refusal
         .where('173836415.266600170.156605577', '==', 353358909) // Blood or Urine Collected
-        .where('173836415.266600170.740582332', '>=', '2023-10-01T00:00:00.000Z') // Date/timestamp for Blood or Urine Collected
+        .where('173836415.266600170.740582332', '>=', '2024-01-01T00:00:00.000Z') // Date/timestamp for Blood or Urine Collected
         .orderBy('173836415.266600170.740582332', 'desc')
         .get();
         return snapShot.docs.map(document => processParticipantData(document.data(), true));
@@ -2456,7 +2460,7 @@ const getSiteMostRecentBoxId = async (siteCode) => {
 
 const addPrintAddressesParticipants = async (data) => {
     try {
-        const uuid = require('uuid');
+        const { v4: uuid } = require('uuid');
         const currentDate = new Date().toISOString();
         const batch = db.batch();
         await data.map(async (i) => {
@@ -3001,6 +3005,34 @@ const processEventWebhook = async (event) => {
     }
 };
 
+const getParticipantCancerOccurrences = async (participantToken) => {
+    try {
+        const snapshot = await db.collection('cancerOccurrence').where('token', '==', participantToken).get();
+        return snapshot.docs.map(doc => doc.data());
+    } catch (error) {
+        throw new Error("Error fetching cancer occurrences.", { cause: error });
+    }
+}
+
+/**
+ * Write cancer occurrence object data to Firestore. 
+ * @param {array<object>} cancerOccurrenceArray - Array of cancer occurrence objects.
+ */
+const writeCancerOccurrences = async (cancerOccurrenceArray) => {
+    try {
+        const batch = db.batch();
+        for (const occurrence of cancerOccurrenceArray) {
+            const docRef = db.collection('cancerOccurrence').doc();
+            batch.set(docRef, occurrence);
+        }
+        await batch.commit();
+    } catch (error) {
+        throw new Error("Error writing cancer occurrences.", { cause: error });
+    }
+}
+
+
+
 const updateParticipantCorrection = async (participantData) => {
     try{
         const snapshot = await db.collection('participants').where('token', '==', participantData['token']).get();
@@ -3144,6 +3176,5 @@ module.exports = {
     eligibleParticipantsForKitAssignment,
     processEventWebhook,
     getSpecimenAndParticipant,
-    queryKitsByReceivedDate,
-    updateParticipantCorrection
+    queryKitsByReceivedDate
 }

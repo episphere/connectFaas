@@ -606,6 +606,7 @@ const initializeTimestamps = {
     "state.158291096": {
         value: 353358909,
         initialize: {
+            "state.158291096": 353358909,
             "state.697256759": new Date().toISOString()
         }
     }
@@ -1127,6 +1128,189 @@ const sortBoxOnBagRemoval = (boxData, bagsToRemove, currDate) => {
 }
 
 /**
+ * Flatten an object into dot notation structure.
+ * @param {object} obj - the object to flatten. 
+ * @param {string} parentPath - the parent path of the object.
+ * @returns {object} - an object with flattened keys.
+ */
+const flattenObject = (obj, parentPath = '') => {
+    const flattened = {};
+
+    const traverse = (currentObj, currentPath) => {
+        for (const key in currentObj) {
+            const value = currentObj[key];
+            const newPath = currentPath ? `${currentPath}.${key}` : key;
+
+            if (value && typeof value === 'object') {
+                if (Array.isArray(value)) {
+                    value.forEach((item, index) => {
+                        traverse(item, `${newPath}[${index}]`);
+                    });
+                } else {
+                    traverse(value, newPath);
+                }
+            } else {
+                // Assign scalar values.
+                flattened[newPath] = value;
+            }
+        }
+    };
+
+    traverse(obj, parentPath);
+    return flattened;
+};
+
+/**
+ * Validate and update the data object for the cancer occurrences field (637153953) in the participant profile.
+ * @param {array<object>} incomingCancerOccurrenceArray - the update object for the participant profile. 
+ * @param {array<object>} existingOccurrences - existing cancer occurrences from the participant profile.
+ * @param {object} requiredOccurrenceRules - the required fields for each cancer occurrence.
+ * @param {string} participantToken - the participant's token.
+ * @param {string} participantConnectId - the participant's connect id.
+ * @returns {object} - an object with an error flag, message, and data array.
+ */
+const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOccurrenceRules, participantToken, participantConnectId) => {
+    // Validate the new occurrence array data
+    for (let i = 0; i < incomingCancerOccurrenceArray.length; i++) {
+        const occurrence = incomingCancerOccurrenceArray[i];
+
+        for (const rule of requiredOccurrenceRules) {
+            const [, propertyKey] = rule.split('.'); // Example: Splitting '637153953[0]' and '345545422'
+
+            if (!occurrence || !occurrence[propertyKey]) {
+                return { error: true, message: `Missing required field: ${propertyKey} in occurrence ${i}`, data: [] };
+            }
+        }
+
+        const isCancerSiteSpecified = validateCancerOccurrence(occurrence[fieldMapping.primaryCancerSite]);
+        if (!isCancerSiteSpecified) {
+            return { error: true, message: 'No primary cancer site identified.', data: [] };
+        }
+    }
+
+    // Query existing occurrences for the participant
+    const { getParticipantCancerOccurrences } = require('./firestore');
+    const existingCancerOccurrences = await getParticipantCancerOccurrences(participantToken);
+    
+    // Make sure the occurrence is not a duplicate - check timestamp and yes values in primary cancer sites.
+    const duplicateCheckResponse = checkForDuplicateCancerOccurrences(incomingCancerOccurrenceArray, existingCancerOccurrences);
+    if (duplicateCheckResponse.error) {
+        return { error: true, message: duplicateCheckResponse.message, data: [] };
+    }
+
+    const finalizedCancerOccurrenceArray = [];
+    // Get the highest occurrence number. Each new occurrence gets a sequential occurrenceNumber (specific to the participant).
+    let highestOccurrenceNumber = getHighestOccurrenceNumber(existingCancerOccurrences);
+    for (const newOccurrence of incomingCancerOccurrenceArray) {
+        // Finalize the occurrence data and add to the finalized array.
+        const occurrenceData = finalizeCancerOccurrenceData(newOccurrence, participantToken, participantConnectId, highestOccurrenceNumber);
+        finalizedCancerOccurrenceArray.push(occurrenceData);
+        highestOccurrenceNumber++;
+    }
+
+    return { error: false, message: 'Success!', data: finalizedCancerOccurrenceArray };
+}
+
+/**
+ * Validate that at least one cancer site in the Occurrence object (740819233) has a value of 'yes'.
+ * @param {object} cancerSitesObject - property (740819233) in the cancer occurrence object (637153953).
+ * @returns {boolean} - true if at least one cancer site has a value of 'yes'. false otherwise.
+ */
+const validateCancerOccurrence = (cancerSitesObject) => {
+    for (const key in cancerSitesObject) {
+        if (key === fieldMapping.cancerSites.anotherTypeOfCancer.toString() && cancerSitesObject[key] && typeof cancerSitesObject[key] === 'string') {
+            return true;
+        } 
+        else if (cancerSitesObject[key] === fieldMapping.yes) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Check for duplicate cancer occurrences. Occurrences are considered duplicates if the timestamp and primary cancer sites match.
+ * @param {array<object>} newOccurrenceArray - the new occurrence array to check.
+ * @param {array<object>} existingCancerOccurrences - the existing occurrences to check against.
+ * @returns {object} - an object with an error flag, message, and data array.
+ * Check for a timestamp match. If a timestamp match is found, compare cancer site data. Short circuit on mismatch (data is unique).
+ */
+const checkForDuplicateCancerOccurrences = (newOccurrenceArray, existingCancerOccurrences) => {
+    const buildTimestampHashMap = (occurrences) => {
+        const timestampHashMap = {};
+        for (const occurrence of occurrences) {
+            const timestamp = occurrence[fieldMapping.cancerOccurrenceTimestamp];
+            if (!timestampHashMap[timestamp]) {
+                timestampHashMap[timestamp] = [];
+            }
+            timestampHashMap[timestamp].push(occurrence);
+        }
+        return timestampHashMap;
+    }
+    
+    const existingOccurrencesHashMap = buildTimestampHashMap(existingCancerOccurrences);
+
+    for (const newOccurrence of newOccurrenceArray) {
+        const timestamp = newOccurrence[fieldMapping.cancerOccurrenceTimestamp];
+        const potentialDuplicateOccurrences = existingOccurrencesHashMap[timestamp] || [];
+
+        existingOccurrenceLoop: for (const occurrence of potentialDuplicateOccurrences) {
+            for (const cancerSiteValue of Object.values(fieldMapping.cancerSites)) {
+                if (newOccurrence[fieldMapping.primaryCancerSite][cancerSiteValue] === undefined) {
+                    continue;
+                }
+                
+                if (newOccurrence[fieldMapping.primaryCancerSite][cancerSiteValue] && newOccurrence[fieldMapping.primaryCancerSite][cancerSiteValue] !== occurrence[fieldMapping.primaryCancerSite][cancerSiteValue]) {
+                    continue existingOccurrenceLoop;
+                }
+            }
+            return { error: true, message: `Error: Duplicate cancer occurrence. Timestamp and primary site matches existing values for this participant. ${newOccurrence[fieldMapping.cancerOccurrenceTimestamp]}`, data: [] };
+        }
+    }
+    return { error: false, message: 'Success!', data: []};
+}
+
+/**
+ * Get the highest occurrence number for the participant. This is used to assign a sequential occurrence number to each new occurrence for the participant.
+ * @param {Array<object>} existingCancerOccurrences - the existing cancer occurrences for the participant.
+ * @returns {number} - the highest existing occurrence number for the participant. 0 if no occurrences exist.
+ */
+const getHighestOccurrenceNumber = (existingCancerOccurrences) => {
+    let highestOccurrenceNumber = 0;
+    for (const occurrence of existingCancerOccurrences) {
+        if (occurrence[fieldMapping.occurrenceNumber] > highestOccurrenceNumber) {
+            highestOccurrenceNumber = occurrence[fieldMapping.occurrenceNumber];
+        }
+    }
+    return highestOccurrenceNumber;
+}
+
+const finalizeCancerOccurrenceData = (occurrenceData, participantToken, participantConnectId, highestOccurrenceNumber) => {
+    const finalizedOccurrenceData = {
+        ...occurrenceData,
+        [fieldMapping.occurrenceNumber]: highestOccurrenceNumber + 1,
+        [fieldMapping.isCancerDiagnosis]: fieldMapping.yes,
+        'token': participantToken,
+        'Connect_ID': participantConnectId,
+    };
+
+    for (const cancerSiteValue of Object.values(fieldMapping.cancerSites)) {
+        if (cancerSiteValue === fieldMapping.cancerSites.anotherTypeOfCancer) {
+            finalizedOccurrenceData[fieldMapping.primaryCancerSite][cancerSiteValue] = occurrenceData[fieldMapping.primaryCancerSite][cancerSiteValue] || '';
+        } else {
+            finalizedOccurrenceData[fieldMapping.primaryCancerSite][cancerSiteValue] = occurrenceData[fieldMapping.primaryCancerSite][cancerSiteValue] === fieldMapping.yes ? fieldMapping.yes : fieldMapping.no;
+        }
+    }
+
+    if (!finalizedOccurrenceData[fieldMapping.preliminaryStageInformation]) {
+        finalizedOccurrenceData[fieldMapping.preliminaryStageInformation] = '';
+    }
+
+    return finalizedOccurrenceData;
+
+}
+
+/**
  * We've had an intermittnt issue with Streck tube data not being added to the specimen data structure (11/2023). 
  * This is a safety net to ensure the data is added. Build the object literal since we only need to do this for streck tubes.
  * @param {string} collectionId - the collection Id of the specimen.
@@ -1286,6 +1470,31 @@ const updateUserProfileHistory = (dataObj, existingDocData, siteCodes) => {
     return userProfileHistory;
 }
 
+/**
+ * Return selected Concept ID fields for each object in a list of data objects.
+ * Fields with nested data include all sub-data.
+ * @param {array<object>} dataObjArray - the array of data objects to filter.
+ * @param {array<string>} selectedFieldsArray - the array of concept ID fields to return. Top-level (non-nested) fields only.
+ * @returns {array<object>} - the filtered array of data objects.
+ */
+const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
+    
+    const handleNestedData = (obj, path) => {
+        return path.split('.').reduce((currentObj, key) => currentObj ? currentObj[key] : undefined, obj);
+    }
+
+    return dataObjArray.map(dataObj => {
+        const filteredData = { 'Connect_ID': dataObj['Connect_ID'] };        
+        for (const field of selectedFieldsArray) {
+            const fieldValue = handleNestedData(dataObj, field);
+            if (fieldValue !== undefined) {
+                filteredData[field] = fieldValue;
+            }
+        }
+        return filteredData;
+    });
+}
+
 
 module.exports = {
     getResponseJSON,
@@ -1343,4 +1552,7 @@ module.exports = {
     checkForQueryFields,
     updateQueryListFields,
     updateUserProfileHistory,
+    flattenObject,
+    handleCancerOccurrences,
+    filterSelectedFields,
 };

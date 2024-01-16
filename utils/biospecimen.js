@@ -157,7 +157,7 @@ const biospecimenAPIs = async (req, res) => {
                 const exists = await specimenExists(masterSpecimenId, specimen)
                 if(exists === true) return res.status(400).json(getResponseJSON('Specimen already exists!', 400));
                 if(exists === false){
-                    const uuid = require('uuid');
+                    const { v4: uuid } = require('uuid');
                     specimen['id'] = uuid();
                     const { storeSpecimen } = require('./firestore');
                     await storeSpecimen(specimen);
