@@ -88,7 +88,11 @@ const dashboard = async (req, res) => {
     } else if (api === 'getSiteNotification' && isHelpDesk === false) { // Everyone except HelpDesk
         const { getSiteNotification } = require('./notifications');
         return await getSiteNotification(req, res, authObj);
-    } else {
+    } else if (api === 'participantDataCorrection') {
+        const { participantDataCorrection } = require('./sites');
+        return await participantDataCorrection(req, res);
+    }
+    else {
         return res.status(404).json(getResponseJSON('API not found!', 404));
     }
 };

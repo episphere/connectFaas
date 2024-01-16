@@ -3001,6 +3001,32 @@ const processEventWebhook = async (event) => {
     }
 };
 
+const updateParticipantCorrection = async (participantData) => {
+    try{
+        const snapshot = await db.collection('participants').where('token', '==', participantData['token']).get();
+        if (snapshot.empty) return false
+        const docId = snapshot.docs[0].id;
+        delete  participantData['token']
+
+        if (participantData['state.148197146'] === 'NULL') {
+            delete participantData['state.148197146']
+            await db.collection("participants").doc(docId).update({
+                'state.148197146': admin.firestore.FieldValue.delete()
+            });
+        }
+        else if (Object.keys(participantData).length > 0) { // performs an update only if other key/value exists
+            await db.collection("participants").doc(docId).update(
+                {...participantData}
+            )
+        }
+        return true;
+    }
+    catch(error){
+        console.error(error);
+        return new Error(error);
+    }
+}
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3118,5 +3144,6 @@ module.exports = {
     eligibleParticipantsForKitAssignment,
     processEventWebhook,
     getSpecimenAndParticipant,
-    queryKitsByReceivedDate
+    queryKitsByReceivedDate,
+    updateParticipantCorrection
 }
