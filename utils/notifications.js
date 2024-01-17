@@ -325,7 +325,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         if (phoneNumber.length >= 10) {
           const currSmsBody = smsBody.replace(/<firstName>/g, firstName);
           const currSmsTo = `+1${phoneNumber.slice(-10)}`;
-          // smsDataArray.push({ body: currSmsBody, to: currSmsTo });
+          
           smsRecordArray.push({
             ...recordCommonData,
             id: smsId,
