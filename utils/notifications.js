@@ -1,4 +1,4 @@
-const uuid = require("uuid");
+const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
@@ -418,7 +418,6 @@ const storeNotificationSchema = async (req, res, authObj) => {
     if (authObj.userEmail) schema["modifiedBy"] = authObj.userEmail;
     await updateNotificationSchema(docID, schema);
   } else {
-    const uuid = require("uuid");
     schema["id"] = uuid();
     const { storeNewNotificationSchema } = require("./firestore");
     schema["createdAt"] = new Date().toISOString();

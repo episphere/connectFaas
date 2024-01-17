@@ -168,7 +168,7 @@ module.exports = {
      collectionCardFlag: 137401245,
      collectionAddtnlNotes: 260133861,
 
-     // participant deceased data
+     // EMR participant deceased data
     participantDeceased: 857217152,
     participantDeceasedNORC: 987563196,
     participantDeceasedTimestamp: 772354119,
@@ -197,13 +197,19 @@ module.exports = {
     userProfileHistory: 569151507,
     userProfileHistoryTimestamp: 371303487,
     profileChangeRequestedBy: 611005658,
+    participationStatus: 912301837,
+    participationStatusDeceased: 618686157,
     authenticationEmail: 421823980,
     authenticationPhone: 348474836,
     signInMechanism: 995036844,
 
-    // Primary cancer site IDs. participant profile -> occurrences {object} (637153953) -> primary site of cancer (740819233). Null until participant diagnosed with cancer.
+    // cancer occurrences
+    occurrenceNumber: 793981056,
     cancerOccurrence: 637153953,
+    cancerOccurrenceTimestamp: 345545422,
+    isCancerDiagnosis: 525972260,
     primaryCancerSite: 740819233,
+    preliminaryStageInformation: 457270069,
     cancerSites: {
         anal: 939782495,
         bladder: 135725957,
