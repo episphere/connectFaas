@@ -41,7 +41,6 @@ async function getParticipantsForNotificationsBQ({
   let result = {hasNext: false, fetchedDataArray: []};
   if (!notificationSpecId || Object.keys(conditions).length === 0) return result;
 
-  const bqNotificationSpecId = notificationSpecId.replace(/-/g, "_").replace(/^(\d)/, "d_$1");
   const bqFieldArray = fieldsToFetch
     .map(convertToBigqueryKey)
     .map((field) => `${field} AS ${field.replace(/\./g, "_DOT_")}`);
@@ -69,7 +68,7 @@ async function getParticipantsForNotificationsBQ({
       FROM
         \`Connect.notifications\`
       WHERE
-        notificationSpecificationsID = "${bqNotificationSpecId}")
+        notificationSpecificationsID = "${notificationSpecId}")
     USING(token)
     WHERE ${bqConditionArray.length === 0 ? "1=1" : bqConditionArray.join(" AND ")}
     AND isSent IS NOT TRUE LIMIT ${limit} OFFSET ${offset}`;

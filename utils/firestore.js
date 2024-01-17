@@ -1870,7 +1870,7 @@ const saveNotificationBatch = async (notificationRecordArray) => {
     const batch = db.batch();
     try {
         for (const record of recordChunk) {
-        const docId = record.uid + record.notificationSpecificationsID.slice(0, 6);
+        const docId = record.uid + record.notificationSpecificationsID.slice(0, 6) + record.id.slice(-2);
         const docRef = db.collection("notifications").doc(docId);
         batch.set(docRef, record);
       }
@@ -1878,27 +1878,6 @@ const saveNotificationBatch = async (notificationRecordArray) => {
       await batch.commit();
     } catch (error) {
       throw new Error("saveNotificationBatch() error.", {cause: error});
-    }
-  }
-};
-
-/**
- * @param {string} specId ID of notification specification
- * @param {string[]} participantTokenArray Array of participant tokens for data updates
- */
-const saveSpecIdsToParticipants = async (specId, participantTokenArray) => {
-  const chunkSize = 30; // 'in' operator has size limit of 30
-  const chunkArray = createChunkArray(participantTokenArray, chunkSize);
-
-  for (const tokenChunk of chunkArray) {
-    const batch = db.batch();
-    try {
-      const snapshot = await db.collection("participants").where("token", "in", tokenChunk).get();
-      if (snapshot.empty) continue;
-      snapshot.forEach((doc) => batch.update(doc.ref, {[`query.notificationSpecIdsUsed.${specId}`]: true}));
-      await batch.commit();
-    } catch (error) {
-      throw new Error("saveSpecIdsToParticipants() error.", {cause: error});
     }
   }
 };
@@ -1948,14 +1927,23 @@ const retrieveNotificationSchemaByID = async (id) => {
   return "";
 };
 
-const retrieveNotificationSchemaByCategory = async (category) => {
-    let query = db.collection('notificationSpecifications')
-    if(category !== 'all') query = query.where('category', '==', category)
-    else query = query.orderBy('category')
-    const snapshot = await query.orderBy('attempt').get();
-    if(snapshot.size === 0) return false;
-    return snapshot.docs.map(dt => dt.data());
-}
+const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
+  let result = [];
+  let query = db.collection("notificationSpecifications");
+  if (category !== "all") query = query.where("category", "==", category);
+  else query = query.orderBy("category");
+
+  // TODO: update query to get daft schemas directly, after all schema in Firestore are updated to have isDraft field
+  const snapshot = await query.orderBy("attempt").get();
+  if (snapshot.size === 0) return result;
+
+  for (const doc of snapshot.docs) {
+    const docData = doc.data();
+    if ((getDrafts && docData.isDraft) || (!getDrafts && !docData.isDraft)) result.push(docData);
+  }
+
+  return result;
+};
 
 const storeNewNotificationSchema = async (data) => {
     await db.collection('notificationSpecifications').add(data);
@@ -3084,7 +3072,6 @@ module.exports = {
     updateUsersCurrentLogin,
     queryDailyReportParticipants,
     saveNotificationBatch,
-    saveSpecIdsToParticipants,
     getSpecimensByReceivedDate,
     getSpecimensByCollectionIds,
     getBoxesByBoxId,
