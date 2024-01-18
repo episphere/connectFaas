@@ -487,6 +487,7 @@ const participantDataCorrection = async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
+    if(req.body.data.length === 0) return res.status(400).json(getResponseJSON('Bad request. Empty array.', 400));
 
     try {
         const { updateParticipantCorrection } = require('./firestore');

@@ -3042,11 +3042,11 @@ const updateParticipantCorrection = async (participantData) => {
 
         if (participantData['state.148197146'] === 'NULL') {
             delete participantData['state.148197146']
-            await db.collection("participants").doc(docId).update({
+            await db.collection('participants').doc(docId).update({
                 'state.148197146': admin.firestore.FieldValue.delete()
             });
         } else if (Object.keys(participantData).length > 0) { // performs an update only if other key/value exists
-            await db.collection("participants").doc(docId).update(
+            await db.collection('participants').doc(docId).update(
                 {...participantData}
             )
         }
