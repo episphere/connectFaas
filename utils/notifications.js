@@ -136,6 +136,11 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
     });
 }
 
+/**
+ * Function triggered by Pub/Sub topic, accepting a message containing a string.
+ * @param {Object} message Pub/Sub message object.
+ * @param {string} message.data base64-encoded string.
+ */
 async function notificationHandler(message) {
   console.log("Received message:", JSON.stringify(message));
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
@@ -171,6 +176,13 @@ async function handleNotificationSpec(notificationSpec) {
   await getParticipantsAndSendNotifications(paramObj);
 }
 
+/**
+ * 
+ * @param {Object} paramObj
+ * @param {Object} paramObj.notificationSpec notification specification object
+ * @param {string} paramObj.cutoffTimeStr ISO string used to filter out participants whose primaryField is after this time
+ * @param {string} paramObj.timeField Concept ID (eg 914594314) to decide which timestamp field to use for filtering
+ */
 async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr, timeField }) {
   const conditions = notificationSpec.conditions;
   const emailSubject = notificationSpec.email?.subject ?? "";
@@ -222,15 +234,21 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   let smsCount = 0;
 
   while (hasNext) {
-    ({ fetchedDataArray, hasNext } = await getParticipantsForNotificationsBQ({
-      notificationSpecId: notificationSpec.id,
-      conditions,
-      cutoffTimeStr,
-      timeField,
-      fieldsToFetch,
-      limit,
-      offset,
-    }));
+    try {
+      ({ fetchedDataArray, hasNext } = await getParticipantsForNotificationsBQ({
+        notificationSpecId: notificationSpec.id,
+        conditions,
+        cutoffTimeStr,
+        timeField,
+        fieldsToFetch,
+        limit,
+        offset,
+      }));
+    } catch (error) {
+      console.error(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpec.id}.`, error);
+      break;
+    }
+
     if (fetchedDataArray.length === 0) break;
 
     let emailRecordArray = [];

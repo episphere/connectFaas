@@ -38,7 +38,7 @@ async function getParticipantsForNotificationsBQ({
   limit = 100,
   offset = 0,
 }) {
-  let result = {hasNext: false, fetchedDataArray: []};
+  let result = { hasNext: false, fetchedDataArray: [] };
   if (!notificationSpecId || Object.keys(conditions).length === 0) return result;
 
   const bqFieldArray = fieldsToFetch
@@ -60,8 +60,7 @@ async function getParticipantsForNotificationsBQ({
     bqConditionArray.push(`${bqTimeField} <= "${cutoffTimeStr}"`);
   }
 
-  try {
-    const queryStr = `SELECT ${bqFieldArray.length === 0 ? "*" : bqFieldArray.join(", ")}
+  const queryStr = `SELECT ${bqFieldArray.length === 0 ? "*" : bqFieldArray.join(", ")}
     FROM \`Connect.participants\` 
     LEFT JOIN (
       SELECT DISTINCT token, TRUE AS isSent
@@ -73,14 +72,11 @@ async function getParticipantsForNotificationsBQ({
     WHERE ${bqConditionArray.length === 0 ? "1=1" : bqConditionArray.join(" AND ")}
     AND isSent IS NOT TRUE LIMIT ${limit} OFFSET ${offset}`;
 
-    const [rows] = await bigquery.query(queryStr);
-    if (rows.length === 0) return result;
+  const [rows] = await bigquery.query(queryStr);
+  if (rows.length === 0) return result;
 
-    result.hasNext = rows.length === limit;
-    result.fetchedDataArray = rows.map(convertToFirestoreData);
-  } catch (error) {
-    console.log(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpecId}.`, error);
-  }
+  result.hasNext = rows.length === limit;
+  result.fetchedDataArray = rows.map(convertToFirestoreData);
 
   return result;
 }
