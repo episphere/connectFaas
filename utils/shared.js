@@ -1184,15 +1184,9 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
             }
         }
 
-        const isCancerSiteSpecified = validateCancerOccurrence(occurrence[fieldMapping.primaryCancerSiteObject]);
-        if (!isCancerSiteSpecified) {
-            return {
-                error: true,
-                message:
-                    "'Another type of cancer description' (868006655) must be included if primary cancer site is 'other' (807835037)." +
-                    "Otherwise, 'another type of cancer description' (868006655) must be excluded.",
-                data: [],
-            };
+        const cancerSiteValidationObj = validateCancerOccurrence(occurrence[fieldMapping.primaryCancerSiteObject]);
+        if (cancerSiteValidationObj.error === true) {
+            return cancerSiteValidationObj;
         }
     }
 
@@ -1227,18 +1221,36 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
  * @returns {boolean} - Returns true the above requirements are met, false otherwise.
  */
 const validateCancerOccurrence = (cancerSitesObject) => {
+    if (!cancerSitesObject || Object.keys(cancerSitesObject).length === 0 || !cancerSitesObject[fieldMapping.primaryCancerSiteCategorical]) {
+        return { error: true, message: 'Primary cancer site categorical (740819233.149205077) is required.', data: [] };
+    }
+    
     const isOtherCancerSiteSelected = cancerSitesObject[fieldMapping.primaryCancerSiteCategorical] === fieldMapping.cancerSites.other;
     const isAnotherTypeOfCancerTextValid = 
         cancerSitesObject[fieldMapping.anotherTypeOfCancerText] !== null &&
         typeof cancerSitesObject[fieldMapping.anotherTypeOfCancerText] === 'string' &&
         cancerSitesObject[fieldMapping.anotherTypeOfCancerText].trim().length > 0;
 
-    if (isOtherCancerSiteSelected) {
-        return isAnotherTypeOfCancerTextValid;
-    } else {
-        return !isAnotherTypeOfCancerTextValid;
-    }
+    const otherCancerSiteErrorMessage = "'Another type of cancer description' (868006655) must be included if primary cancer site is 'other' (807835037)." +
+    "Otherwise, 'another type of cancer description' (868006655) must be excluded.";
+
+    const hasError = isOtherCancerSiteSelected ? !isAnotherTypeOfCancerTextValid : isAnotherTypeOfCancerTextValid;
+
+    return { error: hasError, message: hasError ? otherCancerSiteErrorMessage : '', data: [] };
 }
+// const validateCancerOccurrence = (cancerSitesObject) => {
+//     const isOtherCancerSiteSelected = cancerSitesObject[fieldMapping.primaryCancerSiteCategorical] === fieldMapping.cancerSites.other;
+//     const isAnotherTypeOfCancerTextValid = 
+//         cancerSitesObject[fieldMapping.anotherTypeOfCancerText] !== null &&
+//         typeof cancerSitesObject[fieldMapping.anotherTypeOfCancerText] === 'string' &&
+//         cancerSitesObject[fieldMapping.anotherTypeOfCancerText].trim().length > 0;
+
+//     if (isOtherCancerSiteSelected) {
+//         return isAnotherTypeOfCancerTextValid;
+//     } else {
+//         return !isAnotherTypeOfCancerTextValid;
+//     }
+// }
 
 /**
  * Check for duplicate cancer occurrences. Occurrences are considered duplicates if the timestamp and primary cancer sites match.
