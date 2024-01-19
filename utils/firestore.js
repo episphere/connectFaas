@@ -1908,8 +1908,7 @@ const saveNotificationBatch = async (notificationRecordArray) => {
     const batch = db.batch();
     try {
         for (const record of recordChunk) {
-        const docId = record.uid + record.notificationSpecificationsID.slice(0, 6) + record.id.slice(-2);
-        const docRef = db.collection("notifications").doc(docId);
+        const docRef = db.collection("notifications").doc();
         batch.set(docRef, record);
       }
 
