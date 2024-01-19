@@ -1238,19 +1238,6 @@ const validateCancerOccurrence = (cancerSitesObject) => {
 
     return { error: hasError, message: hasError ? otherCancerSiteErrorMessage : '', data: [] };
 }
-// const validateCancerOccurrence = (cancerSitesObject) => {
-//     const isOtherCancerSiteSelected = cancerSitesObject[fieldMapping.primaryCancerSiteCategorical] === fieldMapping.cancerSites.other;
-//     const isAnotherTypeOfCancerTextValid = 
-//         cancerSitesObject[fieldMapping.anotherTypeOfCancerText] !== null &&
-//         typeof cancerSitesObject[fieldMapping.anotherTypeOfCancerText] === 'string' &&
-//         cancerSitesObject[fieldMapping.anotherTypeOfCancerText].trim().length > 0;
-
-//     if (isOtherCancerSiteSelected) {
-//         return isAnotherTypeOfCancerTextValid;
-//     } else {
-//         return !isAnotherTypeOfCancerTextValid;
-//     }
-// }
 
 /**
  * Check for duplicate cancer occurrences. Occurrences are considered duplicates if the timestamp and primary cancer sites match.
