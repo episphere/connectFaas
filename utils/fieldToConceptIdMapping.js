@@ -206,8 +206,10 @@ module.exports = {
     cancerOccurrence: 637153953,
     cancerOccurrenceTimestamp: 345545422,
     isCancerDiagnosis: 525972260,
-    primaryCancerSite: 740819233,
+    primaryCancerSiteObject: 740819233,
+    primaryCancerSiteCategorical: 149205077,
     preliminaryStageInformation: 457270069,
+    anotherTypeOfCancerText: 868006655, // Text response for 'other' cancer site
     cancerSites: {
         anal: 939782495,
         bladder: 135725957,
@@ -234,6 +236,5 @@ module.exports = {
         uterine: 723614811,
         other: 807835037,
         unavailableUnknown: 178420302,
-        anotherTypeOfCancer: 868006655,
     },
 };

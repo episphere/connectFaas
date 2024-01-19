@@ -1184,16 +1184,22 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
             }
         }
 
-        const isCancerSiteSpecified = validateCancerOccurrence(occurrence[fieldMapping.primaryCancerSite]);
+        const isCancerSiteSpecified = validateCancerOccurrence(occurrence[fieldMapping.primaryCancerSiteObject]);
         if (!isCancerSiteSpecified) {
-            return { error: true, message: 'No primary cancer site identified.', data: [] };
+            return {
+                error: true,
+                message:
+                    "'Another type of cancer description' (868006655) must be included if primary cancer site is 'other' (807835037)." +
+                    "Otherwise, 'another type of cancer description' (868006655) must be excluded.",
+                data: [],
+            };
         }
     }
 
     // Query existing occurrences for the participant
     const { getParticipantCancerOccurrences } = require('./firestore');
     const existingCancerOccurrences = await getParticipantCancerOccurrences(participantToken);
-    
+
     // Make sure the occurrence is not a duplicate - check timestamp and yes values in primary cancer sites.
     const duplicateCheckResponse = checkForDuplicateCancerOccurrences(incomingCancerOccurrenceArray, existingCancerOccurrences);
     if (duplicateCheckResponse.error) {
@@ -1201,33 +1207,37 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
     }
 
     const finalizedCancerOccurrenceArray = [];
-    // Get the highest occurrence number. Each new occurrence gets a sequential occurrenceNumber (specific to the participant).
-    let highestOccurrenceNumber = getHighestOccurrenceNumber(existingCancerOccurrences);
+    let mostRecentOccurrenceNum = existingCancerOccurrences.length;
     for (const newOccurrence of incomingCancerOccurrenceArray) {
         // Finalize the occurrence data and add to the finalized array.
-        const occurrenceData = finalizeCancerOccurrenceData(newOccurrence, participantToken, participantConnectId, highestOccurrenceNumber);
+        const occurrenceData = finalizeCancerOccurrenceData(newOccurrence, participantToken, participantConnectId, mostRecentOccurrenceNum);
         finalizedCancerOccurrenceArray.push(occurrenceData);
-        highestOccurrenceNumber++;
+        mostRecentOccurrenceNum++;
     }
 
     return { error: false, message: 'Success!', data: finalizedCancerOccurrenceArray };
 }
 
 /**
- * Validate that at least one cancer site in the Occurrence object (740819233) has a value of 'yes'.
+ * Validate additional cancer site requirements in the Occurrence object (740819233).
+ * Important: fieldMapping.primaryCancerSite value has already been validated in the initial validation step.
+ * If the 'fieldMapping.cancerSites.other' cancer site is selected, the 'fieldMapping.anotherTypeOfCancerText' field is required.
+ * Else, the 'anotherTypeOfCancerText' field should not be present.
  * @param {object} cancerSitesObject - property (740819233) in the cancer occurrence object (637153953).
- * @returns {boolean} - true if at least one cancer site has a value of 'yes'. false otherwise.
+ * @returns {boolean} - Returns true the above requirements are met, false otherwise.
  */
 const validateCancerOccurrence = (cancerSitesObject) => {
-    for (const key in cancerSitesObject) {
-        if (key === fieldMapping.cancerSites.anotherTypeOfCancer.toString() && cancerSitesObject[key] && typeof cancerSitesObject[key] === 'string') {
-            return true;
-        } 
-        else if (cancerSitesObject[key] === fieldMapping.yes) {
-            return true;
-        }
+    const isOtherCancerSiteSelected = cancerSitesObject[fieldMapping.primaryCancerSiteCategorical] === fieldMapping.cancerSites.other;
+    const isAnotherTypeOfCancerTextValid = 
+        cancerSitesObject[fieldMapping.anotherTypeOfCancerText] !== null &&
+        typeof cancerSitesObject[fieldMapping.anotherTypeOfCancerText] === 'string' &&
+        cancerSitesObject[fieldMapping.anotherTypeOfCancerText].trim().length > 0;
+
+    if (isOtherCancerSiteSelected) {
+        return isAnotherTypeOfCancerTextValid;
+    } else {
+        return !isAnotherTypeOfCancerTextValid;
     }
-    return false;
 }
 
 /**
@@ -1256,52 +1266,32 @@ const checkForDuplicateCancerOccurrences = (newOccurrenceArray, existingCancerOc
         const timestamp = newOccurrence[fieldMapping.cancerOccurrenceTimestamp];
         const potentialDuplicateOccurrences = existingOccurrencesHashMap[timestamp] || [];
 
-        existingOccurrenceLoop: for (const occurrence of potentialDuplicateOccurrences) {
-            for (const cancerSiteValue of Object.values(fieldMapping.cancerSites)) {
-                if (newOccurrence[fieldMapping.primaryCancerSite][cancerSiteValue] === undefined) {
-                    continue;
-                }
-                
-                if (newOccurrence[fieldMapping.primaryCancerSite][cancerSiteValue] && newOccurrence[fieldMapping.primaryCancerSite][cancerSiteValue] !== occurrence[fieldMapping.primaryCancerSite][cancerSiteValue]) {
-                    continue existingOccurrenceLoop;
-                }
+        for (const occurrence of potentialDuplicateOccurrences) {
+            if (occurrence[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical] === newOccurrence[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical]) {
+                return {
+                    error: true,
+                    message: 
+                        `Error: Duplicate cancer occurrence. Timestamp and primary site matches existing cancer occurrence for this participant. Timestamp: ${newOccurrence[fieldMapping.cancerOccurrenceTimestamp]}, ` +
+                        `Primary Cancer Site: ${newOccurrence[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical]}`,
+                    data: [],
+                };    
             }
-            return { error: true, message: `Error: Duplicate cancer occurrence. Timestamp and primary site matches existing values for this participant. ${newOccurrence[fieldMapping.cancerOccurrenceTimestamp]}`, data: [] };
         }
     }
     return { error: false, message: 'Success!', data: []};
 }
 
-/**
- * Get the highest occurrence number for the participant. This is used to assign a sequential occurrence number to each new occurrence for the participant.
- * @param {Array<object>} existingCancerOccurrences - the existing cancer occurrences for the participant.
- * @returns {number} - the highest existing occurrence number for the participant. 0 if no occurrences exist.
- */
-const getHighestOccurrenceNumber = (existingCancerOccurrences) => {
-    let highestOccurrenceNumber = 0;
-    for (const occurrence of existingCancerOccurrences) {
-        if (occurrence[fieldMapping.occurrenceNumber] > highestOccurrenceNumber) {
-            highestOccurrenceNumber = occurrence[fieldMapping.occurrenceNumber];
-        }
-    }
-    return highestOccurrenceNumber;
-}
-
-const finalizeCancerOccurrenceData = (occurrenceData, participantToken, participantConnectId, highestOccurrenceNumber) => {
+const finalizeCancerOccurrenceData = (occurrenceData, participantToken, participantConnectId, mostRecentOccurrenceNum) => {
     const finalizedOccurrenceData = {
         ...occurrenceData,
-        [fieldMapping.occurrenceNumber]: highestOccurrenceNumber + 1,
+        [fieldMapping.occurrenceNumber]: mostRecentOccurrenceNum + 1,
         [fieldMapping.isCancerDiagnosis]: fieldMapping.yes,
         'token': participantToken,
         'Connect_ID': participantConnectId,
     };
 
-    for (const cancerSiteValue of Object.values(fieldMapping.cancerSites)) {
-        if (cancerSiteValue === fieldMapping.cancerSites.anotherTypeOfCancer) {
-            finalizedOccurrenceData[fieldMapping.primaryCancerSite][cancerSiteValue] = occurrenceData[fieldMapping.primaryCancerSite][cancerSiteValue] || '';
-        } else {
-            finalizedOccurrenceData[fieldMapping.primaryCancerSite][cancerSiteValue] = occurrenceData[fieldMapping.primaryCancerSite][cancerSiteValue] === fieldMapping.yes ? fieldMapping.yes : fieldMapping.no;
-        }
+    if (!finalizedOccurrenceData[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical]) {
+        finalizedOccurrenceData[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical] = '';
     }
 
     if (!finalizedOccurrenceData[fieldMapping.preliminaryStageInformation]) {
