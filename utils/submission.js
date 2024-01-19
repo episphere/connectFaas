@@ -140,11 +140,7 @@ const submitSocial = async (req, res, uid) => {
     delete data['ssnNineDigits'];
     delete data['ssnFourDigits'];
 
-    if (Object.keys(data).length <= 0){
-        return res.status(400).json(getResponseJSON('Bad request!', 400));
-    }
-
-    if (!ssnNineDigits && !ssnFourDigits) {
+    if (Object.keys(data).length <= 0 || (!ssnNineDigits && !ssnFourDigits)){
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
 
