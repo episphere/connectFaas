@@ -236,4 +236,17 @@ module.exports = {
         unavailableUnknown: 178420302,
         anotherTypeOfCancer: 868006655,
     },
+
+    // SSN Variables
+    ssnModule: 'D_166676176',
+    ssnCompleteTs: 315032037,
+    ssnStatusFlag: 126331570,
+    ssnFullValue: 447051482,
+    ssnFullGiven: 311580100,
+    ssnFullGivenTime: 454067894,
+    ssnPartialValue: 920333151,
+    ssnPartialGiven: 914639140,
+    ssnPartialGivenTime: 598680838,
+    ssnQcStatus: 605870562,
+    ssnNoCheckRan: 875207881
 };
