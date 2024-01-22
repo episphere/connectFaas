@@ -7,18 +7,23 @@ const {getScheduledNotifications, saveNotificationBatch} = require("./firestore"
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = getTwilioAuthToken();
-const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-const twilioClient = require("twilio")(accountSid, authToken);
+const [twilioClient, messagingServiceSid] = setupTwilioSms();
 
-async function getTwilioAuthToken() {
+async function setupTwilioSms() {
+  const secretsToFetch = {
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+  };
   const client = new SecretManagerServiceClient();
-  const [version] = await client.accessSecretVersion({
-      name: process.env.TWILIO_AUTH_TOKEN,
-  });
+  let fetchedSecrets = {};
+  for (const [key, value] of Object.entries(secretsToFetch)) {
+    const [version] = await client.accessSecretVersion({ name: value });
+    fetchedSecrets[key] = version.payload.data.toString();
+  }
 
-  return version.payload.data.toString();
+  const twilioClient = require("twilio")(fetchedSecrets.accountSid, fetchedSecrets.authToken);
+  return [twilioClient, fetchedSecrets.messagingServiceSid];
 }
 
 const sendSmsBatch = async (smsDataArray) => {
