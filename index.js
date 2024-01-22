@@ -49,22 +49,23 @@ exports.biospecimen = biospecimenAPIs;
 
 // End-Point for Email Notifications Handler
 
-exports.sendEmailNotification = notificationHandler
+exports.sendEmailNotification = notificationHandler;
 
 
 // End-Points for Exporting Firestore to Big Query
 
-exports.importToBigQuery = importToBigQuery;
-  
+exports.importToBigQuery = importToBigQuery; 
+
 exports.scheduleFirestoreDataExport = firestoreExport;
 
 exports.exportNotificationsToBucket = exportNotificationsToBucket;
+
 exports.importNotificationsToBigquery = importNotificationsToBigquery;
 
 // End-Points for Participant Data Cleaning
 
-exports.participantDataCleanup = participantDataCleanup
+exports.participantDataCleanup = participantDataCleanup;
 
 // End-Points for SendGrid Event Webhook
 
-exports.sendGridEventWebhook = sendGridEventWebhook
+exports.sendGridEventWebhook = sendGridEventWebhook;
