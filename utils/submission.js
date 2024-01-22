@@ -137,12 +137,12 @@ const submitSocial = async (req, res, uid) => {
     const ssnNineDigits = data['ssnNineDigits'];
     const ssnFourDigits = data['ssnFourDigits'];
 
-    delete data['ssnNineDigits'];
-    delete data['ssnFourDigits'];
-
     if (Object.keys(data).length <= 0 || (!ssnNineDigits && !ssnFourDigits)){
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
+
+    delete data['ssnNineDigits'];
+    delete data['ssnFourDigits'];
 
     const { encryptAsymmetric } = require('./encrypt');
     const { getTokenForParticipant, storeSSN } = require('./firestore');
