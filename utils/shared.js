@@ -1210,7 +1210,7 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
 
 /**
  * Validate additional cancer site requirements in the Occurrence object (740819233).
- * Important: fieldMapping.primaryCancerSite value has already been validated in the initial validation step.
+ * Important: fieldMapping.primaryCancerSiteObj value has already been validated in the initial validation step.
  * If the 'fieldMapping.cancerSites.other' cancer site is selected, the 'fieldMapping.anotherTypeOfCancerText' field is required.
  * Else, the 'anotherTypeOfCancerText' field should not be present.
  * @param {object} cancerSitesObject - property (740819233) in the cancer occurrence object (637153953).
