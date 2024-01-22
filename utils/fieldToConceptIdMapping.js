@@ -1,6 +1,5 @@
 module.exports = {
-
-    siteLoginMap : {
+    siteLoginMap: {
         kaiserPermanenteGeorgia: 327912200,
         sanfordHealth: 657167265,
         universityOfChicagoMedicine: 809703864,
@@ -200,6 +199,9 @@ module.exports = {
     profileChangeRequestedBy: 611005658,
     participationStatus: 912301837,
     participationStatusDeceased: 618686157,
+    authenticationEmail: 421823980,
+    authenticationPhone: 348474836,
+    signInMechanism: 995036844,
 
     // cancer occurrences
     occurrenceNumber: 793981056,

@@ -1903,35 +1903,13 @@ const saveNotificationBatch = async (notificationRecordArray) => {
     const batch = db.batch();
     try {
         for (const record of recordChunk) {
-        const docId = record.uid + record.notificationSpecificationsID.slice(0, 6);
-        const docRef = db.collection("notifications").doc(docId);
+        const docRef = db.collection("notifications").doc();
         batch.set(docRef, record);
       }
 
       await batch.commit();
     } catch (error) {
       throw new Error("saveNotificationBatch() error.", {cause: error});
-    }
-  }
-};
-
-/**
- * @param {string} specId ID of notification specification
- * @param {string[]} participantTokenArray Array of participant tokens for data updates
- */
-const saveSpecIdsToParticipants = async (specId, participantTokenArray) => {
-  const chunkSize = 30; // 'in' operator has size limit of 30
-  const chunkArray = createChunkArray(participantTokenArray, chunkSize);
-
-  for (const tokenChunk of chunkArray) {
-    const batch = db.batch();
-    try {
-      const snapshot = await db.collection("participants").where("token", "in", tokenChunk).get();
-      if (snapshot.empty) continue;
-      snapshot.forEach((doc) => batch.update(doc.ref, {[`query.notificationSpecIdsUsed.${specId}`]: true}));
-      await batch.commit();
-    } catch (error) {
-      throw new Error("saveSpecIdsToParticipants() error.", {cause: error});
     }
   }
 };
@@ -1973,21 +1951,31 @@ const getSiteDetailsWithSignInProvider = async (acronym) => {
 }
 
 const retrieveNotificationSchemaByID = async (id) => {
-    const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
-    if(snapshot.size === 1) {
-        return snapshot.docs[0].id;
-    }
-    else return new Error('Invalid notification Id!!')
-}
+  const snapshot = await db.collection("notificationSpecifications").where("id", "==", id).get();
+  if (snapshot.size === 1) {
+    return snapshot.docs[0].id;
+  }
 
-const retrieveNotificationSchemaByCategory = async (category) => {
-    let query = db.collection('notificationSpecifications')
-    if(category !== 'all') query = query.where('category', '==', category)
-    else query = query.orderBy('category')
-    const snapshot = await query.orderBy('attempt').get();
-    if(snapshot.size === 0) return false;
-    return snapshot.docs.map(dt => dt.data());
-}
+  return "";
+};
+
+const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
+  let result = [];
+  let query = db.collection("notificationSpecifications");
+  if (category !== "all") query = query.where("category", "==", category);
+  else query = query.orderBy("category");
+
+  // TODO: update query to get daft schemas directly, after all schema in Firestore are updated to have isDraft field
+  const snapshot = await query.orderBy("attempt").get();
+  if (snapshot.size === 0) return result;
+
+  for (const doc of snapshot.docs) {
+    const docData = doc.data();
+    if ((getDrafts && docData.isDraft) || (!getDrafts && !docData.isDraft)) result.push(docData);
+  }
+
+  return result;
+};
 
 const storeNewNotificationSchema = async (data) => {
     await db.collection('notificationSpecifications').add(data);
@@ -2034,6 +2022,22 @@ const getEmailNotifications = async (scheduleAt) => {
     })
     return notifications;
 }
+
+/**
+ * Get all notification specifications that are not drafts and match the scheduleAt time.
+ * @param {string} scheduleAt Time of day to send notifications, eg. '15:00'
+ * @returns 
+ */
+const getScheduledNotifications = async (scheduleAt) => {
+  const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  let notificationSpecArray = [];
+  for (const doc of snapshot.docs) {
+    const docData = doc.data();
+    if (!docData.isDraft && docData.id) notificationSpecArray.push(docData);
+  }
+
+  return notificationSpecArray;
+};
 
 const getNotification = async (id) => {
     const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
@@ -3128,6 +3132,7 @@ module.exports = {
     getNotificationsCategories,
     getNotification,
     getEmailNotifications,
+    getScheduledNotifications,
     getKitAssemblyData,
     storeSiteNotifications,
     getCoordinatingCenterEmail,
@@ -3150,7 +3155,6 @@ module.exports = {
     updateUsersCurrentLogin,
     queryDailyReportParticipants,
     saveNotificationBatch,
-    saveSpecIdsToParticipants,
     getSpecimensByReceivedDate,
     getSpecimensByCollectionIds,
     getBoxesByBoxId,
