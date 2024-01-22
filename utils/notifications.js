@@ -1,9 +1,46 @@
 const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo} = require("./shared");
-const {getEmailNotifications, saveNotificationBatch, saveSpecIdsToParticipants} = require("./firestore");
+const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray} = require("./shared");
+const {getScheduledNotifications, saveNotificationBatch} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
+const conceptIds = require("./fieldToConceptIdMapping");
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = getTwilioAuthToken();
+const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+const twilioClient = require("twilio")(accountSid, authToken);
+
+async function getTwilioAuthToken() {
+  const client = new SecretManagerServiceClient();
+  const [version] = await client.accessSecretVersion({
+      name: process.env.TWILIO_AUTH_TOKEN,
+  });
+
+  return version.payload.data.toString();
+}
+
+const sendSmsBatch = async (smsDataArray) => {
+  // TODO: further check to see whether 1000 is a good batch size
+  const chunkArray = createChunkArray(smsDataArray, 1000);
+  for (const chunk of chunkArray) {
+    const messageArray = await Promise.all(
+      chunk.map((smsData) =>
+        twilioClient.messages.create({
+          body: smsData.notification.body,
+          to: smsData.phone,
+          messagingServiceSid,
+        })
+      )
+    );
+
+    for (let i = 0; i < chunk.length; i++) {
+      chunk[i].messageSid = messageArray[i].sid ?? "";
+    }
+
+  }
+};
 
 const subscribeToNotification = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -68,18 +105,7 @@ const retrieveNotifications = async (req, res, uid) => {
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
 }
 
-const sendSms = (phoneNo) => {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const client = require('twilio')(accountSid, authToken);
-
-    client.messages
-        .create({body: 'Thanks for joining Connect', from: process.env.from_phone_no, to: phoneNo})
-        .then(message => console.log(message.sid));
-}
-
 const getSecrets = async () => {
-    const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
     const client = new SecretManagerServiceClient();
     const [version] = await client.accessSecretVersion({
         name: process.env.GCLOUD_SENDGRID_SECRET,
@@ -110,10 +136,15 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
     });
 }
 
+/**
+ * Function triggered by Pub/Sub topic, accepting a message containing a string.
+ * @param {Object} message Pub/Sub message object.
+ * @param {string} message.data base64-encoded string.
+ */
 async function notificationHandler(message) {
   console.log("Received message:", JSON.stringify(message));
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
-  const notificationSpecArray = await getEmailNotifications(scheduleAt);
+  const notificationSpecArray = await getScheduledNotifications(scheduleAt);
   if (notificationSpecArray.length === 0) return;
   const apiKey = await getSecrets();
   sgMail.setApiKey(apiKey);
@@ -142,42 +173,57 @@ async function handleNotificationSpec(notificationSpec) {
     paramObj = {...paramObj, cutoffTimeStr: cutoffTime.toISOString(), timeField: primaryField};
   }
 
-  await getParticipantsAndSendEmails(paramObj);
+  await getParticipantsAndSendNotifications(paramObj);
 }
 
-async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, timeField}) {
-  const notificationSpecId = notificationSpec.id;
-  if (!notificationSpecId) return;
+/**
+ * 
+ * @param {Object} paramObj
+ * @param {Object} paramObj.notificationSpec notification specification object
+ * @param {string} paramObj.cutoffTimeStr ISO string used to filter out participants whose primaryField is after this time
+ * @param {string} paramObj.timeField Concept ID (eg 914594314) to decide which timestamp field to use for filtering
+ */
+async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr, timeField }) {
   const conditions = notificationSpec.conditions;
-  const messageBody = notificationSpec.email.body;
-  const messageSubject = notificationSpec.email.subject;
-  const emailField = notificationSpec.emailField;
-  const firstNameField = notificationSpec.firstNameField;
-  const preferredNameField = notificationSpec.preferredNameField;
+  const emailSubject = notificationSpec.email?.subject ?? "";
+  const emailBody = notificationSpec.email?.body ?? "";
+  const emailField = notificationSpec.emailField ?? "";
+  const smsBody = notificationSpec.sms?.body ?? "";
+  const phoneField = notificationSpec.phoneField ?? "";
+  const firstNameField = notificationSpec.firstNameField ?? "";
+  const preferredNameField = notificationSpec.preferredNameField ?? "";
 
-  let htmlTemplate = messageBody;
-  if (notificationSpec.category !== "newsletter") {
+  let emailHtmlTemplate = emailBody;
+  if (emailBody && notificationSpec.category !== "newsletter") {
     const converter = new showdown.Converter();
-    htmlTemplate = converter.makeHtml(messageBody);
+    emailHtmlTemplate = converter.makeHtml(emailBody);
   }
 
-  let htmlContainsToken = false;
-  let htmlContainsLoginDetails = false;
+  let emailContainsToken = false;
+  let emailContainsLoginDetails = false;
   let fieldsToFetch = ["Connect_ID", "token", "state.uid"];
   firstNameField && fieldsToFetch.push(firstNameField);
   preferredNameField && fieldsToFetch.push(preferredNameField);
   emailField && fieldsToFetch.push(emailField);
+  phoneField && fieldsToFetch.push(phoneField);
+  smsBody && fieldsToFetch.push(conceptIds.canWeText.toString());
 
-  htmlTemplate = htmlTemplate.replace("<firstName>", "{{firstName}}");
-  if (htmlTemplate.includes("${token}")) {
-    htmlContainsToken = true;
-    htmlTemplate = htmlTemplate.replaceAll("${token}", "{{token}}");
-  }
+  if (emailHtmlTemplate) {
+    emailHtmlTemplate = emailHtmlTemplate.replace(/<firstName>/g, "{{firstName}}");
+    if (emailHtmlTemplate.includes("${token}")) {
+      emailContainsToken = true;
+      emailHtmlTemplate = emailHtmlTemplate.replace(/\${token}/g, "{{token}}");
+    }
 
-  if (htmlTemplate.includes("<loginDetails>")) {
-    htmlContainsLoginDetails = true;
-    htmlTemplate = htmlTemplate.replace("<loginDetails>", "{{loginDetails}}");
-    fieldsToFetch.push("995036844", "348474836", "421823980");
+    if (emailHtmlTemplate.includes("<loginDetails>")) {
+      emailContainsLoginDetails = true;
+      emailHtmlTemplate = emailHtmlTemplate.replace(/<loginDetails>/g, "{{loginDetails}}");
+      fieldsToFetch.push(
+        `${conceptIds.signInMechanism}`,
+        `${conceptIds.authenticationPhone}`,
+        `${conceptIds.authenticationEmail}`
+      );
+    }
   }
 
   const limit = 1000; // SendGrid has a batch limit of 1000
@@ -185,76 +231,40 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
   let hasNext = true;
   let fetchedDataArray = [];
   let emailCount = 0;
+  let smsCount = 0;
 
   while (hasNext) {
-    ({fetchedDataArray, hasNext} = await getParticipantsForNotificationsBQ({
-      notificationSpecId,
-      conditions,
-      cutoffTimeStr,
-      timeField,
-      fieldsToFetch,
-      limit,
-      offset,
-    }));
+    try {
+      ({ fetchedDataArray, hasNext } = await getParticipantsForNotificationsBQ({
+        notificationSpecId: notificationSpec.id,
+        conditions,
+        cutoffTimeStr,
+        timeField,
+        fieldsToFetch,
+        limit,
+        offset,
+      }));
+    } catch (error) {
+      console.error(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpec.id}.`, error);
+      break;
+    }
+
     if (fetchedDataArray.length === 0) break;
-    let participantTokenArray = [];
-    let notificationRecordArray = [];
-    let personalizationArray = [];
+
+    let emailRecordArray = [];
+    let emailPersonalizationArray = [];
+    let smsRecordArray = [];
 
     for (const fetchedData of fetchedDataArray) {
-      if (!fetchedData[emailField]) continue;
-      let notificationBody = htmlTemplate;
-      let substitutions = {};
-      if (htmlContainsLoginDetails) {
-        let loginDetails = "";
+      if (!fetchedData[emailField] && !fetchedData[phoneField]) continue;
 
-        if (fetchedData[995036844] === "phone" && fetchedData[348474836]) {
-          loginDetails = redactPhoneLoginInfo(fetchedData[348474836]);
-        } else if (fetchedData[995036844] === "password" && fetchedData[421823980]) {
-          loginDetails = redactEmailLoginInfo(fetchedData[421823980]);
-        } else if (fetchedData[995036844] === 'passwordAndPhone' && fetchedData[421823980] && fetchedData[348474836]) {
-          loginDetails = redactEmailLoginInfo(fetchedData[421823980]) + " or " + redactPhoneLoginInfo(fetchedData[348474836]);
-        } else {
-          console.log("No login details found for participant with token:", fetchedData.token);
-          continue;
-        }
-
-        substitutions.loginDetails = loginDetails;
-        notificationBody = notificationBody.replace("{{loginDetails}}", loginDetails);
-      }
-
+      const uniqId = uuid();
+      const emailId = uniqId + "-1";
+      const smsId = uniqId + "-2";
+      const currDateTime = new Date().toISOString();
       const firstName = fetchedData[preferredNameField] || fetchedData[firstNameField];
-      substitutions.firstName = firstName;
-      notificationBody = notificationBody.replace("{{firstName}}", firstName);
-
-      if (htmlContainsToken) {
-        substitutions.token = fetchedData.token;
-        notificationBody = notificationBody.replaceAll("{{token}}", fetchedData.token);
-      }
-
-      const notification_id = uuid();
-      personalizationArray.push({
-        to: fetchedData[emailField],
-        substitutions,
-        custom_args: {
-          connect_id: fetchedData.Connect_ID,
-          token: fetchedData.token,
-          notification_id,
-          gcloud_project: process.env.GCLOUD_PROJECT
-        },
-      });
-      participantTokenArray.push(fetchedData.token);
-
-      const notificationRecord = {
-        notificationSpecificationsID: notificationSpecId,
-        id: notification_id,
-        notificationType: notificationSpec.notificationType[0],
-        email: fetchedData[emailField],
-        notification: {
-          title: messageSubject,
-          body: notificationBody,
-          time: new Date().toISOString(),
-        },
+      const recordCommonData = {
+        notificationSpecificationsID: notificationSpec.id,
         attempt: notificationSpec.attempt,
         category: notificationSpec.category,
         token: fetchedData.token,
@@ -262,77 +272,179 @@ async function getParticipantsAndSendEmails({notificationSpec, cutoffTimeStr, ti
         read: false,
       };
 
-      notificationRecordArray.push(notificationRecord);
+      if (emailHtmlTemplate) {
+        let substitutions = { firstName };
+        let currEmailBody = emailHtmlTemplate.replace(/{{firstName}}/g, firstName);
+
+        if (emailContainsLoginDetails) {
+          let loginDetails = "";
+          if (fetchedData[conceptIds.signInMechanism] === "phone" && fetchedData[conceptIds.authenticationPhone]) {
+            loginDetails = redactPhoneLoginInfo(fetchedData[conceptIds.authenticationPhone]);
+          } else if (
+            fetchedData[conceptIds.signInMechanism] === "password" &&
+            fetchedData[conceptIds.authenticationEmail]
+          ) {
+            loginDetails = redactEmailLoginInfo(fetchedData[conceptIds.authenticationEmail]);
+          } else if (
+            fetchedData[conceptIds.signInMechanism] === "passwordAndPhone" &&
+            fetchedData[conceptIds.authenticationEmail] &&
+            fetchedData[conceptIds.authenticationPhone]
+          ) {
+            loginDetails =
+              redactEmailLoginInfo(fetchedData[conceptIds.authenticationEmail]) +
+              " or " +
+              redactPhoneLoginInfo(fetchedData[conceptIds.authenticationPhone]);
+          } else {
+            console.log("No login details found for participant with token:", fetchedData.token);
+            continue;
+          }
+
+          substitutions.loginDetails = loginDetails;
+          currEmailBody = currEmailBody.replace(/{{loginDetails}}/g, loginDetails);
+        }
+
+        if (emailContainsToken) {
+          substitutions.token = fetchedData.token;
+          currEmailBody = currEmailBody.replace(/{{token}}/g, fetchedData.token);
+        }
+
+        emailPersonalizationArray.push({
+          to: fetchedData[emailField],
+          substitutions,
+          custom_args: {
+            connect_id: fetchedData.Connect_ID,
+            token: fetchedData.token,
+            notification_id: emailId,
+            gcloud_project: process.env.GCLOUD_PROJECT,
+          },
+        });
+
+        emailRecordArray.push({
+          ...recordCommonData,
+          id: emailId,
+          notificationType: "email",
+          email: fetchedData[emailField],
+          notification: {
+            title: emailSubject,
+            body: currEmailBody,
+            time: currDateTime,
+          },
+        });
+      }
+
+      let canWeText = fetchedData[conceptIds.canWeText];
+      // TODO: remove data type check after cleaning up mixed data types of conceptIds.canWeText in dev and stage.
+      if (typeof canWeText === "object" && canWeText.integer) {
+        canWeText = canWeText.integer;
+      }
+
+      if (smsBody && fetchedData[phoneField].length >= 10 && canWeText === conceptIds.yes) {
+        const phoneNumber = fetchedData[phoneField].replace(/\D/g, "");
+        if (phoneNumber.length >= 10) {
+          const currSmsBody = smsBody.replace(/<firstName>/g, firstName);
+          const currSmsTo = `+1${phoneNumber.slice(-10)}`;
+          
+          smsRecordArray.push({
+            ...recordCommonData,
+            id: smsId,
+            notificationType: "sms",
+            phone: currSmsTo,
+            notification: {
+              body: currSmsBody,
+              time: currDateTime,
+            },
+          });
+        }
+      }
+
+      if (emailPersonalizationArray.length === 0 && smsRecordArray.length === 0) continue;
+
+      if (emailPersonalizationArray.length > 0) {
+        const emailBatch = {
+          from: {
+            name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
+            email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
+          },
+          subject: emailSubject,
+          html: emailHtmlTemplate,
+          personalizations: emailPersonalizationArray,
+        };
+
+        try {
+          await sgMail.send(emailBatch);
+        } catch (error) {
+          console.error(`Error sending emails for ${notificationSpec.id}(${emailSubject}).`, error);
+          break;
+        }
+
+        emailCount += emailRecordArray.length;
+      }
+
+      if (smsRecordArray.length > 0) {
+        try {
+          await sendSmsBatch(smsRecordArray);
+        } catch (error) {
+          console.error(`Error sending sms for ${notificationSpec.id}(${emailSubject}).`, error);
+          break;
+        }
+
+        smsCount += smsRecordArray.length;
+      }
+
+      try {
+        await saveNotificationBatch([...emailRecordArray, ...smsRecordArray]);
+      } catch (error) {
+        console.error(`Error saving data for ${notificationSpec.id}(${emailSubject}).`, error);
+        break;
+      }
+
+      offset += limit;
     }
-
-    if (personalizationArray.length === 0) continue;
-
-    const msgBatch = {
-      from: {
-        name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
-        email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
-      },
-      subject: messageSubject,
-      html: htmlTemplate,
-      personalizations: personalizationArray,
-    };
-
-    try {
-      await sgMail.send(msgBatch);
-    } catch (error) {
-      console.error(`Error sending emails for ${notificationSpecId}(${messageSubject}).`, error);
-      break;
-    }
-
-    emailCount += personalizationArray.length;
-
-    try {
-      await Promise.all([
-        saveNotificationBatch(notificationRecordArray),
-        saveSpecIdsToParticipants(notificationSpecId, participantTokenArray),
-      ]);
-    } catch (error) {
-      console.error(`Error saving data for ${notificationSpecId}(${messageSubject}).`, error);
-      break;
-    }
-
-    offset += limit;
   }
-  console.log(`Finished notification spec: ${notificationSpecId}(${messageSubject}), emails sent: ${emailCount}`);
+
+  if (emailCount === 0 && smsCount === 0) {
+    console.log(`Finished notification spec: ${notificationSpec.id}(${emailSubject}). No emails or sms sent.`);
+  } else {
+    console.log(
+      `Finished notification spec: ${notificationSpec.id}(${emailSubject}), emails sent: ${emailCount}, sms sent: ${smsCount}`
+    );
+  }
+
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
-    logIPAdddress(req);
-    setHeaders(res);
+  logIPAdddress(req);
+  setHeaders(res);
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-        
-    if(req.method !== 'POST') return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+  if (req.method === "OPTIONS") return res.status(200).json({ code: 200 });
 
-    if(!authObj) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+  if (req.method !== "POST") return res.status(405).json(getResponseJSON("Only POST requests are accepted!", 405));
 
-    if(req.body.data === undefined || Object.keys(req.body.data).length < 1 ) return res.status(400).json(getResponseJSON('Bad requuest.', 400));
+  if (!authObj) return res.status(401).json(getResponseJSON("Authorization failed!", 401));
 
-    const data = req.body.data;
-    if(data.id) {
-        const { retrieveNotificationSchemaByID } = require('./firestore');
-        const docID = await retrieveNotificationSchemaByID(data.id);
-        if(docID instanceof Error) return res.status(404).json(getResponseJSON(docID.message, 404));
-        const { updateNotificationSchema } = require('./firestore');
-        data['modifiedAt'] = new Date().toISOString();
-        if(authObj.userEmail) data['modifiedBy'] = authObj.userEmail;
-        await updateNotificationSchema(docID, data);
-    }
-    else {
-        const { v4: uuid } = require('uuid')
-        data['id'] = uuid();
-        const { storeNewNotificationSchema } = require('./firestore');
-        data['createdAt'] = new Date().toISOString();
-        if(authObj.userEmail) data['createdBy'] = authObj.userEmail;
-        await storeNewNotificationSchema(data);
-    }
-    return res.status(200).json(getResponseJSON('Ok', 200));
-}
+  if (req.body.data === undefined || Object.keys(req.body.data).length < 1)
+    return res.status(400).json(getResponseJSON("Bad requuest.", 400));
+
+  const schema = req.body.data;
+  if (schema.id) {
+    const { retrieveNotificationSchemaByID } = require("./firestore");
+    const docID = await retrieveNotificationSchemaByID(schema.id);
+    if (docID === "") return res.status(404).json(getResponseJSON("Invalid notification Id.", 404));
+
+    const { updateNotificationSchema } = require("./firestore");
+    schema["modifiedAt"] = new Date().toISOString();
+    if (authObj.userEmail) schema["modifiedBy"] = authObj.userEmail;
+    await updateNotificationSchema(docID, schema);
+  } else {
+    schema["id"] = uuid();
+    const { storeNewNotificationSchema } = require("./firestore");
+    schema["createdAt"] = new Date().toISOString();
+    if (authObj.userEmail) schema["createdBy"] = authObj.userEmail;
+    await storeNewNotificationSchema(schema);
+  }
+
+  return res.status(200).json(getResponseJSON("Ok", 200));
+};
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
     logIPAdddress(req);
@@ -347,9 +459,11 @@ const retrieveNotificationSchema = async (req, res, authObj) => {
     if(!req.query.category) return res.status(400).json(getResponseJSON('category is missing in request parameter!', 400));
 
     const category = req.query.category;
+    const getDrafts = req.query.drafts === "true";
     const { retrieveNotificationSchemaByCategory } = require('./firestore');
-    const data = await retrieveNotificationSchemaByCategory(category);
-    if(!data) return res.status(404).json(getResponseJSON(`Notification schema not found for given category - ${category}`, 404))
+    const data = await retrieveNotificationSchemaByCategory(category, getDrafts);
+    if (data.length === 0) return res.status(404).json(getResponseJSON(`Notification schema not found for given category - ${category}`, 404));
+
     return res.status(200).json({data, code:200});
 }
 

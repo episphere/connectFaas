@@ -1,5 +1,5 @@
 const { getResponseJSON, setHeadersDomainRestricted, getUserProfile } = require('./shared');
-const { recruitSubmit, getUserSurveys, getUserCollections } = require('./submission');
+const { recruitSubmit, submitSocial, getUserSurveys, getUserCollections } = require('./submission');
 const { retrieveNotifications } = require('./notifications');
 const { validateToken, generateToken, updateParticipantFirebaseAuthentication, validateUsersEmailPhone } = require('./validation');
 
@@ -36,6 +36,8 @@ const connectApp = async (req, res) => {
 
   try {
     if (api === 'submit') return recruitSubmit(req, res, uid);
+
+    if (api === 'submitSocial') return submitSocial(req, res, uid);
 
     else if (api === 'getUserProfile') return getUserProfile(req, res, uid);
 

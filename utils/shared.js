@@ -235,10 +235,6 @@ const defaultStateFlags = {
     ...optOutReasons
 }
 
-const moduleConcepts = {
-    "moduleSSN": 'D_166676176'
-}
-
 const moduleConceptsToCollections = {
     "D_726699695" :     "module1_v1",
     "D_726699695_V2" :  "module1_v2",
@@ -1498,7 +1494,6 @@ module.exports = {
     filterData,
     incentiveFlags,
     lockedAttributes,
-    moduleConcepts,
     moduleConceptsToCollections,
     moduleStatusConcepts,
     listOfCollectionsRelatedToDataDestruction,
