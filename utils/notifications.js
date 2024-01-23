@@ -6,8 +6,11 @@ const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, r
 const {getScheduledNotifications, saveNotificationBatch} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
+let twilioClient, messagingServiceSid;
 
-const [twilioClient, messagingServiceSid] = setupTwilioSms();
+(async () => {
+  [twilioClient, messagingServiceSid] = await setupTwilioSms();
+})();
 
 async function setupTwilioSms() {
   const secretsToFetch = {
