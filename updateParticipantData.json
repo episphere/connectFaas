@@ -529,11 +529,6 @@
 		"dataType": "number",
 		"mustExist": false
 	},
-	"637153953[].457270069": {
-		"dataType": "string",
-		"mustExist": false,
-		"maxLength": 800
-	},
 	"637153953[].740819233": {
 		"dataType": "object",
 		"mustExist": false

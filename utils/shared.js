@@ -1288,10 +1288,6 @@ const finalizeCancerOccurrenceData = (occurrenceData, participantToken, particip
         finalizedOccurrenceData[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical] = '';
     }
 
-    if (!finalizedOccurrenceData[fieldMapping.preliminaryStageInformation]) {
-        finalizedOccurrenceData[fieldMapping.preliminaryStageInformation] = '';
-    }
-
     return finalizedOccurrenceData;
 
 }
