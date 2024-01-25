@@ -451,7 +451,7 @@ const storeNotificationSchema = async (req, res, authObj) => {
     await storeNewNotificationSchema(schema);
   }
 
-  return res.status(200).json(getResponseJSON("Ok", 200));
+  return res.status(200).json({ message: "Success!", code: 200, data: [{ schemaId: schema.id }] });
 };
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
