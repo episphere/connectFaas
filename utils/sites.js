@@ -336,10 +336,8 @@ const updateParticipantData = async (req, res, authObj) => {
 
         try {
             if (Object.keys(updatedData).length > 0) {
-                await Promise.all([
-                    updateParticipantData(docID, updatedData),
-                    checkDerivedVariables(participantToken, docData['827220437']),
-                ]);
+                    await updateParticipantData(docID, updatedData);
+                    await checkDerivedVariables(participantToken, docData['827220437']);
             }
             
             responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
