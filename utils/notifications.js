@@ -192,6 +192,7 @@ async function handleNotificationSpec(notificationSpec) {
  * @param {string} paramObj.timeField Concept ID (eg 914594314) to decide which timestamp field to use for filtering
  */
 async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr, timeField }) {
+  const readableSpecString = notificationSpec.category + ", " + notificationSpec.attempt;
   const conditions = notificationSpec.conditions;
   const emailSubject = notificationSpec.email?.subject ?? "";
   const emailBody = notificationSpec.email?.body ?? "";
@@ -346,12 +347,12 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         canWeText = canWeText.integer;
       }
 
-      if (smsBody && fetchedData[phoneField].length >= 10 && canWeText === conceptIds.yes) {
+      if (smsBody && fetchedData[phoneField]?.length >= 10 && canWeText === conceptIds.yes) {
         const phoneNumber = fetchedData[phoneField].replace(/\D/g, "");
         if (phoneNumber.length >= 10) {
           const currSmsBody = smsBody.replace(/<firstName>/g, firstName);
           const currSmsTo = `+1${phoneNumber.slice(-10)}`;
-          
+
           smsRecordArray.push({
             ...recordCommonData,
             id: smsId,
@@ -364,60 +365,59 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
           });
         }
       }
+    }
+    
+    if (emailPersonalizationArray.length === 0 && smsRecordArray.length === 0) continue;
 
-      if (emailPersonalizationArray.length === 0 && smsRecordArray.length === 0) continue;
-
-      if (emailPersonalizationArray.length > 0) {
-        const emailBatch = {
-          from: {
-            name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
-            email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
-          },
-          subject: emailSubject,
-          html: emailHtmlTemplate,
-          personalizations: emailPersonalizationArray,
-        };
-
-        try {
-          await sgMail.send(emailBatch);
-        } catch (error) {
-          console.error(`Error sending emails for ${notificationSpec.id}(${emailSubject}).`, error);
-          break;
-        }
-
-        emailCount += emailRecordArray.length;
-      }
-
-      if (smsRecordArray.length > 0) {
-        try {
-          await sendSmsBatch(smsRecordArray);
-        } catch (error) {
-          console.error(`Error sending sms for ${notificationSpec.id}(${emailSubject}).`, error);
-          break;
-        }
-
-        smsCount += smsRecordArray.length;
-      }
+    if (emailPersonalizationArray.length > 0) {
+      const emailBatch = {
+        from: {
+          name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
+          email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
+        },
+        subject: emailSubject,
+        html: emailHtmlTemplate,
+        personalizations: emailPersonalizationArray,
+      };
 
       try {
-        await saveNotificationBatch([...emailRecordArray, ...smsRecordArray]);
+        await sgMail.send(emailBatch);
       } catch (error) {
-        console.error(`Error saving data for ${notificationSpec.id}(${emailSubject}).`, error);
+        console.error(`Error sending emails for ${notificationSpec.id}(${readableSpecString}).`, error);
         break;
       }
 
-      offset += limit;
+      emailCount += emailRecordArray.length;
     }
+
+    if (smsRecordArray.length > 0) {
+      try {
+        await sendSmsBatch(smsRecordArray);
+      } catch (error) {
+        console.error(`Error sending sms for ${notificationSpec.id}(${readableSpecString}).`, error);
+        break;
+      }
+
+      smsCount += smsRecordArray.length;
+    }
+
+    try {
+      await saveNotificationBatch([...emailRecordArray, ...smsRecordArray]);
+    } catch (error) {
+      console.error(`Error saving data for ${notificationSpec.id}(${readableSpecString}).`, error);
+      break;
+    }
+
+    offset += limit;
   }
 
   if (emailCount === 0 && smsCount === 0) {
-    console.log(`Finished notification spec: ${notificationSpec.id}(${emailSubject}). No emails or sms sent.`);
+    console.log(`Finished notification spec: ${notificationSpec.id}(${readableSpecString}). No emails or sms sent.`);
   } else {
     console.log(
-      `Finished notification spec: ${notificationSpec.id}(${emailSubject}), emails sent: ${emailCount}, sms sent: ${smsCount}`
+      `Finished notification spec: ${notificationSpec.id}(${readableSpecString}), emails sent: ${emailCount}, sms sent: ${smsCount}`
     );
   }
-
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
