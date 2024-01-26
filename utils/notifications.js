@@ -401,13 +401,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
     }
 
     if (smsRecordArray.length > 0) {
-      try {
-        smsRecordArray = await sendSmsBatch(smsRecordArray);
-      } catch (error) {
-        console.error(`Error sending sms for ${notificationSpec.id}(${readableSpecString}).`, error);
-        break;
-      }
-
+      smsRecordArray = await sendSmsBatch(smsRecordArray);
       smsCount += smsRecordArray.length;
     }
 
