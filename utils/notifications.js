@@ -202,7 +202,7 @@ async function handleNotificationSpec(notificationSpec) {
  * @param {string} paramObj.timeField Concept ID (eg 914594314) to decide which timestamp field to use for filtering
  */
 async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr, timeField }) {
-  const readableSpecString = notificationSpec.category + ", " + notificationSpec.attempt;
+  const readableSpecString = notificationSpec.email?.subject || notificationSpec.category + ", " + notificationSpec.attempt;
   const conditions = notificationSpec.conditions;
   const emailSubject = notificationSpec.email?.subject ?? "";
   const emailBody = notificationSpec.email?.body ?? "";
@@ -215,7 +215,8 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   let emailHtmlTemplate = emailBody;
   if (emailBody && notificationSpec.category !== "newsletter") {
     const converter = new showdown.Converter();
-    emailHtmlTemplate = converter.makeHtml(emailBody);
+    const cleanEmailBody = emailBody.replace(/\]\s+\(/g, "]("); // Remove this line after fixing markdown files
+    emailHtmlTemplate = converter.makeHtml(cleanEmailBody);
   }
 
   let emailContainsToken = false;
