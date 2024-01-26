@@ -29,25 +29,35 @@ async function setupTwilioSms() {
   return [twilioClient, fetchedSecrets.messagingServiceSid];
 }
 
-const sendSmsBatch = async (smsDataArray) => {
+const sendSmsBatch = async (smsRecordArray) => {
   // TODO: further check to see whether 1000 is a good batch size
-  const chunkArray = createChunkArray(smsDataArray, 1000);
+  let adjustedDataArray = [];
+  const chunkArray = createChunkArray(smsRecordArray, 1000);
   for (const chunk of chunkArray) {
     const messageArray = await Promise.all(
       chunk.map((smsData) =>
-        twilioClient.messages.create({
-          body: smsData.notification.body,
-          to: smsData.phone,
-          messagingServiceSid,
-        })
+        twilioClient.messages
+          .create({
+            body: smsData.notification.body,
+            to: smsData.phone,
+            messagingServiceSid,
+          })
+          .catch((error) => {
+            console.error(`Error sending sms to ${smsData.phone} (token: ${smsData.token}).`, error);
+            return { errorOccurred: true };
+          })
       )
     );
 
     for (let i = 0; i < chunk.length; i++) {
-      chunk[i].messageSid = messageArray[i].sid ?? "";
+      if (!messageArray[i].errorOccurred) {
+        chunk[i].messageSid = messageArray[i].sid || "";
+        adjustedDataArray.push(chunk[i]);
+      }
     }
-
   }
+
+  return adjustedDataArray;
 };
 
 const subscribeToNotification = async (req, res) => {
@@ -392,7 +402,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 
     if (smsRecordArray.length > 0) {
       try {
-        await sendSmsBatch(smsRecordArray);
+        smsRecordArray = await sendSmsBatch(smsRecordArray);
       } catch (error) {
         console.error(`Error sending sms for ${notificationSpec.id}(${readableSpecString}).`, error);
         break;
