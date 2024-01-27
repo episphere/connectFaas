@@ -2,7 +2,7 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat} = require("./shared");
 const {getScheduledNotifications, saveNotificationBatch} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -215,8 +215,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   let emailHtmlTemplate = emailBody;
   if (emailBody && notificationSpec.category !== "newsletter") {
     const converter = new showdown.Converter();
-    const cleanEmailBody = emailBody.replace(/\]\s+\(/g, "]("); // Remove this line after fixing markdown files
-    emailHtmlTemplate = converter.makeHtml(cleanEmailBody);
+    emailHtmlTemplate = converter.makeHtml(emailBody);
   }
 
   let emailContainsToken = false;
@@ -292,7 +291,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         read: false,
       };
 
-      if (emailHtmlTemplate) {
+      if (emailHtmlTemplate && validEmailFormat.test(fetchedData[emailField])) {
         let substitutions = { firstName };
         let currEmailBody = emailHtmlTemplate.replace(/{{firstName}}/g, firstName);
 
