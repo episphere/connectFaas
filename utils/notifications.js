@@ -2,7 +2,7 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat} = require("./shared");
 const {getScheduledNotifications, saveNotificationBatch} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -202,7 +202,7 @@ async function handleNotificationSpec(notificationSpec) {
  * @param {string} paramObj.timeField Concept ID (eg 914594314) to decide which timestamp field to use for filtering
  */
 async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr, timeField }) {
-  const readableSpecString = notificationSpec.category + ", " + notificationSpec.attempt;
+  const readableSpecString = notificationSpec.email?.subject || notificationSpec.category + ", " + notificationSpec.attempt;
   const conditions = notificationSpec.conditions;
   const emailSubject = notificationSpec.email?.subject ?? "";
   const emailBody = notificationSpec.email?.body ?? "";
@@ -291,7 +291,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         read: false,
       };
 
-      if (emailHtmlTemplate) {
+      if (emailHtmlTemplate && validEmailFormat.test(fetchedData[emailField])) {
         let substitutions = { firstName };
         let currEmailBody = emailHtmlTemplate.replace(/{{firstName}}/g, firstName);
 
