@@ -235,10 +235,6 @@ const defaultStateFlags = {
     ...optOutReasons
 }
 
-const moduleConcepts = {
-    "moduleSSN": 'D_166676176'
-}
-
 const moduleConceptsToCollections = {
     "D_726699695" :     "module1_v1",
     "D_726699695_V2" :  "module1_v2",
@@ -280,6 +276,7 @@ const listOfCollectionsRelatedToDataDestruction = [
     "module4_v1",
     "biospecimen",
     "notifications",
+    "cancerOccurrence"
 ];
 
 const incentiveConcepts = {
@@ -606,6 +603,7 @@ const initializeTimestamps = {
     "state.158291096": {
         value: 353358909,
         initialize: {
+            "state.158291096": 353358909,
             "state.697256759": new Date().toISOString()
         }
     }
@@ -1127,6 +1125,174 @@ const sortBoxOnBagRemoval = (boxData, bagsToRemove, currDate) => {
 }
 
 /**
+ * Flatten an object into dot notation structure.
+ * @param {object} obj - the object to flatten. 
+ * @param {string} parentPath - the parent path of the object.
+ * @returns {object} - an object with flattened keys.
+ */
+const flattenObject = (obj, parentPath = '') => {
+    const flattened = {};
+
+    const traverse = (currentObj, currentPath) => {
+        for (const key in currentObj) {
+            const value = currentObj[key];
+            const newPath = currentPath ? `${currentPath}.${key}` : key;
+
+            if (value && typeof value === 'object') {
+                if (Array.isArray(value)) {
+                    value.forEach((item, index) => {
+                        traverse(item, `${newPath}[${index}]`);
+                    });
+                } else {
+                    traverse(value, newPath);
+                }
+            } else {
+                // Assign scalar values.
+                flattened[newPath] = value;
+            }
+        }
+    };
+
+    traverse(obj, parentPath);
+    return flattened;
+};
+
+/**
+ * Validate and update the data object for the cancer occurrences field (637153953) in the participant profile.
+ * @param {array<object>} incomingCancerOccurrenceArray - the update object for the participant profile. 
+ * @param {array<object>} existingOccurrences - existing cancer occurrences from the participant profile.
+ * @param {object} requiredOccurrenceRules - the required fields for each cancer occurrence.
+ * @param {string} participantToken - the participant's token.
+ * @param {string} participantConnectId - the participant's connect id.
+ * @returns {object} - an object with an error flag, message, and data array.
+ */
+const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOccurrenceRules, participantToken, participantConnectId) => {
+    // Validate the new occurrence array data
+    for (let i = 0; i < incomingCancerOccurrenceArray.length; i++) {
+        const occurrence = incomingCancerOccurrenceArray[i];
+
+        for (const rule of requiredOccurrenceRules) {
+            const [, propertyKey] = rule.split('.'); // Example: Splitting '637153953[0]' and '345545422'
+
+            if (!occurrence || !occurrence[propertyKey]) {
+                return { error: true, message: `Missing required field: ${propertyKey} in occurrence ${i}`, data: [] };
+            }
+        }
+
+        const cancerSiteValidationObj = validateCancerOccurrence(occurrence[fieldMapping.primaryCancerSiteObject]);
+        if (cancerSiteValidationObj.error === true) {
+            return cancerSiteValidationObj;
+        }
+    }
+
+    // Query existing occurrences for the participant
+    const { getParticipantCancerOccurrences } = require('./firestore');
+    const existingCancerOccurrences = await getParticipantCancerOccurrences(participantToken);
+
+    // Make sure the occurrence is not a duplicate - check timestamp and yes values in primary cancer sites.
+    const duplicateCheckResponse = checkForDuplicateCancerOccurrences(incomingCancerOccurrenceArray, existingCancerOccurrences);
+    if (duplicateCheckResponse.error) {
+        return { error: true, message: duplicateCheckResponse.message, data: [] };
+    }
+
+    const finalizedCancerOccurrenceArray = [];
+    let mostRecentOccurrenceNum = existingCancerOccurrences.length;
+    for (const newOccurrence of incomingCancerOccurrenceArray) {
+        // Finalize the occurrence data and add to the finalized array.
+        const occurrenceData = finalizeCancerOccurrenceData(newOccurrence, participantToken, participantConnectId, mostRecentOccurrenceNum);
+        finalizedCancerOccurrenceArray.push(occurrenceData);
+        mostRecentOccurrenceNum++;
+    }
+
+    return { error: false, message: 'Success!', data: finalizedCancerOccurrenceArray };
+}
+
+/**
+ * Validate additional cancer site requirements in the Occurrence object (740819233).
+ * Important: fieldMapping.primaryCancerSiteObj value has already been validated in the initial validation step.
+ * If the 'fieldMapping.cancerSites.other' cancer site is selected, the 'fieldMapping.anotherTypeOfCancerText' field is required.
+ * Else, the 'anotherTypeOfCancerText' field should not be present.
+ * @param {object} cancerSitesObject - property (740819233) in the cancer occurrence object (637153953).
+ * @returns {boolean} - Returns true the above requirements are met, false otherwise.
+ */
+const validateCancerOccurrence = (cancerSitesObject) => {
+    if (!cancerSitesObject || Object.keys(cancerSitesObject).length === 0 || !cancerSitesObject[fieldMapping.primaryCancerSiteCategorical]) {
+        return { error: true, message: 'Primary cancer site categorical (740819233.149205077) is required.', data: [] };
+    }
+    
+    const isOtherCancerSiteSelected = cancerSitesObject[fieldMapping.primaryCancerSiteCategorical] === fieldMapping.cancerSites.other;
+    const isAnotherTypeOfCancerTextValid = 
+        cancerSitesObject[fieldMapping.anotherTypeOfCancerText] !== null &&
+        typeof cancerSitesObject[fieldMapping.anotherTypeOfCancerText] === 'string' &&
+        cancerSitesObject[fieldMapping.anotherTypeOfCancerText].trim().length > 0;
+
+    const otherCancerSiteErrorMessage = "'Another type of cancer description' (868006655) must be included if primary cancer site is 'other' (807835037)." +
+    "Otherwise, 'another type of cancer description' (868006655) must be excluded.";
+
+    const hasError = isOtherCancerSiteSelected ? !isAnotherTypeOfCancerTextValid : isAnotherTypeOfCancerTextValid;
+
+    return { error: hasError, message: hasError ? otherCancerSiteErrorMessage : '', data: [] };
+}
+
+/**
+ * Check for duplicate cancer occurrences. Occurrences are considered duplicates if the timestamp and primary cancer sites match.
+ * @param {array<object>} newOccurrenceArray - the new occurrence array to check.
+ * @param {array<object>} existingCancerOccurrences - the existing occurrences to check against.
+ * @returns {object} - an object with an error flag, message, and data array.
+ * Check for a timestamp match. If a timestamp match is found, compare cancer site data. Short circuit on mismatch (data is unique).
+ */
+const checkForDuplicateCancerOccurrences = (newOccurrenceArray, existingCancerOccurrences) => {
+    const buildTimestampHashMap = (occurrences) => {
+        const timestampHashMap = {};
+        for (const occurrence of occurrences) {
+            const timestamp = occurrence[fieldMapping.cancerOccurrenceTimestamp];
+            if (!timestampHashMap[timestamp]) {
+                timestampHashMap[timestamp] = [];
+            }
+            timestampHashMap[timestamp].push(occurrence);
+        }
+        return timestampHashMap;
+    }
+    
+    const existingOccurrencesHashMap = buildTimestampHashMap(existingCancerOccurrences);
+
+    for (const newOccurrence of newOccurrenceArray) {
+        const timestamp = newOccurrence[fieldMapping.cancerOccurrenceTimestamp];
+        const potentialDuplicateOccurrences = existingOccurrencesHashMap[timestamp] || [];
+
+        for (const occurrence of potentialDuplicateOccurrences) {
+            if (occurrence[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical] === newOccurrence[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical]) {
+                return {
+                    error: true,
+                    message: 
+                        `Error: Duplicate cancer occurrence. Timestamp and primary site matches existing cancer occurrence for this participant. Timestamp: ${newOccurrence[fieldMapping.cancerOccurrenceTimestamp]}, ` +
+                        `Primary Cancer Site: ${newOccurrence[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical]}`,
+                    data: [],
+                };    
+            }
+        }
+    }
+    return { error: false, message: 'Success!', data: []};
+}
+
+const finalizeCancerOccurrenceData = (occurrenceData, participantToken, participantConnectId, mostRecentOccurrenceNum) => {
+    const finalizedOccurrenceData = {
+        ...occurrenceData,
+        [fieldMapping.occurrenceNumber]: mostRecentOccurrenceNum + 1,
+        [fieldMapping.isCancerDiagnosis]: fieldMapping.yes,
+        'token': participantToken,
+        'Connect_ID': participantConnectId,
+    };
+
+    if (!finalizedOccurrenceData[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical]) {
+        finalizedOccurrenceData[fieldMapping.primaryCancerSiteObject][fieldMapping.primaryCancerSiteCategorical] = '';
+    }
+
+    return finalizedOccurrenceData;
+
+}
+
+/**
  * We've had an intermittnt issue with Streck tube data not being added to the specimen data structure (11/2023). 
  * This is a safety net to ensure the data is added. Build the object literal since we only need to do this for streck tubes.
  * @param {string} collectionId - the collection Id of the specimen.
@@ -1286,6 +1452,31 @@ const updateUserProfileHistory = (dataObj, existingDocData, siteCodes) => {
     return userProfileHistory;
 }
 
+/**
+ * Return selected Concept ID fields for each object in a list of data objects.
+ * Fields with nested data include all sub-data.
+ * @param {array<object>} dataObjArray - the array of data objects to filter.
+ * @param {array<string>} selectedFieldsArray - the array of concept ID fields to return. Top-level (non-nested) fields only.
+ * @returns {array<object>} - the filtered array of data objects.
+ */
+const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
+    
+    const handleNestedData = (obj, path) => {
+        return path.split('.').reduce((currentObj, key) => currentObj ? currentObj[key] : undefined, obj);
+    }
+
+    return dataObjArray.map(dataObj => {
+        const filteredData = { 'Connect_ID': dataObj['Connect_ID'] };        
+        for (const field of selectedFieldsArray) {
+            const fieldValue = handleNestedData(dataObj, field);
+            if (fieldValue !== undefined) {
+                filteredData[field] = fieldValue;
+            }
+        }
+        return filteredData;
+    });
+}
+
 
 module.exports = {
     getResponseJSON,
@@ -1298,7 +1489,6 @@ module.exports = {
     filterData,
     incentiveFlags,
     lockedAttributes,
-    moduleConcepts,
     moduleConceptsToCollections,
     moduleStatusConcepts,
     listOfCollectionsRelatedToDataDestruction,
@@ -1343,4 +1533,7 @@ module.exports = {
     checkForQueryFields,
     updateQueryListFields,
     updateUserProfileHistory,
+    flattenObject,
+    handleCancerOccurrences,
+    filterSelectedFields,
 };
