@@ -1,5 +1,5 @@
 const { getToken } = require('./utils/validation');
-const { getParticipants, identifyParticipant } = require('./utils/submission');
+const { getFilteredParticipants, getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
 const { notificationHandler } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
@@ -18,6 +18,8 @@ exports.incentiveCompleted = incentiveCompleted;
 exports.participantsEligibleForIncentive = eligibleForIncentive;
 
 exports.getParticipantToken = getToken;
+
+exports.getFilteredParticipants = getFilteredParticipants;
 
 exports.getParticipants = getParticipants;
 
@@ -47,22 +49,23 @@ exports.biospecimen = biospecimenAPIs;
 
 // End-Point for Email Notifications Handler
 
-exports.sendEmailNotification = notificationHandler
+exports.sendEmailNotification = notificationHandler;
 
 
 // End-Points for Exporting Firestore to Big Query
 
-exports.importToBigQuery = importToBigQuery;
-  
+exports.importToBigQuery = importToBigQuery; 
+
 exports.scheduleFirestoreDataExport = firestoreExport;
 
 exports.exportNotificationsToBucket = exportNotificationsToBucket;
+
 exports.importNotificationsToBigquery = importNotificationsToBigquery;
 
 // End-Points for Participant Data Cleaning
 
-exports.participantDataCleanup = participantDataCleanup
+exports.participantDataCleanup = participantDataCleanup;
 
 // End-Points for SendGrid Event Webhook
 
-exports.sendGridEventWebhook = sendGridEventWebhook
+exports.sendGridEventWebhook = sendGridEventWebhook;

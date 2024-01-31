@@ -1,6 +1,5 @@
 module.exports = {
-
-    siteLoginMap : {
+    siteLoginMap: {
         kaiserPermanenteGeorgia: 327912200,
         sanfordHealth: 657167265,
         universityOfChicagoMedicine: 809703864,
@@ -169,7 +168,7 @@ module.exports = {
      collectionCardFlag: 137401245,
      collectionAddtnlNotes: 260133861,
 
-     // participant deceased data
+     // EMR participant deceased data
     participantDeceased: 857217152,
     participantDeceasedNORC: 987563196,
     participantDeceasedTimestamp: 772354119,
@@ -198,10 +197,21 @@ module.exports = {
     userProfileHistory: 569151507,
     userProfileHistoryTimestamp: 371303487,
     profileChangeRequestedBy: 611005658,
+    participationStatus: 912301837,
+    participationStatusDeceased: 618686157,
+    authenticationEmail: 421823980,
+    authenticationPhone: 348474836,
+    signInMechanism: 995036844,
 
-    // Primary cancer site IDs. participant profile -> occurrences {object} (637153953) -> primary site of cancer (740819233). Null until participant diagnosed with cancer.
+    // cancer occurrences
+    occurrenceNumber: 793981056,
     cancerOccurrence: 637153953,
-    primaryCancerSite: 740819233,
+    cancerOccurrenceTimestamp: 345545422,
+    isCancerDiagnosis: 525972260,
+    primaryCancerSiteObject: 740819233,
+    primaryCancerSiteCategorical: 149205077,
+    preliminaryStageInformation: 457270069,
+    anotherTypeOfCancerText: 868006655, // Text response for 'other' cancer site
     cancerSites: {
         anal: 939782495,
         bladder: 135725957,
@@ -228,6 +238,18 @@ module.exports = {
         uterine: 723614811,
         other: 807835037,
         unavailableUnknown: 178420302,
-        anotherTypeOfCancer: 868006655,
     },
+
+    // SSN Variables
+    ssnModule: 'D_166676176',
+    ssnCompleteTs: 315032037,
+    ssnStatusFlag: 126331570,
+    ssnFullValue: 447051482,
+    ssnFullGiven: 311580100,
+    ssnFullGivenTime: 454067894,
+    ssnPartialValue: 920333151,
+    ssnPartialGiven: 914639140,
+    ssnPartialGivenTime: 598680838,
+    ssnQcStatus: 605870562,
+    ssnNoCheckRan: 875207881
 };
