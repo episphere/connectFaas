@@ -276,7 +276,6 @@ const listOfCollectionsRelatedToDataDestruction = [
     "module4_v1",
     "biospecimen",
     "notifications",
-    "cancerOccurrence"
 ];
 
 const incentiveConcepts = {
