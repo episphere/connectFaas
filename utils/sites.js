@@ -408,7 +408,7 @@ const validateUpdateParticipantData = (value, existingValue, path, rule) => {
             if (typeof value !== 'number') {
                 return `Data mismatch: ${path} must be a number.`;
             }
-            if (!rule?.values.includes(value)) {
+            if (rule.values && !rule.values.includes(value)) {
                 return `Data mismatch: ${path} must be one of the following values: ${rule.values.join(', ')}.`;
             }
             break;
