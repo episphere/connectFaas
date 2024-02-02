@@ -217,6 +217,7 @@ const defaultFlags = {
     663265240: 972455046,
     265193023: 972455046,
     220186468: 972455046,
+    320303124: 972455046,
     459098666: 972455046,
     126331570: 972455046,
     311580100: 104430631,
@@ -247,7 +248,8 @@ const moduleConceptsToCollections = {
     "D_912367929" :     "menstrualSurvey_v1",
     "D_826163434" :     "clinicalBioSurvey_v1",
     "D_166676176" :     "ssn",
-    "D_390351864" :     "mouthwash_v1"
+    "D_390351864" :     "mouthwash_v1",
+    "D_601305072" :     "promis_v1"
 }
 
 const moduleStatusConcepts = {
@@ -260,7 +262,8 @@ const moduleStatusConcepts = {
     "459098666" :       "menstrualSurvey",
     "253883960" :       "clinicalBioSurvey",
     "126331570" :       "ssn",
-    "547363263" :       "mouthwash"
+    "547363263" :       "mouthwash",
+    "320303124" :       "promis"
 }
 
 const listOfCollectionsRelatedToDataDestruction = [
@@ -276,6 +279,7 @@ const listOfCollectionsRelatedToDataDestruction = [
     "module4_v1",
     "biospecimen",
     "notifications",
+    "promis_v1"
 ];
 
 const incentiveConcepts = {
