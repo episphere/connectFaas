@@ -246,7 +246,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   }
 
   const limit = 1000; // SendGrid has a batch limit of 1000
-  let offset = 0;
+  let previousConnectId = 0;
   let hasNext = true;
   let fetchedDataArray = [];
   let emailCount = 0;
@@ -261,7 +261,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         timeField,
         fieldsToFetch,
         limit,
-        offset,
+        previousConnectId,
       }));
     } catch (error) {
       console.error(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpec.id}.`, error);
@@ -269,6 +269,9 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
     }
 
     if (fetchedDataArray.length === 0) break;
+    if (hasNext) {
+      previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
+    }
 
     let emailRecordArray = [];
     let emailPersonalizationArray = [];
@@ -412,7 +415,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       break;
     }
 
-    offset += limit;
+    previousConnectId += limit;
   }
 
   if (emailCount === 0 && smsCount === 0) {
