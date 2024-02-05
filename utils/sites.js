@@ -436,6 +436,13 @@ const validateUpdateParticipantData = (value, existingValue, path, rule) => {
             if (!Array.isArray(value)) {
                 return `Data mismatch: ${path} must be an array.`;
             }
+            if (rule.innerElementType) {
+                for (let i = 0; i < value.length; i++) {
+                    if (typeof value[i] !== rule.innerElementType) {
+                        return `Data mismatch: Element at index ${i} of ${path} must be a ${rule.innerElementType}.`;
+                    }
+                }
+            }
             break;
         case 'object':
             if (typeof value !== 'object' || Array.isArray(value)) {
