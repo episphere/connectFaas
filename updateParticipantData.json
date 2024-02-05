@@ -402,11 +402,13 @@
 	},
 	"173836415.266600170.543608829": {
 		"dataType": "array",
-		"mustExist": false
+		"mustExist": false,
+		"innerElementType": "string"
 	},
 	"173836415.266600170.110349197": {
 		"dataType": "array",
-		"mustExist": false
+		"mustExist": false,
+		"innerElementType": "string"
 	},
 	"857217152": {
         "dataType": "number",
