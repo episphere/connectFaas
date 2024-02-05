@@ -1492,6 +1492,37 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     });
 }
 
+const getDatetimeForMagicLink = () => {
+    const currentDate = new Date();
+    const year = currentDate.getUTCFullYear();
+    const month = currentDate.toLocaleString("default", {
+        timeZone: "UTC",
+        month: "long",
+    });
+    const day = currentDate.getUTCDate();
+    const hours = currentDate.getUTCHours();
+    const minutes = currentDate.getUTCMinutes();
+
+    return `${year} ${month} ${day} ${hours}:${minutes} Z`
+};
+
+const getEmailTemplateForMagicLink = (data) => {
+  return `
+    <html>
+    <head></head>
+    <body marginheight="0">
+      <p>Hello,</p>
+      <p>We received a request to sign in to Connect for Cancer Prevention Study using this email address, at ${getDatetimeForMagicLink()}. If you want to sign in with your ${data.email} account, click this link:</p>
+      <p><a href="${data.link}" target="_other" rel="nofollow">Sign in to Connect for Cancer Prevention Study</a></p>
+      <p>If you did not request this link, you can safely ignore this email.</p>
+      <p>Thanks,</p>
+      <p>Your Connect for Cancer Prevention Study team</p>
+    </body>
+    </html>
+  `
+}
+
+const NIHMailbox = 'NCIConnectStudy@mail.nih.gov'
 
 
 module.exports = {
@@ -1553,4 +1584,7 @@ module.exports = {
     flattenObject,
     handleCancerOccurrences,
     filterSelectedFields,
+    getDatetimeForMagicLink,
+    getEmailTemplateForMagicLink,
+    NIHMailbox
 };

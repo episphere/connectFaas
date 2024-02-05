@@ -2,7 +2,7 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getDatetimeForMagicLink, getEmailTemplateForMagicLink, NIHMailbox} = require("./shared");
 const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -124,10 +124,10 @@ const retrieveNotifications = async (req, res, uid) => {
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
 }
 
-const getSecrets = async () => {
+const getSecrets = async (key) => {
     const client = new SecretManagerServiceClient();
     const [version] = await client.accessSecretVersion({
-        name: process.env.GCLOUD_SENDGRID_SECRET,
+        name: key,
     });
     const payload = version.payload.data.toString();
     return payload;
@@ -135,7 +135,7 @@ const getSecrets = async () => {
 
 const sendEmail = async (emailTo, messageSubject, html, cc) => {
     const sgMail = require('@sendgrid/mail');
-    const apiKey = await getSecrets();
+    const apiKey = await getSecrets(process.env.GCLOUD_SENDGRID_SECRET);
     sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
@@ -165,7 +165,7 @@ async function notificationHandler(message) {
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
   const notificationSpecArray = await getScheduledNotifications(scheduleAt);
   if (notificationSpecArray.length === 0) return;
-  const apiKey = await getSecrets();
+  const apiKey = await getSecrets(process.env.GCLOUD_SENDGRID_SECRET);
   sgMail.setApiKey(apiKey);
 
   const notificationPromises = [];
@@ -574,6 +574,66 @@ const getSiteNotification = async (req, res, authObj) => {
     return res.status(200).json({data, code: 200})
 }
 
+const sendMagicLink = async (req, res) => {
+    if (req.method !== "POST") {
+        return res
+            .status(405)
+            .json(getResponseJSON("Only POST requests are accepted!", 405));
+    }
+
+    const data = req.body;
+    const clientId = await getSecrets(process.env.APP_REGISTRATION_CLIENT_ID)
+    const clientSecret = await getSecrets(process.env.APP_REGISTRATION_CLIENT_SECRET)
+    const tenantId = await getSecrets(process.env.APP_REGISTRATION_TENANT_ID)
+
+    const params = new URLSearchParams()
+    params.append('grant_type', 'client_credentials')
+    params.append('scope','https://graph.microsoft.com/.default')
+    params.append('client_id', clientId)
+    params.append('client_secret', clientSecret)
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    }
+    const resAuthorize = await axios.post(
+        `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+        params,
+        config
+    );
+
+    const {access_token} = resAuthorize.data;
+    const body = {
+      message: {
+          subject: `Sign in to Connect for Cancer Prevention Study requested at ${getDatetimeForMagicLink()}`,
+          body: {
+              contentType: "HTML",
+              content: getEmailTemplateForMagicLink(data)
+          },
+          toRecipients: [
+              {
+                  emailAddress: {
+                      address: data.email
+                  }
+              }
+          ],
+      }
+  }
+  const response =  await axios.post(
+      `https://graph.microsoft.com/v1.0/users/${NIHMailbox}/sendMail`,
+      body,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${access_token}`
+        }
+      }
+  );
+  
+    return res.status(202).json({ data: response.data, code: 202 });
+};
+
 module.exports = {
     subscribeToNotification,
     retrieveNotifications,
@@ -582,5 +642,6 @@ module.exports = {
     retrieveNotificationSchema,
     getParticipantNotification,
     sendEmail,
-    getSiteNotification
+    getSiteNotification,
+    sendMagicLink
 }

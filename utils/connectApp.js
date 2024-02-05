@@ -1,6 +1,6 @@
 const { getResponseJSON, setHeadersDomainRestricted, getUserProfile } = require('./shared');
 const { recruitSubmit, submitSocial, getUserSurveys, getUserCollections } = require('./submission');
-const { retrieveNotifications } = require('./notifications');
+const { retrieveNotifications, sendMagicLink } = require('./notifications');
 const { validateToken, generateToken, updateParticipantFirebaseAuthentication, validateUsersEmailPhone } = require('./validation');
 
 const connectApp = async (req, res) => {
@@ -54,6 +54,8 @@ const connectApp = async (req, res) => {
     else if (api === 'updateParticipantFirebaseAuthentication') return await updateParticipantFirebaseAuthentication(req, res);
 
     else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
+
+    else if (api === 'sendMagicLink') return sendMagicLink(req, res);
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 
