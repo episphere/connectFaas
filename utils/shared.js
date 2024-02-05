@@ -1139,9 +1139,16 @@ const flattenObject = (obj, parentPath = '') => {
 
             if (value && typeof value === 'object') {
                 if (Array.isArray(value)) {
-                    value.forEach((item, index) => {
-                        traverse(item, `${newPath}[${index}]`);
-                    });
+                    // Check if element is an object to decide whether to traverse further. 
+                    // This ensures arrays of primitive values are kept intact. 
+                    // Seen in keys 173836415.266600170.110349197 & 173836415.266600170.543608829.
+                    if (value.length === 0 || typeof value[0] !== 'object') {
+                        flattened[newPath] = value;
+                    } else {
+                        value.forEach((item, index) => {
+                            traverse(item, `${newPath}[${index}]`);
+                        });
+                    }
                 } else {
                     traverse(value, newPath);
                 }
@@ -1475,6 +1482,7 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
         return filteredData;
     });
 }
+
 
 
 module.exports = {
