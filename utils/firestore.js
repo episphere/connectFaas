@@ -1,6 +1,8 @@
-const functions = require('firebase-functions');
+// const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-admin.initializeApp(functions.config().firebase);
+// admin.initializeApp(functions.config().firebase);
+const serviceAccount = require("/Users/floreyjh/Projects/scripts/firebase-jessica.json");
+admin.initializeApp({credential: admin.credential.cert(serviceAccount)});
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);

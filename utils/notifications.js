@@ -9,9 +9,9 @@ const conceptIds = require("./fieldToConceptIdMapping");
 
 let twilioClient, messagingServiceSid;
 
-(async () => {
-  [twilioClient, messagingServiceSid] = await setupTwilioSms();
-})();
+// (async () => {
+//   [twilioClient, messagingServiceSid] = await setupTwilioSms();
+// })();
 
 async function setupTwilioSms() {
   const secretsToFetch = {

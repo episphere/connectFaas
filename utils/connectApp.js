@@ -8,6 +8,8 @@ const connectApp = async (req, res) => {
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
+    if (req.query.api === 'sendMagicLink') return sendMagicLink(req, res);
+
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
@@ -54,8 +56,6 @@ const connectApp = async (req, res) => {
     else if (api === 'updateParticipantFirebaseAuthentication') return await updateParticipantFirebaseAuthentication(req, res);
 
     else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
-
-    else if (api === 'sendMagicLink') return sendMagicLink(req, res);
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 
