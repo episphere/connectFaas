@@ -1,8 +1,6 @@
-// const functions = require('firebase-functions');
+const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-// admin.initializeApp(functions.config().firebase);
-const serviceAccount = require("/Users/floreyjh/Projects/scripts/firebase-jessica.json");
-admin.initializeApp({credential: admin.credential.cert(serviceAccount)});
+admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
@@ -3080,6 +3078,13 @@ const updateSurveyEligibility = async (token, survey) => {
 }
 
 
+const generateSignInWithEmailLink = async (email, continueUrl) => {
+    return await admin.auth().generateSignInWithEmailLink(email, {
+        url: continueUrl,
+        handleCodeInApp: true,
+    });
+};
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3201,5 +3206,6 @@ module.exports = {
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
     updateParticipantCorrection,
-    updateSurveyEligibility
+    updateSurveyEligibility,
+    generateSignInWithEmailLink
 }

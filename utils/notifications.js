@@ -2,16 +2,16 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getDatetimeForMagicLink, getEmailTemplateForMagicLink, NIHMailbox} = require("./shared");
-const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility} = require("./firestore");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getDatetimeForEmailLink, getTemplateForEmailLink, NIHMailbox} = require("./shared");
+const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
 let twilioClient, messagingServiceSid;
 
-// (async () => {
-//   [twilioClient, messagingServiceSid] = await setupTwilioSms();
-// })();
+(async () => {
+  [twilioClient, messagingServiceSid] = await setupTwilioSms();
+})();
 
 async function setupTwilioSms() {
   const secretsToFetch = {
@@ -574,17 +574,20 @@ const getSiteNotification = async (req, res, authObj) => {
     return res.status(200).json({data, code: 200})
 }
 
-const sendMagicLink = async (req, res) => {
+const sendEmailLink = async (req, res) => {
     if (req.method !== "POST") {
         return res
             .status(405)
             .json(getResponseJSON("Only POST requests are accepted!", 405));
     }
 
-    const data = req.body;
-    const clientId = await getSecrets(process.env.APP_REGISTRATION_CLIENT_ID)
-    const clientSecret = await getSecrets(process.env.APP_REGISTRATION_CLIENT_SECRET)
-    const tenantId = await getSecrets(process.env.APP_REGISTRATION_TENANT_ID)
+    const { email, continueUrl } = req.body;
+    const [clientId, clientSecret, tenantId, magicLink] = await Promise.all([
+        getSecrets(process.env.APP_REGISTRATION_CLIENT_ID),
+        getSecrets(process.env.APP_REGISTRATION_CLIENT_SECRET),
+        getSecrets(process.env.APP_REGISTRATION_TENANT_ID),
+        generateSignInWithEmailLink(email, continueUrl),
+    ]);
 
     const params = new URLSearchParams()
     params.append('grant_type', 'client_credentials')
@@ -603,18 +606,18 @@ const sendMagicLink = async (req, res) => {
         config
     );
 
-    const {access_token} = resAuthorize.data;
+    const { access_token } = resAuthorize.data;
     const body = {
       message: {
-          subject: `Sign in to Connect for Cancer Prevention Study requested at ${getDatetimeForMagicLink()}`,
+          subject: `Sign in to Connect for Cancer Prevention Study requested at ${getDatetimeForEmailLink()}`,
           body: {
-              contentType: "HTML",
-              content: getEmailTemplateForMagicLink(data)
+              contentType: "html",
+              content: getTemplateForEmailLink(email, magicLink)
           },
           toRecipients: [
               {
                   emailAddress: {
-                      address: data.email
+                      address: email
                   }
               }
           ],
@@ -643,5 +646,5 @@ module.exports = {
     getParticipantNotification,
     sendEmail,
     getSiteNotification,
-    sendMagicLink
+    sendEmailLink
 }
