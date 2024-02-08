@@ -781,26 +781,19 @@ const notificationTokenExists = async (token) => {
     }
 }
 
+/**
+ * Get all notifications to a user, based on uid.
+ * @param {string} uid
+ */
 const retrieveUserNotifications = async (uid) => {
-    try {
-        const snapShot = await db.collection('notifications')
-                            .where('uid', '==', uid)
-                            .orderBy('notification.time', 'desc')
-                            .get();
-        if(snapShot.size > 0){
-            return snapShot.docs.map(document => {
-                let data = document.data();
-                return data;
-            });
-        }
-        else {
-            return false;
-        }
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
-}
+  const snapshot = await db
+    .collection("notifications")
+    .where("uid", "==", uid)
+    .orderBy("notification.time", "desc")
+    .get();
+
+  return snapshot.docs.map((doc) => doc.data());
+};
 
 const retrieveSiteNotifications = async (siteId, isParent) => {
     try {

@@ -110,18 +110,26 @@ const markAllNotificationsAsAlreadyRead = (notification, collection) => {
 }
 
 const retrieveNotifications = async (req, res, uid) => {
+  if (req.method !== "GET") {
+    return res.status(405).json(getResponseJSON("Only GET requests are accepted!", 405));
+  }
 
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
+  const { retrieveUserNotifications } = require("./firestore");
 
-    const { retrieveUserNotifications } = require('./firestore');
-    const notifications = await retrieveUserNotifications(uid);
-    if(notifications !== false){
-        markAllNotificationsAsAlreadyRead(notifications.map(dt => dt.id), 'notifications');
+  try {
+    const notificationArray = await retrieveUserNotifications(uid);
+    if (notificationArray.length > 0) {
+      markAllNotificationsAsAlreadyRead(
+        notificationArray.map((notification) => notification.id),
+        "notifications"
+      );
     }
-    res.status(200).json({data: notifications === false ? [] : notifications, code:200})
-}
+    return res.status(200).json({ data: notificationArray, message: "Success", code: 200 });
+  } catch (error) {
+    console.error("Error when retrieving notifications.", error);
+    return res.status(500).json({ data: [], message: "Internal Server Error", code: 500 });
+  }
+};
 
 const getSecrets = async () => {
     const client = new SecretManagerServiceClient();
