@@ -1436,6 +1436,7 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
  * query the biospecimen collection for documents that match the healthcare provider and collectionIds in collectionIdArray
  * @param {number} requestedSite - site code of the site 
  * @param {string} boxId - boxId of the box
+ * @returns {array} - array of biospecimen documents
  * Firestore 'in' operator limit with two .where() clauses is 15 (30 with one .where() clause).
 */
 const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
