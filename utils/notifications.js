@@ -405,6 +405,30 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       smsCount += smsRecordArray.length;
     }
 
+
+    
+    if ((emailRecordArray[0] && emailRecordArray[0].category === 'PROMIS' && emailRecordArray[0].attempt === '1st Contact') ||
+        (smsRecordArray[0] && smsRecordArray[0].category === 'PROMIS' && smsRecordArray[0].attempt === '1st Contact')) { //placeholders
+
+      const { moduleStatusConcepts, findKeyByValue } = require('./shared');
+      const surveyStatus = findKeyByValue(moduleStatusConcepts, 'promis');
+  
+      for (let participant of [...emailRecordArray, ...smsRecordArray]) {
+
+        const token = participant.token;
+
+        try {
+          const { updateSurveyEligibility } = require('./firestore');
+          await updateSurveyEligibility(token, surveyStatus);
+        }
+        catch (error) {
+          console.error(`Error updating survey eligibility for token ${token}`, error);
+          break;
+        }
+      }
+    }
+    
+
     try {
       await saveNotificationBatch([...emailRecordArray, ...smsRecordArray]);
     } catch (error) {

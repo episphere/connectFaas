@@ -217,7 +217,7 @@ const defaultFlags = {
     663265240: 972455046,
     265193023: 972455046,
     220186468: 972455046,
-    320303124: 972455046,
+    320303124: 789467219,
     459098666: 972455046,
     126331570: 972455046,
     311580100: 104430631,
@@ -814,6 +814,11 @@ const isEmpty = (object) => {
 
     return true;
 }
+
+const findKeyByValue = (object, value) => {
+    return Object.keys(object).find(key => object[key] === value);
+}
+
 
 const isDateTimeFormat = (value) => {
     return typeof value == "string" && (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(value));
@@ -1516,6 +1521,7 @@ module.exports = {
     batchLimit,
     getUserProfile,
     isEmpty,
+    findKeyByValue,
     isDateTimeFormat,
     createChunkArray,
     redactEmailLoginInfo,
