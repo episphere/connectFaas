@@ -3057,6 +3057,27 @@ const updateParticipantCorrection = async (participantData) => {
     }
 }
 
+const updateSurveyEligibility = async (token, survey) => {
+
+    try {
+        const snapshot = await db.collection('participants').where('token', '==', token).get();
+        
+        if (snapshot.empty) return;
+
+        const data = snapshot.docs[0].data()
+
+        if (data[survey] === fieldMapping.notYetEligible) {
+            const docId = snapshot.docs[0].id;
+            const updates = {[survey]: fieldMapping.notStarted}
+        
+            await db.collection('participants').doc(docId).update(updates);
+        }
+    } catch (error) {
+        throw new Error("Error updating survey eligibility.", { cause: error });
+    }
+}
+
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3177,5 +3198,6 @@ module.exports = {
     queryKitsByReceivedDate,
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
-    updateParticipantCorrection
+    updateParticipantCorrection,
+    updateSurveyEligibility
 }
