@@ -3,9 +3,10 @@ const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat} = require("./shared");
-const {getScheduledNotifications, saveNotificationBatch} = require("./firestore");
+const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
+
 let twilioClient, messagingServiceSid;
 
 (async () => {
@@ -407,8 +408,8 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 
 
     
-    if ((emailRecordArray[0] && emailRecordArray[0].category === '3mo QOL Survey Reminders' && emailRecordArray[0].attempt === '1st Contact') ||
-        (smsRecordArray[0] && smsRecordArray[0].category === '3mo QOL Survey Reminders' && smsRecordArray[0].attempt === '1st Contact')) {
+    if ((emailRecordArray[0] && emailRecordArray[0].category === '3mo QOL Survey Reminders' && emailRecordArray[0].attempt === '1st contact') ||
+        (smsRecordArray[0] && smsRecordArray[0].category === '3mo QOL Survey Reminders' && smsRecordArray[0].attempt === '1st contact')) {
 
       const { moduleStatusConcepts, findKeyByValue } = require('./shared');
       const surveyStatus = findKeyByValue(moduleStatusConcepts, 'promis');
@@ -418,7 +419,6 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         const token = participant.token;
 
         try {
-          const { updateSurveyEligibility } = require('./firestore');
           await updateSurveyEligibility(token, surveyStatus);
         }
         catch (error) {
