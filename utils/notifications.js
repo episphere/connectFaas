@@ -595,17 +595,41 @@ const sendEmailLink = async (req, res) => {
     params.append('client_id', clientId)
     params.append('client_secret', clientSecret)
 
-    const config = {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    }
-    const resAuthorize = await axios.post(
-        `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
-        params,
-        config
-    );
+    // const config = {
+    //   headers: {
+    //     'Content-Type': 'application/x-www-form-urlencoded'
+    //   }
+    // }
+    // var details = {
+    //   grant_type: "test@gmail.com",
+    //   scope: "Password!",
+    //     grant_type: "password",
+    // };
 
+    // var formBody = [];
+    // for (var property in details) {
+    //     var encodedKey = encodeURIComponent(property);
+    //     var encodedValue = encodeURIComponent(details[property]);
+    //     formBody.push(encodedKey + "=" + encodedValue);
+    // }
+    // formBody = formBody.join("&");
+
+
+    const resAuthorize =  await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        },
+        body: params,
+    });
+
+
+    // const resAuthorize = await axios.post(
+    //     `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+    //     params,
+    //     config
+    // );
+    console.log(resAuthorize)
     const { access_token } = resAuthorize.data;
     const body = {
       message: {
