@@ -407,8 +407,8 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 
 
     
-    if ((emailRecordArray[0] && emailRecordArray[0].category === 'PROMIS' && emailRecordArray[0].attempt === '1st Contact') ||
-        (smsRecordArray[0] && smsRecordArray[0].category === 'PROMIS' && smsRecordArray[0].attempt === '1st Contact')) { //placeholders
+    if ((emailRecordArray[0] && emailRecordArray[0].category === '3mo QOL Survey Reminders' && emailRecordArray[0].attempt === '1st Contact') ||
+        (smsRecordArray[0] && smsRecordArray[0].category === '3mo QOL Survey Reminders' && smsRecordArray[0].attempt === '1st Contact')) {
 
       const { moduleStatusConcepts, findKeyByValue } = require('./shared');
       const surveyStatus = findKeyByValue(moduleStatusConcepts, 'promis');
