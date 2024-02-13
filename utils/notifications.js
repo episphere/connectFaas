@@ -580,85 +580,77 @@ const sendEmailLink = async (req, res) => {
             .status(405)
             .json(getResponseJSON("Only POST requests are accepted!", 405));
     }
+    try {
+        const { email, continueUrl } = req.body;
+        const [clientId, clientSecret, tenantId, magicLink] = await Promise.all(
+            [
+                getSecrets(process.env.APP_REGISTRATION_CLIENT_ID),
+                getSecrets(process.env.APP_REGISTRATION_CLIENT_SECRET),
+                getSecrets(process.env.APP_REGISTRATION_TENANT_ID),
+                generateSignInWithEmailLink(email, continueUrl),
+            ]
+        );
 
-    const { email, continueUrl } = req.body;
-    const [clientId, clientSecret, tenantId, magicLink] = await Promise.all([
-        getSecrets(process.env.APP_REGISTRATION_CLIENT_ID),
-        getSecrets(process.env.APP_REGISTRATION_CLIENT_SECRET),
-        getSecrets(process.env.APP_REGISTRATION_TENANT_ID),
-        generateSignInWithEmailLink(email, continueUrl),
-    ]);
+        const params = new URLSearchParams();
+        params.append("grant_type", "client_credentials");
+        params.append("scope", "https://graph.microsoft.com/.default");
+        params.append("client_id", clientId);
+        params.append("client_secret", clientSecret);
 
-    const params = new URLSearchParams()
-    params.append('grant_type', 'client_credentials')
-    params.append('scope','https://graph.microsoft.com/.default')
-    params.append('client_id', clientId)
-    params.append('client_secret', clientSecret)
+        const resAuthorize = await fetch(
+            `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/x-www-form-urlencoded;charset=UTF-8",
+                },
+                body: params,
+            }
+        );
 
-    // const config = {
-    //   headers: {
-    //     'Content-Type': 'application/x-www-form-urlencoded'
-    //   }
-    // }
-    // var details = {
-    //   grant_type: "test@gmail.com",
-    //   scope: "Password!",
-    //     grant_type: "password",
-    // };
+        const { access_token } = await resAuthorize.json();
 
-    // var formBody = [];
-    // for (var property in details) {
-    //     var encodedKey = encodeURIComponent(property);
-    //     var encodedValue = encodeURIComponent(details[property]);
-    //     formBody.push(encodedKey + "=" + encodedValue);
-    // }
-    // formBody = formBody.join("&");
-
-
-    const resAuthorize =  await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-        },
-        body: params,
-    });
-
-
-    // const resAuthorize = await axios.post(
-    //     `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
-    //     params,
-    //     config
-    // );
-    console.log(resAuthorize)
-    const { access_token } = resAuthorize.data;
-    const body = {
-      message: {
-          subject: `Sign in to Connect for Cancer Prevention Study requested at ${getDatetimeForEmailLink()}`,
-          body: {
-              contentType: "html",
-              content: getTemplateForEmailLink(email, magicLink)
-          },
-          toRecipients: [
-              {
-                  emailAddress: {
-                      address: email
-                  }
-              }
-          ],
-      }
-  }
-  const response =  await axios.post(
-      `https://graph.microsoft.com/v1.0/users/${NIHMailbox}/sendMail`,
-      body,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${access_token}`
-        }
-      }
-  );
-  
-    return res.status(202).json({ data: response.data, code: 202 });
+        const body = {
+            message: {
+                subject: `Sign in to Connect for Cancer Prevention Study requested at ${getDatetimeForEmailLink()}`,
+                body: {
+                    contentType: "html",
+                    content: getTemplateForEmailLink(email, magicLink),
+                },
+                toRecipients: [
+                    {
+                        emailAddress: {
+                            address: email,
+                        },
+                    },
+                ],
+            },
+        };
+        const response = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${NIHMailbox}/sendMail`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${access_token}`,
+                },
+                body: JSON.stringify(body),
+            }
+        );
+        const { status, statusText: code } = response;
+        return res.status(202).json({ status, code });
+        
+    } catch (err) {
+        console.error(`Error in sendEmailLink(). ${err.message}`);
+        return res
+            .status(500)
+            .json({
+                data: [],
+                message: `Error in sendEmailLink(). ${err.message}`,
+                code: 500,
+            });
+    }
 };
 
 module.exports = {

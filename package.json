@@ -25,7 +25,6 @@
     "@google-cloud/storage": "^7.7.0",
     "@sendgrid/eventwebhook": "^8.0.0",
     "@sendgrid/mail": "^8.1.0",
-    "axios": "^1.6.7",
     "crypto": "^1.0.1",
     "fast-crc32c": "^2.0.0",
     "firebase-admin": "^11.11.1",
