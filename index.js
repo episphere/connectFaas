@@ -10,6 +10,7 @@ const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport, exportNotificationsToBucket, importNotificationsToBigquery } = require('./utils/events');
 const { participantDataCleanup } = require('./utils/participantDataCleanup');
 const { sendGridEventWebhook } = require('./utils/sendGridEventWebhook');
+const { twilioSmsEventWebhook } = require('./utils/twilioSmsEventWebhook');
 
 // API End-Points for Sites
 
@@ -69,3 +70,7 @@ exports.participantDataCleanup = participantDataCleanup;
 // End-Points for SendGrid Event Webhook
 
 exports.sendGridEventWebhook = sendGridEventWebhook;
+
+// End-Points for Twilio Event Webhook
+
+exports.twilioSmsEventWebhook = twilioSmsEventWebhook;
