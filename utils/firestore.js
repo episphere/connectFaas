@@ -2954,7 +2954,7 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
     }
 }
 
-const processEventWebhook = async (event) => {
+const processSendGridEventWebhook = async (event) => {
     if (event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
 
     const date = new Date(event.timestamp * 1000).toISOString();
@@ -3196,7 +3196,7 @@ module.exports = {
     storeKitReceipt,
     addKitStatusToParticipant,
     eligibleParticipantsForKitAssignment,
-    processEventWebhook,
+    processSendGridEventWebhook,
     getSpecimenAndParticipant,
     queryKitsByReceivedDate,
     getParticipantCancerOccurrences,

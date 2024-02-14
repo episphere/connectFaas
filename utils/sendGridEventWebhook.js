@@ -1,7 +1,7 @@
 const sgMail = require("@sendgrid/mail");
 const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const { EventWebhook, EventWebhookHeader } = require("@sendgrid/eventwebhook");
-const { processEventWebhook } = require("./firestore");
+const { processSendGridEventWebhook } = require("./firestore");
 const { getResponseJSON } = require("./shared");
 
 const _testSendEmail = async (res) => {
@@ -65,7 +65,7 @@ const _receivedEvents = async (req, res) => {
     try {
         const events = req.body;
         for (let event of events) {
-            await processEventWebhook(event);
+            await processSendGridEventWebhook(event);
         }
         return res.status(200).json({ code: 200 });
     } catch (e) {
