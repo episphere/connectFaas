@@ -1953,21 +1953,15 @@ const retrieveNotificationSchemaByID = async (id) => {
 };
 
 const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
-  let result = [];
-  let query = db.collection("notificationSpecifications");
-  if (category !== "all") query = query.where("category", "==", category);
-  else query = query.orderBy("category");
-
-  // TODO: update query to get daft schemas directly, after all schema in Firestore are updated to have isDraft field
-  const snapshot = await query.orderBy("attempt").get();
-  if (snapshot.size === 0) return result;
-
-  for (const doc of snapshot.docs) {
-    const docData = doc.data();
-    if ((getDrafts && docData.isDraft) || (!getDrafts && !docData.isDraft)) result.push(docData);
+  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts);
+  if (category !== "all") {
+    query = query.where("category", "==", category);
+  } else {
+    query = query.orderBy("category");
   }
 
-  return result;
+  const snapshot = await query.orderBy("attempt").get();
+  return snapshot.docs.map((doc) => doc.data());
 };
 
 const storeNewNotificationSchema = async (data) => {
