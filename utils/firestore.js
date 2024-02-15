@@ -1436,21 +1436,31 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
  * query the biospecimen collection for documents that match the healthcare provider and collectionIds in collectionIdArray
  * @param {number} requestedSite - site code of the site 
  * @param {string} boxId - boxId of the box
+ * @returns {array} - array of biospecimen documents
+ * Firestore 'in' operator limit with two .where() clauses is 15 (30 with one .where() clause).
 */
-//TODO: extend to batch query for > 15 items in collectionIdArray
 const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
     try {
         const collectionIdArray = await getBiospecimenCollectionIdsFromBox(requestedSite, boxId);
-        const snapshot = await db.collection('biospecimen')
-                                .where(fieldMapping.healthCareProvider.toString(), "==", requestedSite)
-                                .where(fieldMapping.collectionId.toString(), "in", collectionIdArray).get();
+
+        const chunkSize = 15;
+        const collectionIdArrayChunks = createChunkArray(collectionIdArray, chunkSize);
+        
+        const chunkedPromises = collectionIdArrayChunks.map(chunk => {
+            return db.collection('biospecimen')
+            .where(fieldMapping.healthCareProvider.toString(), "==", requestedSite)
+            .where(fieldMapping.collectionId.toString(), "in", chunk).get();
+        });
+        
+        const promiseResults = await Promise.all(chunkedPromises);
+        
         const biospecimenDocs = [];
+        promiseResults.forEach(snapshot => {
+            if (!snapshot.empty) {
+                snapshot.docs.forEach(doc => biospecimenDocs.push(doc.data()));
+            }
+        });
 
-        if (snapshot.empty) return biospecimenDocs;
-
-        for (let document of snapshot.docs) {
-            biospecimenDocs.push(document.data());
-        }
         return biospecimenDocs;
     } catch (error) {
         throw new Error("searchSpecimenBySiteAndBoxId() error.", {cause: error});
@@ -1750,9 +1760,8 @@ const getNumBoxesShipped = async (siteCode, body) => {
     try {
         let query = db.collection('boxes').where('145971562', '==', 353358909);
         query = preQueryBuilder(filters, query, trackingId, endDate, startDate, source, siteCode);
-        const snapshot = await query.get();
-        const result = snapshot.docs.length;
-        return result;
+        const snapshot = await query.count().get();
+        return snapshot.data().count;
     } catch (error) {
         console.error(error);
         return new Error(error)
