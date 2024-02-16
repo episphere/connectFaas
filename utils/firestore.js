@@ -3003,22 +3003,20 @@ const processSendGridEventWebhook = async (event) => {
 const processTwilioEventWebhook = async (event) => {
 
     const date = new Date().toISOString();
-    console.log("Processing event at " + date);
-    console.log(`SID: ${event.MessageSid}, Status: ${event.MessageStatus}, To ${event.To}`);
-    console.log(event);
+    console.log(`SID: ${event.MessageSid}, Status: ${event.MessageStatus}`);
 
-    const response = await db
+    const snapshot = await db
         .collection("notifications")
         .where("messageSid", "==", event.MessageSid)
         .get();
 
-    if (response.size > 0) {
-        for (let doc of response.docs) {
+    if (snapshot.size > 0) {
+        for (let doc of snapshot.docs) {
             const eventRecord = {
                 status: event.MessageStatus,
-                [`${event.MessageStatus}_date`]: date,
-                error_code: event.ErrorCode || "",
-                error_message: event.ErrorMessage || ""
+                [`${event.MessageStatus}Date`]: date,
+                errorCode: event.ErrorCode || "",
+                errorMessage: event.ErrorMessage || ""
             };
            
             await db
