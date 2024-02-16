@@ -2,7 +2,7 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getDatetimeForEmailLink, getTemplateForEmailLink, NIHMailbox} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getDatetimeForEmailLink, getTemplateForEmailLink, nihMailbox} = require("./shared");
 const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -124,7 +124,7 @@ const retrieveNotifications = async (req, res, uid) => {
     res.status(200).json({data: notifications === false ? [] : notifications, code:200})
 }
 
-const getSecrets = async (key) => {
+const getSecret = async (key) => {
     const client = new SecretManagerServiceClient();
     const [version] = await client.accessSecretVersion({
         name: key,
@@ -135,7 +135,7 @@ const getSecrets = async (key) => {
 
 const sendEmail = async (emailTo, messageSubject, html, cc) => {
     const sgMail = require('@sendgrid/mail');
-    const apiKey = await getSecrets(process.env.GCLOUD_SENDGRID_SECRET);
+    const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
     sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
@@ -165,7 +165,7 @@ async function notificationHandler(message) {
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
   const notificationSpecArray = await getScheduledNotifications(scheduleAt);
   if (notificationSpecArray.length === 0) return;
-  const apiKey = await getSecrets(process.env.GCLOUD_SENDGRID_SECRET);
+  const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
   sgMail.setApiKey(apiKey);
 
   const notificationPromises = [];
@@ -584,9 +584,9 @@ const sendEmailLink = async (req, res) => {
         const { email, continueUrl } = req.body;
         const [clientId, clientSecret, tenantId, magicLink] = await Promise.all(
             [
-                getSecrets(process.env.APP_REGISTRATION_CLIENT_ID),
-                getSecrets(process.env.APP_REGISTRATION_CLIENT_SECRET),
-                getSecrets(process.env.APP_REGISTRATION_TENANT_ID),
+                getSecret(process.env.APP_REGISTRATION_CLIENT_ID),
+                getSecret(process.env.APP_REGISTRATION_CLIENT_SECRET),
+                getSecret(process.env.APP_REGISTRATION_TENANT_ID),
                 generateSignInWithEmailLink(email, continueUrl),
             ]
         );
@@ -628,7 +628,7 @@ const sendEmailLink = async (req, res) => {
             },
         };
         const response = await fetch(
-            `https://graph.microsoft.com/v1.0/users/${NIHMailbox}/sendMail`,
+            `https://graph.microsoft.com/v1.0/users/${nihMailbox}/sendMail`,
             {
                 method: "POST",
                 headers: {

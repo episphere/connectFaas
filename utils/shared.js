@@ -1524,7 +1524,7 @@ const getTemplateForEmailLink = (email, continueUrl) => {
   `;
 };
 
-const NIHMailbox = 'NCIConnectStudy@mail.nih.gov'
+const nihMailbox = 'NCIConnectStudy@mail.nih.gov'
 
 
 module.exports = {
@@ -1588,5 +1588,5 @@ module.exports = {
     filterSelectedFields,
     getDatetimeForEmailLink,
     getTemplateForEmailLink,
-    NIHMailbox
+    nihMailbox
 };
