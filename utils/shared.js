@@ -1492,29 +1492,13 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     });
 }
 
-const getDatetimeForEmailLink = () => {
-    const currentDate = new Date();
-    const year = currentDate.getUTCFullYear();
-    const month = currentDate.toLocaleString("default", {
-        timeZone: "UTC",
-        month: "long",
-    });
-    const day = currentDate.getUTCDate();
-    const hours = currentDate.getUTCHours();
-    const minutes = currentDate.getUTCMinutes();
-
-    return `${year} ${month} ${day < 10 ? "0" + day : day} ${
-        hours < 10 ? "0" + hours : hours
-    }:${minutes < 10 ? "0" + minutes : minutes} Z`;
-};
-
 const getTemplateForEmailLink = (email, continueUrl) => {
     return `
     <html>
     <head></head>
     <body marginheight="0">
       <p>Hello,</p>
-      <p>We received a request to sign in to Connect for Cancer Prevention Study using this email address, at ${getDatetimeForEmailLink()}. If you want to sign in with your ${email} account, click this link:</p>
+      <p>We received a request to sign in to Connect for Cancer Prevention Study using this email address. If you want to sign in with your ${email} account, click this link:</p>
       <p><a href="${continueUrl}" target="_other" rel="nofollow">Sign in to Connect for Cancer Prevention Study</a></p>
       <p>If you did not request this link, you can safely ignore this email.</p>
       <p>Thanks,</p>
@@ -1586,7 +1570,6 @@ module.exports = {
     flattenObject,
     handleCancerOccurrences,
     filterSelectedFields,
-    getDatetimeForEmailLink,
     getTemplateForEmailLink,
     nihMailbox
 };
