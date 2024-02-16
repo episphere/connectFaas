@@ -111,18 +111,26 @@ const markAllNotificationsAsAlreadyRead = (notification, collection) => {
 }
 
 const retrieveNotifications = async (req, res, uid) => {
+  if (req.method !== "GET") {
+    return res.status(405).json(getResponseJSON("Only GET requests are accepted!", 405));
+  }
 
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
+  const { retrieveUserNotifications } = require("./firestore");
 
-    const { retrieveUserNotifications } = require('./firestore');
-    const notifications = await retrieveUserNotifications(uid);
-    if(notifications !== false){
-        markAllNotificationsAsAlreadyRead(notifications.map(dt => dt.id), 'notifications');
+  try {
+    const notificationArray = await retrieveUserNotifications(uid);
+    if (notificationArray.length > 0) {
+      markAllNotificationsAsAlreadyRead(
+        notificationArray.map((notification) => notification.id),
+        "notifications"
+      );
     }
-    res.status(200).json({data: notifications === false ? [] : notifications, code:200})
-}
+    return res.status(200).json({ data: notificationArray, message: "Success", code: 200 });
+  } catch (error) {
+    console.error("Error when retrieving notifications.", error);
+    return res.status(500).json({ data: [], message: "Internal Server Error", code: 500 });
+  }
+};
 
 const getSecrets = async () => {
     const client = new SecretManagerServiceClient();
@@ -198,11 +206,11 @@ async function handleNotificationSpec(notificationSpec) {
 /**
  * 
  * @param {Object} paramObj
- * @param {Object} paramObj.notificationSpec notification specification object
- * @param {string} paramObj.cutoffTimeStr ISO string used to filter out participants whose primaryField is after this time
- * @param {string} paramObj.timeField Concept ID (eg 914594314) to decide which timestamp field to use for filtering
+ * @param {Object} paramObj.notificationSpec Notification specification
+ * @param {string} [paramObj.cutoffTimeStr=""] ISO string used to filter out participants whose primaryField is after this time
+ * @param {string} [paramObj.timeField=""] Concept ID (eg 914594314) to decide which timestamp field to use for filtering
  */
-async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr, timeField }) {
+async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr = "", timeField = "" }) {
   const readableSpecString = notificationSpec.email?.subject || notificationSpec.category + ", " + notificationSpec.attempt;
   const conditions = notificationSpec.conditions;
   const emailSubject = notificationSpec.email?.subject ?? "";
@@ -247,7 +255,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   }
 
   const limit = 1000; // SendGrid has a batch limit of 1000
-  let offset = 0;
+  let previousConnectId = 0;
   let hasNext = true;
   let fetchedDataArray = [];
   let emailCount = 0;
@@ -262,7 +270,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         timeField,
         fieldsToFetch,
         limit,
-        offset,
+        previousConnectId,
       }));
     } catch (error) {
       console.error(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpec.id}.`, error);
@@ -270,6 +278,9 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
     }
 
     if (fetchedDataArray.length === 0) break;
+    if (hasNext) {
+      previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
+    }
 
     let emailRecordArray = [];
     let emailPersonalizationArray = [];
@@ -352,13 +363,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         });
       }
 
-      let canWeText = fetchedData[conceptIds.canWeText];
-      // TODO: remove data type check after cleaning up mixed data types of conceptIds.canWeText in dev and stage.
-      if (typeof canWeText === "object" && canWeText.integer) {
-        canWeText = canWeText.integer;
-      }
-
-      if (smsBody && fetchedData[phoneField]?.length >= 10 && canWeText === conceptIds.yes) {
+      if (smsBody && fetchedData[phoneField]?.length >= 10 && fetchedData[conceptIds.canWeText] === conceptIds.yes) {
         const phoneNumber = fetchedData[phoneField].replace(/\D/g, "");
         if (phoneNumber.length >= 10) {
           const currSmsBody = smsBody.replace(/<firstName>/g, firstName);
@@ -436,7 +441,6 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       break;
     }
 
-    offset += limit;
   }
 
   if (emailCount === 0 && smsCount === 0) {
@@ -483,25 +487,32 @@ const storeNotificationSchema = async (req, res, authObj) => {
 };
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
-    logIPAdddress(req);
-    setHeaders(res);
+  logIPAdddress(req);
+  setHeaders(res);
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-        
-    if(req.method !== 'GET') return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+  if (req.method === "OPTIONS") return res.status(200).json({ code: 200 });
 
-    if(!authObj) return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+  if (req.method !== "GET") return res.status(405).json(getResponseJSON("Only GET requests are accepted!", 405));
 
-    if(!req.query.category) return res.status(400).json(getResponseJSON('category is missing in request parameter!', 400));
+  if (!authObj) return res.status(401).json(getResponseJSON("Authorization failed!", 401));
 
-    const category = req.query.category;
-    const getDrafts = req.query.drafts === "true";
-    const { retrieveNotificationSchemaByCategory } = require('./firestore');
-    const data = await retrieveNotificationSchemaByCategory(category, getDrafts);
-    if (data.length === 0) return res.status(404).json(getResponseJSON(`Notification schema not found for given category - ${category}`, 404));
+  if (!req.query.category)
+    return res.status(400).json(getResponseJSON("category is missing in request parameter!", 400));
 
-    return res.status(200).json({data, code:200});
-}
+  const category = req.query.category;
+  const getDrafts = req.query.drafts === "true";
+  const { retrieveNotificationSchemaByCategory } = require("./firestore");
+  try {
+    const schemaArray = await retrieveNotificationSchemaByCategory(category, getDrafts);
+    if (schemaArray.length === 0)
+      return res.status(404).json({ data: [], message: `Notification schema not found for given category - ${category}`, code: 404 });
+
+    return res.status(200).json({ data: schemaArray, code: 200 });
+  } catch (error) {
+    console.error("Error retrieving notification schemas.", error);
+    return res.status(500).json({ data: [], message: error.message, code: 500 });
+  }
+};
 
 const getParticipantNotification = async (req, res, authObj) => {
     logIPAdddress(req);
