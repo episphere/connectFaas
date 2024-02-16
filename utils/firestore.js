@@ -3000,6 +3000,35 @@ const processSendGridEventWebhook = async (event) => {
     }
 };
 
+const processTwilioEventWebhook = async (event) => {
+
+    const date = new Date().toISOString();
+    console.log("Processing event at " + date);
+    console.log(`SID: ${event.MessageSid}, Status: ${event.MessageStatus}, To ${event.To}`);
+    console.log(event);
+
+    const response = await db
+        .collection("notifications")
+        .where("messageSid", "==", event.MessageSid)
+        .get();
+
+    if (response.size > 0) {
+        for (let doc of response.docs) {
+            const eventRecord = {
+                status: event.MessageStatus,
+                [`${event.MessageStatus}_date`]: date,
+                error_code: event.ErrorCode || "",
+                error_message: event.ErrorMessage || ""
+            };
+           
+            await db
+                .collection("notifications")
+                .doc(doc.id)
+                .update(eventRecord);
+        }
+    }
+};
+
 const getParticipantCancerOccurrences = async (participantToken) => {
     try {
         const snapshot = await db.collection('cancerOccurrence').where('token', '==', participantToken).get();
@@ -3197,6 +3226,7 @@ module.exports = {
     addKitStatusToParticipant,
     eligibleParticipantsForKitAssignment,
     processSendGridEventWebhook,
+    processTwilioEventWebhook,
     getSpecimenAndParticipant,
     queryKitsByReceivedDate,
     getParticipantCancerOccurrences,
