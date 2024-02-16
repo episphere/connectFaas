@@ -108,9 +108,11 @@ const _testSendSms = async (res) => {
 };
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
+/* This function will process the webhook data from Twilio */
 const _receivedEvents = async (req, res) => {
     try {
         const status = req.body.MessageStatus;
+        // Delay for making sure the twilio event data
         await sleep(twilioSmsStatusTimeout[status]);
         await processTwilioEventWebhook(req.body);
    
