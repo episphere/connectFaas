@@ -2961,26 +2961,22 @@ const processSendGridEvent = async (event) => {
     console.log("Processing event at " + date);
     console.log(event);
 
-    const response = await db
+    const snapshot = await db
         .collection("sendgridTracking")
         .where("sgMessageId", "==", event.sg_message_id)
         .get();
 
-    if (response.size > 0) {
-        for (let doc of response.docs) {
-            const eventRecord = {
-                [`${event.event}Status`]: true,
-                [`${event.event}Date`]: date,
-                [`${event.event}Timestamp`]: event.timestamp,
-            };
-            if (["bounce", "dropped"].includes(event.event)) {
-                eventRecord[`${event.event}Reason`] = event.reason;
-            }
-            await db
-                .collection("sendgridTracking")
-                .doc(doc.id)
-                .update(eventRecord);
+    if (snapshot.size > 0) {
+        const doc = snapshot.docs[0];
+        const eventRecord = {
+            [`${event.event}Status`]: true,
+            [`${event.event}Date`]: date,
+            [`${event.event}Timestamp`]: event.timestamp,
+        };
+        if (["bounce", "dropped"].includes(event.event)) {
+            eventRecord[`${event.event}Reason`] = event.reason;
         }
+        await db.collection("sendgridTracking").doc(doc.id).update(eventRecord);
     } else {
         const eventRecord = {
             [`${event.event}Status`]: true,
@@ -3001,7 +2997,6 @@ const processSendGridEvent = async (event) => {
 };
 
 const processTwilioEvent = async (event) => {
-
     const date = new Date().toISOString();
     console.log(`SID: ${event.MessageSid}, Status: ${event.MessageStatus}`);
 
@@ -3011,19 +3006,15 @@ const processTwilioEvent = async (event) => {
         .get();
 
     if (snapshot.size > 0) {
-        for (let doc of snapshot.docs) {
-            const eventRecord = {
-                status: event.MessageStatus,
-                [`${event.MessageStatus}Date`]: date,
-                errorCode: event.ErrorCode || "",
-                errorMessage: event.ErrorMessage || ""
-            };
-           
-            await db
-                .collection("notifications")
-                .doc(doc.id)
-                .update(eventRecord);
-        }
+        const doc = snapshot.docs[0];
+        const eventRecord = {
+            status: event.MessageStatus,
+            [`${event.MessageStatus}Date`]: date,
+            errorCode: event.ErrorCode || "",
+            errorMessage: event.ErrorMessage || "",
+        };
+
+        await db.collection("notifications").doc(doc.id).update(eventRecord);
     }
 };
 

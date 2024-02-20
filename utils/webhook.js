@@ -2,12 +2,11 @@ const { getResponseJSON, twilioSmsStatusTimeout } = require("./shared");
 const { processTwilioEvent, processSendGridEvent } = require("./firestore");
 const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const { EventWebhook, EventWebhookHeader } = require("@sendgrid/eventwebhook");
-const { getResponseJSON } = require("./shared");
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 /* This function will process the webhook data from Twilio */
-const receivedTwilioEvent = async (req, res) => {
+const handleReceivedTwilioEvent = async (req, res) => {
     try {
         const status = req.body.MessageStatus;
         // Delay to ensure twilio webhook event data returns in the correct order and ensure all messages have been sent and saved to the database
@@ -23,7 +22,7 @@ const receivedTwilioEvent = async (req, res) => {
     }
 };
 
-const receivedSendGridEvent = async (req, res) => {
+const handleReceivedSendGridEvent = async (req, res) => {
     try {
         const client = new SecretManagerServiceClient();
         const [version] = await client.accessSecretVersion({
@@ -71,9 +70,9 @@ const webhook = async (req, res) => {
     const query = req.query;
 
     if (query.api === "twilio-message-status") {
-        await receivedTwilioEvent(req, res);
+        return await handleReceivedTwilioEvent(req, res);
     } else if (query.api === "sendgrid-email-status") {
-        await receivedSendGridEvent(req, res);
+        return await handleReceivedSendGridEvent(req, res);
     } else return res.status(400).json(getResponseJSON("Bad request!", 400));
 };
 
