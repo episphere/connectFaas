@@ -1,12 +1,14 @@
 const { getResponseJSON, setHeadersDomainRestricted, getUserProfile } = require('./shared');
 const { recruitSubmit, submitSocial, getUserSurveys, getUserCollections } = require('./submission');
-const { retrieveNotifications } = require('./notifications');
+const { retrieveNotifications, sendEmailLink } = require('./notifications');
 const { validateToken, generateToken, updateParticipantFirebaseAuthentication, validateUsersEmailPhone } = require('./validation');
 
 const connectApp = async (req, res) => {
     setHeadersDomainRestricted(req, res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    if (req.query.api === 'sendEmailLink') return sendEmailLink(req, res);
 
     if(!req.headers.authorization || req.headers.authorization.trim() === ""){
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));

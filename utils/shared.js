@@ -1494,6 +1494,23 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     });
 }
 
+const getTemplateForEmailLink = (email, continueUrl) => {
+    return `
+    <html>
+    <head></head>
+    <body marginheight="0">
+      <p>Hello,</p>
+      <p>We received a request to sign in to Connect for Cancer Prevention Study using this email address. If you want to sign in with your ${email} account, click this link:</p>
+      <p><a href="${continueUrl}" target="_other" rel="nofollow">Sign in to Connect for Cancer Prevention Study</a></p>
+      <p>If you did not request this link, you can safely ignore this email.</p>
+      <p>Thanks,</p>
+      <p>Your Connect for Cancer Prevention Study team</p>
+    </body>
+    </html>
+  `;
+};
+
+const nihMailbox = 'NCIConnectStudy@mail.nih.gov'
 
 
 module.exports = {
@@ -1555,4 +1572,6 @@ module.exports = {
     flattenObject,
     handleCancerOccurrences,
     filterSelectedFields,
+    getTemplateForEmailLink,
+    nihMailbox
 };

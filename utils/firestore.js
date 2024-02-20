@@ -3074,6 +3074,13 @@ const updateSurveyEligibility = async (token, survey) => {
 }
 
 
+const generateSignInWithEmailLink = async (email, continueUrl) => {
+    return await admin.auth().generateSignInWithEmailLink(email, {
+        url: continueUrl,
+        handleCodeInApp: true,
+    });
+};
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3195,5 +3202,6 @@ module.exports = {
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
     updateParticipantCorrection,
-    updateSurveyEligibility
+    updateSurveyEligibility,
+    generateSignInWithEmailLink
 }

@@ -2,8 +2,8 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat} = require("./shared");
-const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility} = require("./firestore");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox} = require("./shared");
+const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
@@ -132,10 +132,10 @@ const retrieveNotifications = async (req, res, uid) => {
   }
 };
 
-const getSecrets = async () => {
+const getSecret = async (key) => {
     const client = new SecretManagerServiceClient();
     const [version] = await client.accessSecretVersion({
-        name: process.env.GCLOUD_SENDGRID_SECRET,
+        name: key,
     });
     const payload = version.payload.data.toString();
     return payload;
@@ -143,7 +143,7 @@ const getSecrets = async () => {
 
 const sendEmail = async (emailTo, messageSubject, html, cc) => {
     const sgMail = require('@sendgrid/mail');
-    const apiKey = await getSecrets();
+    const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
     sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
@@ -173,7 +173,7 @@ async function notificationHandler(message) {
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
   const notificationSpecArray = await getScheduledNotifications(scheduleAt);
   if (notificationSpecArray.length === 0) return;
-  const apiKey = await getSecrets();
+  const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
   sgMail.setApiKey(apiKey);
 
   const notificationPromises = [];
@@ -585,6 +585,85 @@ const getSiteNotification = async (req, res, authObj) => {
     return res.status(200).json({data, code: 200})
 }
 
+const sendEmailLink = async (req, res) => {
+    if (req.method !== "POST") {
+        return res
+            .status(405)
+            .json(getResponseJSON("Only POST requests are accepted!", 405));
+    }
+    try {
+        const { email, continueUrl } = req.body;
+        const [clientId, clientSecret, tenantId, magicLink] = await Promise.all(
+            [
+                getSecret(process.env.APP_REGISTRATION_CLIENT_ID),
+                getSecret(process.env.APP_REGISTRATION_CLIENT_SECRET),
+                getSecret(process.env.APP_REGISTRATION_TENANT_ID),
+                generateSignInWithEmailLink(email, continueUrl),
+            ]
+        );
+
+        const params = new URLSearchParams();
+        params.append("grant_type", "client_credentials");
+        params.append("scope", "https://graph.microsoft.com/.default");
+        params.append("client_id", clientId);
+        params.append("client_secret", clientSecret);
+
+        const resAuthorize = await fetch(
+            `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/x-www-form-urlencoded;charset=UTF-8",
+                },
+                body: params,
+            }
+        );
+
+        const { access_token } = await resAuthorize.json();
+
+        const body = {
+            message: {
+                subject: `Sign in to Connect for Cancer Prevention Study`,
+                body: {
+                    contentType: "html",
+                    content: getTemplateForEmailLink(email, magicLink),
+                },
+                toRecipients: [
+                    {
+                        emailAddress: {
+                            address: email,
+                        },
+                    },
+                ],
+            },
+        };
+        const response = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${nihMailbox}/sendMail`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${access_token}`,
+                },
+                body: JSON.stringify(body),
+            }
+        );
+        const { status, statusText: code } = response;
+        return res.status(202).json({ status, code });
+        
+    } catch (err) {
+        console.error(`Error in sendEmailLink(). ${err.message}`);
+        return res
+            .status(500)
+            .json({
+                data: [],
+                message: `Error in sendEmailLink(). ${err.message}`,
+                code: 500,
+            });
+    }
+};
+
 module.exports = {
     subscribeToNotification,
     retrieveNotifications,
@@ -593,5 +672,6 @@ module.exports = {
     retrieveNotificationSchema,
     getParticipantNotification,
     sendEmail,
-    getSiteNotification
+    getSiteNotification,
+    sendEmailLink
 }
