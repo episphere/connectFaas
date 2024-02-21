@@ -600,7 +600,7 @@ const getModuleSHA = async (path) => {
             throw new Error(`Error: Module SHA not found for path ${path}:`, path, responseJSON);
         }
         
-        return responseJSON[0].sha;
+        return sha;
 
     } catch (error) {
         console.error('Error fetching module SHA:', error);
