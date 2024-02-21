@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeadersDomainRestricted, getUserProfile } = require('./shared');
+const { getResponseJSON, setHeadersDomainRestricted, getUserProfile, } = require('./shared');
 const { recruitSubmit, submitSocial, getUserSurveys, getUserCollections } = require('./submission');
 const { retrieveNotifications, sendEmailLink } = require('./notifications');
 const { validateToken, generateToken, updateParticipantFirebaseAuthentication, validateUsersEmailPhone } = require('./validation');
@@ -37,7 +37,7 @@ const connectApp = async (req, res) => {
     console.log(`PWA API: ${api}, called from uid: ${uid}`);
 
   try {
-    if (api === 'submit') return recruitSubmit(req, res, uid);
+    if (api === 'submit') return await recruitSubmit(req, res, uid);
 
     if (api === 'submitSocial') return submitSocial(req, res, uid);
 
@@ -56,6 +56,23 @@ const connectApp = async (req, res) => {
     else if (api === 'updateParticipantFirebaseAuthentication') return await updateParticipantFirebaseAuthentication(req, res);
 
     else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
+
+    else if (api === 'getModuleSHA') {
+      if(req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+      }
+
+      if (!req.query.path || req.query.path === '') {
+        return res.status(400).json(getResponseJSON('Path parameter is required!', 400));
+      }
+
+      const path = req.query.path;
+
+      const { getModuleSHA } = require('./submission');
+      const shaResult = await getModuleSHA(path);
+      
+      return res.status(200).json({data: shaResult, code: 200});
+    }
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 
