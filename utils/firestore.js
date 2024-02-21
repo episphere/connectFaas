@@ -2958,8 +2958,6 @@ const processSendGridEvent = async (event) => {
     if (event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
 
     const date = new Date(event.timestamp * 1000).toISOString();
-    console.log("Processing event at " + date);
-    console.log(event);
 
     const snapshot = await db
         .collection("sendgridTracking")
@@ -3000,7 +2998,6 @@ const processTwilioEvent = async (event) => {
     if (!["failed", "delivered", "undelivered"].includes(event.MessageStatus)) return 
 
     const date = new Date().toISOString();
-    console.log(`SID: ${event.MessageSid}, Status: ${event.MessageStatus}`);
 
     const snapshot = await db
         .collection("notifications")

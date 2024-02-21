@@ -38,7 +38,7 @@ const handleReceivedSendGridEvent = async (req, res) => {
         );
 
         if (!verification) {
-            res.status(403).send("Forbidden");
+            return res.status(403).send("Forbidden");
         }
 
         const events = req.body;
