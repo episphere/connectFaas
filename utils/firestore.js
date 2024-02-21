@@ -2954,49 +2954,66 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
     }
 }
 
-const processEventWebhook = async (event) => {
+const processSendGridEvent = async (event) => {
     if (event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
 
     const date = new Date(event.timestamp * 1000).toISOString();
-    console.log("Processing event at " + date);
-    console.log(event);
 
-    const response = await db
+    const snapshot = await db
         .collection("sendgridTracking")
-        .where("sg_message_id", "==", event.sg_message_id)
+        .where("sgMessageId", "==", event.sg_message_id)
         .get();
 
-    if (response.size > 0) {
-        for (let doc of response.docs) {
-            const eventRecord = {
-                [`${event.event}_status`]: true,
-                [`${event.event}_date`]: date,
-                [`${event.event}_timestamp`]: event.timestamp,
-            };
-            if (["bounce", "dropped"].includes(event.event)) {
-                eventRecord[`${event.event}_reason`] = event.reason;
-            }
-            await db
-                .collection("sendgridTracking")
-                .doc(doc.id)
-                .update(eventRecord);
+    if (snapshot.size > 0) {
+        const doc = snapshot.docs[0];
+        const eventRecord = {
+            [`${event.event}Status`]: true,
+            [`${event.event}Date`]: date,
+            [`${event.event}Timestamp`]: event.timestamp,
+        };
+        if (["bounce", "dropped"].includes(event.event)) {
+            eventRecord[`${event.event}Reason`] = event.reason;
         }
+        await db.collection("sendgridTracking").doc(doc.id).update(eventRecord);
     } else {
         const eventRecord = {
-            [`${event.event}_status`]: true,
-            [`${event.event}_date`]: date,
-            [`${event.event}_timestamp`]: event.timestamp,
-            connect_id: event.connect_id,
+            [`${event.event}Status`]: true,
+            [`${event.event}Date`]: date,
+            [`${event.event}Timestamp`]: event.timestamp,
+            connectId: event.connect_id,
             email: event.email,
-            notification_id: event.notification_id,
-            sg_event_id: event.sg_event_id,
-            sg_message_id: event.sg_message_id,
+            notificationId: event.notification_id,
+            sgEventId: event.sg_event_id,
+            sgMessageId: event.sg_message_id,
             token: event.token,
         };
         if (["bounce", "dropped"].includes(event.event)) {
-            eventRecord[`${event.event}_reason`] = event.reason;
+            eventRecord[`${event.event}Reason`] = event.reason;
         }
         await db.collection("sendgridTracking").add(eventRecord);
+    }
+};
+
+const processTwilioEvent = async (event) => {
+    if (!["failed", "delivered", "undelivered"].includes(event.MessageStatus)) return 
+
+    const date = new Date().toISOString();
+
+    const snapshot = await db
+        .collection("notifications")
+        .where("messageSid", "==", event.MessageSid)
+        .get();
+
+    if (snapshot.size > 0) {
+        const doc = snapshot.docs[0];
+        const eventRecord = {
+            status: event.MessageStatus,
+            [`${event.MessageStatus}Date`]: date,
+            errorCode: event.ErrorCode || "",
+            errorMessage: event.ErrorMessage || "",
+        };
+
+        await db.collection("notifications").doc(doc.id).update(eventRecord);
     }
 };
 
@@ -3196,7 +3213,8 @@ module.exports = {
     storeKitReceipt,
     addKitStatusToParticipant,
     eligibleParticipantsForKitAssignment,
-    processEventWebhook,
+    processSendGridEvent,
+    processTwilioEvent,
     getSpecimenAndParticipant,
     queryKitsByReceivedDate,
     getParticipantCancerOccurrences,

@@ -53,6 +53,9 @@ const sendSmsBatch = async (smsRecordArray) => {
     for (let i = 0; i < chunk.length; i++) {
       if (!messageArray[i].errorOccurred) {
         chunk[i].messageSid = messageArray[i].sid || "";
+        chunk[i].errorCode = messageArray[i].error_code || "";
+        chunk[i].errorMessage = messageArray[i].error_message || "";
+        chunk[i].status = messageArray[i].status || "";
         adjustedDataArray.push(chunk[i]);
       }
     }
