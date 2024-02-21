@@ -484,14 +484,6 @@ const SSOConfig = {
     'UCM-SSO-p4f5m': ucmSSOConfig
 }
 
-const twilioSmsStatusTimeout = {
-    queued: 10000,
-    sending: 15000,
-    sent: 20000,
-    delivered: 25000,
-    undelivered: 30000,
-}
-
 const decodingJWT = (token) => {
     if (token) {
         const base64String = token.split('.')[1];
@@ -1581,6 +1573,5 @@ module.exports = {
     handleCancerOccurrences,
     filterSelectedFields,
     getTemplateForEmailLink,
-    nihMailbox,
-    twilioSmsStatusTimeout
+    nihMailbox
 };

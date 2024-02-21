@@ -2997,6 +2997,8 @@ const processSendGridEvent = async (event) => {
 };
 
 const processTwilioEvent = async (event) => {
+    if (!["failed", "delivered", "undelivered"].includes(event.MessageStatus)) return 
+
     const date = new Date().toISOString();
     console.log(`SID: ${event.MessageSid}, Status: ${event.MessageStatus}`);
 

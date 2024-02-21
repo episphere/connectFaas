@@ -56,7 +56,6 @@ const sendSmsBatch = async (smsRecordArray) => {
         chunk[i].errorCode = messageArray[i].error_code || "";
         chunk[i].errorMessage = messageArray[i].error_message || "";
         chunk[i].status = messageArray[i].status || "";
-        chunk[i][`${messageArray[i].status}Date`] = new Date().toISOString()
         adjustedDataArray.push(chunk[i]);
       }
     }
