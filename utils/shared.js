@@ -484,6 +484,20 @@ const SSOConfig = {
     'UCM-SSO-p4f5m': ucmSSOConfig
 }
 
+// https://www.twilio.com/docs/messaging/guides/debugging-tools#error-codes
+const twilioErrorMessages = {
+    30001: "Queue overflow. You tried to send too many messages too quickly, and your message queue overflowed. Try sending your message again after waiting for some time.",
+    30002: "Account suspended. Your account was suspended between the time of message send and delivery. Please contact Twilio.",
+    30003: "Unreachable destination handset. The destination handset you are trying to reach is switched off or otherwise unavailable.",
+    30004: "Message blocked. The destination number you are trying to reach is blocked from receiving this message (e.g., due to blacklisting).",
+    30005: "Unknown destination handset. The destination number you are trying to reach is unknown and may no longer exist.",
+    30006: "Landline or unreachable carrier. The destination number is unable to receive this message. Potential reasons could include trying to reach a landline or, in the case of short codes, an unreachable carrier.",
+    30007: "Carrier violation. Your message was flagged as objectionable by the carrier. To protect their subscribers, many carriers have implemented content or spam filtering.",
+    30008: "Unknown error. The error does not fit into any of the above categories.",
+    30009: "Missing segment. One or more segments associated with your multi-part inbound message was not received.",
+    300010: "Message price exceeds max price. The price of your message exceeds the max price parameter.",
+};
+
 const decodingJWT = (token) => {
     if (token) {
         const base64String = token.split('.')[1];
@@ -1573,5 +1587,6 @@ module.exports = {
     handleCancerOccurrences,
     filterSelectedFields,
     getTemplateForEmailLink,
-    nihMailbox
+    nihMailbox,
+    twilioErrorMessages
 };
