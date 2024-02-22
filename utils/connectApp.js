@@ -58,7 +58,7 @@ const connectApp = async (req, res) => {
     else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
 
     else if (api === 'getModuleSHA') {
-      if(req.method !== 'GET') {
+      if (req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
       }
 
