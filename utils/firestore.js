@@ -4,7 +4,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -2996,7 +2996,6 @@ const processSendGridEvent = async (event) => {
 
 const processTwilioEvent = async (event) => {
     if (!["failed", "delivered", "undelivered"].includes(event.MessageStatus)) return 
-
     const date = new Date().toISOString();
 
     const snapshot = await db
@@ -3010,10 +3009,12 @@ const processTwilioEvent = async (event) => {
             status: event.MessageStatus,
             [`${event.MessageStatus}Date`]: date,
             errorCode: event.ErrorCode || "",
-            errorMessage: event.ErrorMessage || "",
+            errorMessage: event.ErrorMessage || twilioErrorMessages[event.ErrorCode] || "",
         };
 
         await db.collection("notifications").doc(doc.id).update(eventRecord);
+
+        console.log(`Finished updating status for messageSid ${event.MessageSid}:${event.MessageStatus}`)
     }
 };
 
