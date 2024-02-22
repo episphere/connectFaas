@@ -26,6 +26,7 @@
     "@sendgrid/eventwebhook": "^8.0.0",
     "@sendgrid/mail": "^8.1.0",
     "crypto": "^1.0.1",
+    "crypto-js": "^4.2.0",
     "fast-crc32c": "^2.0.0",
     "firebase-admin": "^11.11.1",
     "firebase-functions": "^4.5.0",

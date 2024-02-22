@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-admin.initializeApp(functions.config().firebase);
+const serviceAccount = require("../../../Code/Secrets/firebase-sdk-dev.json");
+admin.initializeApp({credential: admin.credential.cert(serviceAccount)});
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
@@ -3077,7 +3078,33 @@ const updateSurveyEligibility = async (token, survey) => {
     }
 }
 
+const getPromisResponses = async (uid) => {
+    try {
+        const snapshot = await db.collection('promis_v1').where('uid', '==', uid).get();
 
+        if (snapshot.empty) return;
+
+        const returnPayload = {
+            doc: snapshot.docs[0].id,
+            surveyResults: snapshot.docs[0].data()
+        }
+
+        return returnPayload;
+    } catch (error) {
+        console.log(error)
+        throw new Error("Error fetching promis responses.", { cause: error });
+    }
+
+}
+
+const submitPromisScores = async (doc, data) => {
+
+    try {
+        await db.collection('promis_v1').doc(doc).update(data);
+    } catch (error) {
+        throw new Error("Error submitting promis scores.", { cause: error });
+    }
+}
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3199,5 +3226,7 @@ module.exports = {
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
     updateParticipantCorrection,
-    updateSurveyEligibility
+    updateSurveyEligibility,
+    getPromisResponses,
+    submitPromisScores
 }

@@ -1,4 +1,5 @@
-const fieldMapping = require('./fieldToConceptIdMapping')
+const fieldMapping = require('./fieldToConceptIdMapping');
+const CryptoJS = require('crypto-js');
 
 const getResponseJSON = (message, code) => {
     return { message, code };
@@ -1487,6 +1488,15 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     });
 }
 
+const generateAuthToken = () => {
+
+    const uoid = '56BE7A9C-7A46-444C-869E-539B58C6A149';
+    const token = '2C8C3D2F-75D6-4580-8D77-069C8215D64B';
+
+    const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
+    const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
+    return encoded;
+}
 
 module.exports = {
     getResponseJSON,
@@ -1547,4 +1557,5 @@ module.exports = {
     flattenObject,
     handleCancerOccurrences,
     filterSelectedFields,
+    generateAuthToken
 };

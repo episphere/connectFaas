@@ -567,6 +567,72 @@ const getUserCollections = async (req, res, uid) => {
     }
 }
 
+const processPromisScores = async (uid) => {
+
+    const { getPromisResponses, submitPromisScores } = require('./firestore');
+    const { promisConfig } = require('./config');
+
+    const { doc, surveyResults } = await getPromisResponses(uid);
+    const forms = Object.keys(promisConfig);
+    const scoresPayload = {};
+
+    for (let form of forms) {
+        const sourceQuestion = surveyResults[promisConfig[form].source];
+
+        if (sourceQuestion) {
+            
+            let scoringData = {};
+
+            const questions = Object.keys(promisConfig[form].questions);
+
+            for (const question of questions) {
+                if (sourceQuestion[question]) {
+
+                    const questionConfig = promisConfig[form].questions[question];
+                    const questionResponse = sourceQuestion[question];
+                    
+                    scoringData[questionConfig.name] = questionConfig.responses[questionResponse];
+                }
+            }
+
+            const scores = await getPromisScores(promisConfig[form].id, scoringData);
+
+            scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
+            scoresPayload[promisConfig[form].error] = parseInt(scores['SError']);
+
+            if (scores.ItemErrors) console.log(scores.ItemErrors);
+        }
+    }
+
+    if (Object.keys(scoresPayload).length > 0) {
+        await submitPromisScores(doc, scoresPayload);
+    }
+}
+
+const getPromisScores = async (id, data) => {
+
+    const { generateAuthToken } = require('./shared');
+    const formData = new URLSearchParams();
+
+    Object.keys(data).forEach(key => {
+        formData.append(key, data[key]);
+    });
+
+    const response = await fetch(`https://www.assessmentcenter.net/ac_api/2013-01/Scores/${id}.json`, {
+        method: "POST",
+        headers: {
+            "Authorization": "Basic " + generateAuthToken(),
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: formData.toString()
+    });
+
+    const scores = await response.json();
+    return scores.Form[0];
+}
+
+processPromisScores('eyjekCU9H4V4crXpcRp95HINkXI2');
+
 module.exports = {
     submit,
     recruitSubmit,
