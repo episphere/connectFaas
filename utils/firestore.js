@@ -3014,7 +3014,8 @@ const processTwilioEvent = async (event) => {
 
         await db.collection("notifications").doc(doc.id).update(eventRecord);
 
-        console.log(`Finished updating status for messageSid ${event.MessageSid}:${event.MessageStatus}`)
+    } else {
+        console.error(`Could not find messageSid ${event.MessageSid}. Status ${event.MessageStatus}`)
     }
 };
 
