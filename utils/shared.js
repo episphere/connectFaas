@@ -144,7 +144,9 @@ const withdrawalConcepts = {
         277479354: 104430631,
         217367618: 104430631,
         867203506: 104430631,
-        352996056: 104430631
+        352996056: 104430631,
+        936015433: 104430631,
+        688142378: 104430631,
     },
     906417725: 104430631,
     773707518: 104430631,
@@ -217,6 +219,7 @@ const defaultFlags = {
     663265240: 972455046,
     265193023: 972455046,
     220186468: 972455046,
+    320303124: 789467219,
     459098666: 972455046,
     126331570: 972455046,
     311580100: 104430631,
@@ -247,7 +250,8 @@ const moduleConceptsToCollections = {
     "D_912367929" :     "menstrualSurvey_v1",
     "D_826163434" :     "clinicalBioSurvey_v1",
     "D_166676176" :     "ssn",
-    "D_390351864" :     "mouthwash_v1"
+    "D_390351864" :     "mouthwash_v1",
+    "D_601305072" :     "promis_v1"
 }
 
 const moduleStatusConcepts = {
@@ -260,7 +264,8 @@ const moduleStatusConcepts = {
     "459098666" :       "menstrualSurvey",
     "253883960" :       "clinicalBioSurvey",
     "126331570" :       "ssn",
-    "547363263" :       "mouthwash"
+    "547363263" :       "mouthwash",
+    "320303124" :       "promis"
 }
 
 const listOfCollectionsRelatedToDataDestruction = [
@@ -276,6 +281,7 @@ const listOfCollectionsRelatedToDataDestruction = [
     "module4_v1",
     "biospecimen",
     "notifications",
+    "promis_v1"
 ];
 
 const incentiveConcepts = {
@@ -477,6 +483,20 @@ const SSOConfig = {
     'UCM-SSO-lrjsp': ucmSSOConfig,
     'UCM-SSO-p4f5m': ucmSSOConfig
 }
+
+// https://www.twilio.com/docs/messaging/guides/debugging-tools#error-codes
+const twilioErrorMessages = {
+    30001: "Queue overflow. You tried to send too many messages too quickly, and your message queue overflowed. Try sending your message again after waiting for some time.",
+    30002: "Account suspended. Your account was suspended between the time of message send and delivery. Please contact Twilio.",
+    30003: "Unreachable destination handset. The destination handset you are trying to reach is switched off or otherwise unavailable.",
+    30004: "Message blocked. The destination number you are trying to reach is blocked from receiving this message (e.g., due to blacklisting).",
+    30005: "Unknown destination handset. The destination number you are trying to reach is unknown and may no longer exist.",
+    30006: "Landline or unreachable carrier. The destination number is unable to receive this message. Potential reasons could include trying to reach a landline or, in the case of short codes, an unreachable carrier.",
+    30007: "Carrier violation. Your message was flagged as objectionable by the carrier. To protect their subscribers, many carriers have implemented content or spam filtering.",
+    30008: "Unknown error. The error does not fit into any of the above categories.",
+    30009: "Missing segment. One or more segments associated with your multi-part inbound message was not received.",
+    300010: "Message price exceeds max price. The price of your message exceeds the max price parameter.",
+};
 
 const decodingJWT = (token) => {
     if (token) {
@@ -810,6 +830,11 @@ const isEmpty = (object) => {
 
     return true;
 }
+
+const findKeyByValue = (object, value) => {
+    return Object.keys(object).find(key => object[key] === value);
+}
+
 
 const isDateTimeFormat = (value) => {
     return typeof value == "string" && (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(value));
@@ -1483,6 +1508,23 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     });
 }
 
+const getTemplateForEmailLink = (email, continueUrl) => {
+    return `
+    <html>
+    <head></head>
+    <body marginheight="0">
+      <p>Hello,</p>
+      <p>We received a request to sign in to Connect for Cancer Prevention Study using this email address. If you want to sign in with your ${email} account, click this link:</p>
+      <p><a href="${continueUrl}" target="_other" rel="nofollow">Sign in to Connect for Cancer Prevention Study</a></p>
+      <p>If you did not request this link, you can safely ignore this email.</p>
+      <p>Thanks,</p>
+      <p>Your Connect for Cancer Prevention Study team</p>
+    </body>
+    </html>
+  `;
+};
+
+const nihMailbox = 'NCIConnectStudy@mail.nih.gov'
 
 
 module.exports = {
@@ -1520,6 +1562,7 @@ module.exports = {
     batchLimit,
     getUserProfile,
     isEmpty,
+    findKeyByValue,
     isDateTimeFormat,
     createChunkArray,
     redactEmailLoginInfo,
@@ -1543,4 +1586,7 @@ module.exports = {
     flattenObject,
     handleCancerOccurrences,
     filterSelectedFields,
+    getTemplateForEmailLink,
+    nihMailbox,
+    twilioErrorMessages
 };

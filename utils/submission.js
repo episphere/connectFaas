@@ -36,7 +36,7 @@ const submit = async (res, data, uid) => {
 
         if(collection) {
             let moduleData = data[key];
-            return submitSurvey(res, moduleData, collection, uid)
+            return await submitSurvey(res, moduleData, collection, uid)
         }
     }
 
@@ -66,7 +66,7 @@ const submit = async (res, data, uid) => {
             const siteCode = participant['827220437'];
             const token = await getTokenForParticipant(uid);
 
-            checkDerivedVariables(token, siteCode);
+            await checkDerivedVariables(token, siteCode);
         }
     }
     
@@ -124,7 +124,7 @@ const recruitSubmit = async (req, res, uid) => {
     if(Object.keys(data).length <= 0){
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
-    return submit(res, data, uid);
+    return await submit(res, data, uid);
 }
 
 const submitSocial = async (req, res, uid) => {
@@ -157,7 +157,7 @@ const submitSocial = async (req, res, uid) => {
     ssnObj['token'] = await getTokenForParticipant(uid);
 
     try {
-        const response = storeSSN(ssnObj);
+        const response = await storeSSN(ssnObj);
 
         if(!response) {
             return res.status(500).json(getResponseJSON("Can't add/update data!", 500));
@@ -567,6 +567,47 @@ const getUserCollections = async (req, res, uid) => {
     }
 }
 
+/**
+ * Get the sha of a module in the questionnaire repository.
+ * @param {string} path - the path to the module in the questionnaire repository.
+ * @returns {string} - the sha of the module.
+ */
+const getModuleSHA = async (path) => {
+    try {
+        const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
+        const client = new SecretManagerServiceClient();
+        const [version] = await client.accessSecretVersion({ name: process.env.GITHUB_TOKEN });
+        const token = version.payload.data.toString();
+
+        const gitHubApiResponse = await fetch(`https://api.github.com/repos/episphere/questionnaire/commits?path=${path}&sha=main&per_page=1`, {
+            headers: {
+                'Authorization': `token ${token}`,
+            }
+        });
+
+        const rateLimitRemaining = gitHubApiResponse.headers.get('X-RateLimit-Remaining');
+        if (rateLimitRemaining === '0') {
+            console.error('GitHub API rate limit exceeded.');
+            throw new Error('GitHub API rate limit exceeded.');
+        }
+
+        const responseJSON = await gitHubApiResponse.json();
+
+        const sha = responseJSON[0]?.sha;
+
+        if (!sha) {
+            console.error('Error: Module SHA not found:');
+            throw new Error(`Error: Module SHA not found for path ${path}:`, path, responseJSON);
+        }
+        
+        return sha;
+
+    } catch (error) {
+        console.error('Error fetching module SHA:', error);
+        throw new Error("Error fetching module SHA.", { cause: error });
+    }
+}
+
 module.exports = {
     submit,
     recruitSubmit,
@@ -575,5 +616,6 @@ module.exports = {
     getParticipants,
     identifyParticipant,
     getUserSurveys,
-    getUserCollections
+    getUserCollections,
+    getModuleSHA,
 }
