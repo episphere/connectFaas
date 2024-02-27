@@ -401,20 +401,36 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 
       try {
         await sgMail.send(emailBatch);
+        await saveNotificationBatch(emailRecordArray);
+        emailCount += emailRecordArray.length;
       } catch (error) {
-        console.error(`Error sending emails for ${notificationSpec.id}(${readableSpecString}).`, error);
+        if (error.message.startsWith("saveNotificationBatch")) {
+          console.error(`Error saving email records for ${notificationSpec.id}(${readableSpecString}).`, error);
+        } else {
+          console.error(`Error sending emails for ${notificationSpec.id}(${readableSpecString}).`, error);
+        }
+
         break;
       }
-
-      emailCount += emailRecordArray.length;
     }
 
     if (smsRecordArray.length > 0) {
-      smsRecordArray = await sendSmsBatch(smsRecordArray);
-      smsCount += smsRecordArray.length;
+      try {
+        smsRecordArray = await sendSmsBatch(smsRecordArray);
+        if (smsRecordArray.length > 0) {
+          await saveNotificationBatch(smsRecordArray);
+          smsCount += smsRecordArray.length;
+        }
+      } catch (error) {
+        if (error.message.startsWith("saveNotificationBatch")) {
+          console.error(`Error saving SMS records for ${notificationSpec.id}(${readableSpecString}).`, error);
+        } else {
+          console.error(`Error sending SMS messages for ${notificationSpec.id}(${readableSpecString}).`, error);
+        }
+
+        break;
+      }
     }
-
-
     
     if ((emailRecordArray[0] && emailRecordArray[0].category === '3mo QOL Survey Reminders' && emailRecordArray[0].attempt === '1st contact') ||
         (smsRecordArray[0] && smsRecordArray[0].category === '3mo QOL Survey Reminders' && smsRecordArray[0].attempt === '1st contact')) {
@@ -436,14 +452,6 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       }
     }
     
-
-    try {
-      await saveNotificationBatch([...emailRecordArray, ...smsRecordArray]);
-    } catch (error) {
-      console.error(`Error saving data for ${notificationSpec.id}(${readableSpecString}).`, error);
-      break;
-    }
-
   }
 
   if (emailCount === 0 && smsCount === 0) {
