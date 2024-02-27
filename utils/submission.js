@@ -637,36 +637,66 @@ const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
             }
 
         const commitData = await gitHubApiResponse.json();
-        
-        let sha;
 
-        // Filter commits to inspect only those before the survey start date.
-        // They are sorted by date in descending order, so the first remaining commit is our target.
-        if (surveyStartTimestamp) {
-            const commitsToInspect = commitData.filter(commit => {
-                const commitDate = new Date(commit.commit.author.date).getTime();
-                const surveyStartDate = new Date(surveyStartTimestamp).getTime();
+        // Commits are sorted by date in descending order, so the first found commit is our target.
+        const targetCommit = commitData.find(commit => {
+            // If no timestamp, return the first commit
+            if (!surveyStartTimestamp) return true;
+
+            const commitDate = new Date(commit.commit.author.date).getTime();
+            const surveyStartDate = new Date(surveyStartTimestamp).getTime();
+            return commitDate <= surveyStartDate;
+
+        }) || commitData[0];
     
-                return commitDate <= surveyStartDate;
-            });
-    
-            // If no commits are found before the survey start date, use the most recent commit as a fallback.
-            sha = commitsToInspect[0]?.sha || commitData[0]?.sha;
-    
-        // If no survey start date is provided, use the most recent commit.
-        } else {
-            sha = commitData[0]?.sha;
+        if (!targetCommit) {
+            throw new Error(`No appropriate commit found for path ${path}.`);
         }
-        
+    
+        const sha = targetCommit.sha;
         if (!sha) {
             throw new Error(`Module SHA not found for path ${path}. Most recent SHA also failed.`);
         }
+    
+        const surveyVersion = await getVersionNumberFromGitHubCommit(sha, path, token);
 
-        return sha;
+        return { sha, surveyVersion };
 
     } catch (error) {
         console.error('Error fetching module SHA from commit data.', error);
         throw new Error(`Error fetching module SHA from commit data. ${error.message}`, { cause: error });
+    }
+}
+
+/**
+ * Search the GitHub API (Raw file) by commit SHA for the version number of a module at a specific commit.
+ * Early versions didn't have a versioning convention. Return '1.0' for this case.
+ * @param {String} sha - The SHA of the raw file commit to fetch.
+ * @param {String} path - The path to the file in the questionnaire repository.
+ * @param {String} token - The GitHub API token.
+ * @returns {String} - The version number of the module or '1.0' if not versioned.
+ */
+const getVersionNumberFromGitHubCommit = async (sha, path, token) => {
+    try {
+        const response = await fetch(`https://api.github.com/repos/episphere/questionnaire/contents/${path}?ref=${sha}`, {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3.raw'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Github RAW File API response error. ${response.statusText}`);
+        }
+
+        const rawTextData = await response.text();
+        const versionMatch = rawTextData.match("{\"version\":\\s*\"([0-9]{1,2}\\.[0-9]{1,3})\"}");
+
+        return versionMatch ? versionMatch[1] : '1.0';
+
+    } catch (error) {
+        console.error('Error fetching raw GitHub file from commit sha.', error);
+        throw new Error(`Error fetching raw GitHub file from commit sha. ${error.message}`, { cause: error });
     }
 }
 
