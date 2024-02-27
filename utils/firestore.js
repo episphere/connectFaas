@@ -636,28 +636,49 @@ const retrieveConnectID = async (uid) => {
     }
 }
 
+/**
+ * Fetches the participant's survey data from Firestore.
+ * @param {String} uid - participant's uid
+ * @param {Array} concepts - array of concepts IDs to retrieve
+ * @returns {Object} - object with concept IDs as keys and data as values
+ */
 const retrieveUserSurveys = async (uid, concepts) => {
     try {
         let surveyData = {};
-
         const { moduleConceptsToCollections } = require('./shared');
- 
-        for await (const concept of concepts) {
-            
-            if (moduleConceptsToCollections[concept]) {
-                const snapshot = await db.collection(moduleConceptsToCollections[concept]).where('uid', '==', uid).get();
-            
-                if(snapshot.size > 0){
-                    surveyData[concept] = snapshot.docs[0].data();
-                }
+
+        const surveyPromises = concepts.map(async (concept) => {
+            if (!moduleConceptsToCollections[concept]) {
+                return null;
             }
-        };
+
+            try {
+                const snapshot = await db.collection(moduleConceptsToCollections[concept])
+                    .where('uid', '==', uid)
+                    .get();
+
+                if (snapshot.size > 0) {
+                    return { concept, data: snapshot.docs[0].data() };
+                }
+
+                return null;
+            } catch (error) {
+                console.error(`Error fetching ${concept} survey data: ${error}`);
+                return null;
+            }
+        });
+
+        const surveyDataArray = await Promise.all(surveyPromises);
+
+        surveyDataArray.filter(surveyPromiseResult => surveyPromiseResult !== null)
+            .forEach(({ concept, data }) => {
+                surveyData[concept] = data;
+            });
 
         return surveyData;
-    }
-    catch(error) {
+    } catch (error) {
         console.error(error);
-        return new Error(error);
+        throw new Error(`Error fetching user surveys: ${error}`);
     }
 }
 

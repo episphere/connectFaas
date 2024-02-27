@@ -608,6 +608,68 @@ const getModuleSHA = async (path) => {
     }
 }
 
+/**
+ * Repair: missing SHA value in the survey data. This property should exist for all survey data in all modules.
+ * Ex: Firestore -> Module3_v1 -> any document > sha: "<string value of active commit when survey was started>".
+ * This function compares the survey start date with the commit history of the module.
+ * @param {String} surveyStartTimestamp - The timestamp of the survey start date (ISO 8601 String).
+ * @param {String} path - the file name of the module in the questionnaire repository.
+ * @returns {String} - The SHA of the commit that was active when the survey was started.
+ */
+const getShaFromGitHubCommitData = async (surveyStartTimestamp, path) => {
+    try {
+        const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
+        const client = new SecretManagerServiceClient();
+        const [version] = await client.accessSecretVersion({ name: process.env.GITHUB_TOKEN });
+        const token = version.payload.data.toString();
+
+        const gitHubApiResponse = await fetch(`https://api.github.com/repos/episphere/questionnaire/commits?path=${path}&sha=main`, {
+            headers: {
+                'Authorization': `token ${token}`,
+            }
+        });
+
+        // Authenticated rate limit is 5000 requests per hour for the GitHub API. We do not expect to exceed this limit.
+        const rateLimitRemaining = gitHubApiResponse.headers.get('X-RateLimit-Remaining');
+            if (rateLimitRemaining === '0') {
+                console.error('GitHub API rate limit exceeded.');
+                throw new Error('GitHub API rate limit exceeded.');
+            }
+
+        const commitData = await gitHubApiResponse.json();
+        
+        let sha;
+
+        // Filter commits to inspect only those before the survey start date.
+        // They are sorted by date in descending order, so the first remaining commit is our target.
+        if (surveyStartTimestamp) {
+            const commitsToInspect = commitData.filter(commit => {
+                const commitDate = new Date(commit.commit.author.date).getTime();
+                const surveyStartDate = new Date(surveyStartTimestamp).getTime();
+    
+                return commitDate <= surveyStartDate;
+            });
+    
+            // If no commits are found before the survey start date, use the most recent commit as a fallback.
+            sha = commitsToInspect[0]?.sha || commitData[0]?.sha;
+    
+        // If no survey start date is provided, use the most recent commit.
+        } else {
+            sha = commitData[0]?.sha;
+        }
+        
+        if (!sha) {
+            throw new Error(`Module SHA not found for path ${path}. Most recent SHA also failed.`);
+        }
+
+        return sha;
+
+    } catch (error) {
+        console.error('Error fetching module SHA from commit data.', error);
+        throw new Error(`Error fetching module SHA from commit data. ${error.message}`, { cause: error });
+    }
+}
+
 module.exports = {
     submit,
     recruitSubmit,
@@ -618,4 +680,5 @@ module.exports = {
     getUserSurveys,
     getUserCollections,
     getModuleSHA,
+    getShaFromGitHubCommitData,
 }
