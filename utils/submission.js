@@ -616,7 +616,7 @@ const getModuleSHA = async (path) => {
  * @param {String} path - the file name of the module in the questionnaire repository.
  * @returns {String} - The SHA of the commit that was active when the survey was started.
  */
-const getShaFromGitHubCommitData = async (surveyStartTimestamp, path) => {
+const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
     try {
         const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
         const client = new SecretManagerServiceClient();
@@ -680,5 +680,5 @@ module.exports = {
     getUserSurveys,
     getUserCollections,
     getModuleSHA,
-    getShaFromGitHubCommitData,
+    getSHAFromGitHubCommitData,
 }

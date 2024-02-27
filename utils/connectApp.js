@@ -74,7 +74,6 @@ const connectApp = async (req, res) => {
       return res.status(200).json({data: shaResult, code: 200});
     }
     else if (api === 'getSHAFromGitHubCommitData') {
-      console.log('called getSHAFromGitHubCommitData endpoint');
       if (req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
       }
@@ -86,8 +85,8 @@ const connectApp = async (req, res) => {
       const surveyStartTimestamp = req.query.surveyStartTimestamp || '';
       const path = req.query.path;
 
-      const { getShaFromGitHubCommitData } = require('./submission');
-      const shaResult = await getShaFromGitHubCommitData(surveyStartTimestamp, path);
+      const { getSHAFromGitHubCommitData } = require('./submission');
+      const shaResult = await getSHAFromGitHubCommitData(surveyStartTimestamp, path);
       
       return res.status(200).json({data: shaResult, code: 200});
     }
