@@ -422,12 +422,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
           smsCount += smsRecordArray.length;
         }
       } catch (error) {
-        if (error.message.startsWith("saveNotificationBatch")) {
-          console.error(`Error saving SMS records for ${notificationSpec.id}(${readableSpecString}).`, error);
-        } else {
-          console.error(`Error sending SMS messages for ${notificationSpec.id}(${readableSpecString}).`, error);
-        }
-
+        console.error(`Error saving SMS records for ${notificationSpec.id}(${readableSpecString}).`, error);
         break;
       }
     }
