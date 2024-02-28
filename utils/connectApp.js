@@ -73,6 +73,23 @@ const connectApp = async (req, res) => {
       
       return res.status(200).json({data: shaResult, code: 200});
     }
+    else if (api === 'getSHAFromGitHubCommitData') {
+      if (req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+      }
+
+      if (!req.query.path || req.query.path === '') {
+        return res.status(400).json(getResponseJSON('Path parameter is required!', 400));
+      }
+
+      const surveyStartTimestamp = req.query.surveyStartTimestamp || '';
+      const path = req.query.path;
+
+      const { getSHAFromGitHubCommitData } = require('./submission');
+      const shaResult = await getSHAFromGitHubCommitData(surveyStartTimestamp, path);
+      
+      return res.status(200).json({data: shaResult, code: 200});
+    }
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
 
