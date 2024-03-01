@@ -4,7 +4,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -636,28 +636,49 @@ const retrieveConnectID = async (uid) => {
     }
 }
 
+/**
+ * Fetches the participant's survey data from Firestore.
+ * @param {String} uid - participant's uid
+ * @param {Array} concepts - array of concepts IDs to retrieve
+ * @returns {Object} - object with concept IDs as keys and data as values
+ */
 const retrieveUserSurveys = async (uid, concepts) => {
     try {
         let surveyData = {};
-
         const { moduleConceptsToCollections } = require('./shared');
- 
-        for await (const concept of concepts) {
-            
-            if (moduleConceptsToCollections[concept]) {
-                const snapshot = await db.collection(moduleConceptsToCollections[concept]).where('uid', '==', uid).get();
-            
-                if(snapshot.size > 0){
-                    surveyData[concept] = snapshot.docs[0].data();
-                }
+
+        const surveyPromises = concepts.map(async (concept) => {
+            if (!moduleConceptsToCollections[concept]) {
+                return null;
             }
-        };
+
+            try {
+                const snapshot = await db.collection(moduleConceptsToCollections[concept])
+                    .where('uid', '==', uid)
+                    .get();
+
+                if (snapshot.size > 0) {
+                    return { concept, data: snapshot.docs[0].data() };
+                }
+
+                return null;
+            } catch (error) {
+                console.error(`Error fetching ${concept} survey data: ${error}`);
+                return null;
+            }
+        });
+
+        const surveyDataArray = await Promise.all(surveyPromises);
+
+        surveyDataArray.filter(surveyPromiseResult => surveyPromiseResult !== null)
+            .forEach(({ concept, data }) => {
+                surveyData[concept] = data;
+            });
 
         return surveyData;
-    }
-    catch(error) {
+    } catch (error) {
         console.error(error);
-        return new Error(error);
+        throw new Error(`Error fetching user surveys: ${error}`);
     }
 }
 
@@ -781,26 +802,19 @@ const notificationTokenExists = async (token) => {
     }
 }
 
+/**
+ * Get all notifications to a user, based on uid.
+ * @param {string} uid
+ */
 const retrieveUserNotifications = async (uid) => {
-    try {
-        const snapShot = await db.collection('notifications')
-                            .where('uid', '==', uid)
-                            .orderBy('notification.time', 'desc')
-                            .get();
-        if(snapShot.size > 0){
-            return snapShot.docs.map(document => {
-                let data = document.data();
-                return data;
-            });
-        }
-        else {
-            return false;
-        }
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
-}
+  const snapshot = await db
+    .collection("notifications")
+    .where("uid", "==", uid)
+    .orderBy("notification.time", "desc")
+    .get();
+
+  return snapshot.docs.map((doc) => doc.data());
+};
 
 const retrieveSiteNotifications = async (siteId, isParent) => {
     try {
@@ -1436,21 +1450,31 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
  * query the biospecimen collection for documents that match the healthcare provider and collectionIds in collectionIdArray
  * @param {number} requestedSite - site code of the site 
  * @param {string} boxId - boxId of the box
+ * @returns {array} - array of biospecimen documents
+ * Firestore 'in' operator limit with two .where() clauses is 15 (30 with one .where() clause).
 */
-//TODO: extend to batch query for > 15 items in collectionIdArray
 const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
     try {
         const collectionIdArray = await getBiospecimenCollectionIdsFromBox(requestedSite, boxId);
-        const snapshot = await db.collection('biospecimen')
-                                .where(fieldMapping.healthCareProvider.toString(), "==", requestedSite)
-                                .where(fieldMapping.collectionId.toString(), "in", collectionIdArray).get();
+
+        const chunkSize = 15;
+        const collectionIdArrayChunks = createChunkArray(collectionIdArray, chunkSize);
+        
+        const chunkedPromises = collectionIdArrayChunks.map(chunk => {
+            return db.collection('biospecimen')
+            .where(fieldMapping.healthCareProvider.toString(), "==", requestedSite)
+            .where(fieldMapping.collectionId.toString(), "in", chunk).get();
+        });
+        
+        const promiseResults = await Promise.all(chunkedPromises);
+        
         const biospecimenDocs = [];
+        promiseResults.forEach(snapshot => {
+            if (!snapshot.empty) {
+                snapshot.docs.forEach(doc => biospecimenDocs.push(doc.data()));
+            }
+        });
 
-        if (snapshot.empty) return biospecimenDocs;
-
-        for (let document of snapshot.docs) {
-            biospecimenDocs.push(document.data());
-        }
         return biospecimenDocs;
     } catch (error) {
         throw new Error("searchSpecimenBySiteAndBoxId() error.", {cause: error});
@@ -1750,9 +1774,8 @@ const getNumBoxesShipped = async (siteCode, body) => {
     try {
         let query = db.collection('boxes').where('145971562', '==', 353358909);
         query = preQueryBuilder(filters, query, trackingId, endDate, startDate, source, siteCode);
-        const snapshot = await query.get();
-        const result = snapshot.docs.length;
-        return result;
+        const snapshot = await query.count().get();
+        return snapshot.data().count;
     } catch (error) {
         console.error(error);
         return new Error(error)
@@ -1960,21 +1983,15 @@ const retrieveNotificationSchemaByID = async (id) => {
 };
 
 const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
-  let result = [];
-  let query = db.collection("notificationSpecifications");
-  if (category !== "all") query = query.where("category", "==", category);
-  else query = query.orderBy("category");
-
-  // TODO: update query to get daft schemas directly, after all schema in Firestore are updated to have isDraft field
-  const snapshot = await query.orderBy("attempt").get();
-  if (snapshot.size === 0) return result;
-
-  for (const doc of snapshot.docs) {
-    const docData = doc.data();
-    if ((getDrafts && docData.isDraft) || (!getDrafts && !docData.isDraft)) result.push(docData);
+  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts);
+  if (category !== "all") {
+    query = query.where("category", "==", category);
+  } else {
+    query = query.orderBy("category");
   }
 
-  return result;
+  const snapshot = await query.orderBy("attempt").get();
+  return snapshot.docs.map((doc) => doc.data());
 };
 
 const storeNewNotificationSchema = async (data) => {
@@ -2958,49 +2975,68 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
     }
 }
 
-const processEventWebhook = async (event) => {
+const processSendGridEvent = async (event) => {
     if (event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
 
     const date = new Date(event.timestamp * 1000).toISOString();
-    console.log("Processing event at " + date);
-    console.log(event);
 
-    const response = await db
+    const snapshot = await db
         .collection("sendgridTracking")
-        .where("sg_message_id", "==", event.sg_message_id)
+        .where("sgMessageId", "==", event.sg_message_id)
         .get();
 
-    if (response.size > 0) {
-        for (let doc of response.docs) {
-            const eventRecord = {
-                [`${event.event}_status`]: true,
-                [`${event.event}_date`]: date,
-                [`${event.event}_timestamp`]: event.timestamp,
-            };
-            if (["bounce", "dropped"].includes(event.event)) {
-                eventRecord[`${event.event}_reason`] = event.reason;
-            }
-            await db
-                .collection("sendgridTracking")
-                .doc(doc.id)
-                .update(eventRecord);
+    if (snapshot.size > 0) {
+        const doc = snapshot.docs[0];
+        const eventRecord = {
+            [`${event.event}Status`]: true,
+            [`${event.event}Date`]: date,
+            [`${event.event}Timestamp`]: event.timestamp,
+        };
+        if (["bounce", "dropped"].includes(event.event)) {
+            eventRecord[`${event.event}Reason`] = event.reason;
         }
+        await db.collection("sendgridTracking").doc(doc.id).update(eventRecord);
     } else {
         const eventRecord = {
-            [`${event.event}_status`]: true,
-            [`${event.event}_date`]: date,
-            [`${event.event}_timestamp`]: event.timestamp,
-            connect_id: event.connect_id,
+            [`${event.event}Status`]: true,
+            [`${event.event}Date`]: date,
+            [`${event.event}Timestamp`]: event.timestamp,
+            connectId: event.connect_id,
             email: event.email,
-            notification_id: event.notification_id,
-            sg_event_id: event.sg_event_id,
-            sg_message_id: event.sg_message_id,
+            notificationId: event.notification_id,
+            sgEventId: event.sg_event_id,
+            sgMessageId: event.sg_message_id,
             token: event.token,
         };
         if (["bounce", "dropped"].includes(event.event)) {
-            eventRecord[`${event.event}_reason`] = event.reason;
+            eventRecord[`${event.event}Reason`] = event.reason;
         }
         await db.collection("sendgridTracking").add(eventRecord);
+    }
+};
+
+const processTwilioEvent = async (event) => {
+    if (!["failed", "delivered", "undelivered"].includes(event.MessageStatus)) return 
+    const date = new Date().toISOString();
+
+    const snapshot = await db
+        .collection("notifications")
+        .where("messageSid", "==", event.MessageSid)
+        .get();
+
+    if (snapshot.size > 0) {
+        const doc = snapshot.docs[0];
+        const eventRecord = {
+            status: event.MessageStatus,
+            [`${event.MessageStatus}Date`]: date,
+            errorCode: event.ErrorCode || "",
+            errorMessage: event.ErrorMessage || twilioErrorMessages[event.ErrorCode] || "",
+        };
+
+        await db.collection("notifications").doc(doc.id).update(eventRecord);
+
+    } else {
+        console.error(`Could not find messageSid ${event.MessageSid}. Status ${event.MessageStatus}`)
     }
 };
 
@@ -3056,6 +3092,34 @@ const updateParticipantCorrection = async (participantData) => {
         return new Error(error);
     }
 }
+
+const updateSurveyEligibility = async (token, survey) => {
+
+    try {
+        const snapshot = await db.collection('participants').where('token', '==', token).get();
+        
+        if (snapshot.empty) return;
+
+        const data = snapshot.docs[0].data()
+
+        if (data[survey] === fieldMapping.notYetEligible) {
+            const docId = snapshot.docs[0].id;
+            const updates = {[survey]: fieldMapping.notStarted}
+        
+            await db.collection('participants').doc(docId).update(updates);
+        }
+    } catch (error) {
+        throw new Error("Error updating survey eligibility.", { cause: error });
+    }
+}
+
+
+const generateSignInWithEmailLink = async (email, continueUrl) => {
+    return await admin.auth().generateSignInWithEmailLink(email, {
+        url: continueUrl,
+        handleCodeInApp: true,
+    });
+};
 
 module.exports = {
     updateResponse,
@@ -3172,10 +3236,13 @@ module.exports = {
     storeKitReceipt,
     addKitStatusToParticipant,
     eligibleParticipantsForKitAssignment,
-    processEventWebhook,
+    processSendGridEvent,
+    processTwilioEvent,
     getSpecimenAndParticipant,
     queryKitsByReceivedDate,
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
-    updateParticipantCorrection
+    updateParticipantCorrection,
+    updateSurveyEligibility,
+    generateSignInWithEmailLink
 }

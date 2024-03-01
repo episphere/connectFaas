@@ -36,7 +36,7 @@ async function getParticipantsForNotificationsBQ({
   timeField = "",
   fieldsToFetch = [],
   limit = 100,
-  offset = 0,
+  previousConnectId = 0,
 }) {
   let result = { hasNext: false, fetchedDataArray: [] };
   if (!notificationSpecId || Object.keys(conditions).length === 0) return result;
@@ -70,7 +70,7 @@ async function getParticipantsForNotificationsBQ({
         notificationSpecificationsID = "${notificationSpecId}")
     USING(token)
     WHERE ${bqConditionArray.length === 0 ? "1=1" : bqConditionArray.join(" AND ")}
-    AND isSent IS NOT TRUE LIMIT ${limit} OFFSET ${offset}`;
+    AND isSent IS NOT TRUE AND Connect_ID > ${previousConnectId} ORDER BY Connect_ID LIMIT ${limit}`;
 
   const [rows] = await bigquery.query(queryStr);
   if (rows.length === 0) return result;

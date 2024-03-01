@@ -36,7 +36,7 @@ const submit = async (res, data, uid) => {
 
         if(collection) {
             let moduleData = data[key];
-            return submitSurvey(res, moduleData, collection, uid)
+            return await submitSurvey(res, moduleData, collection, uid)
         }
     }
 
@@ -66,7 +66,7 @@ const submit = async (res, data, uid) => {
             const siteCode = participant['827220437'];
             const token = await getTokenForParticipant(uid);
 
-            checkDerivedVariables(token, siteCode);
+            await checkDerivedVariables(token, siteCode);
         }
     }
     
@@ -124,7 +124,7 @@ const recruitSubmit = async (req, res, uid) => {
     if(Object.keys(data).length <= 0){
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
-    return submit(res, data, uid);
+    return await submit(res, data, uid);
 }
 
 const submitSocial = async (req, res, uid) => {
@@ -157,7 +157,7 @@ const submitSocial = async (req, res, uid) => {
     ssnObj['token'] = await getTokenForParticipant(uid);
 
     try {
-        const response = storeSSN(ssnObj);
+        const response = await storeSSN(ssnObj);
 
         if(!response) {
             return res.status(500).json(getResponseJSON("Can't add/update data!", 500));
@@ -567,6 +567,139 @@ const getUserCollections = async (req, res, uid) => {
     }
 }
 
+/**
+ * Get the sha of a module in the questionnaire repository.
+ * @param {string} path - the path to the module in the questionnaire repository.
+ * @returns {string} - the sha of the module.
+ */
+const getModuleSHA = async (path) => {
+    try {
+        const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
+        const client = new SecretManagerServiceClient();
+        const [version] = await client.accessSecretVersion({ name: process.env.GITHUB_TOKEN });
+        const token = version.payload.data.toString();
+
+        const gitHubApiResponse = await fetch(`https://api.github.com/repos/episphere/questionnaire/commits?path=${path}&sha=main&per_page=1`, {
+            headers: {
+                'Authorization': `token ${token}`,
+            }
+        });
+
+        const rateLimitRemaining = gitHubApiResponse.headers.get('X-RateLimit-Remaining');
+        if (rateLimitRemaining === '0') {
+            console.error('GitHub API rate limit exceeded.');
+            throw new Error('GitHub API rate limit exceeded.');
+        }
+
+        const responseJSON = await gitHubApiResponse.json();
+
+        const sha = responseJSON[0]?.sha;
+
+        if (!sha) {
+            console.error('Error: Module SHA not found:');
+            throw new Error(`Error: Module SHA not found for path ${path}:`, path, responseJSON);
+        }
+        
+        return sha;
+
+    } catch (error) {
+        console.error('Error fetching module SHA:', error);
+        throw new Error("Error fetching module SHA.", { cause: error });
+    }
+}
+
+/**
+ * Repair: missing SHA value in the survey data. This property should exist for all survey data in all modules.
+ * Ex: Firestore -> Module3_v1 -> any document > sha: "<string value of active commit when survey was started>".
+ * This function compares the survey start date with the commit history of the module.
+ * @param {String} surveyStartTimestamp - The timestamp of the survey start date (ISO 8601 String).
+ * @param {String} path - the file name of the module in the questionnaire repository.
+ * @returns {String} - The SHA of the commit that was active when the survey was started.
+ */
+const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
+    try {
+        const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
+        const client = new SecretManagerServiceClient();
+        const [version] = await client.accessSecretVersion({ name: process.env.GITHUB_TOKEN });
+        const token = version.payload.data.toString();
+
+        const gitHubApiResponse = await fetch(`https://api.github.com/repos/episphere/questionnaire/commits?path=${path}&sha=main`, {
+            headers: {
+                'Authorization': `token ${token}`,
+            }
+        });
+
+        // Authenticated rate limit is 5000 requests per hour for the GitHub API. We do not expect to exceed this limit.
+        const rateLimitRemaining = gitHubApiResponse.headers.get('X-RateLimit-Remaining');
+            if (rateLimitRemaining === '0') {
+                console.error('GitHub API rate limit exceeded.');
+                throw new Error('GitHub API rate limit exceeded.');
+            }
+
+        const commitData = await gitHubApiResponse.json();
+
+        // Commits are sorted by date in descending order, so the first found commit is our target.
+        const targetCommit = commitData.find(commit => {
+            // If no timestamp, return the first commit
+            if (!surveyStartTimestamp) return true;
+
+            const commitDate = new Date(commit.commit.author.date).getTime();
+            const surveyStartDate = new Date(surveyStartTimestamp).getTime();
+            return commitDate <= surveyStartDate;
+
+        }) || commitData[0];
+    
+        if (!targetCommit) {
+            throw new Error(`No appropriate commit found for path ${path}.`);
+        }
+    
+        const sha = targetCommit.sha;
+        if (!sha) {
+            throw new Error(`Module SHA not found for path ${path}. Most recent SHA also failed.`);
+        }
+    
+        const surveyVersion = await getVersionNumberFromGitHubCommit(sha, path, token);
+
+        return { sha, surveyVersion };
+
+    } catch (error) {
+        console.error('Error fetching module SHA from commit data.', error);
+        throw new Error(`Error fetching module SHA from commit data. ${error.message}`, { cause: error });
+    }
+}
+
+/**
+ * Search the GitHub API (Raw file) by commit SHA for the version number of a module at a specific commit.
+ * Early versions didn't have a versioning convention. Return '1.0' for this case.
+ * @param {String} sha - The SHA of the raw file commit to fetch.
+ * @param {String} path - The path to the file in the questionnaire repository.
+ * @param {String} token - The GitHub API token.
+ * @returns {String} - The version number of the module or '1.0' if not versioned.
+ */
+const getVersionNumberFromGitHubCommit = async (sha, path, token) => {
+    try {
+        const response = await fetch(`https://api.github.com/repos/episphere/questionnaire/contents/${path}?ref=${sha}`, {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3.raw'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Github RAW File API response error. ${response.statusText}`);
+        }
+
+        const rawTextData = await response.text();
+        const versionMatch = rawTextData.match("{\"version\":\\s*\"([0-9]{1,2}\\.[0-9]{1,3})\"}");
+
+        return versionMatch ? versionMatch[1] : '1.0';
+
+    } catch (error) {
+        console.error('Error fetching raw GitHub file from commit sha.', error);
+        throw new Error(`Error fetching raw GitHub file from commit sha. ${error.message}`, { cause: error });
+    }
+}
+
 module.exports = {
     submit,
     recruitSubmit,
@@ -575,5 +708,7 @@ module.exports = {
     getParticipants,
     identifyParticipant,
     getUserSurveys,
-    getUserCollections
+    getUserCollections,
+    getModuleSHA,
+    getSHAFromGitHubCommitData,
 }
