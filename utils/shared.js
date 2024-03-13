@@ -1526,6 +1526,14 @@ const getTemplateForEmailLink = (email, continueUrl) => {
 
 const nihMailbox = 'NCIConnectStudy@mail.nih.gov'
 
+const getSecret = async (key) => {
+    const client = new SecretManagerServiceClient();
+    const [version] = await client.accessSecretVersion({
+        name: key,
+    });
+    const payload = version.payload.data.toString();
+    return payload;
+}
 
 module.exports = {
     getResponseJSON,
@@ -1588,5 +1596,6 @@ module.exports = {
     filterSelectedFields,
     getTemplateForEmailLink,
     nihMailbox,
-    twilioErrorMessages
+    twilioErrorMessages,
+    getSecret
 };
