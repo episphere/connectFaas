@@ -135,6 +135,7 @@ module.exports = {
         destroyDataCategorical: 883668444,
         requestedAndSign: 704529432,
         dataHasBeenDestroyed: 861639549,
+        dataDestroyedStatus: 884452262
     },
      // home collection
      returnKitTrackingNum: 972453354,
