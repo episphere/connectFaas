@@ -1,5 +1,5 @@
 const { getResponseJSON } = require("./shared");
-const { processTwilioEvent, processSendGridEvent } = require("./firestore");
+const { processTwilioEvent, processSendGridEvent, processMergingSendGridData } = require("./firestore");
 const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const { EventWebhook, EventWebhookHeader } = require("@sendgrid/eventwebhook");
 
@@ -52,6 +52,17 @@ const handleReceivedSendGridEvent = async (req, res) => {
     }
 };
 
+const mergeSendgridData = async (res) => {
+    try {
+        await processMergingSendGridData();
+        
+        return res.status(200).json({ code: 200 });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ code: 500 });
+    }
+};
+
 const webhook = async (req, res) => {
     if (req.method !== "POST") {
         return res
@@ -68,6 +79,8 @@ const webhook = async (req, res) => {
         return await handleReceivedTwilioEvent(req, res);
     } else if (query.api === "sendgrid-email-status") {
         return await handleReceivedSendGridEvent(req, res);
+    } else if (query.api === "merge-sendgrid-data") {
+        return await mergeSendgridData(res);
     } else return res.status(400).json(getResponseJSON("Bad request!", 400));
 };
 
