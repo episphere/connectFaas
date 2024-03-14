@@ -48,12 +48,17 @@ const submit = async (res, data, uid) => {
 
     if (response) {
         let moduleComplete = false;
+        let calculateScores = false;
 
         keys.forEach(key => {
             const { moduleStatusConcepts } = require('./shared');
 
             if (moduleStatusConcepts[key] && data[key] === 231311385) {
                 moduleComplete = true;
+
+                if (key === '320303124') {
+                    calculateScores = true;
+                }
             }
         })
 
@@ -67,6 +72,11 @@ const submit = async (res, data, uid) => {
             const token = await getTokenForParticipant(uid);
 
             await checkDerivedVariables(token, siteCode);
+
+            if (calculateScores) {
+                const { processPromisResults } = require('./promis');
+                processPromisResults(uid);
+            }
         }
     }
     
@@ -699,6 +709,9 @@ const getVersionNumberFromGitHubCommit = async (sha, path, token) => {
         throw new Error(`Error fetching raw GitHub file from commit sha. ${error.message}`, { cause: error });
     }
 }
+
+// const { processPromisResults } = require('./promis');
+// processPromisResults('eyjekCU9H4V4crXpcRp95HINkXI2');
 
 module.exports = {
     submit,

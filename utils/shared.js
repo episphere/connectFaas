@@ -1,4 +1,5 @@
-const fieldMapping = require('./fieldToConceptIdMapping')
+const fieldMapping = require('./fieldToConceptIdMapping');
+const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 
 const getResponseJSON = (message, code) => {
     return { message, code };

@@ -1,3 +1,94 @@
+const CryptoJS = require('crypto-js');
+
+const generatePromisAuthToken = () => {
+
+    // const { getSecret } = require('./shared');
+
+    const uoid = '56BE7A9C-7A46-444C-869E-539B58C6A149';
+    const token = '2C8C3D2F-75D6-4580-8D77-069C8215D64B';
+
+    const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
+    const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
+    return encoded;
+}
+
+const processPromisResults = async (uid) => {
+
+    const { surveyExists, updateSurvey } = require('./firestore');
+
+    const collection = 'promis_v1';
+    const doc = await surveyExists(collection, uid);
+    const surveyResults = doc.data();
+
+    const forms = Object.keys(promisConfig);
+    const scoresPayload = {};
+
+    for (let form of forms) {
+        const sourceQuestion = surveyResults[promisConfig[form].source];
+
+        if (sourceQuestion) {
+
+            let scoringData = {};
+
+            const questions = Object.keys(promisConfig[form].questions);
+
+            for (const question of questions) {
+                if (sourceQuestion[question]) {
+
+                    const questionConfig = promisConfig[form].questions[question];
+                    const questionResponse = sourceQuestion[question];
+
+                    scoringData[questionConfig.name] = questionConfig.responses[questionResponse];
+                }
+            }
+
+            const scores = await getScoringData(promisConfig[form].id, scoringData);
+
+            if (scores) {
+                scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
+                scoresPayload[promisConfig[form].error] = parseInt(scores['SError']);
+            }
+        }
+    }
+
+    if (Object.keys(scoresPayload).length > 0) {
+        await updateSurvey(scoresPayload, collection, doc);
+    }
+}
+
+const getScoringData = async (id, data) => {
+
+    const formData = new URLSearchParams();
+    const url = `https://www.assessmentcenter.net/ac_api/2013-01/Scores/`;
+
+    Object.keys(data).forEach(key => {
+        formData.append(key, data[key]);
+    });
+
+    try {
+        const response = await fetch(`${url}${id}.json`, {
+            method: "POST",
+            headers: {
+                "Authorization": "Basic " + generatePromisAuthToken(),
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: formData.toString()
+        });
+
+        const scores = await response.json();
+
+        if (scores.ItemErrors) {
+            throw new Error('Errors in request data sent to PROMIS Scoring API', scores.ItemErrors);
+        }
+
+        return scores.Form[0];
+    }
+    catch (error) {
+        console.error('Error fetching PROMIS Scoring Data: ', error);
+        return null;
+    }
+}
+
 const promisConfig = {
     'Physical Function': {
         id: '7AA4002D-61C1-438D-9063-91A17FFA68BB',
@@ -481,17 +572,7 @@ const promisConfig = {
     }
 }
 
-const generatePromisAuthToken = () => {
-
-    const uoid = '56BE7A9C-7A46-444C-869E-539B58C6A149';
-    const token = '2C8C3D2F-75D6-4580-8D77-069C8215D64B';
-
-    const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
-    const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
-    return encoded;
-}
 
 module.exports = {
-    promisConfig,
-    generatePromisAuthToken
+    processPromisResults
 }
