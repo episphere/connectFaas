@@ -167,6 +167,16 @@ module.exports = {
      collectionDateTimeStamp: 678166505,
      collectionCardFlag: 137401245,
      collectionAddtnlNotes: 260133861,
+     collectionDetails: 173836415,
+     baseline: 266600170,
+     bioKitMouthwash: 319972665,
+     withdrawConsent: 747006172,
+     activityParticipantRefusal: 685002411,
+     baselineMouthwashSample: 277479354,
+     bloodOrUrineCollected: 156605577,
+     bloodOrUrineCollectedTimestamp: 740582332,
+     collectionRound: 418571751,
+     mouthwashKit: 976461859,
 
      // EMR participant deceased data
     participantDeceased: 857217152,
