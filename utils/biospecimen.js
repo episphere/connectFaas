@@ -817,23 +817,6 @@ const biospecimenAPIs = async (req, res) => {
         }
     }
 
-    else if(api == 'assignKit'){
-        if(req.method !== 'POST') {
-            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-        }
-        let requestData = req.body;
-        if(Object.keys(requestData).length === 0 ) return res.status(400).json(getResponseJSON('Request body is empty!', 400));
-        try {
-            const { assignKitToParticipant } = require('./firestore');
-            const response = await assignKitToParticipant(requestData);
-            return res.status(200).json({data: response, code:200});
-        }
-        catch {
-            console.error(error);
-            return res.status(500).json(getResponseJSON(error.message, 500));
-        }
-    }
-
     else if(api == 'getKitData'){
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
