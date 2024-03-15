@@ -2121,13 +2121,13 @@ const checkCollectionUniqueness = async (supplyId, collectionId) => {
 const queryTotalAddressesToPrint = async () => {
     try {
         const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
-            collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp } = fieldMapping;
+            collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
         const snapshot = await db.collection('participants')
         .where(withdrawConsent.toString(), '==', no)
-        .where(participantDeceasedNORC.toString(), '==', fieldMapping.no)
-        .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', fieldMapping.no)
-        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', fieldMapping.yes)
+        .where(participantDeceasedNORC.toString(), '==', no)
+        .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
+        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
         .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
         .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
         .get();
