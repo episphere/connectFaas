@@ -2149,10 +2149,7 @@ const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
 
 const eligibleParticipantsForKitAssignment = async () => {
     try {
-        const collectionDetails = fieldMapping.collectionDetails;
-        const baseline = fieldMapping.baseline;
-        const bioKitMouthwash = fieldMapping.bioKitMouthwash;
-        const kitStatus = fieldMapping.kitStatus;
+        const { collectionDetails, baseline, bioKitMouthwash, kitStatus } = fieldMapping;
 
         const snapshot = await db.collection("participants").where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', fieldMapping.addressPrinted).get();
         if (snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
@@ -2166,11 +2163,8 @@ const eligibleParticipantsForKitAssignment = async () => {
 
 const addKitStatusToParticipant = async (participantsCID) => {
     try {
-        const collectionDetails = fieldMapping.collectionDetails;
-        const baseline = fieldMapping.baseline;
-        const bioKitMouthwash = fieldMapping.bioKitMouthwash;
-        const kitStatus = fieldMapping.kitStatus;
-        const addressPrinted = fieldMapping.addressPrinted;
+        const { collectionDetails, baseline, bioKitMouthwash, kitStatus, addressPrinted } = fieldMapping;
+
         // Create an array of promises to update participants in parallel
         const updatePromises = participantsCID.map(async (participantCID) => {
             const snapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(participantCID)).get();
@@ -2203,7 +2197,9 @@ const addKitStatusToParticipant = async (participantsCID) => {
 };
 
 const processParticipantData = (record, printLabel) => {
-    const hasMouthwash = record[fieldMapping.collectionDetails][fieldMapping.baseline][fieldMapping.bioKitMouthwash] !== undefined;
+    const { collectionDetails, baseline, bioKitMouthwash } = fieldMapping;
+
+    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;
     const processedRecord = {
         first_name: record['399159511'],
         last_name: record['996038075'],
@@ -2224,9 +2220,9 @@ const processParticipantData = (record, printLabel) => {
 
 const assignKitToParticipant = async (data) => {
     try {
-        const { supplyKitId, kitStatus, pending, UKID, supplyKitTrackingNum, assigned, 
-            collectionRound, collectionDetails, baseline, 
-            bioKitMouthwash, kitType, mouthwashKit } = fieldMapping;
+        const { supplyKitId, kitStatus, pending, UKID, supplyKitTrackingNum, 
+            assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
+            kitType, mouthwashKit } = fieldMapping;
 
         const kitSnapshot = await db.collection("kitAssembly")
             .where(`${supplyKitId}`, '==', data[supplyKitId])
@@ -2240,7 +2236,7 @@ const assignKitToParticipant = async (data) => {
         data[UKID] = kitDoc.data()[UKID];
         const kitData = {
             [supplyKitTrackingNum]: data[supplyKitTrackingNum],
-            [kitStatus]: [assigned],
+            [kitStatus]: assigned,
             [collectionRound]: baseline,
             'Connect_ID': parseInt(data['Connect_ID'])
         };
@@ -2293,10 +2289,7 @@ const processVerifyScannedCode = async (id) => {
 
 const confirmShipmentKit = async (shipmentData) => {
     try {
-        const collectionDetails = fieldMapping.collectionDetails;
-        const baseline = fieldMapping.baseline;
-        const bioKitMouthwash = fieldMapping.bioKitMouthwash;
-        const UKID = fieldMapping.UKID;
+        const { collectionDetails, baseline, bioKitMouthwash, UKID } = fieldMapping;
 
         const kitSnapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
 
