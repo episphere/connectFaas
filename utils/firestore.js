@@ -2293,6 +2293,11 @@ const processVerifyScannedCode = async (id) => {
 
 const confirmShipmentKit = async (shipmentData) => {
     try {
+        const collectionDetails = fieldMapping.collectionDetails;
+        const baseline = fieldMapping.baseline;
+        const bioKitMouthwash = fieldMapping.bioKitMouthwash;
+        const UKID = fieldMapping.UKID;
+
         const kitSnapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
 
         if (kitSnapshot.size === 0) {
@@ -2307,7 +2312,7 @@ const confirmShipmentKit = async (shipmentData) => {
 
         await kitDoc.ref.update(kitData);
         const participantSnapshot = await db.collection("participants")
-            .where(`${fieldMapping.collectionDetails}.${fieldMapping.baseline}.${fieldMapping.bioKitMouthwash}.${fieldMapping.UKID}`, '==', shipmentData[fieldMapping.UKID]).get();
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${UKID}`, '==', shipmentData[UKID]).get();
 
         if (participantSnapshot.size === 0) {
             return false;
@@ -2315,7 +2320,7 @@ const confirmShipmentKit = async (shipmentData) => {
 
         const participantDoc = participantSnapshot.docs[0];
         const participantDocData = participantDoc.data();
-        const prevParticipantObject = participantDocData[fieldMapping.collectionDetails][fieldMapping.baseline][fieldMapping.bioKitMouthwash];
+        const prevParticipantObject = participantDocData[collectionDetails][baseline][bioKitMouthwash];
         const baselineParticipantObject = participantDocData[173836415][266600170];
         const uid = participantDocData['state']['uid'];
         const Connect_ID = participantDocData['Connect_ID'];
