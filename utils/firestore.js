@@ -2147,7 +2147,7 @@ const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
     }
 }
 
-const eligibleParticipantsForKitAssignment = async () => {    
+const eligibleParticipantsForKitAssignment = async () => {
     try {
         const collectionDetails = fieldMapping.collectionDetails;
         const baseline = fieldMapping.baseline;
