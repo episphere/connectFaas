@@ -417,7 +417,15 @@ const removeParticipantsDataDestruction = async () => {
         let count = 0;
         const millisecondsWait = 5184000000; // 60days
         // Stub records that will be retained after deleting data.
-        const stubFieldArray = [ "query", "pin", "token", "state", "Connect_ID", "471168198", "736251808", "436680969", "480305327", "564964481", "795827569", "544150384", "371067537", "454205108", "454445267", "919254129", "412000022", "558435199", "262613359", "821247024", "914594314", "747006172", "659990606", "299274441", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "637147033", "734828170", "715390138", "538619788", "153713899", "613641698", "407743866", "831041022", "269050420", "359404406", "119449326", "304438543", "912301837", "130371375", "765336427", "479278368", "826240317", "693626233", "104278817", "744604255", "268665918", "592227431", "399159511", "231676651", "996038075", "506826178", "524352591", "902332801", "457532784", "773707518", "577794331", "883668444", "827220437", "699625233", ];
+        const stubFieldArray = [
+            ...Object.values(fieldMapping.dataDestruction),
+            "query",
+            "pin",
+            "token",
+            "state",
+            "Connect_ID",
+        ];
+
         // Sub stub records of "query" and "state".
         const subStubFieldArray = ["firstName", "lastName", "studyId", "uid"];
         // CID for participant's data destruction status.
@@ -480,6 +488,7 @@ const removeParticipantsDataDestruction = async () => {
                 if (hasRemovedField) {
                     batch.update(participantRef, {
                         [dataHasBeenDestroyed]: fieldMapping.yes,
+                        [fieldMapping.participationStatus]: fieldMapping.participantMap.dataDestroyedStatus,
                     });
                     count++;
                 }

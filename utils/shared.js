@@ -279,9 +279,10 @@ const listOfCollectionsRelatedToDataDestruction = [
     "module2_v2",
     "module3_v1",
     "module4_v1",
-    "biospecimen",
     "notifications",
-    "promis_v1"
+    "promis_v1",
+    "mouthwash_v1",
+    "ssn" 
 ];
 
 const incentiveConcepts = {
