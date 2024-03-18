@@ -710,9 +710,6 @@ const getVersionNumberFromGitHubCommit = async (sha, path, token) => {
     }
 }
 
-// const { processPromisResults } = require('./promis');
-// processPromisResults('eyjekCU9H4V4crXpcRp95HINkXI2');
-
 module.exports = {
     submit,
     recruitSubmit,
