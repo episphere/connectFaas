@@ -3026,7 +3026,6 @@ const processSendGridEvent = async (event) => {
         const eventRecord = {
             [`${event.event}Status`]: true,
             [`${event.event}Date`]: date,
-            [`${event.event}Timestamp`]: event.timestamp,
         };
         if (["bounce", "dropped"].includes(event.event)) {
             eventRecord[`${event.event}Reason`] = event.reason;
@@ -3061,58 +3060,6 @@ const processTwilioEvent = async (event) => {
         console.error(`Could not find messageSid ${event.MessageSid}. Status ${event.MessageStatus}`)
     }
 };
-
-const processMergingSendGridData = async () => {
-    let isMergedCounter = 0;
-    const eventList = [
-        "processed",
-        "deferred",
-        "delivered",
-        "open",
-        "click",
-        "bounce",
-        "dropped",
-        "spamreport",
-        "unsubscribe",
-        "group_unsubscribe",
-        "group_resubscribe",
-    ];
-    const sendgridSnapshot = await db
-    .collection("sendgridTracking")
-    .get();
-
-    for (let sendgridDoc of sendgridSnapshot.docs) {
-        const sendgridData = sendgridDoc.data();
-        if (sendgridData.isMerged === fieldMapping.yes){
-            isMergedCounter++
-            continue
-        }
-
-        const notificationId = sendgridData.notificationId || sendgridData.notification_id
-        const notificationSnapshot = await db
-        .collection("notifications")
-        .where("id", "==", notificationId)
-        .get();
-
-        if (notificationSnapshot.size > 0){
-            const notificationDoc = notificationSnapshot.docs[0]
-            const updatedData = {}
-
-            for (let event of eventList){
-                updatedData[`${event}Status`] =  sendgridData[`${event}Status`] || sendgridData[`${event}_status`]
-                updatedData[`${event}Date`] = sendgridData[`${event}Date`] || sendgridData[`${event}_date`]
-                updatedData[`${event}Timestamp`] = sendgridData[`${event}Timestamp`] || sendgridData[`${event}_timestamp`]
-                updatedData[`${event}Reason`] = sendgridData[`${event}Reason`] || sendgridData[`${event}_reason`]
-            }
-          
-            await db.collection("notifications").doc(notificationDoc.id).update(JSON.parse(JSON.stringify(updatedData)));
-        }
-
-        await db.collection("sendgridTracking").doc(sendgridDoc.id).update({isMerged: fieldMapping.yes});
-        isMergedCounter++
-    }
-    console.log(`Merging data from sendgridTracking into notifications completely: ${isMergedCounter}/${sendgridSnapshot.size}`);
-}
 
 const getParticipantCancerOccurrences = async (participantToken) => {
     try {
@@ -3318,6 +3265,5 @@ module.exports = {
     writeCancerOccurrences,
     updateParticipantCorrection,
     updateSurveyEligibility,
-    generateSignInWithEmailLink,
-    processMergingSendGridData
+    generateSignInWithEmailLink
 }
