@@ -3013,13 +3013,12 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
 }
 
 const processSendGridEvent = async (event) => {
-    if (event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
+    if (!event.notification_id || event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
 
     const date = new Date(event.timestamp * 1000).toISOString();
-
     const snapshot = await db
-        .collection("sendgridTracking")
-        .where("sgMessageId", "==", event.sg_message_id)
+        .collection("notifications")
+        .where("id", "==", event.notification_id)
         .get();
 
     if (snapshot.size > 0) {
@@ -3027,28 +3026,13 @@ const processSendGridEvent = async (event) => {
         const eventRecord = {
             [`${event.event}Status`]: true,
             [`${event.event}Date`]: date,
-            [`${event.event}Timestamp`]: event.timestamp,
         };
         if (["bounce", "dropped"].includes(event.event)) {
             eventRecord[`${event.event}Reason`] = event.reason;
         }
-        await db.collection("sendgridTracking").doc(doc.id).update(eventRecord);
+        await db.collection("notifications").doc(doc.id).update(eventRecord);
     } else {
-        const eventRecord = {
-            [`${event.event}Status`]: true,
-            [`${event.event}Date`]: date,
-            [`${event.event}Timestamp`]: event.timestamp,
-            connectId: event.connect_id,
-            email: event.email,
-            notificationId: event.notification_id,
-            sgEventId: event.sg_event_id,
-            sgMessageId: event.sg_message_id,
-            token: event.token,
-        };
-        if (["bounce", "dropped"].includes(event.event)) {
-            eventRecord[`${event.event}Reason`] = event.reason;
-        }
-        await db.collection("sendgridTracking").add(eventRecord);
+        console.error(`Could not find notifications ${event.notification_id}. Status ${event.event}`)
     }
 };
 
