@@ -239,6 +239,15 @@ const updateParticipantData = async (req, res, authObj) => {
             continue;
         }
 
+        // Reject to update the uninvited flag if the participant is verified or The PIN was used to sign in
+        const uninvitedRecruitsId = fieldMapping.participantMap.uninvitedRecruits.toString()
+        if (dataObj[uninvitedRecruitsId] && dataObj[uninvitedRecruitsId] === fieldMapping.yes &&
+            (docData[fieldMapping.verified.toString()] === fieldMapping.verified || docData['Connect_ID'])) {
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'The participant is verified or has used a pin to sign in'}});
+            continue;
+        }
+
         // Reject if query key is included. Those values are derived.
         if (dataObj['query']) {
             error = true;
