@@ -524,19 +524,13 @@ const removeUninvitedParticipants = async () => {
             willContinue = currSnapshot.docs.length === batchLimit;
             const batch = db.batch();
             for (const doc of currSnapshot.docs) {
-                const data = doc.data();
-                if (
-                    !data["pin"] &&
-                    !data["token"] &&
-                    data[fieldMapping.verificationStatus] !==
-                        fieldMapping.verified
-                ) {
-                    batch.delete(doc.ref);
-                    count++;
-                }
+                batch.delete(doc.ref);
+                count++
             }
+        
             await batch.commit();
         }
+
         console.log(`Successfully deleted ${count} uninvited participants`)
     } catch (error) {
         willContinue = false;
