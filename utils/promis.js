@@ -2,10 +2,12 @@ const CryptoJS = require('crypto-js');
 
 const generatePromisAuthToken = () => {
 
-    // const { getSecret } = require('./shared');
+    /* temp revert of code
+    const { getSecret } = require('./shared');
+    */
 
-    const uoid = '56BE7A9C-7A46-444C-869E-539B58C6A149';
-    const token = '2C8C3D2F-75D6-4580-8D77-069C8215D64B';
+    const uoid = '';
+    const token = '';
 
     const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
     const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
