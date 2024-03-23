@@ -393,7 +393,7 @@ const removeDocumentFromCollection = async (connectID, token) => {
         for (const collection of listOfCollectionsRelatedToDataDestruction) {
             const query = db.collection(collection)
             const data =
-                collection === "notifications"
+                collection === "notifications" || collection === "ssn"
                     ? await query.where("token", "==", token).get()
                     : await query.where("Connect_ID", "==", connectID).get();
             
@@ -418,7 +418,7 @@ const removeParticipantsDataDestruction = async () => {
         const millisecondsWait = 5184000000; // 60days
         // Stub records that will be retained after deleting data.
         const stubFieldArray = [
-            ...Object.values(fieldMapping.dataDestruction),
+            ...Object.values(fieldMapping.dataDestruction).map(id => id.toString()),
             "query",
             "pin",
             "token",
