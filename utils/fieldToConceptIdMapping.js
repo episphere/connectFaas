@@ -304,7 +304,7 @@ module.exports = {
         HIPAARevocationCategorical: 577794331,
         DateOfSignatureOnHIPAARevocationForm: 613641698,
         VersionOfTheHIPAARevocationForm: 407743866,
-        NameExtractedFromSignedHIPAARevocationFormFirstname: 765336427,
+        NameExtractedFromSignedHIPAARevocationFormFirstName: 765336427,
         NameExtractedFromSignedHIPAARevocationFormMiddleName: 826240317,
         NameExtractedFromSignedHIPAARevocationFormLastName: 479278368,
         NameExtractedFromSignedHIPAARevocationFormSuffix: 693626233,
