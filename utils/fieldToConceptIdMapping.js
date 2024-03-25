@@ -276,7 +276,7 @@ module.exports = {
         ConsentMiddleName: 436680969,
         ConsentLastName: 736251808,
         ConsentSuffixName: 480305327,
-        UserProfileNameFirstname: 399159511,
+        UserProfileNameFirstName: 399159511,
         UserProfileNameMiddleName: 231676651,
         UserProfileNameLastName: 996038075,
         UserProfileNameSuffixName: 506826178,
