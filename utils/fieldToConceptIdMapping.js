@@ -317,7 +317,7 @@ module.exports = {
         DateOfSignatureOnDataDestructionRequestForm: 119449326,
         VersionOfTheDataDestructionRequestForm: 304438543,
         NameExtractedFromSignedDataDestructionFormFirstname: 104278817,
-        NameExtractedFromSignedDataDestructionFormMiddlename: 268665918,
+        NameExtractedFromSignedDataDestructionFormMiddleName: 268665918,
         NameExtractedFromSignedDataDestructionFormLastname: 744604255,
         NameExtractedFromSignedDataDestructionFormSuffixName: 592227431,
         DataHasBeenDestroyedFlag: 861639549,
