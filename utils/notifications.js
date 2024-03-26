@@ -2,7 +2,7 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret} = require("./shared");
 const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -134,15 +134,6 @@ const retrieveNotifications = async (req, res, uid) => {
     return res.status(500).json({ data: [], message: "Internal Server Error", code: 500 });
   }
 };
-
-const getSecret = async (key) => {
-    const client = new SecretManagerServiceClient();
-    const [version] = await client.accessSecretVersion({
-        name: key,
-    });
-    const payload = version.payload.data.toString();
-    return payload;
-}
 
 const sendEmail = async (emailTo, messageSubject, html, cc) => {
     const sgMail = require('@sendgrid/mail');

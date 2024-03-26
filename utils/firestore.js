@@ -393,7 +393,7 @@ const removeDocumentFromCollection = async (connectID, token) => {
         for (const collection of listOfCollectionsRelatedToDataDestruction) {
             const query = db.collection(collection)
             const data =
-                collection === "notifications"
+                collection === "notifications" || collection === "ssn"
                     ? await query.where("token", "==", token).get()
                     : await query.where("Connect_ID", "==", connectID).get();
             
@@ -417,7 +417,15 @@ const removeParticipantsDataDestruction = async () => {
         let count = 0;
         const millisecondsWait = 5184000000; // 60days
         // Stub records that will be retained after deleting data.
-        const stubFieldArray = [ "query", "pin", "token", "state", "Connect_ID", "471168198", "736251808", "436680969", "480305327", "564964481", "795827569", "544150384", "371067537", "454205108", "454445267", "919254129", "412000022", "558435199", "262613359", "821247024", "914594314", "747006172", "659990606", "299274441", "919699172", "141450621", "576083042", "431428747", "121430614", "523768810", "639172801", "175732191", "150818546", "624030581", "285488731", "596510649", "866089092", "990579614", "131458944", "372303208", "777719027", "620696506", "352891568", "958588520", "875010152", "404289911", "637147033", "734828170", "715390138", "538619788", "153713899", "613641698", "407743866", "831041022", "269050420", "359404406", "119449326", "304438543", "912301837", "130371375", "765336427", "479278368", "826240317", "693626233", "104278817", "744604255", "268665918", "592227431", "399159511", "231676651", "996038075", "506826178", "524352591", "902332801", "457532784", "773707518", "577794331", "883668444", "827220437", "699625233", ];
+        const stubFieldArray = [
+            ...Object.values(fieldMapping.dataDestruction).map(id => id.toString()),
+            "query",
+            "pin",
+            "token",
+            "state",
+            "Connect_ID",
+        ];
+
         // Sub stub records of "query" and "state".
         const subStubFieldArray = ["firstName", "lastName", "studyId", "uid"];
         // CID for participant's data destruction status.
@@ -480,6 +488,7 @@ const removeParticipantsDataDestruction = async () => {
                 if (hasRemovedField) {
                     batch.update(participantRef, {
                         [dataHasBeenDestroyed]: fieldMapping.yes,
+                        [fieldMapping.participationStatus]: fieldMapping.participantMap.dataDestroyedStatus,
                     });
                     count++;
                 }
@@ -2112,17 +2121,26 @@ const checkCollectionUniqueness = async (supplyId, collectionId) => {
     }
 };
 
+/**
+ * Creates new array based on query below.
+ * Each participant object is transformed into a new object or an empty array.
+ * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData function.
+ * Ex. [{first_name: 'John', last_name: 'Doe', address_1: '123 Main St', address_2: '', city: 'Anytown', state: 'NY', zip_code: '12345', connect_id: 123457890}, ...]
+ */
 const queryTotalAddressesToPrint = async () => {
     try {
-        const snapShot = await db.collection('participants')
-        .where('747006172', '==', 104430631) // withdraw consent
-        .where('987563196', '==', 104430631) // deceased
-        .where('685002411.277479354', '==', 104430631) // mouthwash refusal
-        .where('173836415.266600170.156605577', '==', 353358909) // Blood or Urine Collected
-        .where('173836415.266600170.740582332', '>=', '2024-01-01T00:00:00.000Z') // Date/timestamp for Blood or Urine Collected
-        .orderBy('173836415.266600170.740582332', 'desc')
+        const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
+            collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
+
+        const snapshot = await db.collection('participants')
+        .where(withdrawConsent.toString(), '==', no)
+        .where(participantDeceasedNORC.toString(), '==', no)
+        .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
+        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
+        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
+        .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
         .get();
-        return snapShot.docs.map(document => processParticipantData(document.data(), true));
+        return snapshot.docs.map(document => processParticipantData(document.data(), true));
     } catch (error) {
         console.error(error);
         return new Error(error);
@@ -2140,9 +2158,10 @@ const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
 
 const eligibleParticipantsForKitAssignment = async () => {
     try {
-        const snapshot = await db.collection("participants").where('173836415.266600170.8583443674.221592017', '==', 849527480).get();
+        const { collectionDetails, baseline, bioKitMouthwash, kitStatus } = fieldMapping;
 
-        if(snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
+        const snapshot = await db.collection("participants").where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', fieldMapping.addressPrinted).get();
+        if (snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
         else return false;
     }
     catch(error){
@@ -2153,6 +2172,8 @@ const eligibleParticipantsForKitAssignment = async () => {
 
 const addKitStatusToParticipant = async (participantsCID) => {
     try {
+        const { collectionDetails, baseline, bioKitMouthwash, kitStatus, addressPrinted } = fieldMapping;
+
         // Create an array of promises to update participants in parallel
         const updatePromises = participantsCID.map(async (participantCID) => {
             const snapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(participantCID)).get();
@@ -2161,13 +2182,13 @@ const addKitStatusToParticipant = async (participantsCID) => {
                 return false;
             }
             const docId = snapshot.docs[0].id;
-            const prevParticipantObject = snapshot.docs[0].data()?.[173836415]?.[266600170];
+            const prevParticipantObject = snapshot.docs[0].data()?.[collectionDetails]?.[baseline];
             await db.collection("participants").doc(docId).update({
-                '173836415': {
-                    '266600170': {
+                [collectionDetails]: {
+                    [baseline]: {
                         ...prevParticipantObject,
-                        '8583443674': {
-                            '221592017': 849527480
+                        [bioKitMouthwash]: {
+                            [kitStatus]: addressPrinted
                         }
                     }
                 }
@@ -2185,7 +2206,9 @@ const addKitStatusToParticipant = async (participantsCID) => {
 };
 
 const processParticipantData = (record, printLabel) => {
-    const hasMouthwash = record[173836415][266600170][8583443674] !== undefined;
+    const { collectionDetails, baseline, bioKitMouthwash } = fieldMapping;
+
+    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;
     const processedRecord = {
         first_name: record['399159511'],
         last_name: record['996038075'],
@@ -2206,18 +2229,24 @@ const processParticipantData = (record, printLabel) => {
 
 const assignKitToParticipant = async (data) => {
     try {
-        const kitSnapshot = await db.collection("kitAssembly").where('690210658', '==', data['690210658']).where('221592017', '==', 517216441).get();
+        const { supplyKitId, kitStatus, pending, UKID, supplyKitTrackingNum, 
+            assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
+            kitType, mouthwashKit } = fieldMapping;
+
+        const kitSnapshot = await db.collection("kitAssembly")
+            .where(`${supplyKitId}`, '==', data[supplyKitId])
+            .where(`${kitStatus}`, '==', pending).get();
 
         if (kitSnapshot.size !== 1) {
             return false;
         }
 
         const kitDoc = kitSnapshot.docs[0];
-        data['687158491'] = kitDoc.data()[687158491];
+        data[UKID] = kitDoc.data()[UKID];
         const kitData = {
-            '531858099': data['531858099'],
-            '221592017': 241974920,
-            '418571751': 266600170,
+            [supplyKitTrackingNum]: data[supplyKitTrackingNum],
+            [kitStatus]: assigned,
+            [collectionRound]: baseline,
             'Connect_ID': parseInt(data['Connect_ID'])
         };
 
@@ -2230,16 +2259,16 @@ const assignKitToParticipant = async (data) => {
         }
 
         const participantDoc = participantSnapshot.docs[0];
-        const prevParticipantObject = participantDoc.data()?.[173836415]?.[266600170];
+        const prevParticipantObject = participantDoc.data()?.[collectionDetails]?.[baseline];
         
         const updatedParticipantObject = {
-            '173836415': {
-                '266600170': {
+            [collectionDetails]: {
+                [baseline]: {
                     ...prevParticipantObject,
-                    '8583443674': {
-                        '379252329': 976461859, // mouthwash
-                        '221592017': 241974920,
-                        '687158491': data['687158491'],
+                    [bioKitMouthwash]: {
+                        [kitType]: mouthwashKit,
+                        [kitStatus]: assigned,
+                        [UKID]: data[UKID],
                     }
                 }
             }
@@ -2269,6 +2298,8 @@ const processVerifyScannedCode = async (id) => {
 
 const confirmShipmentKit = async (shipmentData) => {
     try {
+        const { collectionDetails, baseline, bioKitMouthwash, UKID } = fieldMapping;
+
         const kitSnapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
 
         if (kitSnapshot.size === 0) {
@@ -2282,8 +2313,8 @@ const confirmShipmentKit = async (shipmentData) => {
         };
 
         await kitDoc.ref.update(kitData);
-
-        const participantSnapshot = await db.collection("participants").where('173836415.266600170.8583443674.687158491', '==', shipmentData['687158491']).get();
+        const participantSnapshot = await db.collection("participants")
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${UKID}`, '==', shipmentData[UKID]).get();
 
         if (participantSnapshot.size === 0) {
             return false;
@@ -2291,7 +2322,7 @@ const confirmShipmentKit = async (shipmentData) => {
 
         const participantDoc = participantSnapshot.docs[0];
         const participantDocData = participantDoc.data();
-        const prevParticipantObject = participantDocData[173836415][266600170][8583443674];
+        const prevParticipantObject = participantDocData[collectionDetails][baseline][bioKitMouthwash];
         const baselineParticipantObject = participantDocData[173836415][266600170];
         const uid = participantDocData['state']['uid'];
         const Connect_ID = participantDocData['Connect_ID'];
@@ -2303,7 +2334,7 @@ const confirmShipmentKit = async (shipmentData) => {
             '173836415': {
                 '266600170': {
                     ...baselineParticipantObject,
-                    '8583443674': {
+                    '319972665': {
                         ...prevParticipantObject,
                         '221592017': 277438316,
                         '661940160': shipmentData['661940160']
@@ -2330,7 +2361,7 @@ const storeKitReceipt = async (package) => {
         const kitDoc = kitSnapshot.docs[0];
         const Connect_ID = kitDoc.data()['Connect_ID'];
    
-        const participantSnapshot = await db.collection("participants").where('173836415.266600170.8583443674.687158491', '==', kitDoc.data()[687158491]).get();
+        const participantSnapshot = await db.collection("participants").where('173836415.266600170.319972665.687158491', '==', kitDoc.data()[687158491]).get();
         const participantDoc = participantSnapshot.docs[0];
         const participantDocData = participantSnapshot.docs[0].data();
 
@@ -2341,7 +2372,7 @@ const storeKitReceipt = async (package) => {
         const ptName = participantDocData['153211406'] || participantDocData['399159511']
         const surveyStatus = participantDocData['547363263']
 
-        const prevParticipantObject = participantDocData[173836415][266600170][8583443674];
+        const prevParticipantObject = participantDocData[173836415][266600170][319972665];
         const collectionId = package['259846815']?.split(' ')[0];
         const objectId = package['259846815']?.split(' ')[1];
         
@@ -2379,7 +2410,7 @@ const storeKitReceipt = async (package) => {
             '254109640': 353358909,
             '173836415.266600170.915179629': 103209024,
             '173836415.266600170.448660695': package['678166505'],
-            '173836415.266600170.8583443674': {
+            '173836415.266600170.319972665': {
                 ...prevParticipantObject,
                 '221592017': 375535639,
                 '826941471': package['826941471']
@@ -2976,13 +3007,12 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
 }
 
 const processSendGridEvent = async (event) => {
-    if (event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
+    if (!event.notification_id || event.gcloud_project !== process.env.GCLOUD_PROJECT) return;
 
     const date = new Date(event.timestamp * 1000).toISOString();
-
     const snapshot = await db
-        .collection("sendgridTracking")
-        .where("sgMessageId", "==", event.sg_message_id)
+        .collection("notifications")
+        .where("id", "==", event.notification_id)
         .get();
 
     if (snapshot.size > 0) {
@@ -2990,28 +3020,13 @@ const processSendGridEvent = async (event) => {
         const eventRecord = {
             [`${event.event}Status`]: true,
             [`${event.event}Date`]: date,
-            [`${event.event}Timestamp`]: event.timestamp,
         };
         if (["bounce", "dropped"].includes(event.event)) {
             eventRecord[`${event.event}Reason`] = event.reason;
         }
-        await db.collection("sendgridTracking").doc(doc.id).update(eventRecord);
+        await db.collection("notifications").doc(doc.id).update(eventRecord);
     } else {
-        const eventRecord = {
-            [`${event.event}Status`]: true,
-            [`${event.event}Date`]: date,
-            [`${event.event}Timestamp`]: event.timestamp,
-            connectId: event.connect_id,
-            email: event.email,
-            notificationId: event.notification_id,
-            sgEventId: event.sg_event_id,
-            sgMessageId: event.sg_message_id,
-            token: event.token,
-        };
-        if (["bounce", "dropped"].includes(event.event)) {
-            eventRecord[`${event.event}Reason`] = event.reason;
-        }
-        await db.collection("sendgridTracking").add(eventRecord);
+        console.error(`Could not find notifications ${event.notification_id}. Status ${event.event}`)
     }
 };
 
