@@ -2,15 +2,14 @@ const CryptoJS = require('crypto-js');
 
 const generatePromisAuthToken = () => {
 
-    /* temp revert of code
     const { getSecret } = require('./shared');
-    */
 
-    const uoid = '';
-    const token = '';
+    const uoid = getSecret(process.env.PROMIS_UOID);
+    const token = getSecret(process.env.PROMIS_TOKEN);
 
     const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
     const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
+    
     return encoded;
 }
 
@@ -61,7 +60,7 @@ const processPromisResults = async (uid) => {
 const getScoringData = async (id, data) => {
 
     const formData = new URLSearchParams();
-    const url = `https://www.assessmentcenter.net/ac_api/2013-01/Scores/`;
+    const url = `https://dcb-promis.cit.nih.gov/2014-01/2013-01/Scores/`;
 
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
