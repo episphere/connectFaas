@@ -3,11 +3,12 @@ const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret} = require("./shared");
-const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
+const {getNotificationSpecById, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
 let twilioClient, messagingServiceSid;
+let isSendingNotifications = false;
 
 (async () => {
   [twilioClient, messagingServiceSid] = await setupTwilioSms();
@@ -163,9 +164,15 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
  * @param {string} message.data base64-encoded string.
  */
 async function notificationHandler(message) {
+  if (isSendingNotifications) {
+    console.log("notificationHandler is already running. Exiting...");
+    return;
+  }
+
   console.log("Received message:", JSON.stringify(message));
+  isSendingNotifications = true;
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
-  const notificationSpecArray = await getScheduledNotifications(scheduleAt);
+  const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(scheduleAt);
   if (notificationSpecArray.length === 0) return;
   const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
   sgMail.setApiKey(apiKey);
@@ -176,6 +183,7 @@ async function notificationHandler(message) {
   }
 
   await Promise.all(notificationPromises);
+  isSendingNotifications = false;
 }
 
 async function handleNotificationSpec(notificationSpec) {
@@ -205,7 +213,7 @@ async function handleNotificationSpec(notificationSpec) {
  * @param {string} [paramObj.timeField=""] Concept ID (eg 914594314) to decide which timestamp field to use for filtering
  */
 async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr = "", timeField = "" }) {
-  const readableSpecString = notificationSpec.email?.subject || notificationSpec.category + ", " + notificationSpec.attempt;
+  const readableSpecString = notificationSpec.category + ", " + notificationSpec.attempt;
   const conditions = notificationSpec.conditions;
   const emailSubject = notificationSpec.email?.subject ?? "";
   const emailBody = notificationSpec.email?.body ?? "";
