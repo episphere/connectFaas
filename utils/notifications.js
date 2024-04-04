@@ -8,7 +8,7 @@ const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
 let twilioClient, messagingServiceSid;
-let isSendingNotifications = false;
+let isSendingNotifications = false; // A more robust soluttion is needed when using multiple servers 
 
 (async () => {
   [twilioClient, messagingServiceSid] = await setupTwilioSms();
@@ -172,18 +172,24 @@ async function notificationHandler(message) {
   console.log("Received message:", JSON.stringify(message));
   isSendingNotifications = true;
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
-  const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(scheduleAt);
-  if (notificationSpecArray.length === 0) return;
-  const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
-  sgMail.setApiKey(apiKey);
+  
+  try {
+    const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(scheduleAt);
+    if (notificationSpecArray.length === 0) return;
+    const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
+    sgMail.setApiKey(apiKey);
 
-  const notificationPromises = [];
-  for (const notificationSpec of notificationSpecArray) {
-    notificationPromises.push(handleNotificationSpec(notificationSpec));
+    const notificationPromises = [];
+    for (const notificationSpec of notificationSpecArray) {
+      notificationPromises.push(handleNotificationSpec(notificationSpec));
+    }
+
+    await Promise.allSettled(notificationPromises);
+  } catch (error) {
+    console.error("Error occurred in notificationHandler.", error);
+  } finally {
+    isSendingNotifications = false;
   }
-
-  await Promise.all(notificationPromises);
-  isSendingNotifications = false;
 }
 
 async function handleNotificationSpec(notificationSpec) {
