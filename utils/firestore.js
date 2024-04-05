@@ -2071,16 +2071,20 @@ const getNotificationSpecsBySchedule = async (scheduleAt) => {
  * @returns 
  */
 const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
-  const currTime = new Date().toISOString();
+  const eastTimezone = { timezone: "America/New_York" };
+  const currTime = new Date();
+  const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
+  const currentTimeIsoStr = currTime.toISOString();
   const batch = db.batch();
   const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
   let notificationSpecArray = [];
   for (const doc of snapshot.docs) {
     const docData = doc.data();
-    const lastRunDate = docData.lastRunTime?.split("T")[0] ?? "";
-    if (!docData.isDraft && docData.id && currTime.split("T")[0] !== lastRunDate) {
+    const lastRunTime = docData.lastRunTime || "2020-01-01";
+    const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
+    if (!docData.isDraft && docData.id && currDate !== lastRunDate) {
       notificationSpecArray.push(docData);
-      batch.update(doc.ref, { lastRunTime: currTime });
+      batch.update(doc.ref, { lastRunTime: currentTimeIsoStr });
     }
   }
 
