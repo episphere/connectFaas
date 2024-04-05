@@ -2074,7 +2074,7 @@ const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
   const eastTimezone = { timezone: "America/New_York" };
   const currTime = new Date();
   const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
-  const currentTimeIsoStr = currTime.toISOString();
+  const currTimeIsoStr = currTime.toISOString();
   const batch = db.batch();
   const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
   let notificationSpecArray = [];
@@ -2084,7 +2084,7 @@ const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
     const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
     if (!docData.isDraft && docData.id && currDate !== lastRunDate) {
       notificationSpecArray.push(docData);
-      batch.update(doc.ref, { lastRunTime: currentTimeIsoStr });
+      batch.update(doc.ref, { lastRunTime: currTimeIsoStr });
     }
   }
 
