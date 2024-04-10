@@ -2133,13 +2133,13 @@ const queryTotalAddressesToPrint = async () => {
             collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
         const snapshot = await db.collection('participants')
-        .where(withdrawConsent.toString(), '==', no)
-        .where(participantDeceasedNORC.toString(), '==', no)
-        .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
-        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
-        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
-        .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
-        .get();
+            .where(withdrawConsent.toString(), '==', no)
+            .where(participantDeceasedNORC.toString(), '==', no)
+            .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
+            .get();
         return snapshot.docs.map(document => processParticipantData(document.data(), true));
     } catch (error) {
         console.error(error);

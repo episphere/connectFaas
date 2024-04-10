@@ -274,20 +274,10 @@ const getParticipants = async (req, res, authObj) => {
         }
     }
     else if(req.query.type === 'filter') {
-        const filterDeprecationWarning = "IMPORTANT: this type == 'filter' API is deprecated. Please use the new 'getFilteredParticipants' API. " + 
+        const filterObsoleteNotification = "IMPORTANT: the type == 'filter' API is obsolete. Please use the new 'getFilteredParticipants' API. " + 
             "Ex: .../getFilteredParticipants?firstName=John&lastName=Doe | API notes & documentation: https://github.com/episphere/connect/issues/817#issuecomment-1883893946";
-        const queries = req.query;
-        delete queries.type;
-        if(Object.keys(queries).length === 0) return res.status(400).json(getResponseJSON(`Please include parameters to filter data. ${filterDeprecationWarning}`, 400));
-        const { filterData } = require('./shared');
-        let result = await filterData(queries, siteCodes, isParent);
-        if(result instanceof Error){
-            return res.status(500).json(getResponseJSON(`${filterDeprecationWarning} ${result.message}`, 500));
-        }
-        // Remove module data from participant records.
-        if(result.length > 0) result = removeRestrictedFields(result, restriectedFields, isParent);
         
-        return res.status(200).json({data: result, message: filterDeprecationWarning, code: 200})
+        return res.status(410).json({data: [], message: filterObsoleteNotification, code: 410});
     }
     else if (req.query.type === 'refusalswithdrawals') {
         
@@ -377,9 +367,11 @@ const getFilteredParticipants = async (req, res, authObj) => {
         const { isParentEntity } = require('./shared');
         obj = await isParentEntity(authorized);
     }
-    const isParent = obj.isParent;
-    const siteCodes = obj.siteCodes;
-    
+
+    // The fallback values support Biospecimen access wher 'obj' is a slightly different shape and no parent participant queries exist.
+    const isParent = obj.isParent ?? false;
+    const siteCodes = obj.siteCodes ?? obj.siteCode;
+
     if (req.query.type) return res.status(404).json(getResponseJSON(`The 'type' parameter is not used in this API. ${helpMessage}`, 400));
     if (req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
 
@@ -389,6 +381,9 @@ const getFilteredParticipants = async (req, res, authObj) => {
     "returns firstName, lastName, and data nested in payment round -> baseline. Connect ID is always returned. Typos are ignored. | API notes & documentation: https://github.com/episphere/connect/issues/817#issuecomment-1883893946"
 
     const queries = req.query;
+    const source = queries.source;
+    delete queries.api;
+    delete queries.source;
 
     // Separate selectedFields from filter queries. These are handled separately, after the fetch operation.
     let selectedFields = [];
@@ -400,9 +395,14 @@ const getFilteredParticipants = async (req, res, authObj) => {
     if (Object.keys(queries).length === 0) return res.status(400).json(getResponseJSON(`Please include parameters to filter data. ${helpMessage}`, 400));
     if (!Object.keys(queries).every(param => filterableParams.includes(param))) return res.status(400).json(getResponseJSON(`Invalid filter parameter. ${helpMessage}`, 400));
 
-    // Future extension: the onlyActive and onlyVerified values may vary depending on the requester once integrated with SMDB and Biospecimen.
-    queries['onlyVerified'] = true;
-    queries['onlyActive'] = true;
+    // Return only verified and active participants for sites using the getFilteredParticipants API directly.
+    if (source === 'dashboard' || source === 'biospecimen') {
+        queries['onlyVerified'] = false;
+        queries['onlyActive'] = false;
+    } else {
+        queries['onlyVerified'] = true;
+        queries['onlyActive'] = true;
+    }
 
     try {
         const { filterDB } = require('./firestore');
