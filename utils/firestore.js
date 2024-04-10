@@ -2050,11 +2050,11 @@ const getEmailNotifications = async (scheduleAt) => {
 }
 
 /**
- * Get all notification specifications that are not drafts and match the scheduleAt time.
+ * Get all notification specifications that are not drafts and match the scheduleAt time. This function can be run multiple times per day, for testing.
  * @param {string} scheduleAt Time of day to send notifications, eg. '15:00'
  * @returns 
  */
-const getScheduledNotifications = async (scheduleAt) => {
+const getNotificationSpecsBySchedule = async (scheduleAt) => {
   const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
   let notificationSpecArray = [];
   for (const doc of snapshot.docs) {
@@ -2065,7 +2065,34 @@ const getScheduledNotifications = async (scheduleAt) => {
   return notificationSpecArray;
 };
 
-const getNotification = async (id) => {
+/**
+ * Get all notification specifications that are not drafts and match the scheduleAt time. This function is run once per day, for production use.
+ * @param {string} scheduleAt Time of day to send notifications, eg. '15:00'
+ * @returns 
+ */
+const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
+  const eastTimezone = { timezone: "America/New_York" };
+  const currTime = new Date();
+  const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
+  const currTimeIsoStr = currTime.toISOString();
+  const batch = db.batch();
+  const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  let notificationSpecArray = [];
+  for (const doc of snapshot.docs) {
+    const docData = doc.data();
+    const lastRunTime = docData.lastRunTime || "2020-01-01";
+    const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
+    if (!docData.isDraft && docData.id && currDate !== lastRunDate) {
+      notificationSpecArray.push(docData);
+      batch.update(doc.ref, { lastRunTime: currTimeIsoStr });
+    }
+  }
+
+  await batch.commit(); // batch limit: 500
+  return notificationSpecArray;
+};
+
+const getNotificationSpecById = async (id) => {
     const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
 
     return snapshot.docs[0].data();
@@ -3210,9 +3237,10 @@ module.exports = {
     updateNotificationSchema,
     getNotificationHistoryByParticipant,
     getNotificationsCategories,
-    getNotification,
+    getNotificationSpecById,
     getEmailNotifications,
-    getScheduledNotifications,
+    getNotificationSpecsBySchedule,
+    getNotificationSpecsByScheduleOncePerDay,
     getKitAssemblyData,
     storeSiteNotifications,
     getCoordinatingCenterEmail,
