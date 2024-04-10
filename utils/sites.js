@@ -172,7 +172,7 @@ const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
 }
 
 const updateParticipantData = async (req, res, authObj) => {
-    const { getParticipantData, updateParticipantData, writeCancerOccurrences } = require('./firestore');
+    const { getParticipantData, updateParticipantData: updateParticipantDataFirestore, writeCancerOccurrences } = require('./firestore');
     const { checkForQueryFields, flattenObject, initializeTimestamps, userProfileHistoryKeys } = require('./shared');
     const { checkDerivedVariables } = require('./validation');
 
@@ -211,6 +211,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const dataArray = req.body.data;
     let responseArray = [];
     let error = false;
+    let docCount = 0;
 
     for(let dataObj of dataArray) {
         if(dataObj.token === undefined) {
@@ -354,12 +355,13 @@ const updateParticipantData = async (req, res, authObj) => {
         
         try {
             const promises = [];
-            if (Object.keys(flatUpdateObj).length > 0) promises.push(updateParticipantData(docID, flatUpdateObj));
+            if (Object.keys(flatUpdateObj).length > 0) promises.push(updateParticipantDataFirestore(docID, flatUpdateObj));
             if (finalizedCancerOccurrenceArray.length > 0) promises.push(writeCancerOccurrences(finalizedCancerOccurrenceArray));
             await Promise.all(promises);
             await checkDerivedVariables(participantToken, docData['827220437']);
             
             responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
+            docCount++;
         } catch (e) {
             // Alert the user about the error for this participant but continue to process the rest of the participants.
             console.error(`Server error updating participant at updateParticipantData & checkDerivedVariables. ${e}`);
@@ -369,6 +371,7 @@ const updateParticipantData = async (req, res, authObj) => {
         }
     }
 
+    console.log(`Updated ${docCount} participant records.`);
     return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
 }
 
