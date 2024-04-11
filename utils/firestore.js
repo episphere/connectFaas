@@ -2095,7 +2095,7 @@ const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
 const getNotificationSpecById = async (id) => {
     const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
 
-    return snapshot.docs[0].data();
+    return snapshot.empty ? null : snapshot.docs[0].data();
 }
 
 const addKitAssemblyData = async (data) => {

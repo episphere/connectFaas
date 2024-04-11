@@ -38,8 +38,7 @@ async function getParticipantsForNotificationsBQ({
   limit = 100,
   previousConnectId = 0,
 }) {
-  let result = { hasNext: false, fetchedDataArray: [] };
-  if (!notificationSpecId || Object.keys(conditions).length === 0) return result;
+  if (!notificationSpecId || Object.keys(conditions).length === 0) return [];
 
   const bqFieldArray = fieldsToFetch
     .map(convertToBigqueryKey)
@@ -60,7 +59,7 @@ async function getParticipantsForNotificationsBQ({
     bqConditionArray.push(`${bqTimeField} <= "${cutoffTimeStr}"`);
   }
 
-  const queryStr = `SELECT ${bqFieldArray.length === 0 ? "*" : bqFieldArray.join(", ")}
+  const queryStr = `SELECT ${bqFieldArray.length === 0 ? "token" : bqFieldArray.join(", ")}
     FROM \`Connect.participants\` 
     LEFT JOIN (
       SELECT DISTINCT token, TRUE AS isSent
@@ -68,17 +67,14 @@ async function getParticipantsForNotificationsBQ({
         \`Connect.notifications\`
       WHERE
         notificationSpecificationsID = "${notificationSpecId}")
-    USING(token)
+    USING (token)
     WHERE ${bqConditionArray.length === 0 ? "1=1" : bqConditionArray.join(" AND ")}
-    AND isSent IS NOT TRUE AND Connect_ID > ${previousConnectId} ORDER BY Connect_ID LIMIT ${limit}`;
+    AND isSent IS NULL AND Connect_ID > ${previousConnectId} ORDER BY Connect_ID LIMIT ${limit}`;
 
   const [rows] = await bigquery.query(queryStr);
-  if (rows.length === 0) return result;
+  if (rows.length === 0) return [];
 
-  result.hasNext = rows.length === limit;
-  result.fetchedDataArray = rows.map(convertToFirestoreData);
-
-  return result;
+  return rows.map(convertToFirestoreData);
 }
 
 /**
