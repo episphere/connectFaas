@@ -368,7 +368,7 @@ const getFilteredParticipants = async (req, res, authObj) => {
         obj = await isParentEntity(authorized);
     }
 
-    // The fallback values support Biospecimen access wher 'obj' is a slightly different shape and no parent participant queries exist.
+    // The fallback values support Biospecimen access where 'obj' is a slightly different shape and no parent participant queries exist.
     const isParent = obj.isParent ?? false;
     const siteCodes = obj.siteCodes ?? obj.siteCode;
 
