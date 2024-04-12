@@ -91,6 +91,9 @@ const dashboard = async (req, res) => {
     } else if (api === 'participantDataCorrection') {
         const { participantDataCorrection } = require('./sites');
         return await participantDataCorrection(req, res);
+    } else if (api === "dryRunNotificationSchema") {
+        const { dryRunNotificationSchema } = require('./notifications');
+        return await dryRunNotificationSchema(req, res);
     }
     else {
         return res.status(404).json(getResponseJSON('API not found!', 404));

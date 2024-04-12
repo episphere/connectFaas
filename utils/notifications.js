@@ -228,9 +228,10 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   const phoneField = notificationSpec.phoneField ?? "";
   const firstNameField = notificationSpec.firstNameField ?? "";
   const preferredNameField = notificationSpec.preferredNameField ?? "";
+  const newsletterCategories = ["newsletter", "eNewsletter", "anniversaryNewsletter"];
 
   let emailHtmlTemplate = emailBody;
-  if (emailBody && notificationSpec.category !== "newsletter") {
+  if (emailBody && !newsletterCategories.includes(notificationSpec.category)) {
     const converter = new showdown.Converter();
     emailHtmlTemplate = converter.makeHtml(emailBody);
   }
@@ -271,7 +272,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 
   while (hasNext) {
     try {
-      ({ fetchedDataArray, hasNext } = await getParticipantsForNotificationsBQ({
+      fetchedDataArray = await getParticipantsForNotificationsBQ({
         notificationSpecId: notificationSpec.id,
         conditions,
         cutoffTimeStr,
@@ -279,13 +280,15 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         fieldsToFetch,
         limit,
         previousConnectId,
-      }));
+      });
     } catch (error) {
       console.error(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpec.id}.`, error);
       break;
     }
 
     if (fetchedDataArray.length === 0) break;
+
+    hasNext = fetchedDataArray.length === limit;
     if (hasNext) {
       previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
     }
@@ -476,25 +479,31 @@ const storeNotificationSchema = async (req, res, authObj) => {
   if (req.body.data === undefined || Object.keys(req.body.data).length < 1)
     return res.status(400).json(getResponseJSON("Bad requuest.", 400));
 
-  const schema = req.body.data;
-  if (schema.id) {
-    const { retrieveNotificationSchemaByID } = require("./firestore");
-    const docID = await retrieveNotificationSchemaByID(schema.id);
-    if (docID === "") return res.status(404).json(getResponseJSON("Invalid notification Id.", 404));
+  try {
+    const schema = req.body.data;
+    if (schema.id) {
+      const { retrieveNotificationSchemaByID } = require("./firestore");
+      const docID = await retrieveNotificationSchemaByID(schema.id);
+      if (docID === "") return res.status(404).json(getResponseJSON("Invalid notification Id.", 404));
 
-    const { updateNotificationSchema } = require("./firestore");
-    schema["modifiedAt"] = new Date().toISOString();
-    if (authObj.userEmail) schema["modifiedBy"] = authObj.userEmail;
-    await updateNotificationSchema(docID, schema);
-  } else {
-    schema["id"] = uuid();
-    const { storeNewNotificationSchema } = require("./firestore");
-    schema["createdAt"] = new Date().toISOString();
-    if (authObj.userEmail) schema["createdBy"] = authObj.userEmail;
-    await storeNewNotificationSchema(schema);
+      const { updateNotificationSchema } = require("./firestore");
+      schema["modifiedAt"] = new Date().toISOString();
+      if (authObj.userEmail) schema["modifiedBy"] = authObj.userEmail;
+      await updateNotificationSchema(docID, schema);
+    } else {
+      schema["id"] = uuid();
+      const { storeNewNotificationSchema } = require("./firestore");
+      schema["createdAt"] = new Date().toISOString();
+      if (authObj.userEmail) schema["createdBy"] = authObj.userEmail;
+      await storeNewNotificationSchema(schema);
+    }
+
+    return res.status(200).json({ message: "Success!", code: 200, data: [{ schemaId: schema.id }] });
+  } catch (error) {
+    console.error("Error occurred storing notification schema.", error);
+    return res.status(500).json({ message: error.message, code: 500, data: [] });
   }
 
-  return res.status(200).json({ message: "Success!", code: 200, data: [{ schemaId: schema.id }] });
 };
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
@@ -675,6 +684,94 @@ const sendEmailLink = async (req, res) => {
     }
 };
 
+const dryRunNotificationSchema = async (req, res) => {
+  if (req.method !== "GET") {
+    return res.status(405).json({data: [], message: "Only GET requests are accepted!", code: 405});
+  }
+
+  if (!req.query.schemaId) {
+    return res.status(400).json({data: [], message: "schemaId is missing in request parameter!", code: 400});
+  }
+
+  let countData = { emailCount: 0, smsCount: 0 };
+  let message = "Ok";
+  let spec = null;
+
+  try {
+    spec = await getNotificationSpecById(req.query.schemaId);
+  } catch (error) {
+    return res.status(500).json({ data: [], message: JSON.stringify(error, null, 2), code: 500 });
+  }
+
+  if (!spec) {
+    message = `Notification spec ID ${req.query.schemaId} isn't found.`;
+    return res.status(404).json({ data: [], message, code: 404 });
+  }
+
+  let cutoffTime = new Date();
+  cutoffTime.setDate(cutoffTime.getDate() - spec.time.day);
+  cutoffTime.setHours(cutoffTime.getHours() - spec.time.hour);
+  cutoffTime.setMinutes(cutoffTime.getMinutes() - spec.time.minute);
+
+  if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(spec.primaryField)) {
+    const scheduledTime = new Date(spec.primaryField);
+    if (scheduledTime > cutoffTime) return res.status(200).json({ data: [], message, code: 200 });
+  }
+
+  const cutoffTimeStr = cutoffTime.toISOString();
+  const emailField = spec.emailField ?? "";
+  const emailBody = spec.email?.body ?? "";
+  const phoneField = spec.phoneField ?? "";
+  const smsBody = spec.sms?.body ?? "";
+
+  let fieldsToFetch = ["token"];
+  emailField && fieldsToFetch.push(emailField);
+  phoneField && fieldsToFetch.push(phoneField);
+  smsBody && fieldsToFetch.push(conceptIds.canWeText.toString());
+
+  const limit = 9000;
+  let previousConnectId = 0;
+  let hasNext = true;
+  let fetchedDataArray = [];
+
+  while (hasNext) {
+    try {
+      fetchedDataArray = await getParticipantsForNotificationsBQ({
+        notificationSpecId: spec.id,
+        conditions: spec.conditions,
+        cutoffTimeStr,
+        timeField: spec.primaryField,
+        fieldsToFetch,
+        limit,
+        previousConnectId,
+      });
+    } catch (error) {
+      return res.status(500).json({ data: [countData], message: JSON.stringify(error, null, 2), code: 500 });
+    }
+
+    if (fetchedDataArray.length === 0) break;
+    hasNext = fetchedDataArray.length === limit;
+    if (hasNext) {
+      previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
+    }
+
+    for (const fetchedData of fetchedDataArray) {
+      if (!fetchedData[emailField] && !fetchedData[phoneField]) continue;
+
+      if (emailBody && validEmailFormat.test(fetchedData[emailField])) {
+        countData.emailCount++;
+      }
+
+      if (smsBody && fetchedData[phoneField]?.length >= 10 && fetchedData[conceptIds.canWeText] === conceptIds.yes) {
+        countData.smsCount++;
+      }
+    }
+
+  }
+
+  return res.status(200).json({ data: [countData], message, code: 200 });
+};
+
 module.exports = {
     subscribeToNotification,
     retrieveNotifications,
@@ -684,5 +781,6 @@ module.exports = {
     getParticipantNotification,
     sendEmail,
     getSiteNotification,
-    sendEmailLink
+    sendEmailLink,
+    dryRunNotificationSchema,
 }
