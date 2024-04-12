@@ -319,7 +319,7 @@ module.exports = {
         unableToCompleteOnlineActivities: 620696506,
         doNotLikeThingsOnline: 352891568,  
         covidConcerns: 958588520,
-        partNowUnAbleToParticipate: 875010152,
+        partNowUnableToParticipate: 875010152,
         partIncarcerated: 404289911,
         reasonNotGiven: 538619788,
         otherReasonsSpecify: 715390138,
