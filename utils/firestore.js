@@ -2175,19 +2175,18 @@ const queryHomeCollectionAddressesToPrint = async () => {
             collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
         const snapshot = await db.collection('participants')
-            .select(...participantHomeCollectionKitFields)
             .where(withdrawConsent.toString(), '==', no)
             .where(participantDeceasedNORC.toString(), '==', no)
             .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
+            .select(...participantHomeCollectionKitFields)
             .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
             .get();
 
         return snapshot.docs.map(document => processParticipantHomeMouthwashKitData(document.data(), true));
     } catch (error) {
-        console.error(error);
-        return new Error(error);
+        throw new Error(`Error querying home collection addresses to print`, {cause: error});
     }
 }
 
@@ -2205,17 +2204,16 @@ const eligibleParticipantsForKitAssignment = async () => {
         const { addressPrinted, collectionDetails, baseline, bioKitMouthwash, bloodOrUrineCollectedTimestamp, kitStatus } = fieldMapping;
 
         const snapshot = await db.collection("participants")
-            .select(...participantHomeCollectionKitFields)
             .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', addressPrinted)
+            .select(...participantHomeCollectionKitFields)
             .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
             .get();
 
-        if (snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), false));
-        else return false;
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
+        return snapshot.size === 0
+            ? []
+            : snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), false));;
+    } catch(error) {
+        throw new Error('Error getting Eligible Kit Assignment Participants.', {cause: error});
     }
 }
 
@@ -2269,12 +2267,10 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
         zip_code: record[zip], 
         connect_id: record['Connect_ID'],
     };
-    if ((!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)) {
-        return processedRecord;
-    }
-    else {
-        return [];
-    }
+
+    return (!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)
+        ? processedRecord
+        : [];
 }
 
 const assignKitToParticipant = async (data) => {

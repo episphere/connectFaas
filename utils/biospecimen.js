@@ -757,12 +757,12 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
+        
         try {
             const { queryHomeCollectionAddressesToPrint } = require('./firestore');
             const response = await queryHomeCollectionAddressesToPrint();
             return res.status(200).json({data: response, code:200});
-        }
-        catch (error) {
+        } catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -806,12 +806,12 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
+        
         try {
             const { eligibleParticipantsForKitAssignment } = require('./firestore');
             const response = await eligibleParticipantsForKitAssignment();
             return res.status(200).json({data: response, code:200});
-        }
-        catch {
+        } catch (error){
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
