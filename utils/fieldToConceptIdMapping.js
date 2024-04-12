@@ -312,7 +312,7 @@ module.exports = {
         donNotWantInfoSharedWithRsrchrs: 285488731,  
         worriedInfoNotSecure: 596510649,
         worriedInsWillGetData: 866089092,
-        iAmWorriedAboutDataBeingGivenToMyEmployerPotentialEmployer: 990579614,
+        worriedAboutDataBeingGivenToMyEmployerPotentialEmployer: 990579614,
         worriedAboutDiscriminationFromData: 131458944,
         worriedOthersWillProfitFromMyData: 372303208,
         otherPrivacyConcerns: 777719027,
