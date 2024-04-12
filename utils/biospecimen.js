@@ -758,8 +758,8 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         try {
-            const { queryTotalAddressesToPrint } = require('./firestore');
-            const response = await queryTotalAddressesToPrint();
+            const { queryHomeCollectionAddressesToPrint } = require('./firestore');
+            const response = await queryHomeCollectionAddressesToPrint();
             return res.status(200).json({data: response, code:200});
         }
         catch (error) {
