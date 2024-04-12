@@ -316,7 +316,7 @@ module.exports = {
         worriedAboutDiscriminationFromData: 131458944,
         worriedOthersWillProfitFromMyData: 372303208,
         otherPrivacyConcerns: 777719027,
-        unAbleToCompleteOnlineActivities: 620696506,
+        unableToCompleteOnlineActivities: 620696506,
         donNotLikeThingsOnline: 352891568,  
         covConcerns: 958588520,
         partNowUnAbleToParticipate: 875010152,
