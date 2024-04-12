@@ -318,7 +318,7 @@ module.exports = {
         otherPrivacyConcerns: 777719027,
         unableToCompleteOnlineActivities: 620696506,
         doNotLikeThingsOnline: 352891568,  
-        covConcerns: 958588520,
+        covidConcerns: 958588520,
         partNowUnAbleToParticipate: 875010152,
         partIncarcerated: 404289911,
         reasonNotGiven: 538619788,
