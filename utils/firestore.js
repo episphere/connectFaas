@@ -2149,7 +2149,7 @@ const checkCollectionUniqueness = async (supplyId, collectionId) => {
 };
 
 const participantHomeCollectionKitFields = [
-    `${fieldMapping.collectionDetails.toString()}.${fieldMapping.baseline.toString()}`,
+    fieldMapping.collectionDetails.toString(),
     fieldMapping.firstName.toString(),
     fieldMapping.lastName.toString(),
     fieldMapping.address1.toString(),
