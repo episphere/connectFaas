@@ -782,5 +782,5 @@ module.exports = {
     sendEmail,
     getSiteNotification,
     sendEmailLink,
-    dryRunNotificaionSchema: dryRunNotificationSchema,
+    dryRunNotificationSchema,
 }
