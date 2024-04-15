@@ -2095,7 +2095,7 @@ const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
 const getNotificationSpecById = async (id) => {
     const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
 
-    return snapshot.docs[0].data();
+    return snapshot.empty ? null : snapshot.docs[0].data();
 }
 
 const addKitAssemblyData = async (data) => {
@@ -2148,13 +2148,28 @@ const checkCollectionUniqueness = async (supplyId, collectionId) => {
     }
 };
 
+const participantHomeCollectionKitFields = [
+    fieldMapping.collectionDetails.toString(),
+    fieldMapping.firstName.toString(),
+    fieldMapping.lastName.toString(),
+    fieldMapping.address1.toString(),
+    fieldMapping.address2.toString(),
+    fieldMapping.city.toString(),
+    fieldMapping.state.toString(),
+    fieldMapping.zip.toString(),
+    'Connect_ID',
+];
+
 /**
  * Creates new array based on query below.
  * Each participant object is transformed into a new object or an empty array.
  * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData function.
  * Ex. [{first_name: 'John', last_name: 'Doe', address_1: '123 Main St', address_2: '', city: 'Anytown', state: 'NY', zip_code: '12345', connect_id: 123457890}, ...]
  */
-const queryTotalAddressesToPrint = async () => {
+// TODO: Suboptimal process. Would benefit from direct query on a {kitStatus: initialized} or {completed: no} variable, which could be assigned on kit creation in Biospecimen.
+// This will get progressively slower and more expensive as participants are added.
+// TODO: A sliding time window would be more efficient in the .where(<timestamp>) query.
+const queryHomeCollectionAddressesToPrint = async () => {
     try {
         const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
             collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
@@ -2165,12 +2180,13 @@ const queryTotalAddressesToPrint = async () => {
             .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
+            .select(...participantHomeCollectionKitFields)
             .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
             .get();
-        return snapshot.docs.map(document => processParticipantData(document.data(), true));
+
+        return snapshot.docs.map(document => processParticipantHomeMouthwashKitData(document.data(), true));
     } catch (error) {
-        console.error(error);
-        return new Error(error);
+        throw new Error(`Error querying home collection addresses to print`, {cause: error});
     }
 }
 
@@ -2185,15 +2201,19 @@ const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
 
 const eligibleParticipantsForKitAssignment = async () => {
     try {
-        const { collectionDetails, baseline, bioKitMouthwash, kitStatus } = fieldMapping;
+        const { addressPrinted, collectionDetails, baseline, bioKitMouthwash, bloodOrUrineCollectedTimestamp, kitStatus } = fieldMapping;
 
-        const snapshot = await db.collection("participants").where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', fieldMapping.addressPrinted).get();
-        if (snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
-        else return false;
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
+        const snapshot = await db.collection("participants")
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', addressPrinted)
+            .select(...participantHomeCollectionKitFields)
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
+            .get();
+
+        return snapshot.size === 0
+            ? []
+            : snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), false));;
+    } catch(error) {
+        throw new Error('Error getting Eligible Kit Assignment Participants.', {cause: error});
     }
 }
 
@@ -2232,26 +2252,25 @@ const addKitStatusToParticipant = async (participantsCID) => {
     }
 };
 
-const processParticipantData = (record, printLabel) => {
-    const { collectionDetails, baseline, bioKitMouthwash } = fieldMapping;
+// Note: existing snake_casing follows through to BPTL CSV reporting. Do not update to camelCase without prior communication.
+const processParticipantHomeMouthwashKitData = (record, printLabel) => {
+    const { collectionDetails, baseline, bioKitMouthwash, firstName, lastName, address1, address2, city, state, zip } = fieldMapping;
 
-    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;
+    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;    
     const processedRecord = {
-        first_name: record['399159511'],
-        last_name: record['996038075'],
-        address_1: record['521824358'],
-        address_2: record['442166669'] || '',
-        city: record['703385619'],
-        state: record['634434746'],
-        zip_code: record['892050548'],
+        first_name: record[firstName],
+        last_name: record[lastName],
+        address_1: record[address1],
+        address_2: record[address2] || '',
+        city: record[city],
+        state: record[state],
+        zip_code: record[zip], 
         connect_id: record['Connect_ID'],
     };
-    if ((!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)) {
-        return processedRecord;
-    }
-    else {
-        return [];
-    }
+
+    return (!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)
+        ? processedRecord
+        : [];
 }
 
 const assignKitToParticipant = async (data) => {
@@ -3271,7 +3290,7 @@ module.exports = {
     getSpecimensByBoxedStatus,
     addKitAssemblyData,
     updateKitAssemblyData,
-    queryTotalAddressesToPrint,
+    queryHomeCollectionAddressesToPrint,
     checkCollectionUniqueness,
     processVerifyScannedCode,
     assignKitToParticipant,
