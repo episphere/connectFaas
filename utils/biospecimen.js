@@ -56,25 +56,25 @@ const biospecimenAPIs = async (req, res) => {
         obj = { role, siteAcronym, isBPTLUser, isBiospecimenUser, email };
         if(siteCode !== 0) obj['siteCode'] = siteCode;
     }
-    
-    
-    if(api === 'getParticipants') {
+
+    if(api === 'getFilteredParticipants') {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        if(req.query.type === 'filter') {
-            const queries = req.query;
-            delete queries.type;
-            if(Object.keys(queries).length === 0) return res.status(404).json(getResponseJSON('Please include parameters to filter data.', 400));
-            const { filterData } = require('./shared');
-            const result = await filterData(queries, siteCode);
-            if(result instanceof Error){
-                return res.status(500).json(getResponseJSON(result.message, 500));
-            }
-            return res.status(200).json({data: result, code: 200})
+
+        // req.query includes 'api' key plus query params from the participant search form.
+        if(Object.keys(req.query).length < 2) {
+            return res.status(400).json(getResponseJSON('Please include parameters to filter data.', 400));
         }
-        else{
-            return res.status(400).json(getResponseJSON('Bad request!', 400));
+
+        try {
+            req.query.source = 'biospecimen';
+            const { getFilteredParticipants } = require('./submission');
+            
+            return await getFilteredParticipants(req, res, obj);
+        } catch (error) {
+            console.error('Error in getFilteredParticipants.', error);
+            return res.status(500).json(getResponseJSON('An error occurred while searching for this participant. Please try again later.', 500));
         }
     }
 

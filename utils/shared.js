@@ -61,13 +61,6 @@ const lockedAttributes = [
                         
                     ] // Read only access after initialization
 
-const filterData = async (queries, siteCodes, isParent) => {
-    console.log(queries);
-    const { filterDB } = require('./firestore');
-    const result = await filterDB(queries, siteCodes, isParent);
-    return result;
-}
-
 const incentiveFlags = {
     130371375 : { // Payment Round
         266600170: { // Baseline
@@ -1545,7 +1538,6 @@ module.exports = {
     randomString,
     deleteDocuments,
     setHeadersDomainRestricted,
-    filterData,
     incentiveFlags,
     lockedAttributes,
     moduleConceptsToCollections,
