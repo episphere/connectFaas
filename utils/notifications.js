@@ -204,6 +204,7 @@ async function handleNotificationSpec(notificationSpec) {
   if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(primaryField)) {
     const scheduledTime = new Date(primaryField);
     if (scheduledTime > cutoffTime) return;
+    paramObj = {...paramObj, cutoffTimeStr: "", timeField: ""};
   } else {
     paramObj = {...paramObj, cutoffTimeStr: cutoffTime.toISOString(), timeField: primaryField};
   }
@@ -708,7 +709,9 @@ const dryRunNotificationSchema = async (req, res) => {
     return res.status(404).json({ data: [], message, code: 404 });
   }
 
+  let timeField = spec.primaryField;
   let cutoffTime = new Date();
+  let cutoffTimeStr = cutoffTime.toISOString();
   cutoffTime.setDate(cutoffTime.getDate() - spec.time.day);
   cutoffTime.setHours(cutoffTime.getHours() - spec.time.hour);
   cutoffTime.setMinutes(cutoffTime.getMinutes() - spec.time.minute);
@@ -716,9 +719,11 @@ const dryRunNotificationSchema = async (req, res) => {
   if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(spec.primaryField)) {
     const scheduledTime = new Date(spec.primaryField);
     if (scheduledTime > cutoffTime) return res.status(200).json({ data: [], message, code: 200 });
+    timeField = "";
+    cutoffTimeStr = "";
   }
 
-  const cutoffTimeStr = cutoffTime.toISOString();
+ 
   const emailField = spec.emailField ?? "";
   const emailBody = spec.email?.body ?? "";
   const phoneField = spec.phoneField ?? "";
@@ -740,7 +745,7 @@ const dryRunNotificationSchema = async (req, res) => {
         notificationSpecId: spec.id,
         conditions: spec.conditions,
         cutoffTimeStr,
-        timeField: spec.primaryField,
+        timeField,
         fieldsToFetch,
         limit,
         previousConnectId,
