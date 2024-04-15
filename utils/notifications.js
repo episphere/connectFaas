@@ -723,7 +723,6 @@ const dryRunNotificationSchema = async (req, res) => {
     cutoffTimeStr = "";
   }
 
- 
   const emailField = spec.emailField ?? "";
   const emailBody = spec.email?.body ?? "";
   const phoneField = spec.phoneField ?? "";
