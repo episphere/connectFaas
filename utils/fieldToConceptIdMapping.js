@@ -180,7 +180,7 @@ module.exports = {
      bloodOrUrineCollectedTimestamp: 740582332,
      collectionRound: 418571751,
      mouthwashKit: 976461859,
-     mouthwashSurveyCompletionFlag: 547363263,
+     mouthwashSurveyCompletionStatus: 547363263,
 
      // EMR participant deceased data
     participantDeceased: 857217152,

@@ -2615,11 +2615,13 @@ const shippedKitStatusParcipants = async () => {
     try {
         const shippedStatusParticpants= [];
         const { collectionDetails, baseline, bioKitMouthwash, kitStatus, 
-                shipped, healthCareProvider, mouthwashSurveyCompletionFlag, shippedDateTime, yes, no } = fieldMapping;
+                shipped, healthCareProvider, mouthwashSurveyCompletionStatus, shippedDateTime} = fieldMapping;
         
         // add descending order to the query
         const snapshot = await db.collection("participants")
-                            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', shipped).get();
+                            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', shipped)
+                            .orderBy(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${shippedDateTime}`, 'asc')
+                            .get();
         console.log("🚀 ~ shippedKitStatusParcipants ~ snapshot:", snapshot.docs.length, "------", snapshot.docs[0])
 
         if (snapshot.size > 0) {
@@ -2631,22 +2633,24 @@ const shippedKitStatusParcipants = async () => {
                     'Connect_ID': participantConnectID, // Add the Connect ID to the custom object
                     [healthCareProvider]: participantData[healthCareProvider],
                     [shippedDateTime]: participantData[collectionDetails][baseline][bioKitMouthwash][shippedDateTime],
-                    [mouthwashSurveyCompletionFlag]: participantData[mouthwashSurveyCompletionFlag],
+                    [mouthwashSurveyCompletionStatus]: participantData[mouthwashSurveyCompletionStatus],
                 }; // Create a custom object to hold the required fields
                 
                 try { 
-                    const { supplyKitId, supplyKitTrackingNum, returnKitId, collectionCardId } = fieldMapping; // keeping this here for easier reference
+                    const { supplyKitId, supplyKitTrackingNum, returnKitId, collectionCardId, returnKitTrackingNum } = fieldMapping; // keeping this here for easier reference
                     const kitAssemblySnapshot = await db.collection("kitAssembly")
                     .where('Connect_ID', '==', participantConnectID).get(); // Query kitAssembly collection for the required fields
                     // 690210658 (Supply Kit ID) - "CON364137"(string)
                     // 531858099 (Supply kit Tracking #) - "364497530781"(string)
                     // 194252513 (Return Kit ID) - "CON364137"(string)
                     // 786397882 (Collection Card ID) - "CHA364115 0007"(string)
+                    // 972453354 (Return Kit Tracking #) - "36428497503523800354"(string)
                     if (kitAssemblySnapshot.size > 0) { 
                         const kitAssemblyData = kitAssemblySnapshot.docs[0].data(); // Get the kit assembly data
                         console.log("🚀 ~ shippedKitStatusParcipants ~ kitAssemblyData:", kitAssemblyData)
                         customParticipantObj[supplyKitId] = kitAssemblyData[supplyKitId]; // Add the supply kit ID to the custom object
                         customParticipantObj[supplyKitTrackingNum] = kitAssemblyData[supplyKitTrackingNum]; // Add the supply kit tracking number to the custom object
+                        customParticipantObj[returnKitTrackingNum] = kitAssemblyData[returnKitTrackingNum]; // Add the return kit tracking number to the custom object
                         customParticipantObj[returnKitId] = kitAssemblyData[returnKitId]; // Add the return kit ID to the custom object
                         customParticipantObj[collectionCardId] = kitAssemblyData[collectionCardId]; // Add the collection card ID to the custom object
                         console.log("customParticipantObj after adding kitAssemblyData", customParticipantObj)
@@ -2663,14 +2667,6 @@ const shippedKitStatusParcipants = async () => {
         }
         
         return shippedStatusParticpants;
-        
-        
-        // SAVE FOR LATER
-        // const snapshot = await db.collection("kitAssembly")
-        // .where(fieldMapping.kitStatus.toString() , '==', fieldMapping.shipped)
-        // .get();    
-        // // console.log("snapshot", snapshot.docs, snapshot.docs.length, snapshot.docs[0]);
-        // return snapshot.docs.map(doc => doc.data())  
     } catch (error) {
         console.error(error);
         throw new error("Error in shippedKitStatusParcipants. ", error);
