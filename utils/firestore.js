@@ -2557,7 +2557,6 @@ const addPrintAddressesParticipants = async (data) => {
  * Returns an array of custom objects based on the participants biomouthwash kit status
  * @param {string} statusType - concept id of the kit status's type 
  * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData statusType.
- * 
 */
 const getParticipantsByKitStatus = async (statusType) => {
     try {
