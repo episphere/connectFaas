@@ -1,6 +1,6 @@
 const rules = require("../updateParticipantData.json");
 const submitRules = require("../submitParticipantData.json");
-const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat, refusalWithdrawalConcepts } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submitParticipantsData = async (req, res, site) => {
@@ -238,6 +238,32 @@ const updateParticipantData = async (req, res, authObj) => {
             error = true;
             responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Data Destroyed'}});
             continue;
+        }
+
+        // Refect if the participant has withdrawn consent unless the update is
+        // for data distruction or hippa withdrawal 
+        const allowedWithdrawnUpdates = Object.keys(fieldMapping.dataDestruction);
+        const withdrawConsent = refusalWithdrawalConcepts.withdrewConsent.toString();
+        const revokeHIPAA = refusalWithdrawalConcepts.revokeHIPAA.toString();
+        if (docData[withdrawConsent] === fieldMapping.yes && docData[revokeHIPAA] === fieldMapping.yes) {
+            //Check the keys being sent in for the presence of allowed update
+            //For now if one acceptable key is found then the check will pass
+            //This could be made better and more secure with a comprehensive list of 
+            //all the keys allowed and make sure only those keys are allowed to be updated
+            let foundAcceptableKey = false;
+            let allowedUpdatesKeyIndex = 0;
+            while (!foundAcceptableKey || allowedUpdatesKeyIndex < allowedWithdrawnUpdates.length) {
+                if (Object.prototype.hasOwnProperty.call(dataObj, allowedWithdrawnUpdates[allowedUpdatesKeyIndex])) {
+                    foundAcceptableKey = true;
+                }
+                allowedUpdatesKeyIndex++;
+            }
+            
+            if (!foundAcceptableKey) {
+                error = true;
+                responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Particpant Withdrawn'}});
+                continue;
+            }
         }
 
         // Reject to update the uninvited flag if the participant is verified or The PIN was used to sign in
