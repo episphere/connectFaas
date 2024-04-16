@@ -2559,10 +2559,7 @@ const addPrintAddressesParticipants = async (data) => {
  * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData statusType.
  * 
 */
-
 const getParticipantsByKitStatus = async (statusType) => {
-    console.log("🚀 ~ getParticipantsByKitStatus ~ statusType:", statusType, typeof statusType, fieldMapping.shipped.toString(), typeof fieldMapping.shipped.toString())
-
     try {
         if (statusType === fieldMapping.shipped.toString()) { // For now this will be the only status enabled for this function, more status types to be added later
             return await shippedKitStatusParcipants();
