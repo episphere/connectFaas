@@ -2603,10 +2603,10 @@ const shippedKitStatusParcipants = async () => {
                     const kitAssemblySnapshot = await db.collection("kitAssembly")
                                                     .where('Connect_ID', '==', participantConnectID)
                                                     .select(`${supplyKitId}`,
-                                                    `${supplyKitTrackingNum}`, 
-                                                    `${returnKitTrackingNum}`,
-                                                    `${returnKitId}`, 
-                                                    `${collectionCardId}`)
+                                                        `${supplyKitTrackingNum}`, 
+                                                        `${returnKitTrackingNum}`,
+                                                        `${returnKitId}`, 
+                                                        `${collectionCardId}`)
                                                     .get();
 
                     if (kitAssemblySnapshot.size > 0) { 
