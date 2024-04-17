@@ -185,8 +185,11 @@ const updateParticipantData = async (req, res, authObj) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
     let obj = {};
-    if (authObj) obj = authObj;
-    else {
+    let internalCall = false;
+    if (authObj) {
+        obj = authObj;
+        internalCall = true;
+    } else {
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){
@@ -242,28 +245,12 @@ const updateParticipantData = async (req, res, authObj) => {
 
         // Refect if the participant has withdrawn consent unless the update is
         // for data distruction or hippa withdrawal 
-        const allowedWithdrawnUpdates = Object.keys(fieldMapping.dataDestruction);
         const withdrawConsent = refusalWithdrawalConcepts.withdrewConsent.toString();
         const revokeHIPAA = refusalWithdrawalConcepts.revokeHIPAA.toString();
-        if (docData[withdrawConsent] === fieldMapping.yes && docData[revokeHIPAA] === fieldMapping.yes) {
-            //Check the keys being sent in for the presence of allowed update
-            //For now if one acceptable key is found then the check will pass
-            //This could be made better and more secure with a comprehensive list of 
-            //all the keys allowed and make sure only those keys are allowed to be updated
-            let foundAcceptableKey = false;
-            let allowedUpdatesKeyIndex = 0;
-            while (!foundAcceptableKey || allowedUpdatesKeyIndex < allowedWithdrawnUpdates.length) {
-                if (Object.prototype.hasOwnProperty.call(dataObj, allowedWithdrawnUpdates[allowedUpdatesKeyIndex])) {
-                    foundAcceptableKey = true;
-                }
-                allowedUpdatesKeyIndex++;
-            }
-            
-            if (!foundAcceptableKey) {
-                error = true;
-                responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Particpant Withdrawn'}});
-                continue;
-            }
+        if (!internalCall && docData[withdrawConsent] === fieldMapping.yes && docData[revokeHIPAA] === fieldMapping.yes) {       
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Particpant Withdrawn'}});
+            continue;
         }
 
         // Reject to update the uninvited flag if the participant is verified or The PIN was used to sign in
