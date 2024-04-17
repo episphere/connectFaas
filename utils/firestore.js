@@ -2561,17 +2561,17 @@ const addPrintAddressesParticipants = async (data) => {
 const getParticipantsByKitStatus = async (statusType) => {
     try {
         if (statusType === fieldMapping.shipped.toString()) { // For now this will be the only status enabled for this function, more status types to be added later
-            return await shippedKitStatusParcipants();
+            return await shippedKitStatusParticipants();
         }
         return [];
     } catch (error){
         console.error(`Error in getParticipantsByKitStatus:`, error);
-        throw new error("getParticipantsByKitStatus", error);
+        throw new Error("getParticipantsByKitStatus", error);
     }
 }
 
 
-const shippedKitStatusParcipants = async () => { 
+const shippedKitStatusParticipants = async () => { 
     try {
         const shippedStatusParticpants= [];
         const { collectionDetails, baseline, bioKitMouthwash, kitStatus, 
@@ -2619,8 +2619,8 @@ const shippedKitStatusParcipants = async () => {
                         customParticipantObj[collectionCardId] = kitAssemblyData[collectionCardId];
                     }
                 } catch (error) {
-                    console.error("Error in shippedKitStatusParcipants, fetching kit assembly document.", error);
-                    throw new error("Error in shippedKitStatusParcipants, fetching kit assembly document.", error);
+                    console.error("Error in shippedKitStatusParticipants, fetching kit assembly document.", error);
+                    throw new Error("Error in shippedKitStatusParticipants, fetching kit assembly document.", error);
                 }
                 shippedStatusParticpants.push(customParticipantObj)
             }
@@ -2629,7 +2629,7 @@ const shippedKitStatusParcipants = async () => {
         return shippedStatusParticpants;
     } catch (error) {
         console.error(error);
-        throw new error("Error in shippedKitStatusParcipants. ", error);
+        throw new Error("Error in shippedKitStatusParticipants. ", error);
     }
 }
 
