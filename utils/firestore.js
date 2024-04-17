@@ -2573,7 +2573,7 @@ const getParticipantsByKitStatus = async (statusType) => {
 
 const shippedKitStatusParticipants = async () => { 
     try {
-        const shippedStatusParticpants= [];
+        const shippedStatusParticipants = [];
         const { collectionDetails, baseline, bioKitMouthwash, kitStatus, 
                 shipped, healthCareProvider, mouthwashSurveyCompletionStatus, shippedDateTime} = fieldMapping;
         
@@ -2622,11 +2622,11 @@ const shippedKitStatusParticipants = async () => {
                     console.error("Error in shippedKitStatusParticipants, fetching kit assembly document.", error);
                     throw new Error("Error in shippedKitStatusParticipants, fetching kit assembly document.", error);
                 }
-                shippedStatusParticpants.push(customParticipantObj)
+                shippedStatusParticipants.push(customParticipantObj)
             }
         }
         
-        return shippedStatusParticpants;
+        return shippedStatusParticipants;
     } catch (error) {
         console.error(error);
         throw new Error("Error in shippedKitStatusParticipants. ", error);
