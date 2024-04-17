@@ -1,6 +1,6 @@
 const rules = require("../updateParticipantData.json");
 const submitRules = require("../submitParticipantData.json");
-const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat, refusalWithdrawalConcepts } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submitParticipantsData = async (req, res, site) => {
@@ -185,8 +185,11 @@ const updateParticipantData = async (req, res, authObj) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
     let obj = {};
-    if (authObj) obj = authObj;
-    else {
+    let internalCall = false;
+    if (authObj) {
+        obj = authObj;
+        internalCall = true;
+    } else {
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){
@@ -237,6 +240,16 @@ const updateParticipantData = async (req, res, authObj) => {
         if (docData[dataHasBeenDestroyed] === fieldMapping.yes) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Data Destroyed'}});
+            continue;
+        }
+
+        // Refect if the participant has withdrawn consent unless the update is
+        // for data distruction or hippa withdrawal 
+        const withdrawConsent = refusalWithdrawalConcepts.withdrewConsent.toString();
+        const revokeHIPAA = refusalWithdrawalConcepts.revokeHIPAA.toString();
+        if (!internalCall && docData[withdrawConsent] === fieldMapping.yes && docData[revokeHIPAA] === fieldMapping.yes) {       
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Particpant Withdrawn'}});
             continue;
         }
 
