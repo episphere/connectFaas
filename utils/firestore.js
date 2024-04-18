@@ -2573,7 +2573,6 @@ const getParticipantsByKitStatus = async (statusType) => {
 
 const shippedKitStatusParticipants = async () => { 
     try {
-        const shippedStatusParticipants = [];
         const { collectionDetails, baseline, bioKitMouthwash, kitStatus, 
                 shipped, healthCareProvider, mouthwashSurveyCompletionStatus, shippedDateTime} = fieldMapping;
         
@@ -2586,47 +2585,40 @@ const shippedKitStatusParticipants = async () => {
                                 `${mouthwashSurveyCompletionStatus}`)
                             .get();
         
-        if (snapshot.size > 0) {
+        if (!snapshot.empty) {
+            const participants = [];
+            const kitAssemblyPromises = [];
+            const { supplyKitId, supplyKitTrackingNum, returnKitId, collectionCardId, returnKitTrackingNum } = fieldMapping;
+
             for (const docs of snapshot.docs) {
-                const participantData = docs.data();
-                const participantConnectID = participantData['Connect_ID'];
-                
-                const customParticipantObj = {
-                    "Connect_ID": participantConnectID,
-                    [healthCareProvider]: participantData[healthCareProvider],
-                    [shippedDateTime]: participantData[collectionDetails]?.[baseline]?.[bioKitMouthwash]?.[shippedDateTime] || '',
-                    [mouthwashSurveyCompletionStatus]: participantData[mouthwashSurveyCompletionStatus],
-                };
-                
-                try { 
-                    const { supplyKitId, supplyKitTrackingNum, returnKitId, collectionCardId, returnKitTrackingNum } = fieldMapping;
-                    const kitAssemblySnapshot = await db.collection("kitAssembly")
-                                                    .where('Connect_ID', '==', participantConnectID)
-                                                    .select(`${supplyKitId}`,
-                                                        `${supplyKitTrackingNum}`, 
-                                                        `${returnKitTrackingNum}`,
-                                                        `${returnKitId}`, 
-                                                        `${collectionCardId}`)
-                                                    .get();
-
-                    if (kitAssemblySnapshot.size > 0) { 
-                        const kitAssemblyData = kitAssemblySnapshot.docs[0].data();
-
-                        customParticipantObj[supplyKitId] = kitAssemblyData[supplyKitId];
-                        customParticipantObj[supplyKitTrackingNum] = kitAssemblyData[supplyKitTrackingNum];
-                        customParticipantObj[returnKitTrackingNum] = kitAssemblyData[returnKitTrackingNum];
-                        customParticipantObj[returnKitId] = kitAssemblyData[returnKitId];
-                        customParticipantObj[collectionCardId] = kitAssemblyData[collectionCardId];
-                    }
-                } catch (error) {
-                    console.error("Error in shippedKitStatusParticipants, fetching kit assembly document.", error);
-                    throw new Error("Error in shippedKitStatusParticipants, fetching kit assembly document.", error);
-                }
-                shippedStatusParticipants.push(customParticipantObj)
-            }
-        }
+                const data = docs.data();
+                const participantConnectID = data['Connect_ID'];
         
-        return shippedStatusParticipants;
+                participants.push({
+                    "Connect_ID": participantConnectID,
+                    [healthCareProvider]: data[healthCareProvider],
+                    [shippedDateTime]: data[collectionDetails]?.[baseline]?.[bioKitMouthwash]?.[shippedDateTime] || '',
+                    [mouthwashSurveyCompletionStatus]: data[mouthwashSurveyCompletionStatus],
+                });
+                
+                kitAssemblyPromises.push(
+                    db.collection("kitAssembly")
+                        .where('Connect_ID', '==', participantConnectID)
+                        .select(`${supplyKitId}`, `${supplyKitTrackingNum}`, `${returnKitTrackingNum}`, `${returnKitId}`, `${collectionCardId}`)
+                        .get()
+                );
+            }
+
+            const kitAssemblySnapshot = await Promise.all(kitAssemblyPromises);
+
+            kitAssemblySnapshot.forEach((result, index) => {
+                if(!result.empty) {
+                    const kitData = result.docs[0].data();
+                    Object.assign(participants[index], kitData);
+                }
+            });
+            return participants;
+        }
     } catch (error) {
         console.error(error);
         throw new Error("Error in shippedKitStatusParticipants. ", error);
