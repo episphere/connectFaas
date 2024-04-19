@@ -146,7 +146,7 @@ module.exports = {
      returnKitId: 194252513,
      collectionCupId: 259846815,
      collectionCardId: 786397882,
-     UKID: 687158491,
+     uniqueKitID: 687158491,
      kitType: 379252329,
      kitStatus: 221592017,
      pending: 517216441,
@@ -180,6 +180,7 @@ module.exports = {
      bloodOrUrineCollectedTimestamp: 740582332,
      collectionRound: 418571751,
      mouthwashKit: 976461859,
+     mouthwashSurveyCompletionStatus: 547363263,
 
      // EMR participant deceased data
     participantDeceased: 857217152,

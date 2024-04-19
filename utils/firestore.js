@@ -2275,7 +2275,7 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
 
 const assignKitToParticipant = async (data) => {
     try {
-        const { supplyKitId, kitStatus, pending, UKID, supplyKitTrackingNum, 
+        const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, 
             assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
             kitType, mouthwashKit } = fieldMapping;
 
@@ -2288,7 +2288,7 @@ const assignKitToParticipant = async (data) => {
         }
 
         const kitDoc = kitSnapshot.docs[0];
-        data[UKID] = kitDoc.data()[UKID];
+        data[uniqueKitID] = kitDoc.data()[uniqueKitID];
         const kitData = {
             [supplyKitTrackingNum]: data[supplyKitTrackingNum],
             [kitStatus]: assigned,
@@ -2314,7 +2314,7 @@ const assignKitToParticipant = async (data) => {
                     [bioKitMouthwash]: {
                         [kitType]: mouthwashKit,
                         [kitStatus]: assigned,
-                        [UKID]: data[UKID],
+                        [uniqueKitID]: data[uniqueKitID],
                     }
                 }
             }
@@ -2333,7 +2333,7 @@ const processVerifyScannedCode = async (id) => {
     try {
         const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
         if (snapShot.docs.length === 1) {
-            return { valid: true, UKID: snapShot.docs[0].data()[687158491] }
+            return { valid: true, uniqueKitID: snapShot.docs[0].data()[687158491] }
         }
         else { return false }
     } catch (error) {
@@ -2344,7 +2344,7 @@ const processVerifyScannedCode = async (id) => {
 
 const confirmShipmentKit = async (shipmentData) => {
     try {
-        const { collectionDetails, baseline, bioKitMouthwash, UKID } = fieldMapping;
+        const { collectionDetails, baseline, bioKitMouthwash, uniqueKitID } = fieldMapping;
 
         const kitSnapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
 
@@ -2360,7 +2360,7 @@ const confirmShipmentKit = async (shipmentData) => {
 
         await kitDoc.ref.update(kitData);
         const participantSnapshot = await db.collection("participants")
-            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${UKID}`, '==', shipmentData[UKID]).get();
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${uniqueKitID}`, '==', shipmentData[uniqueKitID]).get();
 
         if (participantSnapshot.size === 0) {
             return false;
@@ -2572,21 +2572,75 @@ const addPrintAddressesParticipants = async (data) => {
     }
 }
 
-const getParticipantSelection = async (filter) => {
+/**
+ * Returns an array of custom objects based on the participants biomouthwash kit status
+ * @param {string} statusType - concept id of the kit status's type 
+ * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData statusType.
+*/
+const getParticipantsByKitStatus = async (statusType) => {
     try {
-        if (filter === 'all') {
-            const snapshot = await db.collection("participantSelection").get();
-            return snapshot.docs.map(doc => doc.data())
+        if (statusType === fieldMapping.shipped.toString()) { // For now this will be the only status enabled for this function, more status types to be added later
+            return await shippedKitStatusParticipants();
         }
-        else {
-            const snapshot = await db.collection("participantSelection")
-                                    .where('kit_status', '==', filter)
-                                    .get();
-            return snapshot.docs.map(doc => doc.data())
-        }
+        return [];
+    } catch (error){
+        console.error(`Error in getParticipantsByKitStatus:`, error);
+        throw new Error("getParticipantsByKitStatus", error);
     }
-    catch(error){
-        return new Error(error);
+}
+
+
+const shippedKitStatusParticipants = async () => { 
+    try {
+        const { collectionDetails, baseline, bioKitMouthwash, kitStatus, 
+                shipped, healthCareProvider, mouthwashSurveyCompletionStatus, shippedDateTime} = fieldMapping;
+        
+        const snapshot = await db.collection("participants")
+                            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', shipped)
+                            .orderBy(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${shippedDateTime}`, 'asc')
+                            .select('Connect_ID', 
+                                `${healthCareProvider}`, 
+                                `${collectionDetails}`, 
+                                `${mouthwashSurveyCompletionStatus}`)
+                            .get();
+        
+        if (!snapshot.empty) {
+            const participants = [];
+            const kitAssemblyPromises = [];
+            const { supplyKitId, supplyKitTrackingNum, returnKitId, collectionCardId, returnKitTrackingNum } = fieldMapping;
+
+            for (const docs of snapshot.docs) {
+                const data = docs.data();
+                const participantConnectID = data['Connect_ID'];
+        
+                participants.push({
+                    "Connect_ID": participantConnectID,
+                    [healthCareProvider]: data[healthCareProvider],
+                    [shippedDateTime]: data[collectionDetails]?.[baseline]?.[bioKitMouthwash]?.[shippedDateTime] || '',
+                    [mouthwashSurveyCompletionStatus]: data[mouthwashSurveyCompletionStatus],
+                });
+                
+                kitAssemblyPromises.push(
+                    db.collection("kitAssembly")
+                        .where('Connect_ID', '==', participantConnectID)
+                        .select(`${supplyKitId}`, `${supplyKitTrackingNum}`, `${returnKitTrackingNum}`, `${returnKitId}`, `${collectionCardId}`)
+                        .get()
+                );
+            }
+
+            const kitAssemblySnapshot = await Promise.all(kitAssemblyPromises);
+
+            kitAssemblySnapshot.forEach((result, index) => {
+                if(!result.empty) {
+                    const kitData = result.docs[0].data();
+                    Object.assign(participants[index], kitData);
+                }
+            });
+            return participants;
+        }
+    } catch (error) {
+        console.error(error);
+        throw new Error("Error in shippedKitStatusParticipants. ", error);
     }
 }
 
@@ -3268,7 +3322,7 @@ module.exports = {
     getSiteMostRecentBoxId,
     retrieveSiteNotifications,
     addPrintAddressesParticipants,
-    getParticipantSelection,
+    getParticipantsByKitStatus,
     shipKits,
     storePackageReceipt,
     getBptlMetrics,
