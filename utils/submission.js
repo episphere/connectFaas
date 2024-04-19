@@ -56,9 +56,11 @@ const submit = async (res, data, uid) => {
             if (moduleStatusConcepts[key] && data[key] === 231311385) {
                 moduleComplete = true;
 
+                /* temp revert of code
                 if (key === '320303124') {
                     calculateScores = true;
                 }
+                */
             }
         })
 
@@ -73,10 +75,12 @@ const submit = async (res, data, uid) => {
 
             await checkDerivedVariables(token, siteCode);
 
+            /* temp revert of code
             if (calculateScores) {
                 const { processPromisResults } = require('./promis');
                 processPromisResults(uid);
             }
+            */
         }
     }
     
