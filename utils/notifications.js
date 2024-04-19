@@ -375,7 +375,13 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         });
       }
 
-      if (smsBody && fetchedData[phoneField]?.length >= 10 && fetchedData[conceptIds.canWeText] === conceptIds.yes) {
+      // Handle mixed data types of conceptIds.canWeText. Remove this after fixing bug causing string data type.
+      let canWeText = fetchedData[conceptIds.canWeText];
+      if (typeof canWeText === "object" && canWeText.integer) {
+        canWeText = canWeText.integer;
+      }
+
+      if (smsBody && fetchedData[phoneField]?.length >= 10 && canWeText === conceptIds.yes) {
         const phoneNumber = fetchedData[phoneField].replace(/\D/g, "");
         if (phoneNumber.length >= 10) {
           const currSmsBody = smsBody.replace(/<firstName>/g, firstName);
