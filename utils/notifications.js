@@ -3,11 +3,12 @@ const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret} = require("./shared");
-const {getScheduledNotifications, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
+const {getNotificationSpecById, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
 let twilioClient, messagingServiceSid;
+let isSendingNotifications = false; // A more robust soluttion is needed when using multiple servers 
 
 (async () => {
   [twilioClient, messagingServiceSid] = await setupTwilioSms();
@@ -163,19 +164,32 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
  * @param {string} message.data base64-encoded string.
  */
 async function notificationHandler(message) {
-  console.log("Received message:", JSON.stringify(message));
-  const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
-  const notificationSpecArray = await getScheduledNotifications(scheduleAt);
-  if (notificationSpecArray.length === 0) return;
-  const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
-  sgMail.setApiKey(apiKey);
-
-  const notificationPromises = [];
-  for (const notificationSpec of notificationSpecArray) {
-    notificationPromises.push(handleNotificationSpec(notificationSpec));
+  if (isSendingNotifications) {
+    console.log("notificationHandler is already running. Exiting...");
+    return;
   }
 
-  await Promise.all(notificationPromises);
+  console.log("Received message:", JSON.stringify(message));
+  isSendingNotifications = true;
+  const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
+  
+  try {
+    const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(scheduleAt);
+    if (notificationSpecArray.length === 0) return;
+    const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
+    sgMail.setApiKey(apiKey);
+
+    const notificationPromises = [];
+    for (const notificationSpec of notificationSpecArray) {
+      notificationPromises.push(handleNotificationSpec(notificationSpec));
+    }
+
+    await Promise.allSettled(notificationPromises);
+  } catch (error) {
+    console.error("Error occurred in notificationHandler.", error);
+  } finally {
+    isSendingNotifications = false;
+  }
 }
 
 async function handleNotificationSpec(notificationSpec) {
@@ -190,6 +204,7 @@ async function handleNotificationSpec(notificationSpec) {
   if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(primaryField)) {
     const scheduledTime = new Date(primaryField);
     if (scheduledTime > cutoffTime) return;
+    paramObj = {...paramObj, cutoffTimeStr: "", timeField: ""};
   } else {
     paramObj = {...paramObj, cutoffTimeStr: cutoffTime.toISOString(), timeField: primaryField};
   }
@@ -205,7 +220,7 @@ async function handleNotificationSpec(notificationSpec) {
  * @param {string} [paramObj.timeField=""] Concept ID (eg 914594314) to decide which timestamp field to use for filtering
  */
 async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr = "", timeField = "" }) {
-  const readableSpecString = notificationSpec.email?.subject || notificationSpec.category + ", " + notificationSpec.attempt;
+  const readableSpecString = notificationSpec.category + ", " + notificationSpec.attempt;
   const conditions = notificationSpec.conditions;
   const emailSubject = notificationSpec.email?.subject ?? "";
   const emailBody = notificationSpec.email?.body ?? "";
@@ -214,9 +229,10 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   const phoneField = notificationSpec.phoneField ?? "";
   const firstNameField = notificationSpec.firstNameField ?? "";
   const preferredNameField = notificationSpec.preferredNameField ?? "";
+  const newsletterCategories = ["newsletter", "eNewsletter", "anniversaryNewsletter"];
 
   let emailHtmlTemplate = emailBody;
-  if (emailBody && notificationSpec.category !== "newsletter") {
+  if (emailBody && !newsletterCategories.includes(notificationSpec.category)) {
     const converter = new showdown.Converter();
     emailHtmlTemplate = converter.makeHtml(emailBody);
   }
@@ -257,7 +273,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 
   while (hasNext) {
     try {
-      ({ fetchedDataArray, hasNext } = await getParticipantsForNotificationsBQ({
+      fetchedDataArray = await getParticipantsForNotificationsBQ({
         notificationSpecId: notificationSpec.id,
         conditions,
         cutoffTimeStr,
@@ -265,13 +281,15 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         fieldsToFetch,
         limit,
         previousConnectId,
-      }));
+      });
     } catch (error) {
       console.error(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpec.id}.`, error);
       break;
     }
 
     if (fetchedDataArray.length === 0) break;
+
+    hasNext = fetchedDataArray.length === limit;
     if (hasNext) {
       previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
     }
@@ -357,7 +375,13 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         });
       }
 
-      if (smsBody && fetchedData[phoneField]?.length >= 10 && fetchedData[conceptIds.canWeText] === conceptIds.yes) {
+      // Handle mixed data types of conceptIds.canWeText. Remove this after fixing bug causing string data type.
+      let canWeText = fetchedData[conceptIds.canWeText];
+      if (typeof canWeText === "object" && canWeText.integer) {
+        canWeText = canWeText.integer;
+      }
+
+      if (smsBody && fetchedData[phoneField]?.length >= 10 && canWeText === conceptIds.yes) {
         const phoneNumber = fetchedData[phoneField].replace(/\D/g, "");
         if (phoneNumber.length >= 10) {
           const currSmsBody = smsBody.replace(/<firstName>/g, firstName);
@@ -462,25 +486,31 @@ const storeNotificationSchema = async (req, res, authObj) => {
   if (req.body.data === undefined || Object.keys(req.body.data).length < 1)
     return res.status(400).json(getResponseJSON("Bad requuest.", 400));
 
-  const schema = req.body.data;
-  if (schema.id) {
-    const { retrieveNotificationSchemaByID } = require("./firestore");
-    const docID = await retrieveNotificationSchemaByID(schema.id);
-    if (docID === "") return res.status(404).json(getResponseJSON("Invalid notification Id.", 404));
+  try {
+    const schema = req.body.data;
+    if (schema.id) {
+      const { retrieveNotificationSchemaByID } = require("./firestore");
+      const docID = await retrieveNotificationSchemaByID(schema.id);
+      if (docID === "") return res.status(404).json(getResponseJSON("Invalid notification Id.", 404));
 
-    const { updateNotificationSchema } = require("./firestore");
-    schema["modifiedAt"] = new Date().toISOString();
-    if (authObj.userEmail) schema["modifiedBy"] = authObj.userEmail;
-    await updateNotificationSchema(docID, schema);
-  } else {
-    schema["id"] = uuid();
-    const { storeNewNotificationSchema } = require("./firestore");
-    schema["createdAt"] = new Date().toISOString();
-    if (authObj.userEmail) schema["createdBy"] = authObj.userEmail;
-    await storeNewNotificationSchema(schema);
+      const { updateNotificationSchema } = require("./firestore");
+      schema["modifiedAt"] = new Date().toISOString();
+      if (authObj.userEmail) schema["modifiedBy"] = authObj.userEmail;
+      await updateNotificationSchema(docID, schema);
+    } else {
+      schema["id"] = uuid();
+      const { storeNewNotificationSchema } = require("./firestore");
+      schema["createdAt"] = new Date().toISOString();
+      if (authObj.userEmail) schema["createdBy"] = authObj.userEmail;
+      await storeNewNotificationSchema(schema);
+    }
+
+    return res.status(200).json({ message: "Success!", code: 200, data: [{ schemaId: schema.id }] });
+  } catch (error) {
+    console.error("Error occurred storing notification schema.", error);
+    return res.status(500).json({ message: error.message, code: 500, data: [] });
   }
 
-  return res.status(200).json({ message: "Success!", code: 200, data: [{ schemaId: schema.id }] });
 };
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
@@ -661,6 +691,97 @@ const sendEmailLink = async (req, res) => {
     }
 };
 
+const dryRunNotificationSchema = async (req, res) => {
+  if (req.method !== "GET") {
+    return res.status(405).json({data: [], message: "Only GET requests are accepted!", code: 405});
+  }
+
+  if (!req.query.schemaId) {
+    return res.status(400).json({data: [], message: "schemaId is missing in request parameter!", code: 400});
+  }
+
+  let countData = { emailCount: 0, smsCount: 0 };
+  let message = "Ok";
+  let spec = null;
+
+  try {
+    spec = await getNotificationSpecById(req.query.schemaId);
+  } catch (error) {
+    return res.status(500).json({ data: [], message: JSON.stringify(error, null, 2), code: 500 });
+  }
+
+  if (!spec) {
+    message = `Notification spec ID ${req.query.schemaId} isn't found.`;
+    return res.status(404).json({ data: [], message, code: 404 });
+  }
+
+  let timeField = spec.primaryField;
+  let cutoffTime = new Date();
+  let cutoffTimeStr = cutoffTime.toISOString();
+  cutoffTime.setDate(cutoffTime.getDate() - spec.time.day);
+  cutoffTime.setHours(cutoffTime.getHours() - spec.time.hour);
+  cutoffTime.setMinutes(cutoffTime.getMinutes() - spec.time.minute);
+
+  if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(spec.primaryField)) {
+    const scheduledTime = new Date(spec.primaryField);
+    if (scheduledTime > cutoffTime) return res.status(200).json({ data: [], message, code: 200 });
+    timeField = "";
+    cutoffTimeStr = "";
+  }
+
+  const emailField = spec.emailField ?? "";
+  const emailBody = spec.email?.body ?? "";
+  const phoneField = spec.phoneField ?? "";
+  const smsBody = spec.sms?.body ?? "";
+
+  let fieldsToFetch = ["token"];
+  emailField && fieldsToFetch.push(emailField);
+  phoneField && fieldsToFetch.push(phoneField);
+  smsBody && fieldsToFetch.push(conceptIds.canWeText.toString());
+
+  const limit = 9000;
+  let previousConnectId = 0;
+  let hasNext = true;
+  let fetchedDataArray = [];
+
+  while (hasNext) {
+    try {
+      fetchedDataArray = await getParticipantsForNotificationsBQ({
+        notificationSpecId: spec.id,
+        conditions: spec.conditions,
+        cutoffTimeStr,
+        timeField,
+        fieldsToFetch,
+        limit,
+        previousConnectId,
+      });
+    } catch (error) {
+      return res.status(500).json({ data: [countData], message: JSON.stringify(error, null, 2), code: 500 });
+    }
+
+    if (fetchedDataArray.length === 0) break;
+    hasNext = fetchedDataArray.length === limit;
+    if (hasNext) {
+      previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
+    }
+
+    for (const fetchedData of fetchedDataArray) {
+      if (!fetchedData[emailField] && !fetchedData[phoneField]) continue;
+
+      if (emailBody && validEmailFormat.test(fetchedData[emailField])) {
+        countData.emailCount++;
+      }
+
+      if (smsBody && fetchedData[phoneField]?.length >= 10 && fetchedData[conceptIds.canWeText] === conceptIds.yes) {
+        countData.smsCount++;
+      }
+    }
+
+  }
+
+  return res.status(200).json({ data: [countData], message, code: 200 });
+};
+
 module.exports = {
     subscribeToNotification,
     retrieveNotifications,
@@ -670,5 +791,6 @@ module.exports = {
     getParticipantNotification,
     sendEmail,
     getSiteNotification,
-    sendEmailLink
+    sendEmailLink,
+    dryRunNotificationSchema,
 }

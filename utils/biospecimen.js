@@ -56,25 +56,25 @@ const biospecimenAPIs = async (req, res) => {
         obj = { role, siteAcronym, isBPTLUser, isBiospecimenUser, email };
         if(siteCode !== 0) obj['siteCode'] = siteCode;
     }
-    
-    
-    if(api === 'getParticipants') {
+
+    if(api === 'getFilteredParticipants') {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        if(req.query.type === 'filter') {
-            const queries = req.query;
-            delete queries.type;
-            if(Object.keys(queries).length === 0) return res.status(404).json(getResponseJSON('Please include parameters to filter data.', 400));
-            const { filterData } = require('./shared');
-            const result = await filterData(queries, siteCode);
-            if(result instanceof Error){
-                return res.status(500).json(getResponseJSON(result.message, 500));
-            }
-            return res.status(200).json({data: result, code: 200})
+
+        // req.query includes 'api' key plus query params from the participant search form.
+        if(Object.keys(req.query).length < 2) {
+            return res.status(400).json(getResponseJSON('Please include parameters to filter data.', 400));
         }
-        else{
-            return res.status(400).json(getResponseJSON('Bad request!', 400));
+
+        try {
+            req.query.source = 'biospecimen';
+            const { getFilteredParticipants } = require('./submission');
+            
+            return await getFilteredParticipants(req, res, obj);
+        } catch (error) {
+            console.error('Error in getFilteredParticipants.', error);
+            return res.status(500).json(getResponseJSON('An error occurred while searching for this participant. Please try again later.', 500));
         }
     }
 
@@ -757,12 +757,12 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
+        
         try {
-            const { queryTotalAddressesToPrint } = require('./firestore');
-            const response = await queryTotalAddressesToPrint();
+            const { queryHomeCollectionAddressesToPrint } = require('./firestore');
+            const response = await queryHomeCollectionAddressesToPrint();
             return res.status(200).json({data: response, code:200});
-        }
-        catch (error) {
+        } catch (error) {
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -806,12 +806,12 @@ const biospecimenAPIs = async (req, res) => {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
+        
         try {
             const { eligibleParticipantsForKitAssignment } = require('./firestore');
             const response = await eligibleParticipantsForKitAssignment();
             return res.status(200).json({data: response, code:200});
-        }
-        catch {
+        } catch (error){
             console.error(error);
             return res.status(500).json(getResponseJSON(error.message, 500));
         }
@@ -827,18 +827,27 @@ const biospecimenAPIs = async (req, res) => {
         return res.status(200).json({data: response, code:200})
     }
 
-     // Participant Selection with filter GET- BPTL 
-    else if(api === 'getParticipantSelection') {
+    else if(api === 'getParticipantsByKitStatus') {
         if(req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        const query = req.query.type;
-        if(Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include parameter to filter data.', 400));
-        const { getParticipantSelection } = require('./firestore');
-        const response = await getParticipantSelection(query);
-        if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
-        console.log('res', response)
-        return res.status(200).json({data: response, code:200})
+        try {
+            const statusType = req.query.type;
+            const kitStatusOptions = [fieldMapping.pending.toString(), fieldMapping.addressPrinted.toString(), 
+                fieldMapping.assigned.toString(),fieldMapping.shipped.toString(), fieldMapping.received.toString()];
+            
+            if (!statusType) return res.status(400).json(getResponseJSON('The type of kit status value is empty.', 400));
+            if (!kitStatusOptions.includes(statusType)) return res.status(400).json(getResponseJSON('The type of kit status value is not one of the available options.', 400));
+            
+            const { getParticipantsByKitStatus } = require('./firestore');
+            const response = await getParticipantsByKitStatus(statusType);
+            
+            if(!response) return res.status(404).json(getResponseJSON('No matching document found!', 404));
+            return res.status(200).json({data: response, code:200});
+        } catch (error) { 
+            console.error(error);
+            return res.status(500).json(getResponseJSON(error.message, 500));
+        }
     }
 
     else if(api === 'getSiteMostRecentBoxId'){

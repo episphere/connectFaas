@@ -1,6 +1,6 @@
 const rules = require("../updateParticipantData.json");
 const submitRules = require("../submitParticipantData.json");
-const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat, refusalWithdrawalConcepts } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submitParticipantsData = async (req, res, site) => {
@@ -172,7 +172,7 @@ const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
 }
 
 const updateParticipantData = async (req, res, authObj) => {
-    const { getParticipantData, updateParticipantData, writeCancerOccurrences } = require('./firestore');
+    const { getParticipantData, updateParticipantData: updateParticipantDataFirestore, writeCancerOccurrences } = require('./firestore');
     const { checkForQueryFields, flattenObject, initializeTimestamps, userProfileHistoryKeys } = require('./shared');
     const { checkDerivedVariables } = require('./validation');
 
@@ -185,8 +185,11 @@ const updateParticipantData = async (req, res, authObj) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
     let obj = {};
-    if (authObj) obj = authObj;
-    else {
+    let internalCall = false;
+    if (authObj) {
+        obj = authObj;
+        internalCall = true;
+    } else {
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){
@@ -211,6 +214,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const dataArray = req.body.data;
     let responseArray = [];
     let error = false;
+    let docCount = 0;
 
     for(let dataObj of dataArray) {
         if(dataObj.token === undefined) {
@@ -236,6 +240,16 @@ const updateParticipantData = async (req, res, authObj) => {
         if (docData[dataHasBeenDestroyed] === fieldMapping.yes) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Data Destroyed'}});
+            continue;
+        }
+
+        // Refect if the participant has withdrawn consent unless the update is
+        // for data distruction or hippa withdrawal 
+        const withdrawConsent = refusalWithdrawalConcepts.withdrewConsent.toString();
+        const revokeHIPAA = refusalWithdrawalConcepts.revokeHIPAA.toString();
+        if (!internalCall && docData[withdrawConsent] === fieldMapping.yes && docData[revokeHIPAA] === fieldMapping.yes) {       
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Particpant Withdrawn'}});
             continue;
         }
 
@@ -354,12 +368,13 @@ const updateParticipantData = async (req, res, authObj) => {
         
         try {
             const promises = [];
-            if (Object.keys(flatUpdateObj).length > 0) promises.push(updateParticipantData(docID, flatUpdateObj));
+            if (Object.keys(flatUpdateObj).length > 0) promises.push(updateParticipantDataFirestore(docID, flatUpdateObj));
             if (finalizedCancerOccurrenceArray.length > 0) promises.push(writeCancerOccurrences(finalizedCancerOccurrenceArray));
             await Promise.all(promises);
             await checkDerivedVariables(participantToken, docData['827220437']);
             
             responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
+            docCount++;
         } catch (e) {
             // Alert the user about the error for this participant but continue to process the rest of the participants.
             console.error(`Server error updating participant at updateParticipantData & checkDerivedVariables. ${e}`);
@@ -369,6 +384,7 @@ const updateParticipantData = async (req, res, authObj) => {
         }
     }
 
+    console.log(`Updated ${docCount} participant records.`);
     return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
 }
 
