@@ -2050,11 +2050,11 @@ const getEmailNotifications = async (scheduleAt) => {
 }
 
 /**
- * Get all notification specifications that are not drafts and match the scheduleAt time.
+ * Get all notification specifications that are not drafts and match the scheduleAt time. This function can be run multiple times per day, for testing.
  * @param {string} scheduleAt Time of day to send notifications, eg. '15:00'
  * @returns 
  */
-const getScheduledNotifications = async (scheduleAt) => {
+const getNotificationSpecsBySchedule = async (scheduleAt) => {
   const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
   let notificationSpecArray = [];
   for (const doc of snapshot.docs) {
@@ -2065,10 +2065,37 @@ const getScheduledNotifications = async (scheduleAt) => {
   return notificationSpecArray;
 };
 
-const getNotification = async (id) => {
+/**
+ * Get all notification specifications that are not drafts and match the scheduleAt time. This function is run once per day, for production use.
+ * @param {string} scheduleAt Time of day to send notifications, eg. '15:00'
+ * @returns 
+ */
+const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
+  const eastTimezone = { timezone: "America/New_York" };
+  const currTime = new Date();
+  const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
+  const currTimeIsoStr = currTime.toISOString();
+  const batch = db.batch();
+  const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  let notificationSpecArray = [];
+  for (const doc of snapshot.docs) {
+    const docData = doc.data();
+    const lastRunTime = docData.lastRunTime || "2020-01-01";
+    const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
+    if (!docData.isDraft && docData.id && currDate !== lastRunDate) {
+      notificationSpecArray.push(docData);
+      batch.update(doc.ref, { lastRunTime: currTimeIsoStr });
+    }
+  }
+
+  await batch.commit(); // batch limit: 500
+  return notificationSpecArray;
+};
+
+const getNotificationSpecById = async (id) => {
     const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
 
-    return snapshot.docs[0].data();
+    return snapshot.empty ? null : snapshot.docs[0].data();
 }
 
 const addKitAssemblyData = async (data) => {
@@ -2121,29 +2148,45 @@ const checkCollectionUniqueness = async (supplyId, collectionId) => {
     }
 };
 
+const participantHomeCollectionKitFields = [
+    fieldMapping.collectionDetails.toString(),
+    fieldMapping.firstName.toString(),
+    fieldMapping.lastName.toString(),
+    fieldMapping.address1.toString(),
+    fieldMapping.address2.toString(),
+    fieldMapping.city.toString(),
+    fieldMapping.state.toString(),
+    fieldMapping.zip.toString(),
+    'Connect_ID',
+];
+
 /**
  * Creates new array based on query below.
  * Each participant object is transformed into a new object or an empty array.
  * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData function.
  * Ex. [{first_name: 'John', last_name: 'Doe', address_1: '123 Main St', address_2: '', city: 'Anytown', state: 'NY', zip_code: '12345', connect_id: 123457890}, ...]
  */
-const queryTotalAddressesToPrint = async () => {
+// TODO: Suboptimal process. Would benefit from direct query on a {kitStatus: initialized} or {completed: no} variable, which could be assigned on kit creation in Biospecimen.
+// This will get progressively slower and more expensive as participants are added.
+// TODO: A sliding time window would be more efficient in the .where(<timestamp>) query.
+const queryHomeCollectionAddressesToPrint = async () => {
     try {
         const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
             collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
         const snapshot = await db.collection('participants')
-        .where(withdrawConsent.toString(), '==', no)
-        .where(participantDeceasedNORC.toString(), '==', no)
-        .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
-        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
-        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
-        .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
-        .get();
-        return snapshot.docs.map(document => processParticipantData(document.data(), true));
+            .where(withdrawConsent.toString(), '==', no)
+            .where(participantDeceasedNORC.toString(), '==', no)
+            .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
+            .select(...participantHomeCollectionKitFields)
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
+            .get();
+
+        return snapshot.docs.map(document => processParticipantHomeMouthwashKitData(document.data(), true));
     } catch (error) {
-        console.error(error);
-        return new Error(error);
+        throw new Error(`Error querying home collection addresses to print`, {cause: error});
     }
 }
 
@@ -2158,15 +2201,19 @@ const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
 
 const eligibleParticipantsForKitAssignment = async () => {
     try {
-        const { collectionDetails, baseline, bioKitMouthwash, kitStatus } = fieldMapping;
+        const { addressPrinted, collectionDetails, baseline, bioKitMouthwash, bloodOrUrineCollectedTimestamp, kitStatus } = fieldMapping;
 
-        const snapshot = await db.collection("participants").where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', fieldMapping.addressPrinted).get();
-        if (snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
-        else return false;
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
+        const snapshot = await db.collection("participants")
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', addressPrinted)
+            .select(...participantHomeCollectionKitFields)
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
+            .get();
+
+        return snapshot.size === 0
+            ? []
+            : snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), false));;
+    } catch(error) {
+        throw new Error('Error getting Eligible Kit Assignment Participants.', {cause: error});
     }
 }
 
@@ -2205,31 +2252,30 @@ const addKitStatusToParticipant = async (participantsCID) => {
     }
 };
 
-const processParticipantData = (record, printLabel) => {
-    const { collectionDetails, baseline, bioKitMouthwash } = fieldMapping;
+// Note: existing snake_casing follows through to BPTL CSV reporting. Do not update to camelCase without prior communication.
+const processParticipantHomeMouthwashKitData = (record, printLabel) => {
+    const { collectionDetails, baseline, bioKitMouthwash, firstName, lastName, address1, address2, city, state, zip } = fieldMapping;
 
-    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;
+    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;    
     const processedRecord = {
-        first_name: record['399159511'],
-        last_name: record['996038075'],
-        address_1: record['521824358'],
-        address_2: record['442166669'] || '',
-        city: record['703385619'],
-        state: record['634434746'],
-        zip_code: record['892050548'],
+        first_name: record[firstName],
+        last_name: record[lastName],
+        address_1: record[address1],
+        address_2: record[address2] || '',
+        city: record[city],
+        state: record[state],
+        zip_code: record[zip], 
         connect_id: record['Connect_ID'],
     };
-    if ((!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)) {
-        return processedRecord;
-    }
-    else {
-        return [];
-    }
+
+    return (!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)
+        ? processedRecord
+        : [];
 }
 
 const assignKitToParticipant = async (data) => {
     try {
-        const { supplyKitId, kitStatus, pending, UKID, supplyKitTrackingNum, 
+        const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, 
             assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
             kitType, mouthwashKit } = fieldMapping;
 
@@ -2242,7 +2288,7 @@ const assignKitToParticipant = async (data) => {
         }
 
         const kitDoc = kitSnapshot.docs[0];
-        data[UKID] = kitDoc.data()[UKID];
+        data[uniqueKitID] = kitDoc.data()[uniqueKitID];
         const kitData = {
             [supplyKitTrackingNum]: data[supplyKitTrackingNum],
             [kitStatus]: assigned,
@@ -2268,7 +2314,7 @@ const assignKitToParticipant = async (data) => {
                     [bioKitMouthwash]: {
                         [kitType]: mouthwashKit,
                         [kitStatus]: assigned,
-                        [UKID]: data[UKID],
+                        [uniqueKitID]: data[uniqueKitID],
                     }
                 }
             }
@@ -2287,7 +2333,7 @@ const processVerifyScannedCode = async (id) => {
     try {
         const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
         if (snapShot.docs.length === 1) {
-            return { valid: true, UKID: snapShot.docs[0].data()[687158491] }
+            return { valid: true, uniqueKitID: snapShot.docs[0].data()[687158491] }
         }
         else { return false }
     } catch (error) {
@@ -2298,7 +2344,7 @@ const processVerifyScannedCode = async (id) => {
 
 const confirmShipmentKit = async (shipmentData) => {
     try {
-        const { collectionDetails, baseline, bioKitMouthwash, UKID } = fieldMapping;
+        const { collectionDetails, baseline, bioKitMouthwash, uniqueKitID } = fieldMapping;
 
         const kitSnapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
 
@@ -2314,7 +2360,7 @@ const confirmShipmentKit = async (shipmentData) => {
 
         await kitDoc.ref.update(kitData);
         const participantSnapshot = await db.collection("participants")
-            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${UKID}`, '==', shipmentData[UKID]).get();
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${uniqueKitID}`, '==', shipmentData[uniqueKitID]).get();
 
         if (participantSnapshot.size === 0) {
             return false;
@@ -2526,21 +2572,75 @@ const addPrintAddressesParticipants = async (data) => {
     }
 }
 
-const getParticipantSelection = async (filter) => {
+/**
+ * Returns an array of custom objects based on the participants biomouthwash kit status
+ * @param {string} statusType - concept id of the kit status's type 
+ * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData statusType.
+*/
+const getParticipantsByKitStatus = async (statusType) => {
     try {
-        if (filter === 'all') {
-            const snapshot = await db.collection("participantSelection").get();
-            return snapshot.docs.map(doc => doc.data())
+        if (statusType === fieldMapping.shipped.toString()) { // For now this will be the only status enabled for this function, more status types to be added later
+            return await shippedKitStatusParticipants();
         }
-        else {
-            const snapshot = await db.collection("participantSelection")
-                                    .where('kit_status', '==', filter)
-                                    .get();
-            return snapshot.docs.map(doc => doc.data())
-        }
+        return [];
+    } catch (error){
+        console.error(`Error in getParticipantsByKitStatus:`, error);
+        throw new Error("getParticipantsByKitStatus", error);
     }
-    catch(error){
-        return new Error(error);
+}
+
+
+const shippedKitStatusParticipants = async () => { 
+    try {
+        const { collectionDetails, baseline, bioKitMouthwash, kitStatus, 
+                shipped, healthCareProvider, mouthwashSurveyCompletionStatus, shippedDateTime} = fieldMapping;
+        
+        const snapshot = await db.collection("participants")
+                            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', shipped)
+                            .orderBy(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${shippedDateTime}`, 'asc')
+                            .select('Connect_ID', 
+                                `${healthCareProvider}`, 
+                                `${collectionDetails}`, 
+                                `${mouthwashSurveyCompletionStatus}`)
+                            .get();
+        
+        if (!snapshot.empty) {
+            const participants = [];
+            const kitAssemblyPromises = [];
+            const { supplyKitId, supplyKitTrackingNum, returnKitId, collectionCardId, returnKitTrackingNum } = fieldMapping;
+
+            for (const docs of snapshot.docs) {
+                const data = docs.data();
+                const participantConnectID = data['Connect_ID'];
+        
+                participants.push({
+                    "Connect_ID": participantConnectID,
+                    [healthCareProvider]: data[healthCareProvider],
+                    [shippedDateTime]: data[collectionDetails]?.[baseline]?.[bioKitMouthwash]?.[shippedDateTime] || '',
+                    [mouthwashSurveyCompletionStatus]: data[mouthwashSurveyCompletionStatus],
+                });
+                
+                kitAssemblyPromises.push(
+                    db.collection("kitAssembly")
+                        .where('Connect_ID', '==', participantConnectID)
+                        .select(`${supplyKitId}`, `${supplyKitTrackingNum}`, `${returnKitTrackingNum}`, `${returnKitId}`, `${collectionCardId}`)
+                        .get()
+                );
+            }
+
+            const kitAssemblySnapshot = await Promise.all(kitAssemblyPromises);
+
+            kitAssemblySnapshot.forEach((result, index) => {
+                if(!result.empty) {
+                    const kitData = result.docs[0].data();
+                    Object.assign(participants[index], kitData);
+                }
+            });
+            return participants;
+        }
+    } catch (error) {
+        console.error(error);
+        throw new Error("Error in shippedKitStatusParticipants. ", error);
     }
 }
 
@@ -3210,9 +3310,10 @@ module.exports = {
     updateNotificationSchema,
     getNotificationHistoryByParticipant,
     getNotificationsCategories,
-    getNotification,
+    getNotificationSpecById,
     getEmailNotifications,
-    getScheduledNotifications,
+    getNotificationSpecsBySchedule,
+    getNotificationSpecsByScheduleOncePerDay,
     getKitAssemblyData,
     storeSiteNotifications,
     getCoordinatingCenterEmail,
@@ -3221,7 +3322,7 @@ module.exports = {
     getSiteMostRecentBoxId,
     retrieveSiteNotifications,
     addPrintAddressesParticipants,
-    getParticipantSelection,
+    getParticipantsByKitStatus,
     shipKits,
     storePackageReceipt,
     getBptlMetrics,
@@ -3243,7 +3344,7 @@ module.exports = {
     getSpecimensByBoxedStatus,
     addKitAssemblyData,
     updateKitAssemblyData,
-    queryTotalAddressesToPrint,
+    queryHomeCollectionAddressesToPrint,
     checkCollectionUniqueness,
     processVerifyScannedCode,
     assignKitToParticipant,

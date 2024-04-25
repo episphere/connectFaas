@@ -46,6 +46,24 @@ const dashboard = async (req, res) => {
     } else if (api === 'getParticipants') {
         const { getParticipants } = require('./submission');
         return await getParticipants(req, res, authObj);
+    } else if (api === 'getFilteredParticipants') {
+        if (req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        
+        // req.query includes 'api' key plus query params from the participant search form.
+        if(Object.keys(req.query).length < 2) {
+            return res.status(400).json(getResponseJSON('Please include at least one search parameter.', 400));
+        }
+        
+        try {
+            req.query.source = 'dashboard';
+            const { getFilteredParticipants } = require('./submission');
+            return await getFilteredParticipants(req, res, authObj);
+        } catch (error) {
+            console.error('Error in getFilteredParticipants.', error);
+            return res.status(500).json(getResponseJSON('An error occurred while searching for this participant. Please try again later.', 500));
+        }
     } else if (api === 'identifyParticipant' && isParent === false) {
         const { identifyParticipant } = require('./submission');
         return await identifyParticipant(req, res, siteCodes);
@@ -91,6 +109,9 @@ const dashboard = async (req, res) => {
     } else if (api === 'participantDataCorrection') {
         const { participantDataCorrection } = require('./sites');
         return await participantDataCorrection(req, res);
+    } else if (api === "dryRunNotificationSchema") {
+        const { dryRunNotificationSchema } = require('./notifications');
+        return await dryRunNotificationSchema(req, res);
     }
     else {
         return res.status(404).json(getResponseJSON('API not found!', 404));

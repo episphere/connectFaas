@@ -449,7 +449,8 @@ const checkRefusalWithdrawals = (data) => {
         data['773707518'] === 353358909 ||
         data['831041022'] === 353358909 ||
         data['906417725'] === 353358909 ||
-        data['987563196'] === 353358909
+        data['987563196'] === 353358909 ||
+        data['831041022'] === 353358909
     ); 
 
     return anyRefusalWithdrawal;
