@@ -366,6 +366,12 @@ const updateParticipantData = async (req, res, authObj) => {
             flatUpdateObj[fieldMapping.userProfileHistory] = updateUserProfileHistory(dataObj, docData, siteCodes);
         }
         
+        // Many participants signed up before the 861639549: 104430631 value was set as a default variable, so it is null. This is the case in many profiles before mid-2023.
+        // When a participant requests data destruction in SMDB, 861639549: 104430631 needs to be set if it is null.
+        if (flatUpdateObj[fieldMapping.participantMap.destroyData] === fieldMapping.yes){
+            flatUpdateObj[fieldMapping.participantMap.dataHasBeenDestroyed] = fieldMapping.no;
+        }
+
         try {
             const promises = [];
             if (Object.keys(flatUpdateObj).length > 0) promises.push(updateParticipantDataFirestore(docID, flatUpdateObj));
