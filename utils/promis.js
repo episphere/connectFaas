@@ -59,9 +59,9 @@ const processPromisResults = async (uid) => {
 const getScoringData = async (id, data) => {
 
     const formData = new URLSearchParams();
-    const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/`;
+    const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/${id}.json`;
 
-    console.log(data);
+    console.log(url);
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
     });
@@ -69,7 +69,7 @@ const getScoringData = async (id, data) => {
     console.log(formData);
 
     try {
-        const response = await fetch(`${url}${id}.json`, {
+        const response = await fetch(url, {
             method: "POST",
             headers: {
                 "Authorization": "Basic " + generatePromisAuthToken(),
