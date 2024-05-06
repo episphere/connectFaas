@@ -77,7 +77,7 @@ const getScoringData = async (id, data) => {
             },
             body: formData.toString()
         });
-
+        console.log(response);
         const scores = await response.json();
 
         if (scores.ItemErrors) {
