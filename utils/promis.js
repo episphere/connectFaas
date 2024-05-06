@@ -64,6 +64,8 @@ const getScoringData = async (id, data) => {
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
     });
+    
+    console.log(`ID: ${id}`);
 
     try {
         const response = await fetch(`${url}${id}.json`, {
