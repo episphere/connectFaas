@@ -65,8 +65,6 @@ const getScoringData = async (id, data) => {
         formData.append(key, data[key]);
     });
 
-    console.log(`ID: ${id}`);
-
     try {
         const response = await fetch(`${url}${id}.json`, {
             method: "POST",
@@ -77,12 +75,13 @@ const getScoringData = async (id, data) => {
             body: formData.toString()
         });
 
-        console.log(response);
         const scores = await response.json();
 
         if (scores.ItemErrors) {
             throw new Error('Errors in request data sent to PROMIS Scoring API', scores.ItemErrors);
         }
+
+        console.log(scores);
 
         return scores.Form[0];
     }
