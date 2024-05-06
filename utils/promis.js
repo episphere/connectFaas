@@ -65,6 +65,8 @@ const getScoringData = async (id, data) => {
         formData.append(key, data[key]);
     });
 
+    console.log(formData);
+
     try {
         const response = await fetch(`${url}${id}.json`, {
             method: "POST",
