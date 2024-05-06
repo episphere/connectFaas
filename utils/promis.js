@@ -59,7 +59,7 @@ const processPromisResults = async (uid) => {
 const getScoringData = async (id, data) => {
 
     const formData = new URLSearchParams();
-    const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/${id}.json`;
+    const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/A0511754-DFB1-4492-81D9-1FC3ED3DD31C.json`;
 
     console.log(url);
     Object.keys(data).forEach(key => {
