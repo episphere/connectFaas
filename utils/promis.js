@@ -61,6 +61,7 @@ const getScoringData = async (id, data) => {
     const formData = new URLSearchParams();
     const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/`;
 
+    console.log(data);
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
     });
