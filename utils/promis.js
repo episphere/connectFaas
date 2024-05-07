@@ -14,6 +14,7 @@ const generatePromisAuthToken = async () => {
 
 const processPromisResults = async (uid) => {
 
+    console.log('Processing PROMIS Results');
     const { surveyExists, updateSurvey } = require('./firestore');
 
     const collection = 'promis_v1';
@@ -42,6 +43,7 @@ const processPromisResults = async (uid) => {
                 }
             }
 
+            console.log('Scoring Data: ', promisConfig[form].id);
             const scores = await getScoringData(promisConfig[form].id, scoringData);
 
             if (scores) {
@@ -52,6 +54,7 @@ const processPromisResults = async (uid) => {
     }
 
     if (Object.keys(scoresPayload).length > 0) {
+        console.log(doc.id);
         await updateSurvey(scoresPayload, collection, doc);
     }
 }
