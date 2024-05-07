@@ -23,6 +23,7 @@ const processPromisResults = async (uid) => {
 
     const forms = Object.keys(promisConfig);
     const scoresPayload = {};
+    const scoresPromises = [];
 
     for (let form of forms) {
         const sourceQuestion = surveyResults[promisConfig[form].source];
@@ -44,19 +45,25 @@ const processPromisResults = async (uid) => {
             }
 
             console.log('Scoring Data: ', promisConfig[form].id);
-            const scores = await getScoringData(promisConfig[form].id, scoringData);
-
-            if (scores) {
-                scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
-                scoresPayload[promisConfig[form].error] = parseInt(scores['SError']);
-            }
+            scorePromises.push(
+                getScoringData(promisConfig[form].id, scoringData).then(scores => {
+                    if (scores) {
+                        scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
+                        scoresPayload[promisConfig[form].error] = parseInt(scores['SError']);
+                    }
+                })
+            );
         }
     }
 
-    if (Object.keys(scoresPayload).length > 0) {
-        console.log(doc.id);
-        await updateSurvey(scoresPayload, collection, doc);
-    }
+    Promise.all(scorePromises).then(async () => {
+        if (Object.keys(scoresPayload).length > 0) {
+            console.log(doc.id);
+            await updateSurvey(scoresPayload, collection, doc);
+        }
+    }).catch(error => {
+        console.error("Error in processing scoring data:", error);
+    });
 }
 
 const getScoringData = async (id, data) => {
