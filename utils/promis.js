@@ -43,6 +43,7 @@ const processPromisResults = async (uid) => {
             }
 
             const scores = await getScoringData(promisConfig[form].id, scoringData);
+            console.log(scores);
 
             if (scores) {
                 scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
@@ -81,8 +82,6 @@ const getScoringData = async (id, data) => {
         if (scores.ItemErrors) {
             throw new Error(`Errors in request data sent to PROMIS Scoring API: ${scores.ItemErrors}`);
         }
-
-        console.log(scores);
 
         return scores.Form[0];
     }
