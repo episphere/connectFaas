@@ -3236,21 +3236,6 @@ const generateSignInWithEmailLink = async (email, continueUrl) => {
     });
 };
 
-const run = async () => {
-    const snapshot = await db.collection('participants').where('320303124', '==', 231311385).get();
-
-    const { processPromisResults } = require('./promis');
-    for(const doc of snapshot.docs) {
-        const data = doc.data();
-        const uid = data['state'].uid;
-        console.log(uid);
-        processPromisResults(uid);
-        
-    }
-}
-
-run();
-
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3375,6 +3360,5 @@ module.exports = {
     writeCancerOccurrences,
     updateParticipantCorrection,
     updateSurveyEligibility,
-    generateSignInWithEmailLink,
-    run
+    generateSignInWithEmailLink
 }
