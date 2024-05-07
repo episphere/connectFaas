@@ -7,6 +7,9 @@ const generatePromisAuthToken = () => {
     const uoid = getSecret(process.env.PROMIS_UOID);
     const token = getSecret(process.env.PROMIS_TOKEN);
 
+    console.log(uoid);
+    console.log(token);
+
     const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
     const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
     return encoded;
@@ -59,8 +62,9 @@ const processPromisResults = async (uid) => {
 const getScoringData = async (id, data) => {
 
     const formData = new URLSearchParams();
-    const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/A0511754-DFB1-4492-81D9-1FC3ED3DD31C.json`;
-
+    // const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/A0511754-DFB1-4492-81D9-1FC3ED3DD31C.json`;
+    const url = 'https://dcb-promis.cit.nih.gov/2014-01/Forms/.json';
+    
     console.log(url);
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
