@@ -1,11 +1,11 @@
 const CryptoJS = require('crypto-js');
 
-const generatePromisAuthToken = () => {
+const generatePromisAuthToken = async () => {
 
     const { getSecret } = require('./shared');
 
-    const uoid = getSecret(process.env.PROMIS_UOID);
-    const token = getSecret(process.env.PROMIS_TOKEN);
+    const uoid = await getSecret(process.env.PROMIS_UOID);
+    const token = await getSecret(process.env.PROMIS_TOKEN);
 
     console.log(uoid);
     console.log(token);
@@ -62,13 +62,13 @@ const processPromisResults = async (uid) => {
 const getScoringData = async (id, data) => {
 
     const formData = new URLSearchParams();
-    // const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/A0511754-DFB1-4492-81D9-1FC3ED3DD31C.json`;
-    const url = 'https://dcb-promis.cit.nih.gov/2014-01/Forms/.json';
-    
+    const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/A0511754-DFB1-4492-81D9-1FC3ED3DD31C.json`;
+    // const url = 'https://dcb-promis.cit.nih.gov/2014-01/Forms/.json';
+    const token = await generatePromisAuthToken();
     console.log(url);
-    Object.keys(data).forEach(key => {
+    /*Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
-    });
+    });*/
 
     console.log(formData);
 
@@ -76,10 +76,10 @@ const getScoringData = async (id, data) => {
         const response = await fetch(url, {
             method: "POST",
             headers: {
-                "Authorization": "Basic " + generatePromisAuthToken(),
+                "Authorization": `Basic ${token}`,
                 "Content-Type": "application/x-www-form-urlencoded"
             },
-            body: formData.toString()
+            //body: formData.toString()
         });
         console.log(response);
         const scores = await response.json();
