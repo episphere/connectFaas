@@ -44,7 +44,6 @@ const processPromisResults = async (uid) => {
                 }
             }
 
-            console.log('Scoring Data: ', promisConfig[form].id);
             scoresPromises.push(
                 getScoringData(promisConfig[form].id, scoringData).then(scores => {
                     if (scores) {
@@ -58,7 +57,6 @@ const processPromisResults = async (uid) => {
 
     Promise.all(scoresPromises).then(async () => {
         if (Object.keys(scoresPayload).length > 0) {
-            console.log(doc.id);
             await updateSurvey(scoresPayload, collection, doc);
         }
     }).catch(error => {
