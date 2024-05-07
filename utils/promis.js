@@ -43,13 +43,8 @@ const processPromisResults = async (uid) => {
             }
 
             const scores = await getScoringData(promisConfig[form].id, scoringData);
-            console.log(scores);
 
             if (scores) {
-
-                console.log(scores['T-Score']);
-                console.log(scores['SError']);
-                
                 scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
                 scoresPayload[promisConfig[form].error] = parseInt(scores['SError']);
             }
