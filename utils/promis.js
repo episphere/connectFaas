@@ -1,13 +1,11 @@
 const CryptoJS = require('crypto-js');
 
-const generatePromisAuthToken = () => {
+const generatePromisAuthToken = async () => {
 
-    /* temp revert of code
     const { getSecret } = require('./shared');
-    */
 
-    const uoid = '';
-    const token = '';
+    const uoid = await getSecret(process.env.PROMIS_UOID);
+    const token = await getSecret(process.env.PROMIS_TOKEN);
 
     const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
     const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
@@ -24,6 +22,7 @@ const processPromisResults = async (uid) => {
 
     const forms = Object.keys(promisConfig);
     const scoresPayload = {};
+    const scoresPromises = [];
 
     for (let form of forms) {
         const sourceQuestion = surveyResults[promisConfig[form].source];
@@ -44,34 +43,41 @@ const processPromisResults = async (uid) => {
                 }
             }
 
-            const scores = await getScoringData(promisConfig[form].id, scoringData);
-
-            if (scores) {
-                scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
-                scoresPayload[promisConfig[form].error] = parseInt(scores['SError']);
-            }
+            scoresPromises.push(
+                getScoringData(promisConfig[form].id, scoringData).then(scores => {
+                    if (scores) {
+                        scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
+                        scoresPayload[promisConfig[form].error] = parseInt(scores['SError']);
+                    }
+                })
+            );
         }
     }
 
-    if (Object.keys(scoresPayload).length > 0) {
-        await updateSurvey(scoresPayload, collection, doc);
-    }
+    Promise.all(scoresPromises).then(async () => {
+        if (Object.keys(scoresPayload).length > 0) {
+            await updateSurvey(scoresPayload, collection, doc);
+        }
+    }).catch(error => {
+        console.error("Error in processing scoring data:", error);
+    });
 }
 
 const getScoringData = async (id, data) => {
 
     const formData = new URLSearchParams();
-    const url = `https://www.assessmentcenter.net/ac_api/2013-01/Scores/`;
+    const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/${id}.json`;
+    const token = await generatePromisAuthToken();
 
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
     });
 
     try {
-        const response = await fetch(`${url}${id}.json`, {
+        const response = await fetch(url, {
             method: "POST",
             headers: {
-                "Authorization": "Basic " + generatePromisAuthToken(),
+                "Authorization": `Basic ${token}`,
                 "Content-Type": "application/x-www-form-urlencoded"
             },
             body: formData.toString()
@@ -80,7 +86,7 @@ const getScoringData = async (id, data) => {
         const scores = await response.json();
 
         if (scores.ItemErrors) {
-            throw new Error('Errors in request data sent to PROMIS Scoring API', scores.ItemErrors);
+            throw new Error(`Errors in request data sent to PROMIS Scoring API: ${scores.ItemErrors}`);
         }
 
         return scores.Form[0];
