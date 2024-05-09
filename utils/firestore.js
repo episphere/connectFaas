@@ -1,8 +1,5 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-// Uncomment this and comment out line 6 to enable local development
-// const serviceAccount = require('../nih-nci-dceg-connect-dev-4a660d0c674e.json');
-// admin.initializeApp({credential: admin.credential.cert(serviceAccount)})
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
@@ -2413,7 +2410,6 @@ const storeKitReceipt = async (package) => {
             const kitDoc = kitSnapshot.docs[0];
             const kitData = kitDoc.data();
             const Connect_ID = kitData['Connect_ID'];
-            console.log('kitData', kitData);
     
             const participantSnapshot = await transaction.get(db.collection("participants").where('173836415.266600170.319972665.687158491', '==', kitDoc.data()[687158491]));
             const participantDoc = participantSnapshot.docs[0];
@@ -2456,13 +2452,11 @@ const storeKitReceipt = async (package) => {
                 'uid': uid
             }
 
-            console.log('Creating biospecimen');
             // Create a reference to a document that doesn't exist yet with the given ID
             const newDocRef = db.collection('biospecimen').doc(uid);
             
             transaction.set(newDocRef, biospecPkg);
 
-            console.log('Updating kit');
             transaction.update(kitDoc.ref, {
                 '137401245': package['137401245'] === true ? 353358909 : 104430631,
                 '221592017': 375535639,
@@ -2471,7 +2465,6 @@ const storeKitReceipt = async (package) => {
                 '826941471': package['826941471']
             });
 
-            console.log('Updating participant snapshot');
             transaction.update(participantDoc.ref, {
                 '684635302': 353358909,
                 '254109640': 353358909,
@@ -2488,8 +2481,6 @@ const storeKitReceipt = async (package) => {
             return;
         });
 
-        console.log('toReturn', toReturn);
-        
         return toReturn;
 
     } 
