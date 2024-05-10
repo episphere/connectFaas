@@ -454,7 +454,7 @@ const ucmSSOConfig = {
 
 /*
 BSWH COMMENT~
-SSOConfig CONST variable placeholder for BSWH
+SSOConfig CONST variable placeholder for BSWH waiting for attributes
 
 const bswhSSOConfig = {
     siteCode: 472940358,

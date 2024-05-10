@@ -10,7 +10,7 @@ module.exports = {
         healthPartnersResearchClinic: 531629870,
         henryFordHealthSystem: 548392715,
         nationalInstitutesOfHealth: 13,
-        // baylorScottAndWhiteHealth: 472940358, // BSWH 
+        baylorScottAndWhiteHealth: 472940358,
     },
 
     yes: 353358909,
