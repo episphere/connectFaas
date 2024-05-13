@@ -549,10 +549,5 @@
 		"dataType": "string",
 		"mustExist": false,
 		"maxLength": 800
-	},
-	"512820379": {
-		"values": [486306141, 854703046],
-		"dataType": "number",
-		"mustExist": false
 	}
 }
