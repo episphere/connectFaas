@@ -1,6 +1,6 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'getParticipants', '--trigger-http', '--runtime=${_RUNTIME}', '--memory=1024MB', '--source=${_SOURCE}', '--env-vars-file=config/stage/.env.yaml']
+  args: ['functions', 'deploy', 'getParticipants', '--trigger-http', '--runtime=${_RUNTIME}', '--vpc-connector=${_CONNECTOR}' '--memory=1024MB', '--source=${_SOURCE}', '--env-vars-file=config/stage/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'add-iam-policy-binding', 'getParticipants', '--member=allUsers', '--role=${_ROLE}']
 - name: 'gcr.io/cloud-builders/gcloud'
@@ -26,3 +26,4 @@ substitutions:
   _RESOURCE: myconnect_firestore_backup_stage
   _EVENT: google.storage.object.finalize
   _TOPIC: Daily-Notifications-Backup
+  _CONNECTOR: dceg-stage-connector
