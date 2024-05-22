@@ -452,22 +452,16 @@ const ucmSSOConfig = {
     acronym: 'UCM'
 }
 
-/*
-BSWH COMMENT~
-SSOConfig CONST variable placeholder for BSWH waiting for attributes
-
 const bswhSSOConfig = {
     siteCode: 472940358,
     acronym: 'BSWH',
-    firstName: '',
-    lastName: '',
-    email: '',
-    group: '',
-    siteManagerUser: '',
-    biospecimenUser: ''
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    email: 'Email Address',
+    group: 'Groups',
+    siteManagerUser: 'Research_Connect_FC',
+    biospecimenUser: 'Research_Connect_FC'
 }
-*/
-
 
 const SSOConfig = {
     'NIH-SSO-qfszp': nihSSODevConfig,
@@ -500,16 +494,11 @@ const SSOConfig = {
 
     'UCM-SSO-tovai': ucmSSOConfig,
     'UCM-SSO-lrjsp': ucmSSOConfig,
-    'UCM-SSO-p4f5m': ucmSSOConfig
+    'UCM-SSO-p4f5m': ucmSSOConfig,
 
-    /*
-    BSWH COMMENT~
-    BSWH SSO Config Placeholder
-
-    'BSWH-SSO-xxxx': bswhSSOConfig,
-    'BSWH-SSO-yyyy': bswhSSOConfig,
-    'BSWH-SSO-zzzz': bswhSSOConfig,
-    */
+    'BSWH-SSO-y2jj3': bswhSSOConfig,
+    'BSWH-SSO-k4cat': bswhSSOConfig,
+    'BSWH-SSO-dcoos': bswhSSOConfig,
 }
 
 // https://www.twilio.com/docs/messaging/guides/debugging-tools#error-codes
