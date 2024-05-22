@@ -513,6 +513,12 @@ const SSOValidation = async (dashboardType, idToken) => {
             return false;
         }
 
+        console.log("Decoded Token in SSOValidation():");
+        console.log(decodedToken);
+
+        console.log("Sign-In Attributes in SSOValidation():");
+        console.log(decodedToken.firebase.sign_in_attributes);
+
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
         if(!allGroups) return;
         const email = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']];
