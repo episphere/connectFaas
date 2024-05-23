@@ -2400,77 +2400,95 @@ const confirmShipmentKit = async (shipmentData) => {
 
 const storeKitReceipt = async (package) => {
     try {
-        const kitSnapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).where('221592017', '==', 277438316).get();
-        if (kitSnapshot.size === 0) {
-            return false;
-        }
-        const kitDoc = kitSnapshot.docs[0];
-        const Connect_ID = kitDoc.data()['Connect_ID'];
-   
-        const participantSnapshot = await db.collection("participants").where('173836415.266600170.319972665.687158491', '==', kitDoc.data()[687158491]).get();
-        const participantDoc = participantSnapshot.docs[0];
-        const participantDocData = participantSnapshot.docs[0].data();
-
-        const token = participantDocData['token'];
-        const uid = participantDocData['state']['uid'];
-        const site = participantDocData['827220437'];
-        const prefEmail = participantDocData['869588347'];
-        const ptName = participantDocData['153211406'] || participantDocData['399159511']
-        const surveyStatus = participantDocData['547363263']
-
-        const prevParticipantObject = participantDocData[173836415][266600170][319972665];
-        const collectionId = package['259846815']?.split(' ')[0];
-        const objectId = package['259846815']?.split(' ')[1];
-        
-        if (objectId === undefined || collectionId === undefined) {
-            return { status: 'Check Collection ID' }
-        }
-
-        const biospecPkg = {
-            '143615646': {
-                '593843561': 353358909,
-                '825582494': package['259846815'],
-                '826941471': package['826941471']
-            },
-            '260133861': package['260133861'],
-            '678166505': package['678166505'],
-            '820476880':  collectionId,
-            '827220437': site,
-            'Connect_ID': Connect_ID,
-            'token': token,
-            'uid': uid
-        }
-
-        await db.collection('biospecimen').add(biospecPkg);
-
-        await kitDoc.ref.update({
-            '137401245': package['137401245'] === true ? 353358909 : 104430631,
-            '221592017': 375535639,
-            '633640710': processPackageConditions(package['633640710']),
-            '755095663': package['755095663'],
-            '826941471': package['826941471']
-        });
-
-        await participantDoc.ref.update({
-            '684635302': 353358909,
-            '254109640': 353358909,
-            '173836415.266600170.915179629': 103209024,
-            '173836415.266600170.448660695': package['678166505'],
-            '173836415.266600170.319972665': {
-                ...prevParticipantObject,
-                '221592017': 375535639,
-                '826941471': package['826941471']
+        let toReturn;
+        await db.runTransaction(async (transaction) => {
+            const kitSnapshot = await transaction.get(db.collection("kitAssembly").where('972453354', '==', package['972453354']).where('221592017', '==', 277438316));
+            if (kitSnapshot.size === 0) {
+                toReturn = false;
+                return;
             }
+            const kitDoc = kitSnapshot.docs[0];
+            const kitData = kitDoc.data();
+            const Connect_ID = kitData['Connect_ID'];
+    
+            const participantSnapshot = await transaction.get(db.collection("participants").where('173836415.266600170.319972665.687158491', '==', kitDoc.data()[687158491]));
+            const participantDoc = participantSnapshot.docs[0];
+            const participantDocData = participantSnapshot.docs[0].data();
+
+            const token = participantDocData['token'];
+            const uid = participantDocData['state']['uid'];
+            const site = participantDocData['827220437'];
+            const prefEmail = participantDocData['869588347'];
+            const ptName = participantDocData['153211406'] || participantDocData['399159511']
+            const surveyStatus = participantDocData['547363263']
+
+            const prevParticipantObject = participantDocData[173836415][266600170][319972665];
+            const collectionId = package['259846815']?.split(' ')[0];
+            const objectId = package['259846815']?.split(' ')[1];
+            
+            if (objectId === undefined || collectionId === undefined) {
+                toReturn = { status: 'Check Collection ID' };
+                return;
+            }
+
+            // check the collection ID from the kitAssembly against the one from package and error if they don't match
+            if(kitData[fieldMapping.collectionCupId] !== package[fieldMapping.collectionCupId]) {
+                toReturn = { status: 'Collection Cup ID from tracking number does not match provided Collection Cup ID' };
+                return;
+            }
+
+            const biospecPkg = {
+                '143615646': {
+                    '593843561': 353358909,
+                    '825582494': package['259846815'],
+                    '826941471': package['826941471']
+                },
+                '260133861': package['260133861'],
+                '678166505': package['678166505'],
+                '820476880':  collectionId,
+                '827220437': site,
+                'Connect_ID': Connect_ID,
+                'token': token,
+                'uid': uid
+            }
+
+            // Create a reference to a document that doesn't exist yet with the given ID
+            const newDocRef = db.collection('biospecimen').doc(uid);
+            
+            transaction.set(newDocRef, biospecPkg);
+
+            transaction.update(kitDoc.ref, {
+                '137401245': package['137401245'] === true ? 353358909 : 104430631,
+                '221592017': 375535639,
+                '633640710': processPackageConditions(package['633640710']),
+                '755095663': package['755095663'],
+                '826941471': package['826941471']
+            });
+
+            transaction.update(participantDoc.ref, {
+                '684635302': 353358909,
+                '254109640': 353358909,
+                '173836415.266600170.915179629': 103209024,
+                '173836415.266600170.448660695': package['678166505'],
+                '173836415.266600170.319972665': {
+                    ...prevParticipantObject,
+                    '221592017': 375535639,
+                    '826941471': package['826941471']
+                }
+            });
+
+            toReturn = { status: true, Connect_ID, token, uid, prefEmail, ptName, surveyStatus };
+            return;
         });
 
-        return { status: true, Connect_ID, token, uid, prefEmail, ptName, surveyStatus };
+        return toReturn;
 
-        } 
-        catch (error) {
-            console.error(error);
-            return new Error(error);
-        }
+    } 
+    catch (error) {
+        console.error(error);
+        return new Error(error);
     }
+}
 
 const processPackageConditions = (pkgConditions) => {
     const keys = [950521660, 545319575, 938338155, 205954477, 289239334, 992420392, 541085383, 427719697, 100618603];
