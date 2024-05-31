@@ -178,8 +178,7 @@ async function sendScheduledNotifications(message) {
   const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
   
   try {
-    // const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(scheduleAt);
-    const notificationSpecArray = await getNotificationSpecsBySchedule(scheduleAt);
+    const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(scheduleAt);
     if (notificationSpecArray.length === 0) {
       console.log("Function sendScheduledNotifications has run earlier today. Exiting...");
       return;
