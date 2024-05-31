@@ -1565,7 +1565,12 @@ const getSecret = async (key) => {
     });
     const payload = version.payload.data.toString();
     return payload;
-}
+};
+
+const cidToLangMapper = {
+    [fieldMapping.english]: "english",
+    [fieldMapping.spanish]: "spanish",
+};
 
 module.exports = {
     getResponseJSON,
@@ -1628,5 +1633,6 @@ module.exports = {
     getTemplateForEmailLink,
     nihMailbox,
     twilioErrorMessages,
-    getSecret
+    getSecret,
+    cidToLangMapper,
 };
