@@ -216,6 +216,9 @@ module.exports = {
     authenticationEmail: 421823980,
     authenticationPhone: 348474836,
     signInMechanism: 995036844,
+    preferredLanguage: 255077064,
+    english: 163149180,
+    spanish: 773342525,
 
     // cancer occurrences
     occurrenceNumber: 793981056,
