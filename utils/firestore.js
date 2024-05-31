@@ -2424,9 +2424,9 @@ const confirmShipmentKit = async (shipmentData) => {
     }
 };
 
-const storeKitReceipt = async (requestData) => {
+const storeKitReceipt = async (package) => {
     try {
-        const kitSnapshot = await db.collection("kitAssembly").where('972453354', '==', requestData['972453354']).where('221592017', '==', 277438316).get();
+        const kitSnapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).where('221592017', '==', 277438316).get();
         if (kitSnapshot.size === 0) {
             return false;
         }
@@ -2446,8 +2446,8 @@ const storeKitReceipt = async (requestData) => {
         const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || "english"
 
         const prevParticipantObject = participantDocData[173836415][266600170][319972665];
-        const collectionId = requestData['259846815']?.split(' ')[0];
-        const objectId = requestData['259846815']?.split(' ')[1];
+        const collectionId = package['259846815']?.split(' ')[0];
+        const objectId = package['259846815']?.split(' ')[1];
         
         if (objectId === undefined || collectionId === undefined) {
             return { status: 'Check Collection ID' }
@@ -2456,11 +2456,11 @@ const storeKitReceipt = async (requestData) => {
         const biospecPkg = {
             '143615646': {
                 '593843561': 353358909,
-                '825582494': requestData['259846815'],
-                '826941471': requestData['826941471']
+                '825582494': package['259846815'],
+                '826941471': package['826941471']
             },
-            '260133861': requestData['260133861'],
-            '678166505': requestData['678166505'],
+            '260133861': package['260133861'],
+            '678166505': package['678166505'],
             '820476880':  collectionId,
             '827220437': site,
             'Connect_ID': Connect_ID,
@@ -2471,22 +2471,22 @@ const storeKitReceipt = async (requestData) => {
         await db.collection('biospecimen').add(biospecPkg);
 
         await kitDoc.ref.update({
-            '137401245': requestData['137401245'] === true ? 353358909 : 104430631,
+            '137401245': package['137401245'] === true ? 353358909 : 104430631,
             '221592017': 375535639,
-            '633640710': processPackageConditions(requestData['633640710']),
-            '755095663': requestData['755095663'],
-            '826941471': requestData['826941471']
+            '633640710': processPackageConditions(package['633640710']),
+            '755095663': package['755095663'],
+            '826941471': package['826941471']
         });
 
         await participantDoc.ref.update({
             '684635302': 353358909,
             '254109640': 353358909,
             '173836415.266600170.915179629': 103209024,
-            '173836415.266600170.448660695': requestData['678166505'],
+            '173836415.266600170.448660695': package['678166505'],
             '173836415.266600170.319972665': {
                 ...prevParticipantObject,
                 '221592017': 375535639,
-                '826941471': requestData['826941471']
+                '826941471': package['826941471']
             }
         });
 
