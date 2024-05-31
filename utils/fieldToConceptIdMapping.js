@@ -225,7 +225,14 @@ module.exports = {
     isCancerDiagnosis: 525972260,
     primaryCancerSiteObject: 740819233,
     primaryCancerSiteCategorical: 149205077,
-    preliminaryStageInformation: 457270069,
+    participantDiagnosisAwareness: 844209241,
+    pathologyAccessionNumber: 421730068,
+    vitalStatusCategorical: 114227122,
+    vitalStatus: {
+        alive: 337516613,
+        dead: 646675764,
+        unknown: 178420302,
+    },
     anotherTypeOfCancerText: 868006655, // Text response for 'other' cancer site
     cancerSites: {
         anal: 939782495,
