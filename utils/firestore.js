@@ -2114,12 +2114,14 @@ const getNotificationSpecById = async (id) => {
 }
 
 const getNotificationSpecByCategoryAndAttempt = async (category = "", attempt = "") => {
+  if (!category || !attempt) return null;
+
   const snapshot = await db
     .collection("notificationSpecifications")
     .where("category", "==", category)
     .where("attempt", "==", attempt)
     .get();
-    
+
   return snapshot.empty ? null : snapshot.docs[0].data();
 };
 
@@ -2400,7 +2402,7 @@ const confirmShipmentKit = async (shipmentData) => {
         const prefEmail = participantDocData['869588347'];
         const token = participantDocData['token'];
         const ptName = participantDocData['153211406'] || participantDocData['399159511']
-        const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || "english";
+        const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
 
         const updatedParticipantObject = {
             '173836415': {
@@ -2447,7 +2449,7 @@ const storeKitReceipt = async (package) => {
             const prefEmail = participantDocData['869588347'];
             const ptName = participantDocData['153211406'] || participantDocData['399159511']
             const surveyStatus = participantDocData['547363263']
-            const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || "english"
+            const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
 
             const prevParticipantObject = participantDocData[173836415][266600170][319972665];
             const collectionId = package['259846815']?.split(' ')[0];

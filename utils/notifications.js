@@ -750,7 +750,7 @@ const dryRunNotificationSchema = async (req, res) => {
       const message = `Notification spec ID ${req.query.schemaId} isn't found.`;
       return res.status(404).json({ data: [], message, code: 404 });
     }
-    const { data, message, code } = await handleDruRun(spec);
+    const { data, message, code } = await handleDryRun(spec);
     return res.status(code).json({ data, message, code });
 
   } catch (error) {
@@ -759,7 +759,7 @@ const dryRunNotificationSchema = async (req, res) => {
 
 };
 
-async function handleDruRun(spec) {
+async function handleDryRun(spec) {
   let timeField = spec.primaryField;
   let cutoffTime = new Date();
   let cutoffTimeStr = cutoffTime.toISOString();
@@ -909,5 +909,5 @@ module.exports = {
   sendEmailLink,
   dryRunNotificationSchema,
   sendInstantNotification,
-  handleDruRun,
+  handleDryRun,
 };
