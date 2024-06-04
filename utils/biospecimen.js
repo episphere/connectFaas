@@ -1,5 +1,6 @@
 const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation, convertSiteLoginToNumber } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
+const { sendInstantNotification } = require("./notifications");
 
 const biospecimenAPIs = async (req, res) => {
     logIPAdddress(req);
@@ -961,6 +962,21 @@ const biospecimenAPIs = async (req, res) => {
         const response = await sendClientEmail(requestData);
         if(!response) return res.status(404).json(getResponseJSON('ERROR!', 404));
         return res.status(200).json(getResponseJSON('Success!', 200));
+    } else if (api === "sendInstantNotification") {
+        if (req.method !== "POST") {
+          return res.status(405).json(getResponseJSON("Only POST requests are accepted!", 405));
+        }
+
+        const requestData = req.body;
+        try {
+          await sendInstantNotification(requestData);
+          return res.status(200).json(getResponseJSON("Success!", 200));
+        } catch (error) {
+          console.error(
+            `Error sending instant notification (${requestData.category}, ${requestData.attempt}). ${error.message}`
+          );
+          return res.status(500).json({ message: error.message, code: 500 });
+        }
     }
 
     else return res.status(400).json(getResponseJSON('Bad request!', 400));
