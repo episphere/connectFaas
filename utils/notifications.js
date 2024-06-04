@@ -571,9 +571,10 @@ const retrieveNotificationSchema = async (req, res, authObj) => {
 
   const category = req.query.category;
   const getDrafts = req.query.drafts === "true";
+  const sendType = req.query.sendType || "scheduled";
   const { retrieveNotificationSchemaByCategory } = require("./firestore");
   try {
-    const schemaArray = await retrieveNotificationSchemaByCategory(category, getDrafts);
+    const schemaArray = await retrieveNotificationSchemaByCategory(category, getDrafts, sendType);
     if (schemaArray.length === 0)
       return res.status(404).json({ data: [], message: `Notification schema not found for given category - ${category}`, code: 404 });
 

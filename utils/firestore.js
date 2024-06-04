@@ -2006,8 +2006,8 @@ const retrieveNotificationSchemaByID = async (id) => {
   return "";
 };
 
-const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
-  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts);
+const retrieveNotificationSchemaByCategory = async (category, getDrafts = false, sendType = "scheduled") => {
+  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", sendType);
   if (category !== "all") {
     query = query.where("category", "==", category);
   } else {
