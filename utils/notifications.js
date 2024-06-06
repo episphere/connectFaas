@@ -453,7 +453,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   
       if (smsRecordArray.length > 0) {
         try {
-          const smsRecordArray = await sendSmsBatch(smsRecordArray);
+          smsRecordArray = await sendSmsBatch(smsRecordArray);
           if (smsRecordArray.length > 0) {
             await saveNotificationBatch(smsRecordArray);
             smsCount[lang] += smsRecordArray.length;

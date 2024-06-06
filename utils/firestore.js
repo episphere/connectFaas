@@ -2506,7 +2506,19 @@ const storeKitReceipt = async (package) => {
                 }
             });
 
-            toReturn = { status: true, Connect_ID, token, uid, prefEmail, ptName, surveyStatus, preferredLanguage };
+            toReturn = {
+              status: true,
+              Connect_ID,
+              token,
+              uid,
+              prefEmail,
+              ptName,
+              surveyStatus,
+              preferredLanguage,
+              [fieldMapping.signInMechanism]: participantDocData[fieldMapping.signInMechanism],
+              [fieldMapping.authenticationPhone]: participantDocData[fieldMapping.authenticationPhone],
+              [fieldMapping.authenticationEmail]: participantDocData[fieldMapping.authenticationEmail],
+            };
             return;
         });
 
