@@ -540,23 +540,6 @@
 		"dataType": "object",
 		"mustExist": false
 	},
-	"637153953[].844209241": {
-		"values": [104430631, 353358909, 178420302],
-		"dataType": "number",
-		"mustExist": false,
-		"required": true
-	},
-	"637153953[].114227122": {
-		"values": [337516613, 646675764, 178420302],
-		"dataType": "number",
-		"mustExist": false,
-		"required": true
-	},
-	"637153953[].421730068": {
-		"dataType": "string",
-		"mustExist": false,
-		"maxLength": 800
-	},
 	"637153953[].740819233.149205077": {
 		"values": [
 			939782495, 135725957, 518416174, 847945207, 283025574, 942970912, 596122041,
