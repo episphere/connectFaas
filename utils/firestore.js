@@ -4,7 +4,7 @@ admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const increment = admin.firestore.FieldValue.increment(1);
 const decrement = admin.firestore.FieldValue.increment(-1);
-const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -1909,20 +1909,35 @@ const sendClientEmail = async (data) => {
         read: data.read
     }
 
-    await storeNotifications(reminder);
+    await storeNotification(reminder);
 
     sendEmail(data.email, data.subject, data.message);
     return true;
 };
 
-const storeNotifications = async payload => {
+const storeNotification = async (notificationData) => {
     try {
-        await db.collection('notifications').add(payload);
+        await db.collection('notifications').add(notificationData);
     } catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
+
+/**
+ * 
+ * @param {string} userToken User token
+ * @param {string} specId Notification Specifications ID
+ */
+const checkIsNotificationSent = async (userToken, specId) => {
+  const snapshot = await db
+    .collection("notifications")
+    .where("token", "==", userToken)
+    .where("notificationSpecificationsID", "==", specId)
+    .get();
+
+  return !snapshot.empty;
+};
 
 /**
  * Save notification records to `notifications` collection.
@@ -1991,8 +2006,8 @@ const retrieveNotificationSchemaByID = async (id) => {
   return "";
 };
 
-const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
-  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts);
+const retrieveNotificationSchemaByCategory = async (category, getDrafts = false, sendType = "scheduled") => {
+  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", sendType);
   if (category !== "all") {
     query = query.where("category", "==", category);
   } else {
@@ -2097,6 +2112,18 @@ const getNotificationSpecById = async (id) => {
 
     return snapshot.empty ? null : snapshot.docs[0].data();
 }
+
+const getNotificationSpecByCategoryAndAttempt = async (category = "", attempt = "") => {
+  if (!category || !attempt) return null;
+
+  const snapshot = await db
+    .collection("notificationSpecifications")
+    .where("category", "==", category)
+    .where("attempt", "==", attempt)
+    .get();
+
+  return snapshot.empty ? null : snapshot.docs[0].data();
+};
 
 const addKitAssemblyData = async (data) => {
     try {
@@ -2375,6 +2402,7 @@ const confirmShipmentKit = async (shipmentData) => {
         const prefEmail = participantDocData['869588347'];
         const token = participantDocData['token'];
         const ptName = participantDocData['153211406'] || participantDocData['399159511']
+        const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
 
         const updatedParticipantObject = {
             '173836415': {
@@ -2390,7 +2418,7 @@ const confirmShipmentKit = async (shipmentData) => {
         };
 
         await participantDoc.ref.update(updatedParticipantObject);
-        return { status: true, Connect_ID, token, uid, prefEmail, ptName };
+        return { status: true, Connect_ID, token, uid, prefEmail, ptName, preferredLanguage };
 
     } catch (error) {
         console.error(error);
@@ -2421,6 +2449,7 @@ const storeKitReceipt = async (package) => {
             const prefEmail = participantDocData['869588347'];
             const ptName = participantDocData['153211406'] || participantDocData['399159511']
             const surveyStatus = participantDocData['547363263']
+            const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
 
             const prevParticipantObject = participantDocData[173836415][266600170][319972665];
             const collectionId = package['259846815']?.split(' ')[0];
@@ -2477,7 +2506,19 @@ const storeKitReceipt = async (package) => {
                 }
             });
 
-            toReturn = { status: true, Connect_ID, token, uid, prefEmail, ptName, surveyStatus };
+            toReturn = {
+              status: true,
+              Connect_ID,
+              token,
+              uid,
+              prefEmail,
+              ptName,
+              surveyStatus,
+              preferredLanguage,
+              [fieldMapping.signInMechanism]: participantDocData[fieldMapping.signInMechanism],
+              [fieldMapping.authenticationPhone]: participantDocData[fieldMapping.authenticationPhone],
+              [fieldMapping.authenticationEmail]: participantDocData[fieldMapping.authenticationEmail],
+            };
             return;
         });
 
@@ -3315,7 +3356,8 @@ module.exports = {
     getNotificationSpecifications,
     retrieveParticipantsByStatus,
     notificationAlreadySent,
-    storeNotifications,
+    storeNotification,
+    checkIsNotificationSent,
     validateSiteSAEmail,
     validateMultiTenantIDToken,
     markNotificationAsRead,
@@ -3329,6 +3371,7 @@ module.exports = {
     getNotificationHistoryByParticipant,
     getNotificationsCategories,
     getNotificationSpecById,
+    getNotificationSpecByCategoryAndAttempt,
     getEmailNotifications,
     getNotificationSpecsBySchedule,
     getNotificationSpecsByScheduleOncePerDay,

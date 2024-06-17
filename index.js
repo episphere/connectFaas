@@ -1,7 +1,7 @@
 const { getToken } = require('./utils/validation');
 const { getFilteredParticipants, getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
-const { notificationHandler } = require('./utils/notifications');
+const { sendScheduledNotifications } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive');
@@ -47,9 +47,9 @@ exports.app = connectApp;
 exports.biospecimen = biospecimenAPIs;
 
 
-// End-Point for Email Notifications Handler
+// End-Point for Scheduled Notifications Handler
 
-exports.sendEmailNotification = notificationHandler;
+exports.sendScheduledNotifications = sendScheduledNotifications;
 
 
 // End-Points for Exporting Firestore to Big Query

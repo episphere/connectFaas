@@ -10,6 +10,7 @@ module.exports = {
         healthPartnersResearchClinic: 531629870,
         henryFordHealthSystem: 548392715,
         nationalInstitutesOfHealth: 13,
+        baylorScottAndWhiteHealth: 472940358,
     },
 
     yes: 353358909,
@@ -216,6 +217,9 @@ module.exports = {
     authenticationEmail: 421823980,
     authenticationPhone: 348474836,
     signInMechanism: 995036844,
+    preferredLanguage: 255077064,
+    english: 163149180,
+    spanish: 773342525,
 
     // cancer occurrences
     occurrenceNumber: 793981056,

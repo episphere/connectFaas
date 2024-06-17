@@ -1,6 +1,6 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'sendEmailNotification', '--trigger-topic=${_TOPIC}', '--runtime=${_RUNTIME}', '--timeout=480s', '--memory=1024MB', '--source=${_SOURCE}', '--env-vars-file=config/stage/.env.yaml']
+  args: ['functions', 'deploy', 'sendScheduledNotifications', '--trigger-topic=${_TOPIC}', '--runtime=${_RUNTIME}', '--timeout=480s', '--memory=1024MB', '--source=${_SOURCE}', '--env-vars-file=config/stage/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'participantsEligibleForIncentive', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=config/stage/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
