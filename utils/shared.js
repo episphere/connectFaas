@@ -445,6 +445,17 @@ const ucmSSOConfig = {
     acronym: 'UCM'
 }
 
+const bswhSSOConfig = {
+    siteCode: 472940358,
+    acronym: 'BSWH',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    email: 'Email Address',
+    group: 'Groups',
+    siteManagerUser: 'Research_Connect_FC',
+    biospecimenUser: 'Research_Connect_FC'
+}
+
 const SSOConfig = {
     'NIH-SSO-qfszp': nihSSODevConfig,
     'NIH-SSO-9q2ao': nihSSODevConfig,
@@ -476,7 +487,11 @@ const SSOConfig = {
 
     'UCM-SSO-tovai': ucmSSOConfig,
     'UCM-SSO-lrjsp': ucmSSOConfig,
-    'UCM-SSO-p4f5m': ucmSSOConfig
+    'UCM-SSO-p4f5m': ucmSSOConfig,
+
+    'BSWH-SSO-y2jj3': bswhSSOConfig,
+    'BSWH-SSO-k4cat': bswhSSOConfig,
+    'BSWH-SSO-dcoos': bswhSSOConfig,
 }
 
 // https://www.twilio.com/docs/messaging/guides/debugging-tools#error-codes
@@ -1528,7 +1543,12 @@ const getSecret = async (key) => {
     });
     const payload = version.payload.data.toString();
     return payload;
-}
+};
+
+const cidToLangMapper = {
+    [fieldMapping.english]: "english",
+    [fieldMapping.spanish]: "spanish",
+};
 
 module.exports = {
     getResponseJSON,
@@ -1591,5 +1611,6 @@ module.exports = {
     getTemplateForEmailLink,
     nihMailbox,
     twilioErrorMessages,
-    getSecret
+    getSecret,
+    cidToLangMapper,
 };

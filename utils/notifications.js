@@ -2,17 +2,24 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret} = require("./shared");
-const {getNotificationSpecById, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink} = require("./firestore");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper} = require("./shared");
+const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
+const converter = new showdown.Converter();
+const langArray = ["english", "spanish"];
 let twilioClient, messagingServiceSid;
 let isSendingNotifications = false; // A more robust soluttion is needed when using multiple servers 
 
-(async () => {
-  [twilioClient, messagingServiceSid] = await setupTwilioSms();
-})();
+getSecret(process.env.GCLOUD_SENDGRID_SECRET).then((apiKey) => {
+  sgMail.setApiKey(apiKey);
+});
+
+setupTwilioSms().then(([client, sid]) => {
+  twilioClient = client;
+  messagingServiceSid = sid;
+ });
 
 async function setupTwilioSms() {
   const secretsToFetch = {
@@ -137,9 +144,6 @@ const retrieveNotifications = async (req, res, uid) => {
 };
 
 const sendEmail = async (emailTo, messageSubject, html, cc) => {
-    const sgMail = require('@sendgrid/mail');
-    const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
-    sgMail.setApiKey(apiKey);
     const msg = {
         to: emailTo,
         from: {
@@ -163,9 +167,9 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
  * @param {Object} message Pub/Sub message object.
  * @param {string} message.data base64-encoded string.
  */
-async function notificationHandler(message) {
+async function sendScheduledNotifications(message) {
   if (isSendingNotifications) {
-    console.log("notificationHandler is already running. Exiting...");
+    console.log("Function sendScheduledNotifications() is already running. Exiting...");
     return;
   }
 
@@ -175,9 +179,10 @@ async function notificationHandler(message) {
   
   try {
     const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(scheduleAt);
-    if (notificationSpecArray.length === 0) return;
-    const apiKey = await getSecret(process.env.GCLOUD_SENDGRID_SECRET);
-    sgMail.setApiKey(apiKey);
+    if (notificationSpecArray.length === 0) {
+      console.log("Function sendScheduledNotifications has run earlier today. Exiting...");
+      return;
+    }
 
     const notificationPromises = [];
     for (const notificationSpec of notificationSpecArray) {
@@ -186,7 +191,7 @@ async function notificationHandler(message) {
 
     await Promise.allSettled(notificationPromises);
   } catch (error) {
-    console.error("Error occurred in notificationHandler.", error);
+    console.error("Error occurred running function sendScheduledNotifications.", error);
   } finally {
     isSendingNotifications = false;
   }
@@ -222,54 +227,60 @@ async function handleNotificationSpec(notificationSpec) {
 async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr = "", timeField = "" }) {
   const readableSpecString = notificationSpec.category + ", " + notificationSpec.attempt;
   const conditions = notificationSpec.conditions;
-  const emailSubject = notificationSpec.email?.subject ?? "";
-  const emailBody = notificationSpec.email?.body ?? "";
   const emailField = notificationSpec.emailField ?? "";
-  const smsBody = notificationSpec.sms?.body ?? "";
   const phoneField = notificationSpec.phoneField ?? "";
   const firstNameField = notificationSpec.firstNameField ?? "";
   const preferredNameField = notificationSpec.preferredNameField ?? "";
   const newsletterCategories = ["newsletter", "eNewsletter", "anniversaryNewsletter"];
-
-  let emailHtmlTemplate = emailBody;
-  if (emailBody && !newsletterCategories.includes(notificationSpec.category)) {
-    const converter = new showdown.Converter();
-    emailHtmlTemplate = converter.makeHtml(emailBody);
-  }
-
-  let emailContainsToken = false;
-  let emailContainsLoginDetails = false;
-  let fieldsToFetch = ["Connect_ID", "token", "state.uid"];
+  
+  let fieldsToFetch = ["Connect_ID", "token", "state.uid", conceptIds.preferredLanguage.toString()];
   firstNameField && fieldsToFetch.push(firstNameField);
   preferredNameField && fieldsToFetch.push(preferredNameField);
   emailField && fieldsToFetch.push(emailField);
   phoneField && fieldsToFetch.push(phoneField);
-  smsBody && fieldsToFetch.push(conceptIds.canWeText.toString());
+  notificationSpec.notificationType.includes("sms") && fieldsToFetch.push(conceptIds.canWeText.toString());
 
-  if (emailHtmlTemplate) {
-    emailHtmlTemplate = emailHtmlTemplate.replace(/<firstName>/g, "{{firstName}}");
-    if (emailHtmlTemplate.includes("${token}")) {
-      emailContainsToken = true;
-      emailHtmlTemplate = emailHtmlTemplate.replace(/\${token}/g, "{{token}}");
+  let emailInSpec = notificationSpec.email || {};
+  let smsInSpec = notificationSpec.sms || {};
+  let emailHasToken = false;
+  let emailHasLoginDetails = false;
+  let emailCount = { total: 0 };
+  let smsCount = { total: 0 };
+
+  for (const lang of langArray) {
+    if (emailInSpec[lang]?.body) {
+      let emailBody = emailInSpec[lang].body;
+      if (!newsletterCategories.includes(notificationSpec.category)) {
+        emailBody = converter.makeHtml(emailBody);
+      }
+
+      emailBody = emailBody.replace(/<firstName>/g, "{{firstName}}");
+      if (emailBody.includes("${token}")) {
+        emailHasToken = true;
+        emailBody = emailBody.replace(/\${token}/g, "{{token}}");
+      }
+
+      if (emailBody.includes("<loginDetails>")) {
+        emailHasLoginDetails = true;
+        emailBody = emailBody.replace(/<loginDetails>/g, "{{loginDetails}}");
+        fieldsToFetch.push(
+          `${conceptIds.signInMechanism}`,
+          `${conceptIds.authenticationPhone}`,
+          `${conceptIds.authenticationEmail}`
+        );
+      }
+
+      emailInSpec[lang].body = emailBody;
     }
 
-    if (emailHtmlTemplate.includes("<loginDetails>")) {
-      emailContainsLoginDetails = true;
-      emailHtmlTemplate = emailHtmlTemplate.replace(/<loginDetails>/g, "{{loginDetails}}");
-      fieldsToFetch.push(
-        `${conceptIds.signInMechanism}`,
-        `${conceptIds.authenticationPhone}`,
-        `${conceptIds.authenticationEmail}`
-      );
-    }
+    emailCount[lang] = 0;
+    smsCount[lang] = 0;
   }
 
   const limit = 1000; // SendGrid has a batch limit of 1000
   let previousConnectId = 0;
   let hasNext = true;
   let fetchedDataArray = [];
-  let emailCount = 0;
-  let smsCount = 0;
 
   while (hasNext) {
     try {
@@ -294,9 +305,14 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
     }
 
-    let emailRecordArray = [];
-    let emailPersonalizationArray = [];
-    let smsRecordArray = [];
+    let notificationData = {};
+    for (const lang of langArray) {
+      notificationData[lang] = {
+        emailRecordArray: [],
+        emailPersonalizationArray: [],
+        smsRecordArray: [],
+      };
+    }
 
     for (const fetchedData of fetchedDataArray) {
       if (!fetchedData[emailField] && !fetchedData[phoneField]) continue;
@@ -315,11 +331,14 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         read: false,
       };
 
-      if (emailHtmlTemplate && validEmailFormat.test(fetchedData[emailField])) {
-        let substitutions = { firstName };
-        let currEmailBody = emailHtmlTemplate.replace(/{{firstName}}/g, firstName);
+      const prefLang = cidToLangMapper[fetchedData[conceptIds.preferredLanguage]] || "english";
+      const emailOfPrefLang = emailInSpec[prefLang];
 
-        if (emailContainsLoginDetails) {
+      if (emailOfPrefLang?.body && validEmailFormat.test(fetchedData[emailField])) {
+        let substitutions = { firstName };
+        let currEmailBody = emailOfPrefLang.body.replace(/{{firstName}}/g, firstName);
+
+        if (emailHasLoginDetails) {
           let loginDetails = "";
           if (fetchedData[conceptIds.signInMechanism] === "phone" && fetchedData[conceptIds.authenticationPhone]) {
             loginDetails = redactPhoneLoginInfo(fetchedData[conceptIds.authenticationPhone]);
@@ -334,9 +353,9 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
             fetchedData[conceptIds.authenticationPhone]
           ) {
             loginDetails =
-              redactEmailLoginInfo(fetchedData[conceptIds.authenticationEmail]) +
-              " or " +
-              redactPhoneLoginInfo(fetchedData[conceptIds.authenticationPhone]);
+              redactPhoneLoginInfo(fetchedData[conceptIds.authenticationPhone]) +
+              ", " +
+              redactEmailLoginInfo(fetchedData[conceptIds.authenticationEmail]);
           } else {
             console.log("No login details found for participant with token:", fetchedData.token);
             continue;
@@ -346,12 +365,12 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
           currEmailBody = currEmailBody.replace(/{{loginDetails}}/g, loginDetails);
         }
 
-        if (emailContainsToken) {
+        if (emailHasToken) {
           substitutions.token = fetchedData.token;
           currEmailBody = currEmailBody.replace(/{{token}}/g, fetchedData.token);
         }
 
-        emailPersonalizationArray.push({
+        notificationData[prefLang].emailPersonalizationArray.push({
           to: fetchedData[emailField],
           substitutions,
           custom_args: {
@@ -362,13 +381,14 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
           },
         });
 
-        emailRecordArray.push({
+        notificationData[prefLang].emailRecordArray.push({
           ...recordCommonData,
           id: emailId,
           notificationType: "email",
+          language: prefLang,
           email: fetchedData[emailField],
           notification: {
-            title: emailSubject,
+            title: emailOfPrefLang.subject,
             body: currEmailBody,
             time: currDateTime,
           },
@@ -381,16 +401,18 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         canWeText = canWeText.integer;
       }
 
-      if (smsBody && fetchedData[phoneField]?.length >= 10 && canWeText === conceptIds.yes) {
+      const smsOfPrefLang = smsInSpec[prefLang];
+      if (smsOfPrefLang?.body && fetchedData[phoneField]?.length >= 10 && canWeText === conceptIds.yes) {
         const phoneNumber = fetchedData[phoneField].replace(/\D/g, "");
         if (phoneNumber.length >= 10) {
-          const currSmsBody = smsBody.replace(/<firstName>/g, firstName);
+          const currSmsBody = smsOfPrefLang.body.replace(/<firstName>/g, firstName);
           const currSmsTo = `+1${phoneNumber.slice(-10)}`;
 
-          smsRecordArray.push({
+          notificationData[prefLang].smsRecordArray.push({
             ...recordCommonData,
             id: smsId,
             notificationType: "sms",
+            language: prefLang,
             phone: currSmsTo,
             notification: {
               body: currSmsBody,
@@ -401,76 +423,97 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       }
     }
     
-    if (emailPersonalizationArray.length === 0 && smsRecordArray.length === 0) continue;
-
-    if (emailPersonalizationArray.length > 0) {
-      const emailBatch = {
-        from: {
-          name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
-          email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
-        },
-        subject: emailSubject,
-        html: emailHtmlTemplate,
-        personalizations: emailPersonalizationArray,
-      };
-
-      try {
-        await sgMail.send(emailBatch);
-        await saveNotificationBatch(emailRecordArray);
-        emailCount += emailRecordArray.length;
-      } catch (error) {
-        if (error.message.startsWith("saveNotificationBatch")) {
-          console.error(`Error saving email records for ${notificationSpec.id}(${readableSpecString}).`, error);
-        } else {
-          console.error(`Error sending emails for ${notificationSpec.id}(${readableSpecString}).`, error);
-        }
-
-        break;
-      }
-    }
-
-    if (smsRecordArray.length > 0) {
-      try {
-        smsRecordArray = await sendSmsBatch(smsRecordArray);
-        if (smsRecordArray.length > 0) {
-          await saveNotificationBatch(smsRecordArray);
-          smsCount += smsRecordArray.length;
-        }
-      } catch (error) {
-        console.error(`Error saving SMS records for ${notificationSpec.id}(${readableSpecString}).`, error);
-        break;
-      }
-    }
-    
-    if ((emailRecordArray[0] && emailRecordArray[0].category === '3mo QOL Survey Reminders' && emailRecordArray[0].attempt === '1st contact') ||
-        (smsRecordArray[0] && smsRecordArray[0].category === '3mo QOL Survey Reminders' && smsRecordArray[0].attempt === '1st contact')) {
-
-      const { moduleStatusConcepts, findKeyByValue } = require('./shared');
-      const surveyStatus = findKeyByValue(moduleStatusConcepts, 'promis');
+    for (const lang of langArray) {
+      let { emailRecordArray, emailPersonalizationArray, smsRecordArray } = notificationData[lang];
+      if (emailPersonalizationArray.length > 0) {
+        const emailBatch = {
+          from: {
+            name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
+            email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
+          },
+          subject: emailInSpec[lang].subject,
+          html: emailInSpec[lang].body,
+          personalizations: emailPersonalizationArray,
+        };
   
-      for (let participant of [...emailRecordArray, ...smsRecordArray]) {
+        try {
+          await sgMail.send(emailBatch);
+          await saveNotificationBatch(emailRecordArray);
+          emailCount[lang] += emailRecordArray.length;
+        } catch (error) {
+          if (error.message.startsWith("saveNotificationBatch")) {
+            console.error(`Error saving email records for ${notificationSpec.id}(${readableSpecString}).`, error);
+          } else {
+            console.error(`Error sending emails for ${notificationSpec.id}(${readableSpecString}).`, error);
+          }
+  
+          break;
+        }
+      }
+  
+      if (smsRecordArray.length > 0) {
+        try {
+          smsRecordArray = await sendSmsBatch(smsRecordArray);
+          if (smsRecordArray.length > 0) {
+            await saveNotificationBatch(smsRecordArray);
+            smsCount[lang] += smsRecordArray.length;
+          }
+        } catch (error) {
+          console.error(`Error saving SMS records for ${notificationSpec.id}(${readableSpecString}).`, error);
+          break;
+        }
+      }
+    }
 
-        const token = participant.token;
+    if (notificationSpec.category === "3mo QOL Survey Reminders" && notificationSpec.attempt === "1st contact") {
+      const { moduleStatusConcepts, findKeyByValue } = require("./shared");
+      const surveyStatus = findKeyByValue(moduleStatusConcepts, "promis");
 
+      let tokenArray = [];
+      for (const { emailRecordArray, smsRecordArray } of Object.values(notificationData)) {
+        tokenArray = [
+          ...tokenArray,
+          ...emailRecordArray.map((record) => record.token),
+          ...smsRecordArray.map((record) => record.token),
+        ];
+      }
+
+      const tokenSet = new Set(tokenArray);
+      for (const token of tokenSet) {
         try {
           await updateSurveyEligibility(token, surveyStatus);
-        }
-        catch (error) {
+        } catch (error) {
           console.error(`Error updating survey eligibility for token ${token}`, error);
           break;
         }
       }
     }
-    
+
+  }
+  
+  for (const lang of langArray) {
+    emailCount.total += emailCount[lang];
+    smsCount.total += smsCount[lang];
   }
 
-  if (emailCount === 0 && smsCount === 0) {
-    console.log(`Finished notification spec: ${notificationSpec.id}(${readableSpecString}). No emails or sms sent.`);
+  let messageArray = [`Finished notification spec: ${notificationSpec.id}(${readableSpecString})`];
+  if (emailCount.total === 0) {
+    messageArray.push("No emails sent");
   } else {
-    console.log(
-      `Finished notification spec: ${notificationSpec.id}(${readableSpecString}), emails sent: ${emailCount}, sms sent: ${smsCount}`
-    );
+    for (const lang of langArray) {
+      messageArray.push(`Email (${lang}) sent: ${emailCount[lang]}`);
+    }
   }
+
+  if (smsCount.total === 0) {
+    messageArray.push("No sms sent");
+  } else {
+    for (const lang of langArray) {
+      messageArray.push(`SMS (${lang}) sent: ${smsCount[lang]}`);
+    }
+  }
+
+  console.log(messageArray.join(". ") + ".");
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
@@ -528,9 +571,10 @@ const retrieveNotificationSchema = async (req, res, authObj) => {
 
   const category = req.query.category;
   const getDrafts = req.query.drafts === "true";
+  const sendType = req.query.sendType || "scheduled";
   const { retrieveNotificationSchemaByCategory } = require("./firestore");
   try {
-    const schemaArray = await retrieveNotificationSchemaByCategory(category, getDrafts);
+    const schemaArray = await retrieveNotificationSchemaByCategory(category, getDrafts, sendType);
     if (schemaArray.length === 0)
       return res.status(404).json({ data: [], message: `Notification schema not found for given category - ${category}`, code: 404 });
 
@@ -693,28 +737,30 @@ const sendEmailLink = async (req, res) => {
 
 const dryRunNotificationSchema = async (req, res) => {
   if (req.method !== "GET") {
-    return res.status(405).json({data: [], message: "Only GET requests are accepted!", code: 405});
+    return res.status(405).json({ data: [], message: "Only GET requests are accepted!", code: 405 });
   }
 
   if (!req.query.schemaId) {
-    return res.status(400).json({data: [], message: "schemaId is missing in request parameter!", code: 400});
+    return res.status(400).json({ data: [], message: "schemaId is missing in request parameter!", code: 400 });
   }
 
-  let countData = { emailCount: 0, smsCount: 0 };
-  let message = "Ok";
   let spec = null;
-
   try {
     spec = await getNotificationSpecById(req.query.schemaId);
+    if (!spec) {
+      const message = `Notification spec ID ${req.query.schemaId} isn't found.`;
+      return res.status(404).json({ data: [], message, code: 404 });
+    }
+    const { data, message, code } = await handleDryRun(spec);
+    return res.status(code).json({ data, message, code });
+
   } catch (error) {
     return res.status(500).json({ data: [], message: JSON.stringify(error, null, 2), code: 500 });
   }
 
-  if (!spec) {
-    message = `Notification spec ID ${req.query.schemaId} isn't found.`;
-    return res.status(404).json({ data: [], message, code: 404 });
-  }
+};
 
+async function handleDryRun(spec) {
   let timeField = spec.primaryField;
   let cutoffTime = new Date();
   let cutoffTimeStr = cutoffTime.toISOString();
@@ -724,25 +770,30 @@ const dryRunNotificationSchema = async (req, res) => {
 
   if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(spec.primaryField)) {
     const scheduledTime = new Date(spec.primaryField);
-    if (scheduledTime > cutoffTime) return res.status(200).json({ data: [], message, code: 200 });
+    if (scheduledTime > cutoffTime) return { data: [], message: "Ok", code: 200 };
     timeField = "";
     cutoffTimeStr = "";
   }
 
+  const emailInSpec = spec.email || {};
+  const smsInSpec = spec.sms || {};
   const emailField = spec.emailField ?? "";
-  const emailBody = spec.email?.body ?? "";
   const phoneField = spec.phoneField ?? "";
-  const smsBody = spec.sms?.body ?? "";
-
-  let fieldsToFetch = ["token"];
+  let fieldsToFetch = ["token", "Connect_ID", conceptIds.preferredLanguage.toString()];
   emailField && fieldsToFetch.push(emailField);
   phoneField && fieldsToFetch.push(phoneField);
-  smsBody && fieldsToFetch.push(conceptIds.canWeText.toString());
+  spec.notificationType.includes("sms") && fieldsToFetch.push(conceptIds.canWeText.toString());
 
-  const limit = 9000;
+  const limit = 1000;
   let previousConnectId = 0;
   let hasNext = true;
   let fetchedDataArray = [];
+  let countObj = { email: {}, sms: {} };
+
+  for (const lang of langArray) {
+    countObj.email[lang] = 0;
+    countObj.sms[lang] = 0;
+  }
 
   while (hasNext) {
     try {
@@ -756,7 +807,8 @@ const dryRunNotificationSchema = async (req, res) => {
         previousConnectId,
       });
     } catch (error) {
-      return res.status(500).json({ data: [countData], message: JSON.stringify(error, null, 2), code: 500 });
+      console.error(`Error dry running spec ID ${spec.id}.`, error);
+      return { data: [countObj], message: JSON.stringify(error, null, 2), code: 500 };
     }
 
     if (fetchedDataArray.length === 0) break;
@@ -768,29 +820,95 @@ const dryRunNotificationSchema = async (req, res) => {
     for (const fetchedData of fetchedDataArray) {
       if (!fetchedData[emailField] && !fetchedData[phoneField]) continue;
 
-      if (emailBody && validEmailFormat.test(fetchedData[emailField])) {
-        countData.emailCount++;
+      const prefLang = cidToLangMapper[fetchedData[conceptIds.preferredLanguage]] || "english";
+
+      if (emailInSpec[prefLang] && validEmailFormat.test(fetchedData[emailField])) {
+        countObj.email[prefLang]++;
       }
 
-      if (smsBody && fetchedData[phoneField]?.length >= 10 && fetchedData[conceptIds.canWeText] === conceptIds.yes) {
-        countData.smsCount++;
+      if (
+        smsInSpec[prefLang] &&
+        fetchedData[phoneField]?.length >= 10 &&
+        fetchedData[conceptIds.canWeText] === conceptIds.yes
+      ) {
+        countObj.sms[prefLang]++;
       }
     }
-
   }
 
-  return res.status(200).json({ data: [countData], message, code: 200 });
+  return { data: [countObj], message: "Ok", code: 200 };
+}
+
+const sendInstantNotification = async (requestData) => {
+  const notificationSpec = await getNotificationSpecByCategoryAndAttempt(requestData.category, requestData.attempt);
+  if (!notificationSpec) {
+    throw new Error(`Notification spec not found for category: "${requestData.category}", attempt: "${requestData.attempt}".`);
+  }
+
+  const isNotificationSent = await checkIsNotificationSent(requestData.token, notificationSpec.id);
+  if (isNotificationSent) {
+    throw new Error(`Notification already sent for participant with ID ${requestData.connectId}.`);
+  }
+
+  const uuidStr = uuid();
+  const emailOfPrefLang = notificationSpec.email[requestData.preferredLanguage] || notificationSpec.email.english;
+  const currEmailBody = emailOfPrefLang.body
+    .replace(/{{firstName}}/g, requestData.substitutions.firstName)
+    .replace(/{{loginDetails}}/g, requestData.substitutions.loginDetails);
+
+  const emailDataToSg = {
+    from: {
+      name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
+      email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
+    },
+    subject: emailOfPrefLang.subject,
+    html: emailOfPrefLang.body,
+    personalizations: [
+      {
+        to: requestData.email,
+        substitutions: requestData.substitutions,
+        custom_args: {
+          connect_id: requestData.connectId,
+          token: requestData.token,
+          notification_id: uuidStr,
+          gcloud_project: process.env.GCLOUD_PROJECT,
+        },
+      },
+    ],
+  };
+  await sgMail.send(emailDataToSg);
+
+  const currEmailRecord = {
+    id: uuidStr,
+    notificationType: "email",
+    language: requestData.preferredLanguage,
+    email: requestData.email,
+    notification: {
+      title: emailOfPrefLang.subject,
+      body: currEmailBody,
+      time: new Date().toISOString(),
+    },
+    notificationSpecificationsID: notificationSpec.id,
+    attempt: requestData.attempt,
+    category: requestData.category,
+    token: requestData.token,
+    uid: requestData.uid,
+    read: false,
+  };
+  await storeNotification(currEmailRecord);
 };
 
 module.exports = {
-    subscribeToNotification,
-    retrieveNotifications,
-    notificationHandler,
-    storeNotificationSchema,
-    retrieveNotificationSchema,
-    getParticipantNotification,
-    sendEmail,
-    getSiteNotification,
-    sendEmailLink,
-    dryRunNotificationSchema,
-}
+  subscribeToNotification,
+  retrieveNotifications,
+  sendScheduledNotifications,
+  storeNotificationSchema,
+  retrieveNotificationSchema,
+  getParticipantNotification,
+  sendEmail,
+  getSiteNotification,
+  sendEmailLink,
+  dryRunNotificationSchema,
+  sendInstantNotification,
+  handleDryRun,
+};
