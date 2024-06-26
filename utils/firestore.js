@@ -450,7 +450,6 @@ const removeParticipantsDataDestruction = async () => {
         // Check each participant if they are already registered or more than 60 days from the date of their request
         // then the system will delete their data except the stub records and update the dataHasBeenDestroyed flag to yes.
         for (const doc of currSnapshot.docs) {
-            const batch = db.batch();
             const participant = doc.data();
             const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
                 ? new Date().getTime() -
@@ -462,6 +461,7 @@ const removeParticipantsDataDestruction = async () => {
                     requestedAndSignCId ||
                 timeDiff > millisecondsWait
             ) {
+                const batch = db.batch();
                 let hasRemovedField = false;
                 const fieldKeys = Object.keys(participant);
                 const participantRef = doc.ref;
@@ -492,12 +492,12 @@ const removeParticipantsDataDestruction = async () => {
                     });
                     count++;
                 }
+                await batch.commit();
+                await removeDocumentFromCollection(
+                    participant["Connect_ID"],
+                    participant["token"]
+                );
             }
-            await batch.commit();
-            await removeDocumentFromCollection(
-                participant["Connect_ID"],
-                participant["token"]
-            );
         }
 
         console.log(
