@@ -57,6 +57,7 @@ const submit = async (res, data, uid) => {
                 moduleComplete = true;
 
                 if (key === '320303124') {
+                    console.log('TEMP DEBUG: PROMIS Key Found');
                     calculateScores = true;
                 }
             }
@@ -74,7 +75,7 @@ const submit = async (res, data, uid) => {
             await checkDerivedVariables(token, siteCode);
 
             if (calculateScores) {
-                
+                console.log(`TEMP DEBUG: ${process.env.GCLOUD_PROJECT}`);
                 //remove condition once implemented in dev tier
                 if(process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-stg-5519' || process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-prod-6d04') {
                     const { processPromisResults } = require('./promis');
