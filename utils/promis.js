@@ -14,6 +14,8 @@ const generatePromisAuthToken = async () => {
 
 const processPromisResults = async (uid) => {
 
+    console.log(`Processing PROMIS Results: ${uid}`);
+    
     const { surveyExists, updateSurvey } = require('./firestore');
 
     const collection = 'promis_v1';
