@@ -447,12 +447,11 @@ const removeParticipantsDataDestruction = async () => {
             .where(dataHasBeenDestroyed, "!=", fieldMapping.yes)
             .get();
 
-        const batch = db.batch();
-
         // Check each participant if they are already registered or more than 60 days from the date of their request
         // then the system will delete their data except the stub records and update the dataHasBeenDestroyed flag to yes.
         for (const doc of currSnapshot.docs) {
             const participant = doc.data();
+            const participantId = doc.id;
             const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
                 ? new Date().getTime() -
                   new Date(participant[dateRequestedDataDestroyCId]).getTime()
@@ -463,37 +462,30 @@ const removeParticipantsDataDestruction = async () => {
                     requestedAndSignCId ||
                 timeDiff > millisecondsWait
             ) {
+                const updatedData = {};
                 let hasRemovedField = false;
                 const fieldKeys = Object.keys(participant);
-                const participantRef = doc.ref;
                 fieldKeys.forEach((key) => {
                     if (!stubFieldArray.includes(key)) {
-                        batch.update(participantRef, {
-                            [key]: admin.firestore.FieldValue.delete(),
-                        });
+                        updatedData[key] = admin.firestore.FieldValue.delete();
                         hasRemovedField = true;
                     } else {
                         if (key === "query" || key === "state") {
                             const subFieldKeys = Object.keys(participant[key]);
                             subFieldKeys.forEach((subKey) => {
                                 if (!subStubFieldArray.includes(subKey)) {
-                                    batch.update(participantRef, {
-                                        [`${key}.${subKey}`]:
-                                            admin.firestore.FieldValue.delete(),
-                                    });
+                                    updatedData[`${key}.${subKey}`] = admin.firestore.FieldValue.delete();
                                 }
                             });
                         }
                     }
                 });
                 if (hasRemovedField) {
-                    batch.update(participantRef, {
-                        [dataHasBeenDestroyed]: fieldMapping.yes,
-                        [fieldMapping.participationStatus]: fieldMapping.participantMap.dataDestroyedStatus,
-                    });
+                    updatedData[dataHasBeenDestroyed] = fieldMapping.yes;
+                    updatedData[fieldMapping.participationStatus] = fieldMapping.participantMap.dataDestroyedStatus;
                     count++;
                 }
-                await batch.commit();
+                await db.collection('participants').doc(participantId).update(updatedData);
                 await removeDocumentFromCollection(
                     participant["Connect_ID"],
                     participant["token"]
