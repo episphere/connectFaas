@@ -97,12 +97,9 @@ const connectApp = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
       }
 
-      const selectedParamsArray = req.query.selectedParamsArray
-        ? req.query.selectedParamsArray.split(',')
-        : [];
-
-      if (selectedParamsArray && !Array.isArray(selectedParamsArray)) {
-        return res.status(400).json(getResponseJSON("Error: selectedParamsArray is optional. If present, it must be an array.", 400));
+      const selectedParamsArray = req.query.selectedParamsArray?.split(',');
+      if (!selectedParamsArray || !Array.isArray(selectedParamsArray) || selectedParamsArray.length === 0) {
+        return res.status(400).json(getResponseJSON("Error: selectedParamsArray is required. Please specify parameters to return.", 400));
       }
 
       const { getAppSettings } = require('./firestore');

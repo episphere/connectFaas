@@ -3291,23 +3291,20 @@ const generateSignInWithEmailLink = async (email, continueUrl) => {
 /**
  * Get the app settings from Firestore.
  * @param {String} appName  - Name of the app (e.g. 'connectApp', 'biospecimen', 'smdb')
- * @param {Array} selectedParamsArray - (Optional) array of parameters to retrieve from the document. If not provided, all parameters will be retrieved.
+ * @param {Array<string>} selectedParamsArray - Array of parameters to retrieve from the document.
  * @returns {Object} - App settings object.
  */
 const getAppSettings = async (appName, selectedParamsArray) => {
     try {
-        let query =  db.collection('appSettings').where('appName', '==', appName);
-
-        if (selectedParamsArray && selectedParamsArray.length > 0) {
-            query = query.select(...selectedParamsArray);
-        }
-
-        const snapshot = await query.get();
+        const snapshot = await db.collection('appSettings')
+            .where('appName', '==', appName)
+            .select(...selectedParamsArray)
+            .get();
         
         if (!snapshot.empty) {
             return snapshot.docs[0].data();
         } else {
-            console.error(`No settings found for ${appName}`);
+            console.error(`No app settings found for ${appName}. Parameters requested: ${selectedParamsArray.join(', ')}`);
             return {};
         }
     } catch (error) {
