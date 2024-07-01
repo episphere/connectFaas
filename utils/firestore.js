@@ -3288,6 +3288,31 @@ const generateSignInWithEmailLink = async (email, continueUrl) => {
     });
 };
 
+/**
+ * Get the app settings from Firestore.
+ * @param {String} appName  - Name of the app (e.g. 'connectApp', 'biospecimen', 'smdb')
+ * @param {Array<string>} selectedParamsArray - Array of parameters to retrieve from the document.
+ * @returns {Object} - App settings object.
+ */
+const getAppSettings = async (appName, selectedParamsArray) => {
+    try {
+        const snapshot = await db.collection('appSettings')
+            .where('appName', '==', appName)
+            .select(...selectedParamsArray)
+            .get();
+        
+        if (!snapshot.empty) {
+            return snapshot.docs[0].data();
+        } else {
+            console.error(`No app settings found for ${appName}. Parameters requested: ${selectedParamsArray.join(', ')}`);
+            return {};
+        }
+    } catch (error) {
+        console.error(`Error fetching app settings for ${appName}.`, error);
+        throw new Error("Error fetching app settings.", { cause: error });
+    }
+}
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3414,5 +3439,6 @@ module.exports = {
     writeCancerOccurrences,
     updateParticipantCorrection,
     updateSurveyEligibility,
-    generateSignInWithEmailLink
+    generateSignInWithEmailLink,
+    getAppSettings
 }
