@@ -76,7 +76,7 @@ const submit = async (res, data, uid) => {
             if (calculateScores) {
 
                 //remove condition once implemented in dev tier
-                if (process.env.GCLOUD_PROJECT !== 'nih-nci-dceg-connect-dev') {
+                if (process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-stg-5519' || process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-prod-6d04') {
                     const { processPromisResults } = require('./promis');
                     processPromisResults(uid);
                 }
