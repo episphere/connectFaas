@@ -11,6 +11,8 @@ const { importToBigQuery, firestoreExport, exportNotificationsToBucket, importNo
 const { participantDataCleanup } = require('./utils/participantDataCleanup');
 const { webhook } = require('./utils/webhook');
 
+const { promisBackfill } = require('./utils/firestore');
+
 // API End-Points for Sites
 
 exports.incentiveCompleted = incentiveCompleted;
@@ -69,3 +71,7 @@ exports.participantDataCleanup = participantDataCleanup;
 // End-Points for Event Webhook
 
 exports.webhook = webhook;
+
+
+// Temporary End-Point
+exports.promis = promisBackfill;
