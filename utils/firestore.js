@@ -7,6 +7,8 @@ const decrement = admin.firestore.FieldValue.increment(-1);
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
+const { setHeadersDomainRestricted } = require('./shared');
+const { processPromisResults } = require('./promis');
 
 const nciCode = 13;
 const nciConceptId = `517700004`;
@@ -3295,6 +3297,22 @@ const generateSignInWithEmailLink = async (email, continueUrl) => {
     });
 };
 
+const promisBackfill = async (req, res) => {
+    setHeadersDomainRestricted(req, res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    const snapshot = await db.collection('promis_v1').get();
+
+    snapshot.docs.forEach( doc => {
+        const data = doc.data();
+        const uid = data['uid'];
+        processPromisResults(uid);
+    });
+
+    return res.status(200).json({code: 200});
+}
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3421,5 +3439,6 @@ module.exports = {
     writeCancerOccurrences,
     updateParticipantCorrection,
     updateSurveyEligibility,
-    generateSignInWithEmailLink
+    generateSignInWithEmailLink,
+    promisBackfill
 }
