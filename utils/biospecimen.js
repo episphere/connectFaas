@@ -673,11 +673,12 @@ const biospecimenAPIs = async (req, res) => {
         }
         const supplyQuery = req.query.supplyKitId;
         const collectionQuery = (req.query.collectionId?.slice(0, -4) || "") + " " + (req.query.collectionId?.slice(-4) || ""); // add space to collection
+        const returnKitTrackingNumberQuery = req.query.returnKitTrackingNumber;
         if (Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include id to check uniqueness.', 400));
         if (collectionQuery.length < 14) return res.status(200).json({data: 'Check Collection ID', code:200});
         try {
             const { checkCollectionUniqueness } = require('./firestore');
-            const response = await checkCollectionUniqueness(supplyQuery, collectionQuery);
+            const response = await checkCollectionUniqueness(supplyQuery, collectionQuery, returnKitTrackingNumberQuery);
             return res.status(200).json({data: response, code:200});
         }
         catch (error) {

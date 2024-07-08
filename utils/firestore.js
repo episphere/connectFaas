@@ -2152,16 +2152,29 @@ const updateKitAssemblyData = async (data) => {
     }
 }
 
-const checkCollectionUniqueness = async (supplyId, collectionId) => {
+const checkCollectionUniqueness = async (supplyId, collectionId, returnKitTrackingNumber) => {
     try {
         const supplySnapShot = await db.collection('kitAssembly').where('690210658', '==', supplyId).get();
         const collectionSnapShot = await db.collection('kitAssembly').where('259846815', '==', collectionId).get();
-        if (supplySnapShot.docs.length === 0 && collectionSnapShot.docs.length === 0) {
+        let returnKitTrackingNumberSnapshot = {docs: []};
+        let supplyKitTrackingNumberSnapshot = {docs: []};
+        if(returnKitTrackingNumber) {
+            [returnKitTrackingNumberSnapshot, supplyKitTrackingNumberSnapshot] = await Promise.all([
+                db.collection('kitAssembly').where(fieldMapping.returnKitTrackingNum.toString(), '==', returnKitTrackingNumber).get(),
+                db.collection('kitAssembly').where(fieldMapping.supplyKitTrackingNum.toString(), '==', returnKitTrackingNumber).get()
+            ]);
+        }
+        if (supplySnapShot.docs.length === 0 && collectionSnapShot.docs.length === 0
+            && returnKitTrackingNumberSnapshot.docs.length === 0 && supplyKitTrackingNumberSnapshot.docs.length === 0) {
             return true;
         } else if (supplySnapShot.docs.length !== 0) {
             return 'duplicate supplykit id';
         } else if (collectionSnapShot.docs.length !== 0) {
             return 'duplicate collection id';
+        } else if (returnKitTrackingNumberSnapshot.docs.length !== 0) {
+            return 'duplicate return kit tracking number';
+        } else if (supplyKitTrackingNumberSnapshot.docs.length !== 0) {
+            return 'return kit tracking number is for supply kit';
         }
     } catch (error) {
         return new Error(error);
@@ -2295,9 +2308,38 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
 
 const assignKitToParticipant = async (data) => {
     try {
-        const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, 
+        const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
             assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
             kitType, mouthwashKit } = fieldMapping;
+
+        
+        // Check the supply kit tracking number and see if it matches the return kit tracking number
+        // of any kits including this one or the supply kit tracking number of any other kits
+
+        const kitsWithDuplicateReturnTrackingNumbers = await db.collection("kitAssembly")
+            .where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
+            .get();
+
+        if(kitsWithDuplicateReturnTrackingNumbers.size > 0) {
+            return false;
+        }
+
+        const otherKitsUsingSupplyKitTrackingNumber = await db.collection("kitAssembly")
+            .where(`${supplyKitTrackingNum}`, '==', data[supplyKitTrackingNum])
+            .get();
+            // .where(`${supplyKitId}`, '!=', data[supplyKitId]).get();
+
+        if(otherKitsUsingSupplyKitTrackingNumber.size > 1) {
+                return false;
+        } else if (otherKitsUsingSupplyKitTrackingNumber.size === 1) {
+            // check if the kit found is the current kit
+            // Doing this instead of including it in the query to avoid creating an unnecessary composite index
+            const possibleDuplicate = otherKitsUsingSupplyKitTrackingNumber.docs[0];
+            const possibleDuplicateKitId = possibleDuplicate.data()[supplyKitId];
+            if(possibleDuplicateKitId !== data[supplyKitId]) {
+                return false;
+            }
+        }
 
         const kitSnapshot = await db.collection("kitAssembly")
             .where(`${supplyKitId}`, '==', data[supplyKitId])
