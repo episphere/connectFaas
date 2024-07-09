@@ -2409,10 +2409,10 @@ const assignKitToParticipant = async (data) => {
 
 const processVerifyScannedCode = async (id) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
-        printDocsCount(snapShot, "processVerifyScannedCode");
-        if (snapShot.docs.length === 1) {
-            return { valid: true, uniqueKitID: snapShot.docs[0].data()[687158491] }
+        const snapshot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
+        printDocsCount(snapshot, "processVerifyScannedCode");
+        if (snapshot.docs.length === 1) {
+            return { valid: true, uniqueKitID: snapshot.docs[0].data()[687158491] }
         }
         else { return false }
     } catch (error) {
