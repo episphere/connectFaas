@@ -442,8 +442,8 @@ const removeParticipantsDataDestruction = async () => {
         // Check each participant if they are already registered or more than 60 days from the date of their request
         // then the system will delete their data except the stub records and update the dataHasBeenDestroyed flag to yes.
         for (const doc of currSnapshot.docs) {
-            const batch = db.batch();
             const participant = doc.data();
+            const participantId = doc.id;
             const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
                 ? new Date().getTime() -
                   new Date(participant[dateRequestedDataDestroyCId]).getTime()
@@ -454,42 +454,35 @@ const removeParticipantsDataDestruction = async () => {
                     requestedAndSignCId ||
                 timeDiff > millisecondsWait
             ) {
+                const updatedData = {};
                 let hasRemovedField = false;
                 const fieldKeys = Object.keys(participant);
-                const participantRef = doc.ref;
                 fieldKeys.forEach((key) => {
                     if (!stubFieldArray.includes(key)) {
-                        batch.update(participantRef, {
-                            [key]: admin.firestore.FieldValue.delete(),
-                        });
+                        updatedData[key] = admin.firestore.FieldValue.delete();
                         hasRemovedField = true;
                     } else {
                         if (key === "query" || key === "state") {
                             const subFieldKeys = Object.keys(participant[key]);
                             subFieldKeys.forEach((subKey) => {
                                 if (!subStubFieldArray.includes(subKey)) {
-                                    batch.update(participantRef, {
-                                        [`${key}.${subKey}`]:
-                                            admin.firestore.FieldValue.delete(),
-                                    });
+                                    updatedData[`${key}.${subKey}`] = admin.firestore.FieldValue.delete();
                                 }
                             });
                         }
                     }
                 });
                 if (hasRemovedField) {
-                    batch.update(participantRef, {
-                        [dataHasBeenDestroyed]: fieldMapping.yes,
-                        [fieldMapping.participationStatus]: fieldMapping.participantMap.dataDestroyedStatus,
-                    });
+                    updatedData[dataHasBeenDestroyed] = fieldMapping.yes;
+                    updatedData[fieldMapping.participationStatus] = fieldMapping.participantMap.dataDestroyedStatus;
                     count++;
                 }
+                await db.collection('participants').doc(participantId).update(updatedData);
+                await removeDocumentFromCollection(
+                    participant["Connect_ID"],
+                    participant["token"]
+                );
             }
-            await batch.commit();
-            await removeDocumentFromCollection(
-                participant["Connect_ID"],
-                participant["token"]
-            );
         }
 
         console.log(
@@ -3357,6 +3350,31 @@ const generateSignInWithEmailLink = async (email, continueUrl) => {
     });
 };
 
+/**
+ * Get the app settings from Firestore.
+ * @param {String} appName  - Name of the app (e.g. 'connectApp', 'biospecimen', 'smdb')
+ * @param {Array<string>} selectedParamsArray - Array of parameters to retrieve from the document.
+ * @returns {Object} - App settings object.
+ */
+const getAppSettings = async (appName, selectedParamsArray) => {
+    try {
+        const snapshot = await db.collection('appSettings')
+            .where('appName', '==', appName)
+            .select(...selectedParamsArray)
+            .get();
+        
+        if (!snapshot.empty) {
+            return snapshot.docs[0].data();
+        } else {
+            console.error(`No app settings found for ${appName}. Parameters requested: ${selectedParamsArray.join(', ')}`);
+            return {};
+        }
+    } catch (error) {
+        console.error(`Error fetching app settings for ${appName}.`, error);
+        throw new Error("Error fetching app settings.", { cause: error });
+    }
+}
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3480,5 +3498,6 @@ module.exports = {
     writeCancerOccurrences,
     updateParticipantCorrection,
     updateSurveyEligibility,
-    generateSignInWithEmailLink,db
+    generateSignInWithEmailLink,
+    getAppSettings
 }
