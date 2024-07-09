@@ -330,16 +330,16 @@ const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept
         const operator = isParent ? 'in' : '==';
         const offset = (page - 1) * limit;
         
-        const snpashot = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('827220437', operator, siteCode)
                                 .where(concept, '==', 353358909)
                                 .orderBy('Connect_ID', 'asc')
                                 .offset(offset)
                                 .limit(limit)
                                 .get();                 
-        printDocsCount(snpashot, "retrieveRefusalWithdrawalParticipants");
+        printDocsCount(snapshot, "retrieveRefusalWithdrawalParticipants");
 
-        return snpashot.docs.map(doc => doc.data());
+        return snapshot.docs.map(doc => doc.data());
     } catch (error) {
         console.error(error);
         return new Error(error)
@@ -356,7 +356,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
         const { incentiveConcepts } = require('./shared');
         const object = incentiveConcepts[roundType]
         
-        const snpashot = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('827220437', operator, siteCode)
                                 .where('821247024', '==', 197316935)
                                 .where(`${object}.222373868`, "==", 353358909)
@@ -366,9 +366,9 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
                                 .offset(offset)
                                 .limit(limit)
                                 .get();
-        printDocsCount(snpashot, "retrieveParticipantsEligibleForIncentives");
+        printDocsCount(snapshot, "retrieveParticipantsEligibleForIncentives");
 
-        return snpashot.docs.map(document => {
+        return snapshot.docs.map(document => {
             let data = document.data();
             return {firstName: data['399159511'], email: data['869588347'], token: data['token'], site: data['827220437']}
         });
@@ -500,16 +500,16 @@ const removeUninvitedParticipants = async () => {
         const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
 
         while (willContinue) {
-            const currSnapshot = await db
+            const snapshot = await db
               .collection("participants")
               .where(uninvitedRecruitsCId, "==", fieldMapping.yes)
               .limit(batchLimit)
               .get();
-            printDocsCount(currSnapshot, "removeUninvitedParticipants");
+            printDocsCount(snapshot, "removeUninvitedParticipants");
 
-            willContinue = currSnapshot.docs.length === batchLimit;
+            willContinue = snapshot.docs.length === batchLimit;
             const batch = db.batch();
-            for (const doc of currSnapshot.docs) {
+            for (const doc of snapshot.docs) {
                 batch.delete(doc.ref);
                 count++
             }
@@ -1371,13 +1371,13 @@ const getSpecimenAndParticipant = async (collectionId, siteCode, isBPTL) => {
         // Fetch the specimen
         let query = db.collection('biospecimen').where(fieldMapping.collectionId.toString(), '==', collectionId);
         if (!isBPTL) query = query.where(fieldMapping.healthCareProvider.toString(), '==', siteCode);
-        const specimenSnapshot = await query.get();
-        printDocsCount(specimenSnapshot, "getSpecimenAndParticipant; collection: biospecimen");
+        const snapshot = await query.get();
+        printDocsCount(snapshot, "getSpecimenAndParticipant; collection: biospecimen");
 
-        if (specimenSnapshot.size !== 1) {
+        if (snapshot.size !== 1) {
             throw new Error('Couldn\'t find matching specimen document.');
         }
-        const specimenData = specimenSnapshot.docs[0].data();
+        const specimenData = snapshot.docs[0].data();
 
         // Use the Connect_ID in the specimen doc to fetch the participant
         const participantSnapshot = await db.collection('participants').where('Connect_ID', '==', specimenData['Connect_ID']).get();
@@ -2184,11 +2184,11 @@ const addKitAssemblyData = async (data) => {
 
 const updateKitAssemblyData = async (data) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
-        printDocsCount(snapShot, "updateKitAssemblyData");
+        const snapshot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
+        printDocsCount(snapshot, "updateKitAssemblyData");
 
-        if (snapShot.empty) return false
-        const docId = snapShot.docs[0].id;
+        if (snapshot.empty) return false
+        const docId = snapshot.docs[0].id;
  
         await db.collection('kitAssembly').doc(docId).update({
             '194252513': data[fieldMapping.returnKitId],
@@ -2820,15 +2820,15 @@ const setPackageReceiptFedex = async (boxUpdateData) => {
             delete boxUpdateData['shipmentTimestamp'];
         }
         
-        const boxSnapshot = await query.get();
-        printDocsCount(boxSnapshot, "setPackageReceiptFedex");
+        const snapshot = await query.get();
+        printDocsCount(snapshot, "setPackageReceiptFedex");
         
-        if (boxSnapshot.empty) {
+        if (snapshot.empty) {
             console.error('Box not found');
             return { message: 'Box Not Found', data: null };
         }
 
-        const boxListData = boxSnapshot.docs.map(doc => ({
+        const boxListData = snapshot.docs.map(doc => ({
             boxDocRef: doc.ref,
             boxData: doc.data(),
         }));
