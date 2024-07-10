@@ -1841,81 +1841,6 @@ const getNotificationSpecifications = async (notificationType, notificationCateg
     }
 }
 
-// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
-const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
-    try {
-        let query = db.collection('participants')
-                                .limit(limit)
-                                .offset(offset);
-        
-        for(let obj in conditions) {
-            let operator = '';
-            let values = '';
-            if(conditions[obj]['equals']) {
-                if(typeof conditions[obj]['equals'] == 'string') {
-                    values = conditions[obj]['equals'];
-                }
-                else if(typeof conditions[obj]['equals'] == 'number') {
-                    values = parseInt(conditions[obj]['equals']);
-                }
-                operator = '==';
-            }
-            if(conditions[obj]['notequals']) {
-                if(typeof conditions[obj]['notequals'] == 'string') {
-                    values = conditions[obj]['notequals'];
-                }
-                else if(typeof conditions[obj]['notequals'] == 'number') {
-                    values = parseInt(conditions[obj]['notequals']);
-                }
-                operator = '!=';
-            }
-            if(conditions[obj]['greater']) {
-                if(typeof conditions[obj]['greater'] == 'string') {
-                    values = conditions[obj]['greater'];
-                }
-                else if(typeof conditions[obj]['greater'] == 'number') {
-                    values = parseInt(conditions[obj]['greater']);
-                }
-                operator = '>';
-            }
-            if(conditions[obj]['greaterequals']) {
-                if(typeof conditions[obj]['greaterequals'] == 'string') {
-                    values = conditions[obj]['greaterequals'];
-                }
-                else if(typeof conditions[obj]['greaterequals'] == 'number') {
-                    values = parseInt(conditions[obj]['greaterequals']);
-                }
-                operator = '>=';
-            }
-            if(conditions[obj]['less']) {
-                if(typeof conditions[obj]['less'] == 'string') {
-                    values = conditions[obj]['less'];
-                }
-                else if(typeof conditions[obj]['less'] == 'number') {
-                    values = parseInt(conditions[obj]['less']);
-                }
-                operator = '<';
-            }
-            if(conditions[obj]['lessequals']) {
-                if(typeof conditions[obj]['lessequals'] == 'string') {
-                    values = conditions[obj]['lessequals'];
-                }
-                else if(typeof conditions[obj]['lessequals'] == 'number') {
-                    values = parseInt(conditions[obj]['lessequals']);
-                }
-                operator = '<=';
-            }
-            query = query.where(obj, operator, values);
-        }
-        const snapshot = await query.get();
-        printDocsCount(snapshot, `retrieveParticipantsByStatus; offset: ${offset}`);
-        return snapshot.docs.map(doc => doc.data());
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
-}
-
 const sendClientEmail = async (data) => {
 
     const { sendEmail } = require('./notifications');
@@ -3432,7 +3357,6 @@ module.exports = {
     removeParticipantsDataDestruction,
     removeUninvitedParticipants,
     getNotificationSpecifications,
-    retrieveParticipantsByStatus,
     storeNotification,
     checkIsNotificationSent,
     validateSiteSAEmail,
