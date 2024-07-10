@@ -315,7 +315,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             snapshot = await query.get();
         }
 
-        printDocsCount(snapshot, "retrieveParticipants");
+        printDocsCount(snapshot, `retrieveParticipants; offset: ${offset}`);
         return snapshot.docs.map(doc => doc.data());
     }
     catch(error){
@@ -337,7 +337,7 @@ const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept
                                 .offset(offset)
                                 .limit(limit)
                                 .get();                 
-        printDocsCount(snapshot, "retrieveRefusalWithdrawalParticipants");
+        printDocsCount(snapshot, `retrieveRefusalWithdrawalParticipants; offset: ${offset}`);
 
         return snapshot.docs.map(doc => doc.data());
     } catch (error) {
@@ -366,7 +366,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
                                 .offset(offset)
                                 .limit(limit)
                                 .get();
-        printDocsCount(snapshot, "retrieveParticipantsEligibleForIncentives");
+        printDocsCount(snapshot, `retrieveParticipantsEligibleForIncentives; offset: ${offset}`);
 
         return snapshot.docs.map(document => {
             let data = document.data();
@@ -1797,7 +1797,7 @@ const getBoxesPagination = async (siteCode, body) => {
         query = preQueryBuilder(filters, query, trackingId, endDate, startDate, source, siteCode);
         query = query.orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage * elementsPerPage);
         const snapshot = await query.get();
-        printDocsCount(snapshot, "getBoxesPagination");
+        printDocsCount(snapshot, `getBoxesPagination; offset: ${currPage * elementsPerPage}`);
         const result = snapshot.docs.map(document => document.data());
         return result;
     } 
@@ -1908,7 +1908,7 @@ const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
             query = query.where(obj, operator, values);
         }
         const snapshot = await query.get();
-        printDocsCount(snapshot, "retrieveParticipantsByStatus");
+        printDocsCount(snapshot, `retrieveParticipantsByStatus; offset: ${offset}`);
         return snapshot.docs.map(doc => doc.data());
     } catch (error) {
         console.error(error);
