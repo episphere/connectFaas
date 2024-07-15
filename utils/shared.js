@@ -1,5 +1,6 @@
-const fieldMapping = require('./fieldToConceptIdMapping');
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const { QuerySnapshot } = require('firebase-admin/firestore');
+const fieldMapping = require('./fieldToConceptIdMapping');
 
 const getResponseJSON = (message, code) => {
     return { message, code };
@@ -1572,6 +1573,28 @@ const cidToLangMapper = {
     [fieldMapping.spanish]: "spanish",
 };
 
+/**
+ * @param {QuerySnapshot | QuerySnapshot[]} snapshot A query snapshot or an array of snapshots
+ * @param {string} infoStr Name of the function and other info to be printed
+ * @returns {void}
+ */
+const printDocsCount = (snapshot, infoStr = "") => {
+  let count = 0;
+  if (Array.isArray(snapshot)) {
+    for (const snap of snapshot) {
+      if (snap.constructor.name !== "QuerySnapshot" || snap.empty) continue;
+      count += snap.size;
+    }
+  } else {
+    if (snapshot.constructor.name !== "QuerySnapshot" || snapshot.empty) return;
+    count = snapshot.size;
+  }
+
+  if (count > 0) {
+    console.log(`Docs read from Firestore: ${count}; function: ${infoStr}`);
+  }
+};
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -1635,4 +1658,5 @@ module.exports = {
     twilioErrorMessages,
     getSecret,
     cidToLangMapper,
+    printDocsCount,
 };
