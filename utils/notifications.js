@@ -663,7 +663,7 @@ const sendEmailLink = async (req, res) => {
             .json(getResponseJSON("Only POST requests are accepted!", 405));
     }
     try {
-        const { email, continueUrl } = req.body;
+        const { email, continueUrl, preferredLanguage } = req.body;
         const [clientId, clientSecret, tenantId, magicLink] = await Promise.all(
             [
                 getSecret(process.env.APP_REGISTRATION_CLIENT_ID),
@@ -692,13 +692,20 @@ const sendEmailLink = async (req, res) => {
         );
 
         const { access_token } = await resAuthorize.json();
-
         const body = {
             message: {
-                subject: `Sign in to Connect for Cancer Prevention Study`,
+                subject:
+                    preferredLanguage ===
+                    conceptIds.spanish.toString()
+                        ? "Inicie sesión para Estudio Connect para la Prevención del Cáncer"
+                        : "Sign in to Connect for Cancer Prevention Study",
                 body: {
                     contentType: "html",
-                    content: getTemplateForEmailLink(email, magicLink),
+                    content: getTemplateForEmailLink(
+                        email,
+                        magicLink,
+                        preferredLanguage
+                    ),
                 },
                 toRecipients: [
                     {
