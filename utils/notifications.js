@@ -2,7 +2,7 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
 const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -427,13 +427,23 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       let { emailRecordArray, emailPersonalizationArray, smsRecordArray } = notificationData[lang];
       if (emailPersonalizationArray.length > 0) {
         const emailBatch = {
-          from: {
-            name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
-            email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
-          },
-          subject: emailInSpec[lang].subject,
-          html: emailInSpec[lang].body,
-          personalizations: emailPersonalizationArray,
+            from: {
+                name:
+                    process.env.SG_FROM_NAME ||
+                    "Connect for Cancer Prevention Study",
+                email:
+                    process.env.SG_FROM_EMAIL ||
+                    "donotreply@myconnect.cancer.gov",
+            },
+            subject: emailInSpec[lang].subject,
+            html: emailInSpec[lang].body,
+            personalizations: emailPersonalizationArray,
+            tracking_settings: {
+                subscription_tracking: {
+                    enable: true,
+                    html: unsubscribeTextObj[lang] || unsubscribeTextObj.english
+                },
+            },
         };
   
         try {
@@ -875,6 +885,12 @@ const sendInstantNotification = async (requestData) => {
         },
       },
     ],
+    tracking_settings: {
+      subscription_tracking: {
+          enable: true,
+          html: unsubscribeTextObj[requestData.preferredLanguage] || unsubscribeTextObj.english
+      },
+    },
   };
   await sgMail.send(emailDataToSg);
 
