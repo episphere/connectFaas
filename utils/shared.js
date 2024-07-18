@@ -624,7 +624,7 @@ const isParentEntity = async (siteDetails) => {
     return {...siteDetails, isParent, siteCodes};
 };
 
-const logIPAdddress = (req) => {
+const logIPAddress = (req) => {
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     console.log(ipAddress)
 }
@@ -1638,7 +1638,7 @@ module.exports = {
     defaultStateFlags,
     SSOValidation,
     conceptMappings,
-    logIPAdddress,
+    logIPAddress,
     decodingJWT,
     initializeTimestamps,
     tubeKeytoNum,

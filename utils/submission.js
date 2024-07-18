@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAddress } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submit = async (res, data, uid) => {
@@ -212,7 +212,7 @@ const submitSocial = async (req, res, uid) => {
 }
 
 const getParticipants = async (req, res, authObj) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -348,7 +348,7 @@ const removeRestrictedFields = (data, restriectedFields, isParent) => {
  * @returns {array<object>} - A filtered array of participant data objects.
  */
 const getFilteredParticipants = async (req, res, authObj) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -430,7 +430,7 @@ const getFilteredParticipants = async (req, res, authObj) => {
 }
 
 const identifyParticipant = async (req, res, site) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
         
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});

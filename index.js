@@ -1,15 +1,15 @@
 const { getToken } = require('./utils/validation');
 const { getFilteredParticipants, getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
-const { sendScheduledNotifications } = require('./utils/notifications');
+const { getParticipantNotification, sendScheduledNotifications } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive');
 const { dashboard } = require('./utils/dashboard');
-const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport, exportNotificationsToBucket, importNotificationsToBigquery } = require('./utils/events');
 const { participantDataCleanup } = require('./utils/participantDataCleanup');
 const { webhook } = require('./utils/webhook');
+const { heartbeat } = require('./utils/heartbeat');
 
 // API End-Points for Sites
 
@@ -69,3 +69,7 @@ exports.participantDataCleanup = participantDataCleanup;
 // End-Points for Event Webhook
 
 exports.webhook = webhook;
+
+// End-Points for Public Heartbeat
+
+exports.heartbeat = heartbeat;
