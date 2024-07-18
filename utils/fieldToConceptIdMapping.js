@@ -394,6 +394,8 @@ module.exports = {
         baselineBloodAndUrineIsRefused: 526455436,
         baselineMouthwashCollected: 684635302,
         baselineBloodSampleCollected: 878865966,
-        bioSpmVisitV1r0: 331584571
+        bioSpmVisitV1r0: 331584571,
+        allBaselineSurveysCompleted: 100767870,
+        firebaseAuthenticationEmail: 421823980,
     }
 };
