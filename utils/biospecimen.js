@@ -671,13 +671,14 @@ const biospecimenAPIs = async (req, res) => {
         if( req.method !== 'GET') {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        const supplyQuery = req.query.supplyKitId;
-        const collectionQuery = (req.query.collectionId?.slice(0, -4) || "") + " " + (req.query.collectionId?.slice(-4) || ""); // add space to collection
+        const supplyKitId = req.query.supplyKitId;
+        const collectionIdSuffix = (req.query.collectionId?.slice(0, -4) || "") + " " + (req.query.collectionId?.slice(-4) || ""); // add space to collection
+        const returnKitTrackingNumberNumber = req.query.returnKitTrackingNumber;
         if (Object.keys(query).length === 0) return res.status(404).json(getResponseJSON('Please include id to check uniqueness.', 400));
-        if (collectionQuery.length < 14) return res.status(200).json({data: 'Check Collection ID', code:200});
+        if (collectionIdSuffix.length < 14) return res.status(200).json({data: 'Check Collection ID', code:200});
         try {
             const { checkCollectionUniqueness } = require('./firestore');
-            const response = await checkCollectionUniqueness(supplyQuery, collectionQuery);
+            const response = await checkCollectionUniqueness(supplyKitId, collectionIdSuffix, returnKitTrackingNumberNumber);
             return res.status(200).json({data: response, code:200});
         }
         catch (error) {
