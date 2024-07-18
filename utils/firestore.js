@@ -1,10 +1,9 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { Transaction } = require('firebase-admin/firestore');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
-const increment = admin.firestore.FieldValue.increment(1);
-const decrement = admin.firestore.FieldValue.increment(-1);
-const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -24,6 +23,7 @@ const verifyTokenOrPin = async ({ token = null, pin = null }) => {
   }
 
   const snapshot = await query.get();
+  printDocsCount(snapshot, "verifyTokenOrPin");
   if (snapshot.size === 1) {
     const participantData = snapshot.docs[0].data();
     if (
@@ -81,8 +81,9 @@ const linkParticipanttoFirebaseUID = async (docID, uID) => {
 
 const participantExists = async (uid) => {
     try{
-        const response = await db.collection('participants').where('state.uid', '==', uid).get();
-        if(response.size === 0){
+        const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
+        printDocsCount(snapshot, "participantExists");
+        if(snapshot.size === 0){
             return false;
         }
         else{
@@ -97,9 +98,10 @@ const participantExists = async (uid) => {
 
 const updateResponse = async (data, uid) => {
     try{
-        const response = await db.collection('participants').where('state.uid', '==', uid).get();
-        if(response.size === 1) {
-            for(let doc of response.docs){
+        const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
+        printDocsCount(snapshot, "updateResponse");
+        if(snapshot.size === 1) {
+            for(let doc of snapshot.docs){
                 await db.collection('participants').doc(doc.id).update(data);
                 return true;
             }
@@ -109,20 +111,6 @@ const updateResponse = async (data, uid) => {
         console.error(error);
         return new Error(error)
     }
-}
-
-const incrementCounter = async (field, siteCode) => {
-    const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
-    let obj = {}
-    obj[field] = increment;
-    await db.collection('stats').doc(snapShot.docs[0].id).update(obj);
-}
-
-const decrementCounter = async (field, siteCode) => {
-    const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
-    let obj = {}
-    obj[field] = decrement;
-    await db.collection('stats').doc(snapShot.docs[0].id).update(obj);
 }
 
 const createRecord = async (data) => {
@@ -138,13 +126,13 @@ const createRecord = async (data) => {
 
 const recordExists = async (studyId, siteCode) => {
     try{
-        const snapShot = await db.collection('participants').where('state.studyId', '==', studyId).where('827220437', '==', siteCode).get();
-        if(snapShot.size === 1){
-            return snapShot.docs[0].data();
+        const snapshot = await db.collection('participants').where('state.studyId', '==', studyId).where('827220437', '==', siteCode).get();
+        printDocsCount(snapshot, "recordExists");
+        if (snapshot.size === 1) {
+            return snapshot.docs[0].data();
         }
-        else {
-            return false;
-        }
+
+        return false;
     }
     catch(error){
         console.error(error);
@@ -154,15 +142,15 @@ const recordExists = async (studyId, siteCode) => {
 
 const validateSiteSAEmail = async (saEmail) => {
     try{
-        const snapShot = await db.collection('siteDetails')
+        const snapshot = await db.collection('siteDetails')
                                 .where('saEmail', '==', saEmail)
                                 .get();
-        if(snapShot.size === 1) {
-            return snapShot.docs[0].data();
+        printDocsCount(snapshot, "validateSiteSAEmail");
+        if(snapshot.size === 1) {
+            return snapshot.docs[0].data();
         }
-        else{
-            return false;
-        };
+
+        return false;
     }
     catch(error){
         console.error(error);
@@ -173,16 +161,16 @@ const validateSiteSAEmail = async (saEmail) => {
 const getParticipantData = async (token, siteCode, isParent) => {
     try{
         const operator = isParent ? 'in' : '==';
-        const snapShot = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('token', '==', token)
                                 .where('827220437', operator, siteCode)
                                 .get();
-        if(snapShot.size === 1) {
-            return {id: snapShot.docs[0].id, data: snapShot.docs[0].data()};
+        printDocsCount(snapshot, "getParticipantData");
+        if (snapshot.size === 1) {
+            return {id: snapshot.docs[0].id, data: snapshot.docs[0].data()};
         }
-        else{
-            return false;
-        };
+
+        return false;
     }
     catch(error){
         console.error(error);
@@ -197,10 +185,11 @@ const updateParticipantData = async (id, data) => {
             .update(data);
 }
 
+// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const retrieveParticipants = async (siteCode, decider, isParent, limit, page, site, from, to) => {
     try{
         const operator = isParent ? 'in' : '==';
-        let participants = {};
+        let snapshot;
         const offset = (page-1)*limit;
         if(decider === 'verified') {
             let query = db.collection('participants')
@@ -211,7 +200,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                             .offset(offset)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'notyetverified') {
             let query = db.collection('participants')
@@ -222,7 +211,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'cannotbeverified') {
             let query = db.collection('participants')
@@ -233,7 +222,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'profileNotSubmitted') {
             let query = db.collection('participants')
@@ -244,7 +233,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'consentNotSubmitted') {
             let query = db.collection('participants')
@@ -256,7 +245,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'notSignedIn') {
             let query = db.collection('participants')
@@ -268,7 +257,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'all') {
             let query = db.collection('participants')
@@ -281,7 +270,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent   
             if(from) query = query.where('914594314', '>=', from)
             if(to) query = query.where('914594314', '<=', to)
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'active') {
             let query = db.collection('participants')
@@ -295,7 +284,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
             if(from) query = query.where('914594314', '>=', from)
             if(to) query = query.where('914594314', '<=', to)
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'notactive') {
             let query = db.collection('participants')
@@ -309,7 +298,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
             if(from) query = query.where('914594314', '>=', from)
             if(to) query = query.where('914594314', '<=', to)
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'passive') {
             let query = db.collection('participants')
@@ -323,12 +312,11 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
             if(from) query = query.where('914594314', '>=', from)
             if(to) query = query.where('914594314', '<=', to)
-            participants = await query.get();
+            snapshot = await query.get();
         }
-        return participants.docs.map(document => {
-            let data = document.data();
-            return data;
-        });
+
+        printDocsCount(snapshot, `retrieveParticipants; offset: ${offset}`);
+        return snapshot.docs.map(doc => doc.data());
     }
     catch(error){
         console.error(error);
@@ -336,28 +324,29 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
     }
 }
 
+// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept, limit, page) => {
     try {
         const operator = isParent ? 'in' : '==';
         const offset = (page - 1) * limit;
         
-        let participants = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('827220437', operator, siteCode)
                                 .where(concept, '==', 353358909)
                                 .orderBy('Connect_ID', 'asc')
                                 .offset(offset)
                                 .limit(limit)
                                 .get();                 
+        printDocsCount(snapshot, `retrieveRefusalWithdrawalParticipants; offset: ${offset}`);
 
-        return participants.docs.map(document => {
-            return document.data();
-        });
+        return snapshot.docs.map(doc => doc.data());
     } catch (error) {
         console.error(error);
         return new Error(error)
     }
 }
 
+// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, isParent, limit, page) => {
     try {
 
@@ -367,7 +356,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
         const { incentiveConcepts } = require('./shared');
         const object = incentiveConcepts[roundType]
         
-        let participants = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('827220437', operator, siteCode)
                                 .where('821247024', '==', 197316935)
                                 .where(`${object}.222373868`, "==", 353358909)
@@ -377,8 +366,9 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
                                 .offset(offset)
                                 .limit(limit)
                                 .get();
-                        
-        return participants.docs.map(document => {
+        printDocsCount(snapshot, `retrieveParticipantsEligibleForIncentives; offset: ${offset}`);
+
+        return snapshot.docs.map(document => {
             let data = document.data();
             return {firstName: data['399159511'], email: data['869588347'], token: data['token'], site: data['827220437']}
         });
@@ -392,13 +382,14 @@ const removeDocumentFromCollection = async (connectID, token) => {
     try {
         for (const collection of listOfCollectionsRelatedToDataDestruction) {
             const query = db.collection(collection)
-            const data =
+            const snapshot =
                 collection === "notifications" || collection === "ssn"
                     ? await query.where("token", "==", token).get()
                     : await query.where("Connect_ID", "==", connectID).get();
-            
-            if (data.size !== 0) {
-                for (const dt of data.docs) {
+            printDocsCount(snapshot, "removeDocumentFromCollection");
+
+            if (snapshot.size !== 0) {
+                for (const dt of snapshot.docs) {
                     await db.collection(collection).doc(dt.id).delete();
                 }
             }
@@ -446,6 +437,7 @@ const removeParticipantsDataDestruction = async () => {
             .where(destroyDataCId, "==", fieldMapping.yes)
             .where(dataHasBeenDestroyed, "!=", fieldMapping.yes)
             .get();
+        printDocsCount(currSnapshot, "removeParticipantsDataDestruction");
 
         // Check each participant if they are already registered or more than 60 days from the date of their request
         // then the system will delete their data except the stub records and update the dataHasBeenDestroyed flag to yes.
@@ -508,15 +500,16 @@ const removeUninvitedParticipants = async () => {
         const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
 
         while (willContinue) {
-            const currSnapshot = await db
-            .collection('participants')
-            .where(uninvitedRecruitsCId, '==', fieldMapping.yes)
-            .limit(batchLimit)
-            .get();
+            const snapshot = await db
+              .collection("participants")
+              .where(uninvitedRecruitsCId, "==", fieldMapping.yes)
+              .limit(batchLimit)
+              .get();
+            printDocsCount(snapshot, "removeUninvitedParticipants");
 
-            willContinue = currSnapshot.docs.length === batchLimit;
+            willContinue = snapshot.docs.length === batchLimit;
             const batch = db.batch();
-            for (const doc of currSnapshot.docs) {
+            for (const doc of snapshot.docs) {
                 batch.delete(doc.ref);
                 count++
             }
@@ -537,13 +530,15 @@ const removeUninvitedParticipants = async () => {
  */
 const getChildren = async (id) => {
     try{
-        const snapShot = await db.collection('siteDetails')
+        const snapshot = await db.collection('siteDetails')
                                 .where('state.parentID', 'array-contains', id)
                                 .get();
-        if(snapShot.size > 0) {
+        printDocsCount(snapshot, "getChildren");
+
+        if(snapshot.size > 0) {
             /** @type {number[]} */
             const siteCodes = [];
-            snapShot.docs.forEach(document => {
+            snapshot.docs.forEach(document => {
                 if(document.data().siteCode){
                     siteCodes.push(document.data().siteCode);
                 }
@@ -560,13 +555,15 @@ const getChildren = async (id) => {
 
 const verifyIdentity = async (type, token, siteCode) => {
     try{
-        const snapShot = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('token', '==', token)
                                 .where('827220437', '==', siteCode)
                                 .get();
-        if(snapShot.size > 0){
-            const docId = snapShot.docs[0].id;
-            const docData = snapShot.docs[0].data();
+        printDocsCount(snapshot, "verifyIdentity");
+
+        if(snapshot.size > 0){
+            const docId = snapshot.docs[0].id;
+            const docData = snapshot.docs[0].data();
             const existingVerificationStatus = docData[821247024];
             const { conceptMappings } = require('./shared');
             const concept = conceptMappings[type];
@@ -595,12 +592,13 @@ const verifyIdentity = async (type, token, siteCode) => {
 
 const retrieveUserProfile = async (uid) => {
     try{
-        const snapShot = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('state.uid', '==', uid)
                                 .get();
+        printDocsCount(snapshot, "retrieveUserProfile");
 
-        if(snapShot.size > 0) {
-            let data = snapShot.docs[0].data();
+        if(snapshot.size > 0) {
+            let data = snapshot.docs[0].data();
             delete data.state;
 
             return data;
@@ -620,6 +618,8 @@ const retrieveConnectID = async (uid) => {
         const snapshot = await db.collection('participants')
                                 .where('state.uid', '==', uid)
                                 .get();
+        printDocsCount(snapshot, "retrieveConnectID");
+
         if(snapshot.size === 1){
             if(snapshot.docs[0].data()['Connect_ID']) {
                 return snapshot.docs[0].data()['Connect_ID'];
@@ -658,6 +658,7 @@ const retrieveUserSurveys = async (uid, concepts) => {
                 const snapshot = await db.collection(moduleConceptsToCollections[concept])
                     .where('uid', '==', uid)
                     .get();
+                printDocsCount(snapshot, "retrieveUserSurveys");
 
                 if (snapshot.size > 0) {
                     return { concept, data: snapshot.docs[0].data() };
@@ -686,6 +687,8 @@ const retrieveUserSurveys = async (uid, concepts) => {
 
 const surveyExists = async (collection, uid) => {
     const snapshot = await db.collection(collection).where('uid', '==', uid).get();
+    printDocsCount(snapshot, "surveyExists");
+
     if (snapshot.size > 0) {
         return snapshot.docs[0];
     }
@@ -720,8 +723,9 @@ const updateSurvey = async (data, collection, doc) => {
 const sanityCheckConnectID = async (ID) => {
     try{
         const snapshot = await db.collection('participants').where('Connect_ID', '==', ID).get();
-        if(snapshot.size === 0) return true;
-        else return false;
+        printDocsCount(snapshot, "sanityCheckConnectID");
+
+        return snapshot.size === 0;
     }
     catch(error){
         console.error(error);
@@ -732,8 +736,9 @@ const sanityCheckConnectID = async (ID) => {
 const sanityCheckPIN = async (pin) => {
     try{
         const snapshot = await db.collection('participants').where('pin', '==', pin).get();
-        if(snapshot.size === 0) return true;
-        else return false;
+        printDocsCount(snapshot, "sanityCheckPIN");
+        
+        return snapshot.size === 0;
     }
     catch(error){
         console.error(error);
@@ -745,6 +750,7 @@ const individualParticipant = async (key, value, siteCode, isParent) => {
     try {
         const operator = isParent ? 'in' : '==';
         const snapshot = await db.collection('participants').where(key, '==', value).where('827220437', operator, siteCode).get();
+        printDocsCount(snapshot, "individualParticipant");
         if(snapshot.size > 0) {
             return snapshot.docs.map(document => {
                 let data = document.data();
@@ -763,6 +769,7 @@ const updateParticipantRecord = async (key, value, siteCode, isParent, obj) => {
     try {
         const operator = isParent ? 'in' : '==';
         const snapshot = await db.collection('participants').where(key, '==', value).where('827220437', operator, siteCode).get();
+        printDocsCount(snapshot, "updateParticipantRecord");
         const docId = snapshot.docs[0].id;
         await db.collection('participants').doc(docId).update(obj);
     }
@@ -774,9 +781,11 @@ const updateParticipantRecord = async (key, value, siteCode, isParent, obj) => {
 
 const deleteFirestoreDocuments = async (siteCode) => {
     try{
-        const data = await db.collection('participants').where('827220437', '==', siteCode).get();
-        if(data.size !== 0){
-            data.docs.forEach(async dt =>{ 
+        const snapshot = await db.collection('participants').where('827220437', '==', siteCode).get();
+        printDocsCount(snapshot, "deleteFirestoreDocuments");
+
+        if(snapshot.size !== 0){
+            snapshot.docs.forEach(async dt =>{ 
                 await db.collection('participants').doc(dt.id).delete()
             })
         }
@@ -793,11 +802,13 @@ const storeNotificationTokens = (data) => {
 }
 
 const notificationTokenExists = async (token) => {
-    const snapShot = await db.collection('notificationRegistration')
+    const snapshot = await db.collection('notificationRegistration')
                             .where('notificationToken', '==', token)
                             .get();
-    if(snapShot.size === 1){
-        return snapShot.docs[0].data().uid;
+    printDocsCount(snapshot, "notificationTokenExists");
+
+    if(snapshot.size === 1){
+        return snapshot.docs[0].data().uid;
     }
     else {
         return false;
@@ -814,6 +825,7 @@ const retrieveUserNotifications = async (uid) => {
     .where("uid", "==", uid)
     .orderBy("notification.time", "desc")
     .get();
+  printDocsCount(snapshot, "retrieveUserNotifications");
 
   return snapshot.docs.map((doc) => doc.data());
 };
@@ -822,11 +834,12 @@ const retrieveSiteNotifications = async (siteId, isParent) => {
     try {
         let query = db.collection('siteNotifications');
         if(!isParent) query = query.where('siteId', '==', siteId);
-        const snapShot = await query.orderBy('notification.time', 'desc')
-                                    .get(); 
+        const snapshot = await query.orderBy('notification.time', 'desc')
+                                    .get();
+        printDocsCount(snapshot, "retrieveSiteNotifications");
                             
-        if(snapShot.size > 0){
-            return snapShot.docs.map(document => {
+        if(snapshot.size > 0){
+            return snapshot.docs.map(document => {
                 let data = document.data();
                 return data;
             });
@@ -918,6 +931,7 @@ const filterDB = async (queries, siteCode, isParent) => {
     const executeQuery = async (query) => {
         const operator = isParent ? 'in' : '==';
         const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
+        printDocsCount(snapshot, "executeQuery");
         if (snapshot.size !== 0) {
             snapshot.docs.forEach(doc => {
                 fetchedResults.push(doc.data());
@@ -1006,6 +1020,7 @@ const filterDB = async (queries, siteCode, isParent) => {
 const validateBiospecimenUser = async (email) => {
     try {
         const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
+        printDocsCount(snapshot, "validateBiospecimenUser");
         if(snapshot.size === 1) {
             const role = snapshot.docs[0].data().role;
             const siteCode = snapshot.docs[0].data().siteCode;
@@ -1024,9 +1039,10 @@ const biospecimenUserList = async (siteCode, email) => {
     try {
         let query = db.collection('biospecimenUsers').where('siteCode', '==', siteCode)
         if(email) query = query.where('addedBy', '==', email)
-        const snapShot = await query.orderBy('role').orderBy('email').get();
-        if(snapShot.size !== 0){
-            return snapShot.docs.map(document => document.data());
+        const snapshot = await query.orderBy('role').orderBy('email').get();
+        printDocsCount(snapshot, "biospecimenUserList");
+        if(snapshot.size !== 0){
+            return snapshot.docs.map(document => document.data());
         }
         else{
             return [];
@@ -1040,6 +1056,7 @@ const biospecimenUserList = async (siteCode, email) => {
 const biospecimenUserExists = async (email) => {
     try {
         const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
+        printDocsCount(snapshot, "biospecimenUserExists");
         if(snapshot.size === 0) return false;
         else return true;
     } catch (error) {
@@ -1062,6 +1079,7 @@ const removeUser = async (userEmail, siteCode, email, manager) => {
         let query = db.collection('biospecimenUsers').where('email', '==', userEmail).where('siteCode', '==', siteCode);
         if(manager) query = query.where('addedBy', '==', email);
         const snapshot = await query.get();
+        printDocsCount(snapshot, "removeUser");
         if(snapshot.size === 1) {
             console.log('Removing', userEmail);
             const docId = snapshot.docs[0].id;
@@ -1081,6 +1099,7 @@ const storeSpecimen = async (data) => {
 
 const updateSpecimen = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
+    printDocsCount(snapshot, "updateSpecimen");
     const docId = snapshot.docs[0].id;
 
     if (!data[fieldMapping.tubesBagsCids.streckTube]) { // Check for streck data due to intermittent null streck values in Firestore (11/2023).
@@ -1128,6 +1147,7 @@ const getUnshippedBoxes = async (siteCode, isBPTL = false) => {
         let query = db.collection('boxes').where(fieldMapping.submitShipmentFlag.toString(), '==', fieldMapping.no);
         if (!isBPTL) query = query.where(fieldMapping.loginSite.toString(), '==', siteCode);
         const snapshot = await query.get();
+        printDocsCount(snapshot, "getUnshippedBoxes");
         
         return snapshot.docs.map(document => document.data());
     } catch (error) {
@@ -1149,6 +1169,7 @@ const getSpecimensByBoxedStatus = async (siteCode, boxedStatusConceptId, isBPTL 
         if (!isBPTL) query = query.where(fieldMapping.healthCareProvider.toString(), '==', siteCode);
 
         const snapshot = await query.get();
+        printDocsCount(snapshot, "getSpecimensByBoxedStatus");
         
         return snapshot.docs.map(document => document.data());
     } catch (error) {
@@ -1183,6 +1204,7 @@ const updateBox = async (id, boxAndTubesData, addedTubes, loginSite) => {
 
         const boxSnapshot = snapshotResponse[0].docs.map(doc => ({ ref: doc.ref, data: doc.data() }));
         const specimenSnapshot = snapshotResponse[1].docs.map(doc => ({ ref: doc.ref, data: doc.data() }));
+        printDocsCount(snapshotResponse, "updateBox");
         
         if (boxSnapshot.length !== 1 || specimenSnapshot.length !== 1) {
             throw new Error('Couldn\'t find Matching documents.');
@@ -1244,6 +1266,7 @@ const removeBag = async (siteCode, requestData) => {
     }
 
     const [boxSnapshot, ...specimenSnapshots] = await Promise.all([boxQuery, ...chunkedSpecimenQueries]);
+    printDocsCount([boxSnapshot, ...specimenSnapshots], "removeBag");
 
     if (boxSnapshot.size !== 1 || specimenSnapshots.some(snapshot => snapshot.empty)) {
         throw new Error('Couldn\'t find Matching documents.');
@@ -1317,6 +1340,7 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
     let conceptTube = conversion[tubeId];
 
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).where('siteAcronym', '==', siteAcronym).get();
+    printDocsCount(snapshot, "reportMissingSpecimen");
     if(snapshot.size === 1 && conceptTube != undefined){
         const docId = snapshot.docs[0].id;
         let currDoc = snapshot.docs[0].data();
@@ -1347,15 +1371,17 @@ const getSpecimenAndParticipant = async (collectionId, siteCode, isBPTL) => {
         // Fetch the specimen
         let query = db.collection('biospecimen').where(fieldMapping.collectionId.toString(), '==', collectionId);
         if (!isBPTL) query = query.where(fieldMapping.healthCareProvider.toString(), '==', siteCode);
-        const specimenSnapshot = await query.get();
+        const snapshot = await query.get();
+        printDocsCount(snapshot, "getSpecimenAndParticipant; collection: biospecimen");
 
-        if (specimenSnapshot.size !== 1) {
+        if (snapshot.size !== 1) {
             throw new Error('Couldn\'t find matching specimen document.');
         }
-        const specimenData = specimenSnapshot.docs[0].data();
+        const specimenData = snapshot.docs[0].data();
 
         // Use the Connect_ID in the specimen doc to fetch the participant
         const participantSnapshot = await db.collection('participants').where('Connect_ID', '==', specimenData['Connect_ID']).get();
+        printDocsCount(participantSnapshot, "getSpecimenAndParticipant; collection: participants");
 
         if (participantSnapshot.size !== 1) {
             throw new Error('Couldn\'t find matching participant document.');
@@ -1370,6 +1396,7 @@ const getSpecimenAndParticipant = async (collectionId, siteCode, isBPTL) => {
 
 const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).get();
+    printDocsCount(snapshot, "searchSpecimen");
     if (snapshot.size === 1) {
         if (allSitesFlag) return snapshot.docs[0].data();
         const token = snapshot.docs[0].data().token;
@@ -1391,6 +1418,7 @@ const getSiteLocationBox = async (requestedSite, boxId) => {
         const snapshot = await db.collection('boxes')
                                 .where(fieldMapping.loginSite.toString(), "==", requestedSite)
                                 .where(fieldMapping.shippingBoxId.toString(), "==", boxId).get();
+        printDocsCount(snapshot, "getSiteLocationBox");
         const boxMatch = [];
         for(let document of snapshot.docs) {
             boxMatch.push(document.data());
@@ -1469,6 +1497,7 @@ const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
         });
         
         const promiseResults = await Promise.all(chunkedPromises);
+        printDocsCount(promiseResults, "searchSpecimenBySiteAndBoxId");
         
         const biospecimenDocs = [];
         promiseResults.forEach(snapshot => {
@@ -1489,6 +1518,7 @@ const searchShipments = async (siteCode) => {
     const tubesBagsCidKeys = swapObjKeysAndValues(tubesBagsCids);
     const snapshot = await db.collection('biospecimen').where(healthCareProvider, '==', siteCode).get();
     let shipmentData = [];
+    printDocsCount(snapshot, "searchShipments");
 
     if (snapshot.size !== 0) {
         for (let document of snapshot.docs) {
@@ -1519,18 +1549,21 @@ const searchShipments = async (siteCode) => {
 
 const specimenExists = async (id) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
+    printDocsCount(snapshot, "specimenExists");
     if(snapshot.size === 1) return true;
     else return false;
 }
 
 const boxExists = async (boxId, loginSite) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
+    printDocsCount(snapshot, "boxExists");
     if(snapshot.size === 1) return true;
     else return false;
 }
 
 const accessionIdExists = async (accessionId, accessionIdType, siteCode) => {
     const snapshot = await db.collection('biospecimen').where(accessionIdType, '==', accessionId).get();
+    printDocsCount(snapshot, "accessionIdExists");
     if(snapshot.size === 1) {
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
@@ -1546,18 +1579,18 @@ const updateTempCheckDate = async (institute) => {
     let randomStart = Math.floor(Math.random()*5)+15 - currDate.getDay();
     currDate.setDate(currDate.getDate() + randomStart);
     const snapshot = await db.collection('SiteLocations').where('Site', '==',institute).get();
+    printDocsCount(snapshot, "updateTempCheckDate");
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
         await db.collection('SiteLocations').doc(docId).update({'nextTempMonitor':currDate.toString()});
-        //console.log(currDate.toString());
     }
 }
 
 /**
  * 
- * @param {Array<string>} boxIdArray - array of box ids to fetch 
+ * @param {Array<string>} boxIdArray - array of box ids to fetch
  * @param {string} siteCode - site code of the user (number)
- * @param {transaction} transaction - firestore transation object
+ * @param {Transaction} transaction - firestore transation object
  * @returns boxes object with data and docRef
  * If boxIdArray.length > 15, chunk the array into multiple queries to support the use of 'in' operator.
  */
@@ -1590,6 +1623,7 @@ const getBoxesByBoxId = async (boxIdArray, siteCode, transaction = null) => {
 
             const chunkPromises = chunksToSend.map(chunk => getSnapshot(chunk));
             const snapshots = await Promise.all(chunkPromises);
+            printDocsCount(snapshots, "getBoxesByBoxId");
 
             snapshots.forEach(snapshot => {
                 const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
@@ -1599,6 +1633,7 @@ const getBoxesByBoxId = async (boxIdArray, siteCode, transaction = null) => {
         } else {
             const snapshot = await getSnapshot(boxIdArray);
             resultsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+            printDocsCount(snapshot, "getBoxesByBoxId");
         }
 
         return resultsArray;
@@ -1647,6 +1682,7 @@ const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
 
 const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
+    printDocsCount(snapshot, "shipBox");
     if(snapshot.size === 1) {
         let currDate = new Date().toISOString();
         shippingData['656548982'] = currDate;
@@ -1663,6 +1699,7 @@ const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
 
 const getLocations = async (institute) => {
     const snapshot = await db.collection('SiteLocations').where('siteAcronym', '==', institute).get();
+    printDocsCount(snapshot, "getLocations");
     console.log(institute)
     if(snapshot.size !== 0) {
         return snapshot.docs.map(document => document.data());
@@ -1691,6 +1728,7 @@ const searchBoxes = async (institute, flag) => {
     }
 
     if (snapshot.size !== 0){
+        printDocsCount(snapshot, "searchBoxes");
         return snapshot.docs.map(document => document.data());
     } else {
         return [];
@@ -1701,7 +1739,7 @@ const searchBoxesByLocation = async (institute, location) => {
     console.log("institute" + institute);
     console.log("location" + location);
     const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149','==',location).get();
-    console.log(snapshot);
+    printDocsCount(snapshot, "searchBoxesByLocation");
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
         // console.log(JSON.stringify(result));
@@ -1717,6 +1755,7 @@ const searchBoxesByLocation = async (institute, location) => {
 
 const getSpecimenCollections = async (token, siteCode) => {
     const snapshot = await db.collection('biospecimen').where('token', '==', token).where('827220437', '==', siteCode).get();
+    printDocsCount(snapshot, "getSpecimenCollections");
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
@@ -1743,6 +1782,7 @@ const buildQueryWithFilters = (query, trackingId, endDate, startDate, source, si
     return query
 }
 
+// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const getBoxesPagination = async (siteCode, body) => {
     const currPage = body.pageNumber;
     const orderByField = body.orderBy;
@@ -1757,6 +1797,7 @@ const getBoxesPagination = async (siteCode, body) => {
         query = preQueryBuilder(filters, query, trackingId, endDate, startDate, source, siteCode);
         query = query.orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage * elementsPerPage);
         const snapshot = await query.get();
+        printDocsCount(snapshot, `getBoxesPagination; offset: ${currPage * elementsPerPage}`);
         const result = snapshot.docs.map(document => document.data());
         return result;
     } 
@@ -1790,93 +1831,12 @@ const getNotificationSpecifications = async (notificationType, notificationCateg
         if(notificationCategory) snapshot = snapshot.where('category', '==', notificationCategory);
         snapshot = snapshot.where('scheduleAt', '==', scheduleAt);
         snapshot = await snapshot.get();
+        printDocsCount(snapshot, "getNotificationSpecifications");
         return snapshot.docs.map(document => {
             return document.data();
         });
     } catch (error) {
         console.error(error);
-        return new Error(error);
-    }
-}
-
-const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
-    try {
-        let query = db.collection('participants')
-                                .limit(limit)
-                                .offset(offset);
-        
-        for(let obj in conditions) {
-            let operator = '';
-            let values = '';
-            if(conditions[obj]['equals']) {
-                if(typeof conditions[obj]['equals'] == 'string') {
-                    values = conditions[obj]['equals'];
-                }
-                else if(typeof conditions[obj]['equals'] == 'number') {
-                    values = parseInt(conditions[obj]['equals']);
-                }
-                operator = '==';
-            }
-            if(conditions[obj]['notequals']) {
-                if(typeof conditions[obj]['notequals'] == 'string') {
-                    values = conditions[obj]['notequals'];
-                }
-                else if(typeof conditions[obj]['notequals'] == 'number') {
-                    values = parseInt(conditions[obj]['notequals']);
-                }
-                operator = '!=';
-            }
-            if(conditions[obj]['greater']) {
-                if(typeof conditions[obj]['greater'] == 'string') {
-                    values = conditions[obj]['greater'];
-                }
-                else if(typeof conditions[obj]['greater'] == 'number') {
-                    values = parseInt(conditions[obj]['greater']);
-                }
-                operator = '>';
-            }
-            if(conditions[obj]['greaterequals']) {
-                if(typeof conditions[obj]['greaterequals'] == 'string') {
-                    values = conditions[obj]['greaterequals'];
-                }
-                else if(typeof conditions[obj]['greaterequals'] == 'number') {
-                    values = parseInt(conditions[obj]['greaterequals']);
-                }
-                operator = '>=';
-            }
-            if(conditions[obj]['less']) {
-                if(typeof conditions[obj]['less'] == 'string') {
-                    values = conditions[obj]['less'];
-                }
-                else if(typeof conditions[obj]['less'] == 'number') {
-                    values = parseInt(conditions[obj]['less']);
-                }
-                operator = '<';
-            }
-            if(conditions[obj]['lessequals']) {
-                if(typeof conditions[obj]['lessequals'] == 'string') {
-                    values = conditions[obj]['lessequals'];
-                }
-                else if(typeof conditions[obj]['lessequals'] == 'number') {
-                    values = parseInt(conditions[obj]['lessequals']);
-                }
-                operator = '<=';
-            }
-            query = query.where(obj, operator, values);
-        }
-        const participants = await query.get();
-        return participants.docs.map(doc => doc.data());
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
-}
-
-const notificationAlreadySent = async (token, notificationSpecificationsID) => {
-    try {
-        const snapshot = await db.collection('notifications').where('token', '==', token).where('notificationSpecificationsID', '==', notificationSpecificationsID).get();
-        return snapshot.size !== 0;
-    } catch (error) {
         return new Error(error);
     }
 }
@@ -1927,9 +1887,10 @@ const checkIsNotificationSent = async (userToken, specId) => {
     .collection("notifications")
     .where("token", "==", userToken)
     .where("notificationSpecificationsID", "==", specId)
+    .count()
     .get();
 
-  return !snapshot.empty;
+  return snapshot.data().count > 0;
 };
 
 /**
@@ -1956,6 +1917,7 @@ const saveNotificationBatch = async (notificationRecordArray) => {
 
 const markNotificationAsRead = async (id, collection) => {
     const snapshot = await db.collection(collection).where('id', '==', id).get();
+    printDocsCount(snapshot, "markNotificationAsRead");
     const docId = snapshot.docs[0].id;
     await db.collection(collection).doc(docId).update({read: true});
 }
@@ -1963,6 +1925,7 @@ const markNotificationAsRead = async (id, collection) => {
 const storeSSN = async (data) => {
     try{
         const response = await db.collection('ssn').where('uid', '==', data.uid).get();
+        printDocsCount(response, "storeSSN");
         if(response.size === 1) {
             for(let doc of response.docs){
                 await db.collection('ssn').doc(doc.id).update(data);
@@ -1982,16 +1945,19 @@ const storeSSN = async (data) => {
 
 const getTokenForParticipant = async (uid) => {
     const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
+    printDocsCount(snapshot, "getTokenForParticipant");
     return snapshot.docs[0].data()['token'];
 }
 
 const getSiteDetailsWithSignInProvider = async (acronym) => {
     const snapshot = await db.collection('siteDetails').where('acronym', '==', acronym).get();
+    printDocsCount(snapshot, "getSiteDetailsWithSignInProvider");
     return snapshot.docs[0].data();
 }
 
 const retrieveNotificationSchemaByID = async (id) => {
   const snapshot = await db.collection("notificationSpecifications").where("id", "==", id).get();
+  printDocsCount(snapshot, "retrieveNotificationSchemaByID");
   if (snapshot.size === 1) {
     return snapshot.docs[0].id;
   }
@@ -2008,6 +1974,7 @@ const retrieveNotificationSchemaByCategory = async (category, getDrafts = false,
   }
 
   const snapshot = await query.orderBy("attempt").get();
+  printDocsCount(snapshot, "retrieveNotificationSchemaByCategory");
   return snapshot.docs.map((doc) => doc.data());
 };
 
@@ -2027,11 +1994,15 @@ const getNotificationHistoryByParticipant = async (token, siteCode, isParent) =>
                                         .where('token', '==', token)
                                         .where('827220437', operator, siteCode)
                                         .get();
+    printDocsCount(participantRecord, "getNotificationHistoryByParticipant; collection: participants");
+
     if(participantRecord.size === 1) {
         const snapshot = await db.collection('notifications')
                                     .where('token', '==', token)
                                     .orderBy('notification.time', 'desc')
                                     .get();
+        printDocsCount(snapshot, "getNotificationHistoryByParticipant; collection: notifications");
+
         return snapshot.docs.map(dt => dt.data());
     }
     else return false;
@@ -2039,6 +2010,7 @@ const getNotificationHistoryByParticipant = async (token, siteCode, isParent) =>
 
 const getNotificationsCategories = async (scheduleAt) => {
     const snapshot = await db.collection('notificationSpecifications').where('scheduleAt', '==', scheduleAt).get();
+    printDocsCount(snapshot, "getNotificationsCategories");
     const categories = [];
     snapshot.forEach(dt => {
         const category = dt.data().category;
@@ -2049,6 +2021,7 @@ const getNotificationsCategories = async (scheduleAt) => {
 
 const getEmailNotifications = async (scheduleAt) => {
     const snapshot = await db.collection('notificationSpecifications').where('scheduleAt', '==', scheduleAt).get();
+    printDocsCount(snapshot, "getEmailNotifications");
     const notifications = [];
     snapshot.forEach(dt => {
         const notification = dt.data();
@@ -2064,6 +2037,7 @@ const getEmailNotifications = async (scheduleAt) => {
  */
 const getNotificationSpecsBySchedule = async (scheduleAt) => {
   const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  printDocsCount(snapshot, "getNotificationSpecsBySchedule");
   let notificationSpecArray = [];
   for (const doc of snapshot.docs) {
     const docData = doc.data();
@@ -2085,6 +2059,7 @@ const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
   const currTimeIsoStr = currTime.toISOString();
   const batch = db.batch();
   const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  printDocsCount(snapshot, "getNotificationSpecsByScheduleOncePerDay");
   let notificationSpecArray = [];
   for (const doc of snapshot.docs) {
     const docData = doc.data();
@@ -2102,6 +2077,7 @@ const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
 
 const getNotificationSpecById = async (id) => {
     const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
+    printDocsCount(snapshot, "getNotificationSpecById");
 
     return snapshot.empty ? null : snapshot.docs[0].data();
 }
@@ -2114,6 +2090,7 @@ const getNotificationSpecByCategoryAndAttempt = async (category = "", attempt = 
     .where("category", "==", category)
     .where("attempt", "==", attempt)
     .get();
+  printDocsCount(snapshot, "getNotificationSpecByCategoryAndAttempt");
 
   return snapshot.empty ? null : snapshot.docs[0].data();
 };
@@ -2132,10 +2109,11 @@ const addKitAssemblyData = async (data) => {
 
 const updateKitAssemblyData = async (data) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
+        const snapshot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
+        printDocsCount(snapshot, "updateKitAssemblyData");
 
-        if (snapShot.empty) return false
-        const docId = snapShot.docs[0].id;
+        if (snapshot.empty) return false
+        const docId = snapshot.docs[0].id;
  
         await db.collection('kitAssembly').doc(docId).update({
             '194252513': data[fieldMapping.returnKitId],
@@ -2156,6 +2134,7 @@ const checkCollectionUniqueness = async (supplyId, collectionId, returnKitTracki
     try {
         const supplySnapShot = await db.collection('kitAssembly').where('690210658', '==', supplyId).get();
         const collectionSnapShot = await db.collection('kitAssembly').where('259846815', '==', collectionId).get();
+        printDocsCount([supplySnapShot, collectionSnapShot], "checkCollectionUniqueness");
         let returnKitTrackingNumberSnapshot = {docs: []};
         let supplyKitTrackingNumberSnapshot = {docs: []};
         if(returnKitTrackingNumber) {
@@ -2241,6 +2220,7 @@ const eligibleParticipantsForKitAssignment = async () => {
             .select(...participantHomeCollectionKitFields)
             .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
             .get();
+        printDocsCount(snapshot, "eligibleParticipantsForKitAssignment");
 
         return snapshot.size === 0
             ? []
@@ -2257,6 +2237,7 @@ const addKitStatusToParticipant = async (participantsCID) => {
         // Create an array of promises to update participants in parallel
         const updatePromises = participantsCID.map(async (participantCID) => {
             const snapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(participantCID)).get();
+            printDocsCount(snapshot, "addKitStatusToParticipant");
             if (snapshot.size === 0) {
                 // No matching document found, stop the update
                 return false;
@@ -2343,6 +2324,7 @@ const assignKitToParticipant = async (data) => {
         const kitSnapshot = await db.collection("kitAssembly")
             .where(`${supplyKitId}`, '==', data[supplyKitId])
             .where(`${kitStatus}`, '==', pending).get();
+        printDocsCount(kitSnapshot, "assignKitToParticipant; collection: kitAssembly");
 
         if (kitSnapshot.size !== 1) {
             return false;
@@ -2360,6 +2342,7 @@ const assignKitToParticipant = async (data) => {
         await kitDoc.ref.update(kitData);
 
         const participantSnapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(data['Connect_ID'])).get();
+        printDocsCount(participantSnapshot, "assignKitToParticipant; collection: participants");
 
         if (participantSnapshot.size !== 1) {
             return false;
@@ -2392,9 +2375,10 @@ const assignKitToParticipant = async (data) => {
 
 const processVerifyScannedCode = async (id) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
-        if (snapShot.docs.length === 1) {
-            return { valid: true, uniqueKitID: snapShot.docs[0].data()[687158491] }
+        const snapshot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
+        printDocsCount(snapshot, "processVerifyScannedCode");
+        if (snapshot.docs.length === 1) {
+            return { valid: true, uniqueKitID: snapshot.docs[0].data()[687158491] }
         }
         else { return false }
     } catch (error) {
@@ -2408,6 +2392,7 @@ const confirmShipmentKit = async (shipmentData) => {
         const { collectionDetails, baseline, bioKitMouthwash, uniqueKitID } = fieldMapping;
 
         const kitSnapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
+        printDocsCount(kitSnapshot, "confirmShipmentKit; collection: kitAssembly");
 
         if (kitSnapshot.size === 0) {
             return false;
@@ -2422,6 +2407,7 @@ const confirmShipmentKit = async (shipmentData) => {
         await kitDoc.ref.update(kitData);
         const participantSnapshot = await db.collection("participants")
             .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${uniqueKitID}`, '==', shipmentData[uniqueKitID]).get();
+        printDocsCount(participantSnapshot, "confirmShipmentKit; collection: participants");
 
         if (participantSnapshot.size === 0) {
             return false;
@@ -2465,6 +2451,7 @@ const storeKitReceipt = async (package) => {
         let toReturn;
         await db.runTransaction(async (transaction) => {
             const kitSnapshot = await transaction.get(db.collection("kitAssembly").where('972453354', '==', package['972453354']).where('221592017', '==', 277438316));
+            printDocsCount(kitSnapshot, "storeKitReceipt");
             if (kitSnapshot.size === 0) {
                 toReturn = false;
                 return;
@@ -2579,6 +2566,7 @@ const processPackageConditions = (pkgConditions) => {
 const getKitAssemblyData = async () => {
     try {
         const snapshot = await db.collection("kitAssembly").get();
+        printDocsCount(snapshot, "getKitAssemblyData");
         if(snapshot.size !== 0)  return snapshot.docs.map(doc => doc.data()) 
         else return false;
     }
@@ -2600,6 +2588,7 @@ const storeSiteNotifications = async (reminder) => {
 const getCoordinatingCenterEmail = async () => {
     try {
         const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+        printDocsCount(snapshot, "getCoordinatingCenterEmail");
         if(snapshot.size > 0) return snapshot.docs[0].data().email;
     } catch (error) {
         console.error(error);
@@ -2610,6 +2599,7 @@ const getCoordinatingCenterEmail = async () => {
 const getSiteEmail = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        printDocsCount(snapshot, "getSiteEmail");
         if(snapshot.size > 0) return snapshot.docs[0].data().email;
     } catch (error) {
         console.error(error);
@@ -2620,6 +2610,7 @@ const getSiteEmail = async (siteCode) => {
 const getSiteAcronym = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        printDocsCount(snapshot, "getSiteAcronym");
         if(snapshot.size > 0) return snapshot.docs[0].data().acronym;
     } catch (error) {
         console.error(error);
@@ -2630,6 +2621,7 @@ const getSiteAcronym = async (siteCode) => {
 const getSiteMostRecentBoxId = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        printDocsCount(snapshot, "getSiteMostRecentBoxId");
         if (snapshot.size > 0) {
             const doc = snapshot.docs[0];
             return {
@@ -2721,11 +2713,12 @@ const shippedKitStatusParticipants = async () => {
                 );
             }
 
-            const kitAssemblySnapshot = await Promise.all(kitAssemblyPromises);
+            const kitAssemblySnapshots = await Promise.all(kitAssemblyPromises);
+            printDocsCount(kitAssemblySnapshots, "shippedKitStatusParticipants");
 
-            kitAssemblySnapshot.forEach((result, index) => {
-                if(!result.empty) {
-                    const kitData = result.docs[0].data();
+            kitAssemblySnapshots.forEach((snapshot, index) => {
+                if(!snapshot.empty) {
+                    const kitData = snapshot.docs[0].data();
                     Object.assign(participants[index], kitData);
                 }
             });
@@ -2767,6 +2760,7 @@ const storePackageReceipt = async (data) => {
 const setPackageReceiptUSPS = async (data) => {
     try {
         const snapshot = await db.collection("participantSelection").where('usps_trackingNum', '==', data.scannedBarcode).get();
+        printDocsCount(snapshot, "setPackageReceiptUSPS");
         const docId = snapshot.docs[0].id;
         await db.collection("participantSelection").doc(docId).update(
         { 
@@ -2792,14 +2786,15 @@ const setPackageReceiptFedex = async (boxUpdateData) => {
             delete boxUpdateData['shipmentTimestamp'];
         }
         
-        const boxSnapshot = await query.get();
+        const snapshot = await query.get();
+        printDocsCount(snapshot, "setPackageReceiptFedex");
         
-        if (boxSnapshot.empty) {
+        if (snapshot.empty) {
             console.error('Box not found');
             return { message: 'Box Not Found', data: null };
         }
 
-        const boxListData = boxSnapshot.docs.map(doc => ({
+        const boxListData = snapshot.docs.map(doc => ({
             boxDocRef: doc.ref,
             boxData: doc.data(),
         }));
@@ -2856,6 +2851,7 @@ const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) 
         });
 
         const specimenQuerySnapshots = await Promise.all(specimenDocsToFetch);
+        printDocsCount(specimenQuerySnapshots, "processReceiptData");
         let specimenDocs = [];
         specimenQuerySnapshots.forEach(snapshot => {
             snapshot.docs.forEach(specimenDoc => {
@@ -2912,10 +2908,10 @@ const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) 
 const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
     try {
         await db.collection("bptlMetrics").doc('--metrics--').update({ 
-            [currentkitStatus]: increment
+            [currentkitStatus]: admin.firestore.FieldValue.increment(1)
         })
         await db.collection("bptlMetrics").doc('--metrics--').update({ 
-            [prevKitStatus]: decrement
+            [prevKitStatus]: admin.firestore.FieldValue.increment(-1)
         })
             return true;
     }
@@ -2927,6 +2923,7 @@ const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
 
 const getBptlMetrics = async () => {
     const snapshot = await db.collection("bptlMetrics").get();
+    printDocsCount(snapshot, "getBptlMetrics");
     return snapshot.docs.map(doc => doc.data())
 }
 
@@ -2934,6 +2931,7 @@ const getBptlMetricsForShipped = async () => {
     try {
         let response = []
         const snapshot = await db.collection("participantSelection").where('kit_status', '==', 'shipped').get();
+        printDocsCount(snapshot, "getBptlMetricsForShipped");
         let shipedParticipants = snapshot.docs.map(doc =>  doc.data())
         const keys = ['first_name', 'last_name', 'pickup_date', 'participation_status']
         shipedParticipants.forEach( i => { response.push(pick(i, keys) )});
@@ -2948,27 +2946,6 @@ const getBptlMetricsForShipped = async () => {
 const pick = (obj, arr) => {
     return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
 } 
-
-const processBsiData = async (tubeConceptIds, query) => {
-    return await Promise.all(tubeConceptIds.map( async tubeConceptId => { // using await promise.all waits until all the ele in a map are processed
-        const snapshot = await db.collection("biospecimen").where(`${tubeConceptId}.926457119`, '==', query).get();// perform query on tube level
-        return snapshot.docs.map(doc => {
-            let collectionIdInfo = {}
-            collectionIdInfo['825582494'] = doc.data()[tubeConceptId]['825582494']
-            collectionIdInfo['926457119'] = doc.data()[tubeConceptId]['926457119']
-            collectionIdInfo['678166505'] = doc.data()['678166505']
-            collectionIdInfo['Connect_ID'] = doc.data()['Connect_ID']
-            // collectionIdInfo['789843387'] = i['789843387']
-            collectionIdInfo['827220437'] = doc.data()['827220437']
-            collectionIdInfo['951355211'] = doc.data()['951355211']
-            collectionIdInfo['915838974'] = doc.data()['915838974']
-            collectionIdInfo['650516960'] = doc.data()['650516960']
-            collectionIdInfo['762124027'] = doc.data()[tubeConceptId]['762124027'] === undefined ? ``  : doc.data()[tubeConceptId]['762124027']
-            collectionIdInfo['982885431'] = doc.data()[tubeConceptId]['248868659'] === undefined ? `` : doc.data()[tubeConceptId]['248868659']['982885431']
-            return collectionIdInfo
-        }) // push query results to holdBiospecimenMatches array       
-    }));
-}
 
 const verifyUsersEmailOrPhone = async (req) => {
     const queries = req.query
@@ -3079,6 +3056,7 @@ const queryDailyReportParticipants = async (sitecode) => {
     let query = db.collection('participants');
     try {
         const snapshot = await query.where('331584571.266600170.840048338', '>=', twoDaysAgo).where('827220437', '==', sitecode).get();
+        printDocsCount(snapshot, "queryDailyReportParticipants");
         if (snapshot.size !== 0) {
             const promises = snapshot.docs.map(async (document) => {
                 return processQueryDailyReportParticipants(document);
@@ -3098,6 +3076,7 @@ const queryDailyReportParticipants = async (sitecode) => {
 const processQueryDailyReportParticipants = async (document) => {
     try {
         const secondSnapshot = await db.collection('biospecimen').where('Connect_ID', '==', document.data()['Connect_ID']).get();
+        printDocsCount(secondSnapshot, "processQueryDailyReportParticipants");
         if (secondSnapshot.size !== 0) {
             const dailyReport = {};
             if (secondSnapshot.docs[0].data()['951355211'] !== undefined) {
@@ -3122,6 +3101,7 @@ const processQueryDailyReportParticipants = async (document) => {
 
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+    printDocsCount(snapshot, "getRestrictedFields");
     return snapshot.docs[0].data().restrictedFields;
 }
 
@@ -3155,6 +3135,7 @@ const getSpecimensByReceivedDate = async (receivedTimestamp) => {
  */
 const getBoxesByReceivedDate = async (receivedTimestamp) => {
     const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
+    printDocsCount(snapshot, "getBoxesByReceivedDate");
     return snapshot.docs.map(doc => doc.data());
 }
 
@@ -3186,6 +3167,7 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
 
         const chunkQueries = chunksToSend.map(chunk => getSnapshot(chunk));
         const snapshots = await Promise.all(chunkQueries);
+        printDocsCount(snapshots, "getSpecimensByCollectionIds");
 
         snapshots.forEach(snapshot => {
             const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
@@ -3207,6 +3189,7 @@ const processSendGridEvent = async (event) => {
         .collection("notifications")
         .where("id", "==", event.notification_id)
         .get();
+    printDocsCount(snapshot, "processSendGridEvent");
 
     if (snapshot.size > 0) {
         const doc = snapshot.docs[0];
@@ -3231,6 +3214,7 @@ const processTwilioEvent = async (event) => {
         .collection("notifications")
         .where("messageSid", "==", event.MessageSid)
         .get();
+    printDocsCount(snapshot, "processTwilioEvent");
 
     if (snapshot.size > 0) {
         const doc = snapshot.docs[0];
@@ -3251,6 +3235,7 @@ const processTwilioEvent = async (event) => {
 const getParticipantCancerOccurrences = async (participantToken) => {
     try {
         const snapshot = await db.collection('cancerOccurrence').where('token', '==', participantToken).get();
+        printDocsCount(snapshot, "getParticipantCancerOccurrences");
         return snapshot.docs.map(doc => doc.data());
     } catch (error) {
         throw new Error("Error fetching cancer occurrences.", { cause: error });
@@ -3279,6 +3264,7 @@ const writeCancerOccurrences = async (cancerOccurrenceArray) => {
 const updateParticipantCorrection = async (participantData) => {
     try {
         const snapshot = await db.collection('participants').where('token', '==', participantData['token']).get();
+        printDocsCount(snapshot, "updateParticipantCorrection");
         if (snapshot.empty) return false
         const docId = snapshot.docs[0].id;
         delete  participantData['token']
@@ -3305,6 +3291,7 @@ const updateSurveyEligibility = async (token, survey) => {
 
     try {
         const snapshot = await db.collection('participants').where('token', '==', token).get();
+        printDocsCount(snapshot, "updateSurveyEligibility");
         
         if (snapshot.empty) return;
 
@@ -3406,15 +3393,11 @@ module.exports = {
     getSpecimenCollections,
     getBoxesPagination,
     getNumBoxesShipped,
-    incrementCounter,
-    decrementCounter,
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
     removeParticipantsDataDestruction,
     removeUninvitedParticipants,
     getNotificationSpecifications,
-    retrieveParticipantsByStatus,
-    notificationAlreadySent,
     storeNotification,
     checkIsNotificationSent,
     validateSiteSAEmail,
