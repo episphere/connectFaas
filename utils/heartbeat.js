@@ -1,7 +1,7 @@
-const { logIPAdddress, setHeaders } = require('./shared');
+const { logIPAddress, setHeaders } = require('./shared');
 
 const heartbeat = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') {

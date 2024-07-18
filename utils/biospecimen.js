@@ -1,9 +1,9 @@
-const { getResponseJSON, setHeaders, logIPAdddress, SSOValidation, convertSiteLoginToNumber } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAddress, SSOValidation, convertSiteLoginToNumber } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { sendInstantNotification } = require("./notifications");
 
 const biospecimenAPIs = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});

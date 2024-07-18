@@ -1,4 +1,4 @@
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAddress } = require('./shared');
 const conceptIds = require('./fieldToConceptIdMapping')
 
 const generateToken = async (req, res, uid) => {
@@ -104,7 +104,7 @@ const validateToken = async (req, res, uid) => {
 };
 
 const getToken = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
@@ -457,7 +457,7 @@ const checkRefusalWithdrawals = (data) => {
 }
 
 const validateUsersEmailPhone = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));

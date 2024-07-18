@@ -1,8 +1,8 @@
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAddress } = require('./shared');
 const { getStatsFromBQ } = require('./bigquery');
 
 const stats = async (req, res, authObj) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});

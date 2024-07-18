@@ -2,7 +2,7 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
 const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -527,7 +527,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
-  logIPAdddress(req);
+  logIPAddress(req);
   setHeaders(res);
 
   if (req.method === "OPTIONS") return res.status(200).json({ code: 200 });
@@ -567,7 +567,7 @@ const storeNotificationSchema = async (req, res, authObj) => {
 };
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
-  logIPAdddress(req);
+  logIPAddress(req);
   setHeaders(res);
 
   if (req.method === "OPTIONS") return res.status(200).json({ code: 200 });
@@ -596,7 +596,7 @@ const retrieveNotificationSchema = async (req, res, authObj) => {
 };
 
 const getParticipantNotification = async (req, res, authObj) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -632,7 +632,7 @@ const getParticipantNotification = async (req, res, authObj) => {
 }
 
 const getSiteNotification = async (req, res, authObj) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({code: 200});
