@@ -2327,7 +2327,6 @@ const assignKitToParticipant = async (data) => {
         const otherKitsUsingSupplyKitTrackingNumber = await db.collection("kitAssembly")
             .where(`${supplyKitTrackingNum}`, '==', data[supplyKitTrackingNum])
             .get();
-            // .where(`${supplyKitId}`, '!=', data[supplyKitId]).get();
 
         if(otherKitsUsingSupplyKitTrackingNumber.size > 1) {
                 return false;
