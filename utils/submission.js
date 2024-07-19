@@ -582,17 +582,29 @@ const getUserCollections = async (req, res, uid) => {
 }
 
 /**
+ * Fetch the GitHub API token from Secret Manager.
+ * @returns {String} - The GitHub API token.
+ */
+const getGitHubToken = async () => {
+    try {
+        const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
+        const client = new SecretManagerServiceClient();
+        const [version] = await client.accessSecretVersion({ name: process.env.GITHUB_TOKEN });
+        return version.payload.data.toString();
+    } catch (error) {
+        console.error('Error fetching GitHub token:');
+        throw new Error('Error fetching GitHub token.', { cause: error });
+    }
+}
+
+/**
  * Get the sha of a module in the questionnaire repository.
  * @param {string} path - the path to the module in the questionnaire repository.
  * @returns {string} - the sha of the module.
  */
 const getModuleSHA = async (path) => {
     try {
-        const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
-        const client = new SecretManagerServiceClient();
-        const [version] = await client.accessSecretVersion({ name: process.env.GITHUB_TOKEN });
-        const token = version.payload.data.toString();
-
+        const token = await getGitHubToken();
         const gitHubApiResponse = await fetch(`https://api.github.com/repos/episphere/questionnaire/commits?path=${path}&sha=main&per_page=1`, {
             headers: {
                 'Authorization': `token ${token}`,
@@ -632,11 +644,7 @@ const getModuleSHA = async (path) => {
  */
 const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
     try {
-        const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
-        const client = new SecretManagerServiceClient();
-        const [version] = await client.accessSecretVersion({ name: process.env.GITHUB_TOKEN });
-        const token = version.payload.data.toString();
-
+        const token = await getGitHubToken();
         const gitHubApiResponse = await fetch(`https://api.github.com/repos/episphere/questionnaire/commits?path=${path}&sha=main`, {
             headers: {
                 'Authorization': `token ${token}`,
@@ -672,13 +680,32 @@ const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
             throw new Error(`Module SHA not found for path ${path}. Most recent SHA also failed.`);
         }
     
-        const surveyVersion = await getVersionNumberFromGitHubCommit(sha, path, token);
+        const textAndVersionResponse = await getTextAndVersionNumberFromGitHubCommit(sha, path, token);
+        const surveyVersion = textAndVersionResponse.surveyVersion;
 
         return { sha, surveyVersion };
 
     } catch (error) {
         console.error('Error fetching module SHA from commit data.', error);
         throw new Error(`Error fetching module SHA from commit data. ${error.message}`, { cause: error });
+    }
+}
+
+/**
+ * Fetch a raw file from the questionnaire repository using the GitHub API.
+ * @param {String} sha - The SHA of the raw file commit to fetch.
+ * @param {String} path - The path to the file in the questionnaire repository.
+ * @param {String} token - The GitHub API token.} surveyStartTimestamp 
+ * @returns {Object} - The survey's module text and version number.
+ */
+const getQuestSurveyFromGitHub = async (sha, path) => {
+    try {
+        const token = await getGitHubToken();
+        return await getTextAndVersionNumberFromGitHubCommit(sha, path, token);
+
+    } catch (error) {
+        console.error('Error fetching Quest survey from GitHub.', error);
+        throw new Error(`Error fetching Quest survey from GitHub. ${error.message}`, { cause: error });
     }
 }
 
@@ -690,7 +717,7 @@ const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
  * @param {String} token - The GitHub API token.
  * @returns {String} - The version number of the module or '1.0' if not versioned.
  */
-const getVersionNumberFromGitHubCommit = async (sha, path, token) => {
+const getTextAndVersionNumberFromGitHubCommit = async (sha, path, token) => {
     try {
         const response = await fetch(`https://api.github.com/repos/episphere/questionnaire/contents/${path}?ref=${sha}`, {
             headers: {
@@ -703,10 +730,11 @@ const getVersionNumberFromGitHubCommit = async (sha, path, token) => {
             throw new Error(`Github RAW File API response error. ${response.statusText}`);
         }
 
-        const rawTextData = await response.text();
-        const versionMatch = rawTextData.match("{\"version\":\\s*\"([0-9]{1,2}\\.[0-9]{1,3})\"}");
+        const moduleText = await response.text();
+        const versionMatch = moduleText.match("{\"version\":\\s*\"([0-9]{1,2}\\.[0-9]{1,3})\"}");
+        const surveyVersion = versionMatch ? versionMatch[1] : '1.0';
 
-        return versionMatch ? versionMatch[1] : '1.0';
+        return { moduleText, surveyVersion };
 
     } catch (error) {
         console.error('Error fetching raw GitHub file from commit sha.', error);
@@ -724,5 +752,6 @@ module.exports = {
     getUserSurveys,
     getUserCollections,
     getModuleSHA,
+    getQuestSurveyFromGitHub,
     getSHAFromGitHubCommitData,
 }
