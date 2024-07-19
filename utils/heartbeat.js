@@ -1,4 +1,6 @@
 const { logIPAddress, setHeaders } = require('./shared');
+const {BigQuery} = require('@google-cloud/bigquery');
+const bigquery = new BigQuery();
 
 const heartbeat = async (req, res) => {
     logIPAddress(req);
@@ -18,9 +20,17 @@ const heartbeat = async (req, res) => {
     const minutes = currentTime.getUTCMinutes().toString().padStart(2, '0');
     const seconds = currentTime.getUTCSeconds().toString().padStart(2, '0');
 
-    const message = `Current time (UTC) is: ${hours}:${minutes}:${seconds}`;
+    const queryStr = `SELECT * FROM \`nih-nci-dceg-connect-dev.heartbeat.recruitment_summary\``;
+    const [rows] = await bigquery.query(queryStr);
 
-    return res.status(200).json({ code: 200, data: message});
+    console.log(rows);
+
+    const payload = {
+        utc: `${hours}:${minutes}:${seconds}`,
+
+    }
+
+    return res.status(200).json({ code: 200, data: payload});
 }
 
 module.exports = {
