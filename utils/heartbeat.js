@@ -23,6 +23,8 @@ const heartbeat = async (req, res) => {
     const query = `SELECT * FROM \`nih-nci-dceg-connect-dev.heartbeat.recruitment_summary\``;
     const rows = await bigquery.query(query);
 
+    console.log(rows);
+
     const payload = {
         utc: `${hours}:${minutes}:${seconds}`,
         activeParticipants: rows.num_active_participants,
