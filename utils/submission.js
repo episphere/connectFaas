@@ -583,7 +583,7 @@ const getUserCollections = async (req, res, uid) => {
 
 /**
  * Fetch the GitHub API token from Secret Manager.
- * @returns {String} - The GitHub API token.
+ * @returns {string} - The GitHub API token.
  */
 const getGitHubToken = async () => {
     try {
@@ -638,9 +638,9 @@ const getModuleSHA = async (path) => {
  * Repair: missing SHA value in the survey data. This property should exist for all survey data in all modules.
  * Ex: Firestore -> Module3_v1 -> any document > sha: "<string value of active commit when survey was started>".
  * This function compares the survey start date with the commit history of the module.
- * @param {String} surveyStartTimestamp - The timestamp of the survey start date (ISO 8601 String).
- * @param {String} path - the file name of the module in the questionnaire repository.
- * @returns {String} - The SHA of the commit that was active when the survey was started.
+ * @param {string} surveyStartTimestamp - The timestamp of the survey start date (ISO 8601 String).
+ * @param {string} path - the file name of the module in the questionnaire repository.
+ * @returns {string} - The SHA of the commit that was active when the survey was started.
  */
 const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
     try {
@@ -693,9 +693,9 @@ const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
 
 /**
  * Fetch a raw file from the questionnaire repository using the GitHub API.
- * @param {String} sha - The SHA of the raw file commit to fetch.
- * @param {String} path - The path to the file in the questionnaire repository.
- * @param {String} token - The GitHub API token.} surveyStartTimestamp 
+ * @param {string} sha - The SHA of the raw file commit to fetch.
+ * @param {string} path - The path to the file in the questionnaire repository.
+ * @param {string} token - The GitHub API token.
  * @returns {Object} - The survey's module text and version number.
  */
 const getQuestSurveyFromGitHub = async (sha, path) => {
@@ -712,10 +712,10 @@ const getQuestSurveyFromGitHub = async (sha, path) => {
 /**
  * Search the GitHub API (Raw file) by commit SHA for the version number of a module at a specific commit.
  * Early versions didn't have a versioning convention. Return '1.0' for this case.
- * @param {String} sha - The SHA of the raw file commit to fetch.
- * @param {String} path - The path to the file in the questionnaire repository.
- * @param {String} token - The GitHub API token.
- * @returns {String} - The version number of the module or '1.0' if not versioned.
+ * @param {string} sha - The SHA of the raw file commit to fetch.
+ * @param {string} path - The path to the file in the questionnaire repository.
+ * @param {string} token - The GitHub API token.
+ * @returns {string} - The version number of the module or '1.0' if not versioned.
  */
 const getTextAndVersionNumberFromGitHubCommit = async (sha, path, token) => {
     try {

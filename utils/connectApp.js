@@ -79,16 +79,15 @@ const connectApp = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
       }
 
-      if (!req.query.sha) {
+      const { sha, path } = req.query;
+
+      if (!sha) {
         return res.status(400).json(getResponseJSON('Sha parameter is required!', 400));
       }
 
-      if (!req.query.path) {
+      if (!path) {
         return res.status(400).json(getResponseJSON('Path parameter is required!', 400));
       }
-
-      const sha = req.query.sha;
-      const path = req.query.path;
 
       const { getQuestSurveyFromGitHub } = require('./submission');
       const moduleTextAndVersionResult = await getQuestSurveyFromGitHub(sha, path);
