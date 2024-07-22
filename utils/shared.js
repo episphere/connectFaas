@@ -1544,9 +1544,9 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
 const getTemplateForEmailLink = (
     email,
     continueUrl,
-    preferredLanguage = fieldMapping.english.toString()
+    preferredLanguage = fieldMapping.english
 ) => {
-    return preferredLanguage === fieldMapping.spanish.toString()
+    return preferredLanguage === fieldMapping.spanish
         ? `
     <html>
     <head></head>

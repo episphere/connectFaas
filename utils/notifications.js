@@ -705,8 +705,7 @@ const sendEmailLink = async (req, res) => {
         const body = {
             message: {
                 subject:
-                    preferredLanguage ===
-                    conceptIds.spanish.toString()
+                    preferredLanguage === conceptIds.spanish
                         ? "Inicie sesión para Estudio Connect para la Prevención del Cáncer"
                         : "Sign in to Connect for Cancer Prevention Study",
                 body: {
