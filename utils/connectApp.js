@@ -62,7 +62,7 @@ const connectApp = async (req, res) => {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
       }
 
-      if (!req.query.path || req.query.path === '') {
+      if (!req.query.path) {
         return res.status(400).json(getResponseJSON('Path parameter is required!', 400));
       }
 
@@ -74,12 +74,33 @@ const connectApp = async (req, res) => {
       return res.status(200).json({data: shaResult, code: 200});
     }
 
+    else if (api === 'getQuestSurveyFromGitHub') {
+      if (req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+      }
+
+      const { sha, path } = req.query;
+
+      if (!sha) {
+        return res.status(400).json(getResponseJSON('Sha parameter is required!', 400));
+      }
+
+      if (!path) {
+        return res.status(400).json(getResponseJSON('Path parameter is required!', 400));
+      }
+
+      const { getQuestSurveyFromGitHub } = require('./submission');
+      const moduleTextAndVersionResult = await getQuestSurveyFromGitHub(sha, path);
+      
+      return res.status(200).json({data: moduleTextAndVersionResult, code: 200});
+    }
+
     else if (api === 'getSHAFromGitHubCommitData') {
       if (req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
       }
 
-      if (!req.query.path || req.query.path === '') {
+      if (!req.query.path) {
         return res.status(400).json(getResponseJSON('Path parameter is required!', 400));
       }
 
