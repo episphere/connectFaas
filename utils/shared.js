@@ -1593,7 +1593,7 @@ const unsubscribeTextObj = {
     english:
         "<p><i>To unsubscribe from emails about Connect from the National Cancer Institute (NCI), <% click here %> .</i></p>",
     spanish:
-        "<p><i>Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %> .</i></p>",
+        "<p><i>Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %>.</i></p>",
 };
 
 module.exports = {
