@@ -13,7 +13,7 @@ const generatePromisAuthToken = async () => {
 }
 
 const processPromisResults = async (uid) => {
-
+    
     const { surveyExists, updateSurvey } = require('./firestore');
 
     const collection = 'promis_v1';
