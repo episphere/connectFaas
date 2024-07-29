@@ -7,6 +7,10 @@ steps:
   args: ['functions', 'deploy', 'biospecimen', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=config/stage/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'add-iam-policy-binding', 'biospecimen', '--member=allUsers', '--role=${_ROLE}']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'heartbeat', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=config/stage/.env.yaml']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'add-iam-policy-binding', 'heartbeat', '--member=allUsers', '--role=${_ROLE}']
 substitutions:
   _SOURCE: https://source.developers.google.com/projects/nih-nci-dceg-connect-stg-5519/repos/github_episphere_connectfaas/moveable-aliases/stage
   _RUNTIME: nodejs20

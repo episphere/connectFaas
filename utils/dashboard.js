@@ -1,7 +1,7 @@
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAddress } = require('./shared');
 
 const dashboard = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
     if (req.method === 'OPTIONS') return res.status(200).json({code: 200});
     if (!req.headers.authorization || req.headers.authorization.trim() === "") {
