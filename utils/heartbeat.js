@@ -20,7 +20,7 @@ const heartbeat = async (req, res) => {
     const minutes = currentTime.getUTCMinutes().toString().padStart(2, '0');
     const seconds = currentTime.getUTCSeconds().toString().padStart(2, '0');
 
-    const query = `SELECT * FROM \`nih-nci-dceg-connect-dev.heartbeat.recruitment_summary\``;
+    const query = `SELECT * FROM \`${process.env.GCLOUD_PROJECT}.heartbeat.recruitment_summary\``;
     const [rows] = await bigquery.query(query);
 
     const payload = {
