@@ -2,7 +2,7 @@ const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAdddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
 const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -427,13 +427,23 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       let { emailRecordArray, emailPersonalizationArray, smsRecordArray } = notificationData[lang];
       if (emailPersonalizationArray.length > 0) {
         const emailBatch = {
-          from: {
-            name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
-            email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
-          },
-          subject: emailInSpec[lang].subject,
-          html: emailInSpec[lang].body,
-          personalizations: emailPersonalizationArray,
+            from: {
+                name:
+                    process.env.SG_FROM_NAME ||
+                    "Connect for Cancer Prevention Study",
+                email:
+                    process.env.SG_FROM_EMAIL ||
+                    "donotreply@myconnect.cancer.gov",
+            },
+            subject: emailInSpec[lang].subject,
+            html: emailInSpec[lang].body,
+            personalizations: emailPersonalizationArray,
+            tracking_settings: {
+                subscription_tracking: {
+                    enable: true,
+                    html: unsubscribeTextObj[lang] || unsubscribeTextObj.english
+                },
+            },
         };
   
         try {
@@ -517,7 +527,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 }
 
 const storeNotificationSchema = async (req, res, authObj) => {
-  logIPAdddress(req);
+  logIPAddress(req);
   setHeaders(res);
 
   if (req.method === "OPTIONS") return res.status(200).json({ code: 200 });
@@ -557,7 +567,7 @@ const storeNotificationSchema = async (req, res, authObj) => {
 };
 
 const retrieveNotificationSchema = async (req, res, authObj) => {
-  logIPAdddress(req);
+  logIPAddress(req);
   setHeaders(res);
 
   if (req.method === "OPTIONS") return res.status(200).json({ code: 200 });
@@ -586,7 +596,7 @@ const retrieveNotificationSchema = async (req, res, authObj) => {
 };
 
 const getParticipantNotification = async (req, res, authObj) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -622,7 +632,7 @@ const getParticipantNotification = async (req, res, authObj) => {
 }
 
 const getSiteNotification = async (req, res, authObj) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -663,7 +673,7 @@ const sendEmailLink = async (req, res) => {
             .json(getResponseJSON("Only POST requests are accepted!", 405));
     }
     try {
-        const { email, continueUrl } = req.body;
+        const { email, continueUrl, preferredLanguage } = req.body;
         const [clientId, clientSecret, tenantId, magicLink] = await Promise.all(
             [
                 getSecret(process.env.APP_REGISTRATION_CLIENT_ID),
@@ -692,13 +702,19 @@ const sendEmailLink = async (req, res) => {
         );
 
         const { access_token } = await resAuthorize.json();
-
         const body = {
             message: {
-                subject: `Sign in to Connect for Cancer Prevention Study`,
+                subject:
+                    preferredLanguage === conceptIds.spanish
+                        ? "Inicie sesión para Estudio Connect para la Prevención del Cáncer"
+                        : "Sign in to Connect for Cancer Prevention Study",
                 body: {
                     contentType: "html",
-                    content: getTemplateForEmailLink(email, magicLink),
+                    content: getTemplateForEmailLink(
+                        email,
+                        magicLink,
+                        preferredLanguage
+                    ),
                 },
                 toRecipients: [
                     {
@@ -875,6 +891,12 @@ const sendInstantNotification = async (requestData) => {
         },
       },
     ],
+    tracking_settings: {
+      subscription_tracking: {
+          enable: true,
+          html: unsubscribeTextObj[requestData.preferredLanguage] || unsubscribeTextObj.english
+      },
+    },
   };
   await sgMail.send(emailDataToSg);
 

@@ -1,5 +1,6 @@
-const fieldMapping = require('./fieldToConceptIdMapping');
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const { QuerySnapshot } = require('firebase-admin/firestore');
+const fieldMapping = require('./fieldToConceptIdMapping');
 
 const getResponseJSON = (message, code) => {
     return { message, code };
@@ -623,7 +624,7 @@ const isParentEntity = async (siteDetails) => {
     return {...siteDetails, isParent, siteCodes};
 };
 
-const logIPAdddress = (req) => {
+const logIPAddress = (req) => {
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     console.log(ipAddress)
 }
@@ -1518,9 +1519,26 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     });
 }
 
-const getTemplateForEmailLink = (email, continueUrl) => {
-    return `
+const getTemplateForEmailLink = (
+    email,
+    continueUrl,
+    preferredLanguage = fieldMapping.english
+) => {
+    return preferredLanguage === fieldMapping.spanish
+        ? `
     <html>
+    <head></head>
+    <body marginheight="0">
+      <p>Hola,</p>
+      <p>Recibimos una solicitud para iniciar sesión en el Estudio Connect para la Prevención del Cáncer usando esta dirección de correo electrónico. Si desea iniciar sesión con su cuenta ${email}, haga clic en este enlace:</p>
+      <p><a href="${continueUrl}" target="_other" rel="nofollow">Iniciar sesión para Estudio Connect para la Prevención del Cáncer:</a></p>
+      <p>Si no solicitó este enlace, puede ignorar este correo electrónico de forma segura.</p>
+      <p>Gracias,</p>
+      <p>Su equipo del Estudio Connect para la Prevención del Cáncer</p>
+    </body>
+    </html>
+  `
+        : ` <html>
     <head></head>
     <body marginheight="0">
       <p>Hello,</p>
@@ -1530,8 +1548,7 @@ const getTemplateForEmailLink = (email, continueUrl) => {
       <p>Thanks,</p>
       <p>Your Connect for Cancer Prevention Study team</p>
     </body>
-    </html>
-  `;
+    </html>`;
 };
 
 const nihMailbox = 'NCIConnectStudy@mail.nih.gov'
@@ -1548,6 +1565,35 @@ const getSecret = async (key) => {
 const cidToLangMapper = {
     [fieldMapping.english]: "english",
     [fieldMapping.spanish]: "spanish",
+};
+
+/**
+ * @param {QuerySnapshot | QuerySnapshot[]} snapshot A query snapshot or an array of snapshots
+ * @param {string} infoStr Name of the function and other info to be printed
+ * @returns {void}
+ */
+const printDocsCount = (snapshot, infoStr = "") => {
+  let count = 0;
+  if (Array.isArray(snapshot)) {
+    for (const snap of snapshot) {
+      if (snap.constructor.name !== "QuerySnapshot" || snap.empty) continue;
+      count += snap.size;
+    }
+  } else {
+    if (snapshot.constructor.name !== "QuerySnapshot" || snapshot.empty) return;
+    count = snapshot.size;
+  }
+
+  if (count > 0) {
+    console.log(`Docs read from Firestore: ${count}; function: ${infoStr}`);
+  }
+};
+
+const unsubscribeTextObj = {
+    english:
+        "<p><i>To unsubscribe from emails about Connect from the National Cancer Institute (NCI), <% click here %>.</i></p>",
+    spanish:
+        "<p><i>Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %>.</i></p>",
 };
 
 module.exports = {
@@ -1570,7 +1616,7 @@ module.exports = {
     defaultStateFlags,
     SSOValidation,
     conceptMappings,
-    logIPAdddress,
+    logIPAddress,
     decodingJWT,
     initializeTimestamps,
     tubeKeytoNum,
@@ -1613,4 +1659,6 @@ module.exports = {
     twilioErrorMessages,
     getSecret,
     cidToLangMapper,
+    printDocsCount,
+    unsubscribeTextObj
 };
