@@ -1225,6 +1225,11 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
         if (cancerSiteValidationObj.error === true) {
             return cancerSiteValidationObj;
         }
+
+        const diagnosisAwarenessValidationObj = validateDiagnosisAwareness(occurrence[fieldMapping.vitalStatusCategorical], occurrence[fieldMapping.participantDiagnosisAwareness]);
+        if (diagnosisAwarenessValidationObj.error === true) {
+            return diagnosisAwarenessValidationObj;
+        }
     }
 
     // Query existing occurrences for the participant
@@ -1255,7 +1260,7 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
  * If the 'fieldMapping.cancerSites.other' cancer site is selected, the 'fieldMapping.anotherTypeOfCancerText' field is required.
  * Else, the 'anotherTypeOfCancerText' field should not be present.
  * @param {object} cancerSitesObject - property (740819233) in the cancer occurrence object (637153953).
- * @returns {boolean} - Returns true the above requirements are met, false otherwise.
+ * @returns {object} - Returns an object with error (boolean), message (string), and data (array).
  */
 const validateCancerOccurrence = (cancerSitesObject) => {
     if (!cancerSitesObject || Object.keys(cancerSitesObject).length === 0 || !cancerSitesObject[fieldMapping.primaryCancerSiteCategorical]) {
@@ -1274,6 +1279,23 @@ const validateCancerOccurrence = (cancerSitesObject) => {
     const hasError = isOtherCancerSiteSelected ? !isAnotherTypeOfCancerTextValid : isAnotherTypeOfCancerTextValid;
 
     return { error: hasError, message: hasError ? otherCancerSiteErrorMessage : '', data: [] };
+}
+
+/**
+ * Rules: if vitalStatusCategorical is 'alive' at chart review (114227122: 337516613), participant must be aware of diagnosis (844209241: 353358909). Else, block API request.
+ * If vitalStatusCategorical is 'dead' or 'unknown' (114227122: 646675764 or 178420302), participant awareness can be yes, no, or unknown (844209241: 353358909 or 104430631 or 178420302).
+ * @param {number} vitalStatusCategorical - the participant's vital status (conceptID).
+ * @param {number} participantDiagnosisAwareness - the participant's awareness of diagnosis (conceptID).
+ * @returns {object} - Returns an object with error (boolean), message (string), and data (array).
+ */
+const validateDiagnosisAwareness = (vitalStatusCategorical, participantDiagnosisAwareness) => {
+    const isAliveAtChartReview = vitalStatusCategorical === fieldMapping.vitalStatus.alive;
+    const isParticipantAwareOfDiagnosis = participantDiagnosisAwareness === fieldMapping.yes;
+
+    const isAwarenessValid = isAliveAtChartReview ? isParticipantAwareOfDiagnosis : true;
+    const awarenessErrorMessage = "Participant must be aware of diagnosis if alive at chart review. Otherwise, awareness can be 'yes (353358909)', 'no (104430631)', or 'unknown (178420302)'.";
+
+    return { error: !isAwarenessValid, message: !isAwarenessValid ? awarenessErrorMessage : '', data: [] };
 }
 
 /**

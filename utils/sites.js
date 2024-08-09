@@ -418,7 +418,7 @@ const flatValidationHandler = (newData, existingData, rules, validationFunction)
  * Validate data submitted to the updateParticipantData endpoint.
  * @param {string|number|array|object} value - The value to validate. From a key:value pair submitted in the POST request.
  * @param {string|number|array|object} existingValue - The existing value to validate against. From the existing participant data in the database.
- * @param {string} path - The flattened path to the value in the data object. Example: 'state.123456789' or '637153953[].457270069' <- where [] is an array with any index value.
+ * @param {string} path - The flattened path to the value in the data object. Example: 'state.123456789' or '637153953[].149205077' <- where [] is an array with any index value.
  * @param {object} rule - The validation rule to use from updateParticipantData.json. Example: { "dataType": "string", "maxLength": 100 }
  * @returns null for success, or an error message for failure.
  */
