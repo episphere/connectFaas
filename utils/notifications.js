@@ -475,30 +475,6 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       }
     }
 
-    if (notificationSpec.category === "3mo QOL Survey Reminders" && notificationSpec.attempt === "1st contact") {
-      const { moduleStatusConcepts, findKeyByValue } = require("./shared");
-      const surveyStatus = findKeyByValue(moduleStatusConcepts, "promis");
-
-      let tokenArray = [];
-      for (const { emailRecordArray, smsRecordArray } of Object.values(notificationData)) {
-        tokenArray = [
-          ...tokenArray,
-          ...emailRecordArray.map((record) => record.token),
-          ...smsRecordArray.map((record) => record.token),
-        ];
-      }
-
-      const tokenSet = new Set(tokenArray);
-      for (const token of tokenSet) {
-        try {
-          await updateSurveyEligibility(token, surveyStatus);
-        } catch (error) {
-          console.error(`Error updating survey eligibility for token ${token}`, error);
-          break;
-        }
-      }
-    }
-
   }
   
   for (const lang of langArray) {
