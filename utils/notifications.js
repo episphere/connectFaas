@@ -47,17 +47,15 @@ const sendBulkSms = async (phoneNumberArray, messageString) => {
   }
 
   try {
-    const service = await twilioClient.notify.v1.services.create({messagingServiceSid});
-    const smsNotification = await service
-    .notifications()
-    .create({
+    const service = await twilioClient.notify.v1.services.create({ messagingServiceSid });
+    const smsNotification = await service.notifications().create({
       body: messageString,
-      toBinding: phoneNumberArray.map(phone => JSON.stringify({binding_type: 'sms', address: phone})),
+      toBinding: phoneNumberArray.map((phone) => JSON.stringify({ binding_type: "sms", address: phone })),
     });
 
     return smsNotification;
   } catch (error) {
-    throw new Error("sendBulkSms() error.", {cause: error});
+    throw new Error("sendBulkSms() error.", { cause: error });
   }
 };
 
@@ -462,23 +460,19 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       let { emailRecordArray, emailPersonalizationArray, smsRecordArray, phoneNumberArray } = notificationData[lang];
       if (emailPersonalizationArray.length > 0) {
         const emailBatch = {
-            from: {
-                name:
-                    process.env.SG_FROM_NAME ||
-                    "Connect for Cancer Prevention Study",
-                email:
-                    process.env.SG_FROM_EMAIL ||
-                    "donotreply@myconnect.cancer.gov",
+          from: {
+            name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
+            email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
+          },
+          subject: emailInSpec[lang].subject,
+          html: emailInSpec[lang].body,
+          personalizations: emailPersonalizationArray,
+          tracking_settings: {
+            subscription_tracking: {
+              enable: true,
+              html: unsubscribeTextObj[lang] || unsubscribeTextObj.english,
             },
-            subject: emailInSpec[lang].subject,
-            html: emailInSpec[lang].body,
-            personalizations: emailPersonalizationArray,
-            tracking_settings: {
-                subscription_tracking: {
-                    enable: true,
-                    html: unsubscribeTextObj[lang] || unsubscribeTextObj.english
-                },
-            },
+          },
         };
   
         try {
@@ -507,10 +501,10 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
           await saveNotificationBatch(smsRecordArray);
           smsCount[lang] += smsRecordArray.length;
         } catch (error) {
-          if (error.message.startsWith("sendBulkSms")) {
-            console.error(`Error sending bulk messages for ${notificationSpec.id}(${readableSpecString}).`, error);
-          } else {
+          if (error.message.startsWith("saveNotificationBatch")) {
             console.error(`Error saving message records for ${notificationSpec.id}(${readableSpecString}).`, error);
+          } else {
+            console.error(`Error sending bulk messages for ${notificationSpec.id}(${readableSpecString}).`, error);
           }
 
           break;
