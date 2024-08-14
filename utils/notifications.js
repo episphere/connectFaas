@@ -33,6 +33,7 @@ const setupTwilio = async () => {
 
   twilioClient = twilio(fetchedSecrets.accountSid, fetchedSecrets.authToken);
   messagingServiceSid = fetchedSecrets.messagingServiceSid;
+  isTwilioSetup = true;
 };
 
 /**
@@ -43,7 +44,6 @@ const setupTwilio = async () => {
 const sendBulkSms = async (phoneNumberArray, messageString) => {
   if (!isTwilioSetup) {
     await setupTwilio();
-    isTwilioSetup = true;
   }
 
   try {
@@ -69,7 +69,6 @@ const sendBulkSms = async (phoneNumberArray, messageString) => {
 const sendPersonalizedSms = async (smsRecordArray) => {
   if (!isTwilioSetup) {
     await setupTwilio();
-    isTwilioSetup = true;
   }
 
   let adjustedSmsRecordArray = [];
