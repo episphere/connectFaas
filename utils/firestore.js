@@ -2180,8 +2180,6 @@ const participantHomeCollectionKitFields = [
  * Ex. [{first_name: 'John', last_name: 'Doe', address_1: '123 Main St', address_2: '', city: 'Anytown', state: 'NY', zip_code: '12345', connect_id: 123457890}, ...]
  */
 
-// logic: current date is 5 days in difference more than actual date
-
 // TODO: Suboptimal process. Would benefit from direct query on a {kitStatus: initialized} or {completed: no} variable, which could be assigned on kit creation in Biospecimen.
 // This will get progressively slower and more expensive as participants are added.
 // TODO: A sliding time window would be more efficient in the .where(<timestamp>) query.
@@ -2190,9 +2188,9 @@ const queryHomeCollectionAddressesToPrint = async () => {
     try {
         const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
             collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
-        
-        const fiveDaysAgoISO = getFiveDaysAgoDateISO()
 
+        const fiveDaysAgoISO = getFiveDaysAgoDateISO();
+        
         const snapshot = await db.collection('participants')
             .where(withdrawConsent.toString(), '==', no)
             .where(participantDeceasedNORC.toString(), '==', no)
