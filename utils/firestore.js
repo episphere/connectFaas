@@ -2297,7 +2297,7 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
     zip_code: record[zip], 
     connect_id: record['Connect_ID'],
     };
-     
+
     return (!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)
         ? processedRecord
         : [];
