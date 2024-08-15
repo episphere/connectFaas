@@ -2189,7 +2189,7 @@ const queryHomeCollectionAddressesToPrint = async () => {
         const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
             collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
-        const fiveDaysAgoISO = getFiveDaysAgoDateISO();
+        const fiveDaysAgoDateISO = getFiveDaysAgoDateISO();
         
         const snapshot = await db.collection('participants')
             .where(withdrawConsent.toString(), '==', no)
@@ -2197,7 +2197,7 @@ const queryHomeCollectionAddressesToPrint = async () => {
             .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
-            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoISO)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoDateISO)
             .select(...participantHomeCollectionKitFields)
             .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
             .get();
@@ -2281,13 +2281,9 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
     const { collectionDetails, baseline, bioKitMouthwash, firstName, lastName, address1, address2, city, state, zip } = fieldMapping;
 
     const addressLineOne = record?.[address1];
-    console.log("🚀 ~ processParticipantHomeMouthwashKitData ~ addressLineOne:", addressLineOne)
     const poBoxRegex = /\b(?:P\.?O\.?(?:\s*Box|\s+Office\s+Box)|Post\s+Office\s+Box)\b/i;
-    // If the address line one does contain a PO Box, return an empty array
     const isPOBoxMatch = poBoxRegex.test(addressLineOne);
-    // console.log("---")
-    // console.log("🚀 ~ processParticipantHomeMouthwashKitData ~ isPOBoxMatch:", isPOBoxMatch)
-    // console.log("---")
+    
     if (isPOBoxMatch) return null;
 
     const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;    
@@ -2302,17 +2298,6 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
     connect_id: record['Connect_ID'],
     };
      
-    // console.log("Condition evaluation:", {
-    //     hasMouthwash,
-    //     printLabel,
-    //     isPOBoxMatch,
-    //     condition: (!hasMouthwash && printLabel && !isPOBoxMatch) || (hasMouthwash && !printLabel && !isPOBoxMatch),
-    //     addressLineOne,
-    //     processedRecord
-    // });
-    // console.log("---")
-
-    
     return (!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)
         ? processedRecord
         : [];
