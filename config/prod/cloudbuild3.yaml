@@ -1,6 +1,6 @@
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'sendScheduledNotifications', '--gen2', '--trigger-http', '--runtime=${_RUNTIME}', '--timeout=3600s', '--memory=2048MB', '--ingress-settings=internal-only', '--no-allow-unauthenticated', '--source=${_SOURCE}', '--env-vars-file=config/prod/.env.yaml']
+  args: ['functions', 'deploy', 'sendScheduledNotifications', '--gen2', '--trigger-http', '--runtime=${_RUNTIME}', '--timeout=3600s', '--memory=2048MB', '--ingress-settings=internal-only', '--source=${_SOURCE}', '--env-vars-file=config/prod/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'participantsEligibleForIncentive', '--trigger-http', '--runtime=${_RUNTIME}', '--source=${_SOURCE}', '--env-vars-file=config/prod/.env.yaml']
 - name: 'gcr.io/cloud-builders/gcloud'

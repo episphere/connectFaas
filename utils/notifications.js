@@ -4,13 +4,13 @@ const showdown = require("showdown");
 const twilio = require("twilio");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
-const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule} = require("./firestore");
+const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule, updateNotifySmsRecord} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
 const converter = new showdown.Converter();
 const langArray = ["english", "spanish"];
-let twilioClient, messagingServiceSid;
+let twilioClient, messagingServiceSid, twilioNotifyServiceSid;
 let isTwilioSetup = false;
 let isSendingNotifications = false; // A more robust soluttion is needed when using multiple servers 
 
@@ -23,6 +23,7 @@ const setupTwilio = async () => {
     accountSid: process.env.TWILIO_ACCOUNT_SID,
     authToken: process.env.TWILIO_AUTH_TOKEN,
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+    twilioNotifyServiceSid: process.env.TWILIO_NOTIFY_SERVICE_SID,
   };
   const client = new SecretManagerServiceClient();
   let fetchedSecrets = {};
@@ -33,7 +34,38 @@ const setupTwilio = async () => {
 
   twilioClient = twilio(fetchedSecrets.accountSid, fetchedSecrets.authToken);
   messagingServiceSid = fetchedSecrets.messagingServiceSid;
+  twilioNotifyServiceSid = fetchedSecrets.twilioNotifyServiceSid;
   isTwilioSetup = true;
+};
+
+/**
+ * Get detailed data of a message from Twilio, and update to Firestore.
+ * @param {string} msgSid 
+ * @param {string} notificationSid 
+ * @returns {Promise<boolean>}
+ */
+const handleNotifySmsCallback = async (msgSid, notificationSid) => {
+  if (!isTwilioSetup) {
+    await setupTwilio();
+  }
+
+  try {
+    const msg = await twilioClient.messages(msgSid).fetch();
+    let data = {
+      twilioNotificationSid: notificationSid,
+      messageSid: msg.sid,
+      phone: msg.to,
+      status: msg.status,
+      updatedDate: msg.dateUpdated?.toISOString() || new Date().toISOString(),
+    };
+    msg.errorMessage && (data.errorMessage = msg.errorMessage);
+    msg.errorCode && (data.errorCode = msg.errorCode);
+
+    return await updateNotifySmsRecord(data);
+  } catch (error) {
+    console.error("Error occured running handleNotifySmsCallback().", error);
+    return false;
+  }
 };
 
 /**
@@ -47,13 +79,13 @@ const sendBulkSms = async (phoneNumberArray, messageString) => {
   }
 
   try {
-    const service = await twilioClient.notify.v1.services.create({ messagingServiceSid });
-    const smsNotification = await service.notifications().create({
-      body: messageString,
-      toBinding: phoneNumberArray.map((phone) => JSON.stringify({ binding_type: "sms", address: phone })),
-    });
-
-    return smsNotification;
+    return await twilioClient.notify.v1
+      .services(twilioNotifyServiceSid)
+      .notifications.create({
+        toBinding: phoneNumberArray.map((recipient) => JSON.stringify({ binding_type: "sms", address: recipient })),
+        body: messageString,
+        deliveryCallbackUrl: `https://us-central1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/webhook?api=twilio-notify-callback`,
+      });
   } catch (error) {
     throw new Error("sendBulkSms() error.", { cause: error });
   }
@@ -347,7 +379,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         emailRecordArray: [],
         emailPersonalizationArray: [],
         smsRecordArray: [],
-        phoneNumberArray: [],
+        phoneNumberSet: new Set(),
       };
     }
 
@@ -440,7 +472,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         const phoneNumber = fetchedData[phoneField].replace(/\D/g, "");
         if (phoneNumber.length >= 10) {
           const smsTo = `+1${phoneNumber.slice(-10)}`;
-          notificationData[prefLang].phoneNumberArray.push(smsTo);
+          notificationData[prefLang].phoneNumberSet.add(smsTo);
           notificationData[prefLang].smsRecordArray.push({
             ...recordCommonData,
             id: smsId,
@@ -457,7 +489,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
     }
     
     for (const lang of langArray) {
-      let { emailRecordArray, emailPersonalizationArray, smsRecordArray, phoneNumberArray } = notificationData[lang];
+      let { emailRecordArray, emailPersonalizationArray, smsRecordArray, phoneNumberSet } = notificationData[lang];
       if (emailPersonalizationArray.length > 0) {
         const emailBatch = {
           from: {
@@ -492,10 +524,9 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   
       if (smsRecordArray.length > 0) {
         try {
-          const smsNotification = await sendBulkSms(phoneNumberArray, smsInSpec[lang].body);
+          const smsNotification = await sendBulkSms(Array.from(phoneNumberSet), smsInSpec[lang].body);
           for (const smsRecord of smsRecordArray) {
-            smsRecord.sid = smsNotification.sid;
-            smsRecord.serviceSid = smsNotification.serviceSid;
+            smsRecord.twilioNotificationSid = smsNotification.sid;
           }
 
           await saveNotificationBatch(smsRecordArray);
@@ -970,4 +1001,5 @@ module.exports = {
   dryRunNotificationSchema,
   sendInstantNotification,
   handleDryRun,
+  handleNotifySmsCallback,
 };

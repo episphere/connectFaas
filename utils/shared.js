@@ -1596,6 +1596,13 @@ const unsubscribeTextObj = {
         "<p><i>Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %>.</i></p>",
 };
 
+/**
+ * Delay for a specified time, to avoid errors (race conditions, rate limiting, etc.) 
+ * @param {number} ms Delayed time in milliseconds
+ * @returns {Promise<void>}
+ */
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -1660,5 +1667,6 @@ module.exports = {
     getSecret,
     cidToLangMapper,
     printDocsCount,
-    unsubscribeTextObj
+    unsubscribeTextObj,
+    delay,
 };
