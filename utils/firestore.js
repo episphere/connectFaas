@@ -3,10 +3,9 @@ const admin = require('firebase-admin');
 const { Transaction } = require('firebase-admin/firestore');
 admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
-const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
-const { getFiveDaysAgoDateISO } = require('./shared');
 
 const nciCode = 13;
 const nciConceptId = `517700004`;
