@@ -1618,6 +1618,16 @@ const unsubscribeTextObj = {
         "<p><i>Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %>.</i></p>",
 };
 
+/**
+ * Returns a date string five days ago in ISO format
+ * @returns {string} - ISO string of the date five days ago
+ * @example "2024-08-05T00:00:00.000Z"
+*/
+const getFiveDaysAgoDateISO = () => { 
+    const currentDate = new Date();
+    return new Date(currentDate.setDate(currentDate.getDate() - 5)).toISOString();
+}
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -1682,5 +1692,6 @@ module.exports = {
     getSecret,
     cidToLangMapper,
     printDocsCount,
-    unsubscribeTextObj
+    unsubscribeTextObj,
+    getFiveDaysAgoDateISO
 };
