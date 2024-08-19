@@ -3,7 +3,7 @@ const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
-const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule} = require("./firestore");
+const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
@@ -470,30 +470,6 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
           }
         } catch (error) {
           console.error(`Error saving SMS records for ${notificationSpec.id}(${readableSpecString}).`, error);
-          break;
-        }
-      }
-    }
-
-    if (notificationSpec.category === "3mo QOL Survey Reminders" && notificationSpec.attempt === "1st contact") {
-      const { moduleStatusConcepts, findKeyByValue } = require("./shared");
-      const surveyStatus = findKeyByValue(moduleStatusConcepts, "promis");
-
-      let tokenArray = [];
-      for (const { emailRecordArray, smsRecordArray } of Object.values(notificationData)) {
-        tokenArray = [
-          ...tokenArray,
-          ...emailRecordArray.map((record) => record.token),
-          ...smsRecordArray.map((record) => record.token),
-        ];
-      }
-
-      const tokenSet = new Set(tokenArray);
-      for (const token of tokenSet) {
-        try {
-          await updateSurveyEligibility(token, surveyStatus);
-        } catch (error) {
-          console.error(`Error updating survey eligibility for token ${token}`, error);
           break;
         }
       }
