@@ -1,7 +1,6 @@
-const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { Transaction } = require('firebase-admin/firestore');
-admin.initializeApp(functions.config().firebase);
+admin.initializeApp();
 const db = admin.firestore();
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
@@ -3334,6 +3333,25 @@ const getAppSettings = async (appName, selectedParamsArray) => {
     }
 }
 
+/**
+ * Update Notify message delivery status to Firestore.
+ * @param {Object} data 
+ */
+const updateNotifySmsRecord = async (data) => {
+  const snapshot = await db
+    .collection("notifications")
+    .where("phone", "==", data.phone)
+    .where("twilioNotificationSid", "==", data.twilioNotificationSid)
+    .get();
+
+    if (snapshot.size === 1) {
+      await snapshot.docs[0].ref.update(data);
+      return true;
+    }
+
+    return false;
+};
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3456,5 +3474,6 @@ module.exports = {
     writeCancerOccurrences,
     updateParticipantCorrection,
     generateSignInWithEmailLink,
-    getAppSettings
+    getAppSettings,
+    updateNotifySmsRecord,
 }
