@@ -50,7 +50,7 @@ exports.biospecimen = biospecimenAPIs;
 
 // End-Point for Scheduled Notifications Handler
 
-exports.sendScheduledNotifications = onRequest(sendScheduledNotifications);
+exports.sendScheduledNotificationsGen2 = onRequest(sendScheduledNotifications);
 
 
 // End-Points for Exporting Firestore to Big Query
