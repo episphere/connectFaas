@@ -1628,6 +1628,13 @@ const getFiveDaysAgoDateISO = () => {
     return new Date(currentDate.setDate(currentDate.getDate() - 5)).toISOString();
 }
 
+/**
+ * Delay for a specified time, to avoid errors (race conditions, rate limiting, etc.) 
+ * @param {number} ms Delayed time in milliseconds
+ * @returns {Promise<void>}
+ */
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
 module.exports = {
     getResponseJSON,
     setHeaders,
@@ -1693,5 +1700,6 @@ module.exports = {
     cidToLangMapper,
     printDocsCount,
     unsubscribeTextObj,
-    getFiveDaysAgoDateISO
+    getFiveDaysAgoDateISO,
+    delay,
 };
