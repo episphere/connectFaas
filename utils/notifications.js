@@ -235,7 +235,7 @@ async function sendScheduledNotifications(req, res) {
 
   if (isSendingNotifications) {
     console.log("Function sendScheduledNotifications() is already running. Exiting...");
-    return res.status(429).json(getResponseJSON("Function is already running.", 429));
+    return res.status(208).json(getResponseJSON("Function is already running.", 208));
   }
 
   if (!req.body || !req.body.scheduleAt) {
@@ -247,7 +247,7 @@ async function sendScheduledNotifications(req, res) {
     const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(req.body.scheduleAt);
     if (notificationSpecArray.length === 0) {
       console.log("Function sendScheduledNotifications() has run earlier today. Exiting...");
-      return res.status(429).json(getResponseJSON("Function has run earlier today.", 429));
+      return res.status(208).json(getResponseJSON("Function has run earlier today.", 208));
     }
 
     const notificationPromises = [];
