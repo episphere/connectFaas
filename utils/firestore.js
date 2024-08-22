@@ -1,7 +1,9 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { Transaction } = require('firebase-admin/firestore');
-admin.initializeApp(functions.config().firebase);
+const serviceAccount = require('../nih-nci-dceg-connect-dev-4a660d0c674e'); 
+admin.initializeApp({credential: admin.credential.cert(serviceAccount)}); 
+// admin.initializeApp(functions.config().firebase);
 const db = admin.firestore();
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
@@ -183,6 +185,13 @@ const updateParticipantData = async (id, data) => {
     await db.collection('participants')
             .doc(id)
             .update(data);
+}
+
+const overwriteParticipantData = async (id, data) => {
+
+    await db.collection('participants')
+            .doc(id)
+            .set(data, {merge: false});
 }
 
 // TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
@@ -3364,6 +3373,7 @@ module.exports = {
     deleteFirestoreDocuments,
     getParticipantData,
     updateParticipantData,
+    overwriteParticipantData,
     storeNotificationTokens,
     notificationTokenExists,
     retrieveUserNotifications,

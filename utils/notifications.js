@@ -16,27 +16,27 @@ getSecret(process.env.GCLOUD_SENDGRID_SECRET).then((apiKey) => {
   sgMail.setApiKey(apiKey);
 });
 
-setupTwilioSms().then(([client, sid]) => {
-  twilioClient = client;
-  messagingServiceSid = sid;
- });
+// setupTwilioSms().then(([client, sid]) => {
+//   twilioClient = client;
+//   messagingServiceSid = sid;
+//  });
 
-async function setupTwilioSms() {
-  const secretsToFetch = {
-    accountSid: process.env.TWILIO_ACCOUNT_SID,
-    authToken: process.env.TWILIO_AUTH_TOKEN,
-    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
-  };
-  const client = new SecretManagerServiceClient();
-  let fetchedSecrets = {};
-  for (const [key, value] of Object.entries(secretsToFetch)) {
-    const [version] = await client.accessSecretVersion({ name: value });
-    fetchedSecrets[key] = version.payload.data.toString();
-  }
+// async function setupTwilioSms() {
+//   const secretsToFetch = {
+//     accountSid: process.env.TWILIO_ACCOUNT_SID,
+//     authToken: process.env.TWILIO_AUTH_TOKEN,
+//     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+//   };
+//   const client = new SecretManagerServiceClient();
+//   let fetchedSecrets = {};
+//   for (const [key, value] of Object.entries(secretsToFetch)) {
+//     const [version] = await client.accessSecretVersion({ name: value });
+//     fetchedSecrets[key] = version.payload.data.toString();
+//   }
 
-  const twilioClient = require("twilio")(fetchedSecrets.accountSid, fetchedSecrets.authToken);
-  return [twilioClient, fetchedSecrets.messagingServiceSid];
-}
+//   const twilioClient = require("twilio")(fetchedSecrets.accountSid, fetchedSecrets.authToken);
+//   return [twilioClient, fetchedSecrets.messagingServiceSid];
+// }
 
 const sendSmsBatch = async (smsRecordArray) => {
   // TODO: further check to see whether 1000 is a good batch size
