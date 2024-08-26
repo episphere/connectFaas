@@ -1,3 +1,4 @@
+const {onRequest} = require("firebase-functions/v2/https");
 const { getToken } = require('./utils/validation');
 const { getFilteredParticipants, getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
@@ -49,7 +50,7 @@ exports.biospecimen = biospecimenAPIs;
 
 // End-Point for Scheduled Notifications Handler
 
-exports.sendScheduledNotifications = sendScheduledNotifications;
+exports.sendScheduledNotificationsGen2 = onRequest(sendScheduledNotifications);
 
 
 // End-Points for Exporting Firestore to Big Query

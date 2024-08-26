@@ -1,9 +1,8 @@
-const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { Transaction } = require('firebase-admin/firestore');
-admin.initializeApp(functions.config().firebase);
+admin.initializeApp();
 const db = admin.firestore();
-const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 
@@ -2178,25 +2177,33 @@ const participantHomeCollectionKitFields = [
  * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData function.
  * Ex. [{first_name: 'John', last_name: 'Doe', address_1: '123 Main St', address_2: '', city: 'Anytown', state: 'NY', zip_code: '12345', connect_id: 123457890}, ...]
  */
+
 // TODO: Suboptimal process. Would benefit from direct query on a {kitStatus: initialized} or {completed: no} variable, which could be assigned on kit creation in Biospecimen.
 // This will get progressively slower and more expensive as participants are added.
 // TODO: A sliding time window would be more efficient in the .where(<timestamp>) query.
+
 const queryHomeCollectionAddressesToPrint = async () => {
     try {
         const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
             collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
+        const fiveDaysAgoDateISO = getFiveDaysAgoDateISO();
+        
         const snapshot = await db.collection('participants')
             .where(withdrawConsent.toString(), '==', no)
             .where(participantDeceasedNORC.toString(), '==', no)
             .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoDateISO)
             .select(...participantHomeCollectionKitFields)
-            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
             .get();
-
-        return snapshot.docs.map(document => processParticipantHomeMouthwashKitData(document.data(), true));
+        
+        if (snapshot.size === 0) return [];
+        
+        const mappedResults = snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), true));
+        return mappedResults.filter(result => result !== null);
     } catch (error) {
         throw new Error(`Error querying home collection addresses to print`, {cause: error});
     }
@@ -2218,13 +2225,14 @@ const eligibleParticipantsForKitAssignment = async () => {
         const snapshot = await db.collection("participants")
             .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', addressPrinted)
             .select(...participantHomeCollectionKitFields)
-            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`)
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
             .get();
         printDocsCount(snapshot, "eligibleParticipantsForKitAssignment");
 
-        return snapshot.size === 0
-            ? []
-            : snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), false));;
+        if (snapshot.size === 0) return [];
+        const mappedResults = snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), false));
+        return mappedResults.filter(result => result !== null);
+
     } catch(error) {
         throw new Error('Error getting Eligible Kit Assignment Participants.', {cause: error});
     }
@@ -2270,16 +2278,22 @@ const addKitStatusToParticipant = async (participantsCID) => {
 const processParticipantHomeMouthwashKitData = (record, printLabel) => {
     const { collectionDetails, baseline, bioKitMouthwash, firstName, lastName, address1, address2, city, state, zip } = fieldMapping;
 
+    const addressLineOne = record?.[address1];
+    const poBoxRegex = /\b(?:P\.?O\.?(?:\s*Box|\s+Office\s+Box)|Post\s+Office\s+Box)\b/i;
+    const isPOBoxMatch = poBoxRegex.test(addressLineOne);
+    
+    if (isPOBoxMatch) return null;
+
     const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;    
     const processedRecord = {
-        first_name: record[firstName],
-        last_name: record[lastName],
-        address_1: record[address1],
-        address_2: record[address2] || '',
-        city: record[city],
-        state: record[state],
-        zip_code: record[zip], 
-        connect_id: record['Connect_ID'],
+    first_name: record[firstName],
+    last_name: record[lastName],
+    address_1: record[address1],
+    address_2: record[address2] || '',
+    city: record[city],
+    state: record[state],
+    zip_code: record[zip], 
+    connect_id: record['Connect_ID'],
     };
 
     return (!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)
@@ -3287,28 +3301,6 @@ const updateParticipantCorrection = async (participantData) => {
     }
 }
 
-const updateSurveyEligibility = async (token, survey) => {
-
-    try {
-        const snapshot = await db.collection('participants').where('token', '==', token).get();
-        printDocsCount(snapshot, "updateSurveyEligibility");
-        
-        if (snapshot.empty) return;
-
-        const data = snapshot.docs[0].data()
-
-        if (data[survey] === fieldMapping.notYetEligible) {
-            const docId = snapshot.docs[0].id;
-            const updates = {[survey]: fieldMapping.notStarted}
-        
-            await db.collection('participants').doc(docId).update(updates);
-        }
-    } catch (error) {
-        throw new Error("Error updating survey eligibility.", { cause: error });
-    }
-}
-
-
 const generateSignInWithEmailLink = async (email, continueUrl) => {
     return await admin.auth().generateSignInWithEmailLink(email, {
         url: continueUrl,
@@ -3340,6 +3332,25 @@ const getAppSettings = async (appName, selectedParamsArray) => {
         throw new Error("Error fetching app settings.", { cause: error });
     }
 }
+
+/**
+ * Update Notify message delivery status to Firestore.
+ * @param {Object} data 
+ */
+const updateNotifySmsRecord = async (data) => {
+  const snapshot = await db
+    .collection("notifications")
+    .where("phone", "==", data.phone)
+    .where("twilioNotificationSid", "==", data.twilioNotificationSid)
+    .get();
+
+    if (snapshot.size === 1) {
+      await snapshot.docs[0].ref.update(data);
+      return true;
+    }
+
+    return false;
+};
 
 module.exports = {
     updateResponse,
@@ -3462,7 +3473,7 @@ module.exports = {
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
     updateParticipantCorrection,
-    updateSurveyEligibility,
     generateSignInWithEmailLink,
-    getAppSettings
+    getAppSettings,
+    updateNotifySmsRecord,
 }
