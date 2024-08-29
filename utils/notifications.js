@@ -1,31 +1,29 @@
 const { v4: uuid } = require("uuid");
 const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
+const twilio = require("twilio");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
-const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, updateSurveyEligibility, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule} = require("./firestore");
+const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule, updateNotifySmsRecord} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
 const converter = new showdown.Converter();
 const langArray = ["english", "spanish"];
-let twilioClient, messagingServiceSid;
+let twilioClient, messagingServiceSid, twilioNotifyServiceSid;
+let isTwilioSetup = false;
 let isSendingNotifications = false; // A more robust soluttion is needed when using multiple servers 
 
 getSecret(process.env.GCLOUD_SENDGRID_SECRET).then((apiKey) => {
   sgMail.setApiKey(apiKey);
 });
 
-setupTwilioSms().then(([client, sid]) => {
-  twilioClient = client;
-  messagingServiceSid = sid;
- });
-
-async function setupTwilioSms() {
+const setupTwilio = async () => {
   const secretsToFetch = {
     accountSid: process.env.TWILIO_ACCOUNT_SID,
     authToken: process.env.TWILIO_AUTH_TOKEN,
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+    twilioNotifyServiceSid: process.env.TWILIO_NOTIFY_SERVICE_SID,
   };
   const client = new SecretManagerServiceClient();
   let fetchedSecrets = {};
@@ -34,13 +32,76 @@ async function setupTwilioSms() {
     fetchedSecrets[key] = version.payload.data.toString();
   }
 
-  const twilioClient = require("twilio")(fetchedSecrets.accountSid, fetchedSecrets.authToken);
-  return [twilioClient, fetchedSecrets.messagingServiceSid];
-}
+  twilioClient = twilio(fetchedSecrets.accountSid, fetchedSecrets.authToken);
+  messagingServiceSid = fetchedSecrets.messagingServiceSid;
+  twilioNotifyServiceSid = fetchedSecrets.twilioNotifyServiceSid;
+  isTwilioSetup = true;
+};
 
-const sendSmsBatch = async (smsRecordArray) => {
-  // TODO: further check to see whether 1000 is a good batch size
-  let adjustedDataArray = [];
+/**
+ * Get detailed data of a message from Twilio, and update to Firestore.
+ * @param {string} msgSid 
+ * @param {string} notificationSid 
+ * @returns {Promise<boolean>}
+ */
+const handleNotifySmsCallback = async (msgSid, notificationSid) => {
+  if (!isTwilioSetup) {
+    await setupTwilio();
+  }
+
+  try {
+    const msg = await twilioClient.messages(msgSid).fetch();
+    let data = {
+      twilioNotificationSid: notificationSid,
+      messageSid: msg.sid,
+      phone: msg.to,
+      status: msg.status,
+      updatedDate: msg.dateUpdated?.toISOString() || new Date().toISOString(),
+    };
+    msg.errorMessage && (data.errorMessage = msg.errorMessage);
+    msg.errorCode && (data.errorCode = msg.errorCode);
+
+    return await updateNotifySmsRecord(data);
+  } catch (error) {
+    console.error("Error occured running handleNotifySmsCallback().", error);
+    return false;
+  }
+};
+
+/**
+ * Send multiple (up to 10,000) messages in one API call. Good for generic messages.
+ * @param {string[]} phoneNumberArray An array of phone numbers
+ * @param {string} messageString SMS message to send
+ */
+const sendBulkSms = async (phoneNumberArray, messageString) => {
+  if (!isTwilioSetup) {
+    await setupTwilio();
+  }
+
+  try {
+    return await twilioClient.notify.v1
+      .services(twilioNotifyServiceSid)
+      .notifications.create({
+        toBinding: phoneNumberArray.map((recipient) => JSON.stringify({ binding_type: "sms", address: recipient })),
+        body: messageString,
+        deliveryCallbackUrl: `https://us-central1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/webhook?api=twilio-notify-callback`,
+      });
+  } catch (error) {
+    throw new Error("sendBulkSms() error.", { cause: error });
+  }
+};
+
+/**
+ * Send one message in one API call. Good for personalized messages.
+ * @param {Object[]} smsRecordArray 
+ * @returns {Promise<Object[]>}
+ */
+const sendPersonalizedSms = async (smsRecordArray) => {
+  if (!isTwilioSetup) {
+    await setupTwilio();
+  }
+
+  let adjustedSmsRecordArray = [];
   const chunkArray = createChunkArray(smsRecordArray, 1000);
   for (const chunk of chunkArray) {
     const messageArray = await Promise.all(
@@ -64,12 +125,12 @@ const sendSmsBatch = async (smsRecordArray) => {
         chunk[i].errorCode = messageArray[i].error_code || "";
         chunk[i].errorMessage = messageArray[i].error_message || "";
         chunk[i].status = messageArray[i].status || "";
-        adjustedDataArray.push(chunk[i]);
+        adjustedSmsRecordArray.push(chunk[i]);
       }
     }
   }
 
-  return adjustedDataArray;
+  return adjustedSmsRecordArray;
 };
 
 const subscribeToNotification = async (req, res) => {
@@ -163,25 +224,30 @@ const sendEmail = async (emailTo, messageSubject, html, cc) => {
 }
 
 /**
- * Function triggered by Pub/Sub topic, accepting a message containing a string.
- * @param {Object} message Pub/Sub message object.
- * @param {string} message.data base64-encoded string.
+ * Notifications handler triggered by an HTTP request from cloud scheduler.
+ * @param {Request} req HTTP request
+ * @param {Response} res HTTP response
  */
-async function sendScheduledNotifications(message) {
-  if (isSendingNotifications) {
-    console.log("Function sendScheduledNotifications() is already running. Exiting...");
-    return;
+async function sendScheduledNotifications(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json(getResponseJSON("Only POST requests are accepted!", 405));
   }
 
-  console.log("Received message:", JSON.stringify(message));
+  if (isSendingNotifications) {
+    console.log("Function sendScheduledNotifications() is already running. Exiting...");
+    return res.status(208).json(getResponseJSON("Function is already running.", 208));
+  }
+
+  if (!req.body || !req.body.scheduleAt) {
+    return res.status(400).json(getResponseJSON("Field scheduleAt is missing in request body.", 400));
+  }
+
   isSendingNotifications = true;
-  const scheduleAt = message.data ? Buffer.from(message.data, "base64").toString().trim() : null;
-  
   try {
-    const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(scheduleAt);
+    const notificationSpecArray = await getNotificationSpecsByScheduleOncePerDay(req.body.scheduleAt);
     if (notificationSpecArray.length === 0) {
-      console.log("Function sendScheduledNotifications has run earlier today. Exiting...");
-      return;
+      console.log("Function sendScheduledNotifications() has run earlier today. Exiting...");
+      return res.status(208).json(getResponseJSON("Function has run earlier today.", 208));
     }
 
     const notificationPromises = [];
@@ -190,8 +256,10 @@ async function sendScheduledNotifications(message) {
     }
 
     await Promise.allSettled(notificationPromises);
+    return res.status(200).json(getResponseJSON("Finished sending out notifications", 200));
   } catch (error) {
     console.error("Error occurred running function sendScheduledNotifications.", error);
+    return res.status(500).json(getResponseJSON("Internal Server Error!", 500));
   } finally {
     isSendingNotifications = false;
   }
@@ -311,6 +379,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         emailRecordArray: [],
         emailPersonalizationArray: [],
         smsRecordArray: [],
+        phoneNumberSet: new Set(),
       };
     }
 
@@ -322,6 +391,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
       const smsId = uniqId + "-2";
       const currDateTime = new Date().toISOString();
       const firstName = fetchedData[preferredNameField] || fetchedData[firstNameField];
+      const prefLang = cidToLangMapper[fetchedData[conceptIds.preferredLanguage]] || "english";
       const recordCommonData = {
         notificationSpecificationsID: notificationSpec.id,
         attempt: notificationSpec.attempt,
@@ -331,12 +401,9 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         read: false,
       };
 
-      const prefLang = cidToLangMapper[fetchedData[conceptIds.preferredLanguage]] || "english";
-      const emailOfPrefLang = emailInSpec[prefLang];
-
-      if (emailOfPrefLang?.body && validEmailFormat.test(fetchedData[emailField])) {
+      if (emailInSpec[prefLang]?.body && validEmailFormat.test(fetchedData[emailField])) {
         let substitutions = { firstName };
-        let currEmailBody = emailOfPrefLang.body.replace(/{{firstName}}/g, firstName);
+        let currEmailBody = emailInSpec[prefLang].body.replace(/{{firstName}}/g, firstName);
 
         if (emailHasLoginDetails) {
           let loginDetails = "";
@@ -388,7 +455,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
           language: prefLang,
           email: fetchedData[emailField],
           notification: {
-            title: emailOfPrefLang.subject,
+            title: emailInSpec[prefLang].subject,
             body: currEmailBody,
             time: currDateTime,
           },
@@ -401,21 +468,19 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         canWeText = canWeText.integer;
       }
 
-      const smsOfPrefLang = smsInSpec[prefLang];
-      if (smsOfPrefLang?.body && fetchedData[phoneField]?.length >= 10 && canWeText === conceptIds.yes) {
+      if (smsInSpec[prefLang]?.body && fetchedData[phoneField]?.length >= 10 && canWeText === conceptIds.yes) {
         const phoneNumber = fetchedData[phoneField].replace(/\D/g, "");
         if (phoneNumber.length >= 10) {
-          const currSmsBody = smsOfPrefLang.body.replace(/<firstName>/g, firstName);
-          const currSmsTo = `+1${phoneNumber.slice(-10)}`;
-
+          const smsTo = `+1${phoneNumber.slice(-10)}`;
+          notificationData[prefLang].phoneNumberSet.add(smsTo);
           notificationData[prefLang].smsRecordArray.push({
             ...recordCommonData,
             id: smsId,
             notificationType: "sms",
             language: prefLang,
-            phone: currSmsTo,
+            phone: smsTo,
             notification: {
-              body: currSmsBody,
+              body: smsInSpec[prefLang].body,
               time: currDateTime,
             },
           });
@@ -424,26 +489,22 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
     }
     
     for (const lang of langArray) {
-      let { emailRecordArray, emailPersonalizationArray, smsRecordArray } = notificationData[lang];
+      let { emailRecordArray, emailPersonalizationArray, smsRecordArray, phoneNumberSet } = notificationData[lang];
       if (emailPersonalizationArray.length > 0) {
         const emailBatch = {
-            from: {
-                name:
-                    process.env.SG_FROM_NAME ||
-                    "Connect for Cancer Prevention Study",
-                email:
-                    process.env.SG_FROM_EMAIL ||
-                    "donotreply@myconnect.cancer.gov",
+          from: {
+            name: process.env.SG_FROM_NAME || "Connect for Cancer Prevention Study",
+            email: process.env.SG_FROM_EMAIL || "donotreply@myconnect.cancer.gov",
+          },
+          subject: emailInSpec[lang].subject,
+          html: emailInSpec[lang].body,
+          personalizations: emailPersonalizationArray,
+          tracking_settings: {
+            subscription_tracking: {
+              enable: true,
+              html: unsubscribeTextObj[lang] || unsubscribeTextObj.english,
             },
-            subject: emailInSpec[lang].subject,
-            html: emailInSpec[lang].body,
-            personalizations: emailPersonalizationArray,
-            tracking_settings: {
-                subscription_tracking: {
-                    enable: true,
-                    html: unsubscribeTextObj[lang] || unsubscribeTextObj.english
-                },
-            },
+          },
         };
   
         try {
@@ -463,37 +524,20 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   
       if (smsRecordArray.length > 0) {
         try {
-          smsRecordArray = await sendSmsBatch(smsRecordArray);
-          if (smsRecordArray.length > 0) {
-            await saveNotificationBatch(smsRecordArray);
-            smsCount[lang] += smsRecordArray.length;
+          const smsNotification = await sendBulkSms(Array.from(phoneNumberSet), smsInSpec[lang].body);
+          for (const smsRecord of smsRecordArray) {
+            smsRecord.twilioNotificationSid = smsNotification.sid;
           }
+
+          await saveNotificationBatch(smsRecordArray);
+          smsCount[lang] += smsRecordArray.length;
         } catch (error) {
-          console.error(`Error saving SMS records for ${notificationSpec.id}(${readableSpecString}).`, error);
-          break;
-        }
-      }
-    }
+          if (error.message.startsWith("saveNotificationBatch")) {
+            console.error(`Error saving message records for ${notificationSpec.id}(${readableSpecString}).`, error);
+          } else {
+            console.error(`Error sending bulk messages for ${notificationSpec.id}(${readableSpecString}).`, error);
+          }
 
-    if (notificationSpec.category === "3mo QOL Survey Reminders" && notificationSpec.attempt === "1st contact") {
-      const { moduleStatusConcepts, findKeyByValue } = require("./shared");
-      const surveyStatus = findKeyByValue(moduleStatusConcepts, "promis");
-
-      let tokenArray = [];
-      for (const { emailRecordArray, smsRecordArray } of Object.values(notificationData)) {
-        tokenArray = [
-          ...tokenArray,
-          ...emailRecordArray.map((record) => record.token),
-          ...smsRecordArray.map((record) => record.token),
-        ];
-      }
-
-      const tokenSet = new Set(tokenArray);
-      for (const token of tokenSet) {
-        try {
-          await updateSurveyEligibility(token, surveyStatus);
-        } catch (error) {
-          console.error(`Error updating survey eligibility for token ${token}`, error);
           break;
         }
       }
@@ -933,4 +977,5 @@ module.exports = {
   dryRunNotificationSchema,
   sendInstantNotification,
   handleDryRun,
+  handleNotifySmsCallback,
 };
