@@ -418,7 +418,7 @@ const kpSSOConfig = {
 }
 
 const norcSSOConfig = {
-    group: 'http://schemas.xmlsoap.org/claims/Group',
+    group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
     email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
     helpDeskUser: 'connect-help-desk-user',
     siteCode: 222222222,
