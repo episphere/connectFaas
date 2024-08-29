@@ -823,10 +823,10 @@ const dryRunNotificationSchema = async (req, res) => {
 async function handleDryRun(spec) {
   let timeField = spec.primaryField;
   let cutoffTime = new Date();
-  let cutoffTimeStr = cutoffTime.toISOString();
   cutoffTime.setDate(cutoffTime.getDate() - spec.time.day);
   cutoffTime.setHours(cutoffTime.getHours() - spec.time.hour);
   cutoffTime.setMinutes(cutoffTime.getMinutes() - spec.time.minute);
+  let cutoffTimeStr = cutoffTime.toISOString();
 
   if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(spec.primaryField)) {
     const scheduledTime = new Date(spec.primaryField);
