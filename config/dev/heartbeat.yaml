@@ -1,0 +1,29 @@
+steps:
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: [ 
+    'functions', 
+    'deploy', 
+    '${_NAME}', 
+    '--trigger-http', 
+    '--runtime=${_RUNTIME}', 
+    '--timeout=${_TIMEOUT}', 
+    '--source=${_SOURCE}', 
+    '--env-vars-file=${_VARIABLES}'
+  ]
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: [
+    'functions', 
+    'add-iam-policy-binding', 
+    '${_NAME}', 
+    '--member=${_MEMBER}', 
+    '--role=${_ROLE}'
+  ]
+
+substitutions:
+  _MEMBER: allUsers
+  _NAME: heartbeat
+  _RUNTIME: nodejs20
+  _ROLE: roles/cloudfunctions.invoker
+  _SOURCE: https://source.developers.google.com/projects/nih-nci-dceg-connect-dev/repos/github_episphere_connectfaas/moveable-aliases/dev
+  _TIMEOUT: 120s
+  _VARIABLES: config/dev/.env.yaml
