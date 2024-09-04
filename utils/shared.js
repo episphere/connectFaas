@@ -529,11 +529,6 @@ const SSOValidation = async (dashboardType, idToken) => {
             return false;
         }
 
-        console.log("In SSOValidation():");
-        console.log(dashboardType);
-        console.log(decodedToken.firebase.sign_in_attributes);
-        console.log(tenant);
-
         const allGroups = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['group']];
         if(!allGroups) return;
         const email = decodedToken.firebase.sign_in_attributes[SSOConfig[tenant]['email']];
