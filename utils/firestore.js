@@ -1,6 +1,8 @@
 const admin = require('firebase-admin');
-const { Transaction } = require('firebase-admin/firestore');
-admin.initializeApp();
+const { Transaction, FieldPath } = require('firebase-admin/firestore');
+const serviceAccount = require('../nih-nci-dceg-connect-dev-4a660d0c674e.json');
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+// admin.initializeApp();
 const db = admin.firestore();
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
@@ -11,120 +13,120 @@ const nciConceptId = `517700004`;
 const tubesBagsCids = fieldMapping.tubesBagsCids;
 
 const verifyTokenOrPin = async ({ token = null, pin = null }) => {
-  const resultObj = { isDuplicateAccount: false, isValid: false, docId: null };
-  if (!token && !pin) return resultObj;
+    const resultObj = { isDuplicateAccount: false, isValid: false, docId: null };
+    if (!token && !pin) return resultObj;
 
-  let query = db.collection('participants');
-  if (token) {
-    query = query.where('token', '==', token);
-  } else {
-    query = query.where('pin', '==', pin);
-  }
-
-  const snapshot = await query.get();
-  printDocsCount(snapshot, "verifyTokenOrPin");
-  if (snapshot.size === 1) {
-    const participantData = snapshot.docs[0].data();
-    if (
-      participantData[fieldMapping.verificationStatus] ===
-      fieldMapping.duplicate
-    ) {
-      resultObj.isDuplicateAccount = true;
-      return resultObj;
+    let query = db.collection('participants');
+    if (token) {
+        query = query.where('token', '==', token);
+    } else {
+        query = query.where('pin', '==', pin);
     }
 
-    if (participantData.state.uid === undefined) {
-      resultObj.isValid = true;
-      resultObj.docId = snapshot.docs[0].id;
-    }
-  }
+    const snapshot = await query.get();
+    printDocsCount(snapshot, "verifyTokenOrPin");
+    if (snapshot.size === 1) {
+        const participantData = snapshot.docs[0].data();
+        if (
+            participantData[fieldMapping.verificationStatus] ===
+            fieldMapping.duplicate
+        ) {
+            resultObj.isDuplicateAccount = true;
+            return resultObj;
+        }
 
-  return resultObj;
+        if (participantData.state.uid === undefined) {
+            resultObj.isValid = true;
+            resultObj.docId = snapshot.docs[0].id;
+        }
+    }
+
+    return resultObj;
 };
 
 const validateIDToken = async (idToken) => {
-    try{
+    try {
         const decodedToken = await admin.auth().verifyIdToken(idToken, true);
         return decodedToken;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const validateMultiTenantIDToken = async (idToken, tenant) => {
-    try{
+    try {
         const decodedToken = await admin.auth().tenantManager().authForTenant(tenant).verifyIdToken(idToken, true);
         return decodedToken;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const linkParticipanttoFirebaseUID = async (docID, uID) => {
-    try{
+    try {
         let data = {};
         data['230663853'] = 353358909;
         data['state.uid'] = uID
         await db.collection('participants').doc(docID).update(data);
         return true;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const participantExists = async (uid) => {
-    try{
+    try {
         const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
         printDocsCount(snapshot, "participantExists");
-        if(snapshot.size === 0){
+        if (snapshot.size === 0) {
             return false;
         }
-        else{
+        else {
             return true;
         }
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const updateResponse = async (data, uid) => {
-    try{
+    try {
         const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
         printDocsCount(snapshot, "updateResponse");
-        if(snapshot.size === 1) {
-            for(let doc of snapshot.docs){
+        if (snapshot.size === 1) {
+            for (let doc of snapshot.docs) {
                 await db.collection('participants').doc(doc.id).update(data);
                 return true;
             }
         }
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error)
     }
 }
 
 const createRecord = async (data) => {
-    try{
+    try {
         await db.collection('participants').add(data);
         return true;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const recordExists = async (studyId, siteCode) => {
-    try{
+    try {
         const snapshot = await db.collection('participants').where('state.studyId', '==', studyId).where('827220437', '==', siteCode).get();
         printDocsCount(snapshot, "recordExists");
         if (snapshot.size === 1) {
@@ -133,45 +135,45 @@ const recordExists = async (studyId, siteCode) => {
 
         return false;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const validateSiteSAEmail = async (saEmail) => {
-    try{
+    try {
         const snapshot = await db.collection('siteDetails')
-                                .where('saEmail', '==', saEmail)
-                                .get();
+            .where('saEmail', '==', saEmail)
+            .get();
         printDocsCount(snapshot, "validateSiteSAEmail");
-        if(snapshot.size === 1) {
+        if (snapshot.size === 1) {
             return snapshot.docs[0].data();
         }
 
         return false;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const getParticipantData = async (token, siteCode, isParent) => {
-    try{
+    try {
         const operator = isParent ? 'in' : '==';
         const snapshot = await db.collection('participants')
-                                .where('token', '==', token)
-                                .where('827220437', operator, siteCode)
-                                .get();
+            .where('token', '==', token)
+            .where('827220437', operator, siteCode)
+            .get();
         printDocsCount(snapshot, "getParticipantData");
         if (snapshot.size === 1) {
-            return {id: snapshot.docs[0].id, data: snapshot.docs[0].data()};
+            return { id: snapshot.docs[0].id, data: snapshot.docs[0].data() };
         }
 
         return false;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -180,144 +182,329 @@ const getParticipantData = async (token, siteCode, isParent) => {
 const updateParticipantData = async (id, data) => {
 
     await db.collection('participants')
-            .doc(id)
-            .update(data);
+        .doc(id)
+        .update(data);
+}
+
+const overwriteParticipantData = async (id, data) => {
+
+    await db.collection('participants')
+        .doc(id)
+        .set(data, {
+            merge: false
+        });
+}
+
+const resetParticipantHelper = async (uid, saveToDb) => {
+    console.log('uid', uid);
+    // @TODO: Get information for user + reset
+    const toDelete = {};
+    let biospecimensToDelete = [];
+    let obj = {};
+    await db.runTransaction(async (transaction) => {
+        console.log('Transaction start at %s', +new Date());
+        const participantQuery = db.collection('participants').where('state.uid', '==', uid);
+        const snapshot = await transaction.get(participantQuery);
+        console.log('snapshot.size', snapshot.size);
+        console.log('Participant snapshot obtained at %s', +new Date());
+        if (snapshot.size === 0) {
+            // No matching document found, stop the update
+            return false;
+        }
+
+
+
+        const { defaultFlags, defaultStateFlags, moduleConceptsToCollections } = require('./shared');
+
+        const userId = snapshot.docs[0].id;
+        const prevUserData = snapshot.docs[0].data();
+        const { token, Connect_ID } = prevUserData;
+        console.log('prevUserData for %s', Connect_ID, JSON.stringify(obj, null, '\t'));
+        obj = {
+            state: {
+                uid,
+                ...defaultStateFlags
+            },
+            230663853: 353358909,
+            token,
+            Connect_ID,
+            512820379: 854703046, // defaulting it as passive
+            471593703: (new Date()).toISOString(),
+            ...defaultFlags
+        }
+
+        console.log('New values for user %s', Connect_ID, JSON.stringify(obj, null, '\t'));
+
+        // @TODO: Update DB with obj
+
+        // @TODO: Get all secondary + tertiary data by directly running here vs. using helper methods
+        // Then probably update to use transaction
+
+        const userSurveyPromises = Object.keys(moduleConceptsToCollections).map((concept) => {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    console.log('Querying user surveys at %s', +new Date());
+                    const docQuery = db.collection(moduleConceptsToCollections[concept]).where('uid', '==', uid);
+                    const docSnapshot = await transaction.get(docQuery);
+        
+                    if (docSnapshot.size > 0) {
+                        toDelete[concept] = docSnapshot.docs.map(doc => doc.id);
+                    }
+                    console.log('Resolving user survey promises at %s', +new Date());
+                    return resolve();
+                } catch(err) {
+                    reject(err);
+                }
+            });
+        });
+
+        const userNotificationsPromise = new Promise(async (resolve, reject) => {
+            try {
+                console.log('Querying user notifications at %s', +new Date());
+                const notifQuery = db.collection("notifications").where("uid", "==", uid);
+                const notifSnapshot = await transaction.get(notifQuery);
+                toDelete.notifications = notifSnapshot.docs.map(doc => doc.id);
+                console.log('Resolving user notification promise at %s', +new Date());
+                return resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        const userBiospecimenPromise = new Promise(async (resolve, reject) => {
+            try {
+                console.log('Querying user biospecimens at %s', +new Date());
+                const biospecimenQuery = db.collection('biospecimen').where('token', '==', token);
+                const biospecimenSnapshot = await transaction.get(biospecimenQuery);
+                toDelete.biospecimen = biospecimenSnapshot.docs.map(doc => doc.id);
+                biospecimensToDelete = biospecimenSnapshot.docs.map(doc => doc.data());
+                console.log('Resolving user biospecimens promise at %s', +new Date());
+                return resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        const userCancerOccurrencesPromise = new Promise(async (resolve, reject) => {
+            try {
+                console.log('Querying user cancer occurrences at %s', +new Date());
+                const cancerOccurrencesQuery = db.collection('cancerOccurrence').where('token', '==', token);
+                const cancerOccurrencesSnapshot = await transaction.get(cancerOccurrencesQuery);
+                toDelete.cancerOccurrence = cancerOccurrencesSnapshot.docs.map(doc => doc.id);
+                console.log('Resolving user cancer occurrences promise at %s', +new Date());
+                return resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        const kitAssemblyPromise = new Promise(async (resolve, reject) => {
+            try {
+                console.log('Querying user kit assembly at %s', +new Date());
+                const kitAssemblyQuery = db.collection('kitAssembly').where('Connect_ID', '==', Connect_ID);
+                const kitAssemblySnapshot = await transaction.get(kitAssemblyQuery);
+                toDelete.kitAssembly = kitAssemblySnapshot.docs.map(doc => doc.id);
+                console.log('Resolving user kit assembly at %s', +new Date());
+                return resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        await Promise.all([Promise.all(userSurveyPromises), userNotificationsPromise, userBiospecimenPromise, userCancerOccurrencesPromise, kitAssemblyPromise]);
+        console.log('All read promises resolved at %s', +new Date());
+
+        console.log('toDelete', toDelete);
+        if (saveToDb) {
+            const participantDoc = db.collection('participants').doc(userId);
+            // @TODO: This batching isn't right. See: https://firebase.google.com/docs/firestore/manage-data/delete-data#node.js_2
+            console.log('Running delete lookup promises at %s', +new Date());
+            const deleteDocs = await Promise.all(Object.keys(toDelete).map((docType) => {
+                let ids = toDelete[docType] || [];
+                if (!ids.length) {
+                    return;
+                }
+                const docQuery = db.collection(docType)
+                    .where(FieldPath.documentId(), 'in', ids);
+                return transaction.get(docQuery);
+                // return transaction.delete(docQuery);
+            }));
+            console.log('Done with delete lookup promises at %s, updating participant', +new Date());
+            // Transactions require all reads happen before writes for some reason, hence this structure
+            const participantUpdatePromise = transaction
+                .set(participantDoc, obj, {
+                    merge: false
+                });
+            const deletePromises = deleteDocs.map(doc => doc && doc.ref ? transaction.delete(doc.ref) : Promise.resolve());
+            await Promise.all([participantUpdatePromise, Promise.all(deletePromises)]);
+            console.log('Done with deletePromises and participantUpdatePromise at %s', +new Date());
+        }
+        console.log('Final transaction returning at %s', +new Date());
+        return;
+    });
+    return { data: obj, deleted: toDelete };
+
+}
+
+// Reference: https://firebase.google.com/docs/firestore/manage-data/delete-data#node.js_2
+const deleteQueryBatch = async (db, query, resolve) => {
+    const snapshot = await query.get();
+
+    const batchSize = snapshot.size;
+    if (batchSize === 0) {
+        // When there are no documents left, we are done
+        resolve();
+        return;
+    }
+
+    // Delete documents in a batch
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    // Recurse on the next process tick, to avoid
+    // exploding the stack.
+    process.nextTick(() => {
+        deleteQueryBatch(db, query, resolve);
+    });
 }
 
 // TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const retrieveParticipants = async (siteCode, decider, isParent, limit, page, site, from, to) => {
-    try{
+    try {
         const operator = isParent ? 'in' : '==';
         let snapshot;
-        const offset = (page-1)*limit;
-        if(decider === 'verified') {
+        const offset = (page - 1) * limit;
+        if (decider === 'verified') {
             let query = db.collection('participants')
-                            .where('821247024', '==', 197316935)
-                            .where('699625233', '==', 353358909)
-                            .orderBy("Connect_ID", "asc")
-                            .limit(limit)
-                            .offset(offset)
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .where('821247024', '==', 197316935)
+                .where('699625233', '==', 353358909)
+                .orderBy("Connect_ID", "asc")
+                .limit(limit)
+                .offset(offset)
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
             snapshot = await query.get();
         }
-        if(decider === 'notyetverified') {
+        if (decider === 'notyetverified') {
             let query = db.collection('participants')
-                                    .where('821247024', '==', 875007964)
-                                    .where('699625233', '==', 353358909)
-                                    .orderBy("Connect_ID", "asc")
-                                    .offset(offset)
-                                    .limit(limit)
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .where('821247024', '==', 875007964)
+                .where('699625233', '==', 353358909)
+                .orderBy("Connect_ID", "asc")
+                .offset(offset)
+                .limit(limit)
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
             snapshot = await query.get();
         }
-        if(decider === 'cannotbeverified') {
+        if (decider === 'cannotbeverified') {
             let query = db.collection('participants')
-                                    .where('821247024', '==', 219863910)
-                                    .where('699625233', '==', 353358909)
-                                    .orderBy("Connect_ID", "asc")
-                                    .offset(offset)
-                                    .limit(limit)
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .where('821247024', '==', 219863910)
+                .where('699625233', '==', 353358909)
+                .orderBy("Connect_ID", "asc")
+                .offset(offset)
+                .limit(limit)
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
             snapshot = await query.get();
         }
-        if(decider === 'profileNotSubmitted') {
+        if (decider === 'profileNotSubmitted') {
             let query = db.collection('participants')
-                                    .where('699625233', '==', 104430631)
-                                    .where('919254129', '==', 353358909)
-                                    .orderBy("821247024", "asc")
-                                    .offset(offset)
-                                    .limit(limit)
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .where('699625233', '==', 104430631)
+                .where('919254129', '==', 353358909)
+                .orderBy("821247024", "asc")
+                .offset(offset)
+                .limit(limit)
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
             snapshot = await query.get();
         }
-        if(decider === 'consentNotSubmitted') {
+        if (decider === 'consentNotSubmitted') {
             let query = db.collection('participants')
-                                    .where('699625233', '==', 104430631)
-                                    .where('919254129', '==', 104430631)
-                                    .where('230663853', '==', 353358909)
-                                    .orderBy("821247024", "asc")
-                                    .offset(offset)
-                                    .limit(limit)
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .where('699625233', '==', 104430631)
+                .where('919254129', '==', 104430631)
+                .where('230663853', '==', 353358909)
+                .orderBy("821247024", "asc")
+                .offset(offset)
+                .limit(limit)
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
             snapshot = await query.get();
         }
-        if(decider === 'notSignedIn') {
+        if (decider === 'notSignedIn') {
             let query = db.collection('participants')
-                                    .where('699625233', '==', 104430631)
-                                    .where('919254129', '==', 104430631)
-                                    .where('230663853', '==', 104430631)
-                                    .orderBy("821247024", "asc")
-                                    .offset(offset)
-                                    .limit(limit)
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .where('699625233', '==', 104430631)
+                .where('919254129', '==', 104430631)
+                .where('230663853', '==', 104430631)
+                .orderBy("821247024", "asc")
+                .offset(offset)
+                .limit(limit)
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
             snapshot = await query.get();
         }
-        if(decider === 'all') {
+        if (decider === 'all') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("914594314", "desc")
+            if (from || to) query = query.orderBy("914594314", "desc")
             query = query.orderBy("821247024", "asc")
-                            .offset(offset)
-                            .limit(limit)
-            
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .offset(offset)
+                .limit(limit)
+
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent   
-            if(from) query = query.where('914594314', '>=', from)
-            if(to) query = query.where('914594314', '<=', to)
+            if (from) query = query.where('914594314', '>=', from)
+            if (to) query = query.where('914594314', '<=', to)
             snapshot = await query.get();
         }
-        if(decider === 'active') {
+        if (decider === 'active') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("914594314", "desc")
+            if (from || to) query = query.orderBy("914594314", "desc")
             query = query.where("512820379", "==", 486306141) // Recruit type active
-                            .orderBy("821247024", "asc")
-                            .offset(offset)
-                            .limit(limit)
-            
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .orderBy("821247024", "asc")
+                .offset(offset)
+                .limit(limit)
+
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
-            if(from) query = query.where('914594314', '>=', from)
-            if(to) query = query.where('914594314', '<=', to)
+            if (from) query = query.where('914594314', '>=', from)
+            if (to) query = query.where('914594314', '<=', to)
             snapshot = await query.get();
         }
-        if(decider === 'notactive') {
+        if (decider === 'notactive') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("914594314", "desc")
+            if (from || to) query = query.orderBy("914594314", "desc")
             query = query.where("512820379", "==", 180583933) // Recruit type not active
-                            .orderBy("821247024", "asc")
-                            .offset(offset)
-                            .limit(limit)
-            
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .orderBy("821247024", "asc")
+                .offset(offset)
+                .limit(limit)
+
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
-            if(from) query = query.where('914594314', '>=', from)
-            if(to) query = query.where('914594314', '<=', to)
+            if (from) query = query.where('914594314', '>=', from)
+            if (to) query = query.where('914594314', '<=', to)
             snapshot = await query.get();
         }
-        if(decider === 'passive') {
+        if (decider === 'passive') {
             let query = db.collection('participants')
-            if(from || to) query = query.orderBy("914594314", "desc")
+            if (from || to) query = query.orderBy("914594314", "desc")
             query = query.where("512820379", "==", 854703046) // Recruit type passive
-                            .orderBy("821247024", "asc")
-                            .offset(offset)
-                            .limit(limit)
-            
-            if(site) query = query.where('827220437', '==', site) // Get for a specific site
+                .orderBy("821247024", "asc")
+                .offset(offset)
+                .limit(limit)
+
+            if (site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
-            if(from) query = query.where('914594314', '>=', from)
-            if(to) query = query.where('914594314', '<=', to)
+            if (from) query = query.where('914594314', '>=', from)
+            if (to) query = query.where('914594314', '<=', to)
             snapshot = await query.get();
         }
 
         printDocsCount(snapshot, `retrieveParticipants; offset: ${offset}`);
         return snapshot.docs.map(doc => doc.data());
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -328,14 +515,14 @@ const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept
     try {
         const operator = isParent ? 'in' : '==';
         const offset = (page - 1) * limit;
-        
+
         const snapshot = await db.collection('participants')
-                                .where('827220437', operator, siteCode)
-                                .where(concept, '==', 353358909)
-                                .orderBy('Connect_ID', 'asc')
-                                .offset(offset)
-                                .limit(limit)
-                                .get();                 
+            .where('827220437', operator, siteCode)
+            .where(concept, '==', 353358909)
+            .orderBy('Connect_ID', 'asc')
+            .offset(offset)
+            .limit(limit)
+            .get();
         printDocsCount(snapshot, `retrieveRefusalWithdrawalParticipants; offset: ${offset}`);
 
         return snapshot.docs.map(doc => doc.data());
@@ -350,26 +537,26 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
     try {
 
         const operator = isParent ? 'in' : '==';
-        const offset = (page-1)*limit;
+        const offset = (page - 1) * limit;
 
         const { incentiveConcepts } = require('./shared');
         const object = incentiveConcepts[roundType]
-        
+
         const snapshot = await db.collection('participants')
-                                .where('827220437', operator, siteCode)
-                                .where('821247024', '==', 197316935)
-                                .where(`${object}.222373868`, "==", 353358909)
-                                .where(`${object}.648936790`, '==', 104430631)
-                                .where(`${object}.648228701`, '==', 104430631)
-                                .orderBy('Connect_ID', 'asc')
-                                .offset(offset)
-                                .limit(limit)
-                                .get();
+            .where('827220437', operator, siteCode)
+            .where('821247024', '==', 197316935)
+            .where(`${object}.222373868`, "==", 353358909)
+            .where(`${object}.648936790`, '==', 104430631)
+            .where(`${object}.648228701`, '==', 104430631)
+            .orderBy('Connect_ID', 'asc')
+            .offset(offset)
+            .limit(limit)
+            .get();
         printDocsCount(snapshot, `retrieveParticipantsEligibleForIncentives; offset: ${offset}`);
 
         return snapshot.docs.map(document => {
             let data = document.data();
-            return {firstName: data['399159511'], email: data['869588347'], token: data['token'], site: data['827220437']}
+            return { firstName: data['399159511'], email: data['869588347'], token: data['token'], site: data['827220437'] }
         });
     } catch (error) {
         console.error(error);
@@ -445,12 +632,12 @@ const removeParticipantsDataDestruction = async () => {
             const participantId = doc.id;
             const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
                 ? new Date().getTime() -
-                  new Date(participant[dateRequestedDataDestroyCId]).getTime()
+                new Date(participant[dateRequestedDataDestroyCId]).getTime()
                 : 0;
 
             if (
                 participant[destroyDataCategoricalCId] ===
-                    requestedAndSignCId ||
+                requestedAndSignCId ||
                 timeDiff > millisecondsWait
             ) {
                 const updatedData = {};
@@ -500,10 +687,10 @@ const removeUninvitedParticipants = async () => {
 
         while (willContinue) {
             const snapshot = await db
-              .collection("participants")
-              .where(uninvitedRecruitsCId, "==", fieldMapping.yes)
-              .limit(batchLimit)
-              .get();
+                .collection("participants")
+                .where(uninvitedRecruitsCId, "==", fieldMapping.yes)
+                .limit(batchLimit)
+                .get();
             printDocsCount(snapshot, "removeUninvitedParticipants");
 
             willContinue = snapshot.docs.length === batchLimit;
@@ -512,7 +699,7 @@ const removeUninvitedParticipants = async () => {
                 batch.delete(doc.ref);
                 count++
             }
-        
+
             await batch.commit();
         }
 
@@ -528,17 +715,17 @@ const removeUninvitedParticipants = async () => {
  * @param {string} id - Entity ID
  */
 const getChildren = async (id) => {
-    try{
+    try {
         const snapshot = await db.collection('siteDetails')
-                                .where('state.parentID', 'array-contains', id)
-                                .get();
+            .where('state.parentID', 'array-contains', id)
+            .get();
         printDocsCount(snapshot, "getChildren");
 
-        if(snapshot.size > 0) {
+        if (snapshot.size > 0) {
             /** @type {number[]} */
             const siteCodes = [];
             snapshot.docs.forEach(document => {
-                if(document.data().siteCode){
+                if (document.data().siteCode) {
                     siteCodes.push(document.data().siteCode);
                 }
             });
@@ -546,27 +733,27 @@ const getChildren = async (id) => {
         }
         return [];
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return [];
     }
 }
 
 const verifyIdentity = async (type, token, siteCode) => {
-    try{
+    try {
         const snapshot = await db.collection('participants')
-                                .where('token', '==', token)
-                                .where('827220437', '==', siteCode)
-                                .get();
+            .where('token', '==', token)
+            .where('827220437', '==', siteCode)
+            .get();
         printDocsCount(snapshot, "verifyIdentity");
 
-        if(snapshot.size > 0){
+        if (snapshot.size > 0) {
             const docId = snapshot.docs[0].id;
             const docData = snapshot.docs[0].data();
             const existingVerificationStatus = docData[821247024];
             const { conceptMappings } = require('./shared');
             const concept = conceptMappings[type];
-            if([875007964, 160161595].indexOf(existingVerificationStatus) === -1) {
+            if ([875007964, 160161595].indexOf(existingVerificationStatus) === -1) {
                 console.log(`Verification status cannot be changed from ${existingVerificationStatus} to ${concept}`);
                 return new Error(`Verification status cannot be changed from ${existingVerificationStatus} to ${concept}`);
             }
@@ -575,7 +762,7 @@ const verifyIdentity = async (type, token, siteCode) => {
 
             data['821247024'] = concept;
             data['914594314'] = new Date().toISOString();
-            
+
             await db.collection('participants').doc(docId).update(data);
             return true;
         }
@@ -583,21 +770,22 @@ const verifyIdentity = async (type, token, siteCode) => {
             return new Error('Invalid token!');
         }
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const retrieveUserProfile = async (uid) => {
-    try{
+    try {
         const snapshot = await db.collection('participants')
-                                .where('state.uid', '==', uid)
-                                .get();
+            .where('state.uid', '==', uid)
+            .get();
         printDocsCount(snapshot, "retrieveUserProfile");
 
-        if(snapshot.size > 0) {
+        if (snapshot.size > 0) {
             let data = snapshot.docs[0].data();
+            console.log('data', JSON.stringify(data, null, '\t'));
             delete data.state;
 
             return data;
@@ -606,32 +794,32 @@ const retrieveUserProfile = async (uid) => {
             return {};
         }
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const retrieveConnectID = async (uid) => {
-    try{
+    try {
         const snapshot = await db.collection('participants')
-                                .where('state.uid', '==', uid)
-                                .get();
+            .where('state.uid', '==', uid)
+            .get();
         printDocsCount(snapshot, "retrieveConnectID");
 
-        if(snapshot.size === 1){
-            if(snapshot.docs[0].data()['Connect_ID']) {
+        if (snapshot.size === 1) {
+            if (snapshot.docs[0].data()['Connect_ID']) {
                 return snapshot.docs[0].data()['Connect_ID'];
             }
             else {
                 return new Error('Connect ID not found on record!');
             }
         }
-        else{
-            return new Error('Error retrieving single Connect ID!');    
+        else {
+            return new Error('Error retrieving single Connect ID!');
         }
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -720,26 +908,26 @@ const updateSurvey = async (data, collection, doc) => {
 
 
 const sanityCheckConnectID = async (ID) => {
-    try{
+    try {
         const snapshot = await db.collection('participants').where('Connect_ID', '==', ID).get();
         printDocsCount(snapshot, "sanityCheckConnectID");
 
         return snapshot.size === 0;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const sanityCheckPIN = async (pin) => {
-    try{
+    try {
         const snapshot = await db.collection('participants').where('pin', '==', pin).get();
         printDocsCount(snapshot, "sanityCheckPIN");
-        
+
         return snapshot.size === 0;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -750,7 +938,7 @@ const individualParticipant = async (key, value, siteCode, isParent) => {
         const operator = isParent ? 'in' : '==';
         const snapshot = await db.collection('participants').where(key, '==', value).where('827220437', operator, siteCode).get();
         printDocsCount(snapshot, "individualParticipant");
-        if(snapshot.size > 0) {
+        if (snapshot.size > 0) {
             return snapshot.docs.map(document => {
                 let data = document.data();
                 return data;
@@ -758,7 +946,7 @@ const individualParticipant = async (key, value, siteCode, isParent) => {
         }
         else return false;
     }
-    catch(error) {
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -772,24 +960,24 @@ const updateParticipantRecord = async (key, value, siteCode, isParent, obj) => {
         const docId = snapshot.docs[0].id;
         await db.collection('participants').doc(docId).update(obj);
     }
-    catch(error) {
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
 
 const deleteFirestoreDocuments = async (siteCode) => {
-    try{
+    try {
         const snapshot = await db.collection('participants').where('827220437', '==', siteCode).get();
         printDocsCount(snapshot, "deleteFirestoreDocuments");
 
-        if(snapshot.size !== 0){
-            snapshot.docs.forEach(async dt =>{ 
+        if (snapshot.size !== 0) {
+            snapshot.docs.forEach(async dt => {
                 await db.collection('participants').doc(dt.id).delete()
             })
         }
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -802,11 +990,11 @@ const storeNotificationTokens = (data) => {
 
 const notificationTokenExists = async (token) => {
     const snapshot = await db.collection('notificationRegistration')
-                            .where('notificationToken', '==', token)
-                            .get();
+        .where('notificationToken', '==', token)
+        .get();
     printDocsCount(snapshot, "notificationTokenExists");
 
-    if(snapshot.size === 1){
+    if (snapshot.size === 1) {
         return snapshot.docs[0].data().uid;
     }
     else {
@@ -819,25 +1007,25 @@ const notificationTokenExists = async (token) => {
  * @param {string} uid
  */
 const retrieveUserNotifications = async (uid) => {
-  const snapshot = await db
-    .collection("notifications")
-    .where("uid", "==", uid)
-    .orderBy("notification.time", "desc")
-    .get();
-  printDocsCount(snapshot, "retrieveUserNotifications");
+    const snapshot = await db
+        .collection("notifications")
+        .where("uid", "==", uid)
+        .orderBy("notification.time", "desc")
+        .get();
+    printDocsCount(snapshot, "retrieveUserNotifications");
 
-  return snapshot.docs.map((doc) => doc.data());
+    return snapshot.docs.map((doc) => doc.data());
 };
 
 const retrieveSiteNotifications = async (siteId, isParent) => {
     try {
         let query = db.collection('siteNotifications');
-        if(!isParent) query = query.where('siteId', '==', siteId);
+        if (!isParent) query = query.where('siteId', '==', siteId);
         const snapshot = await query.orderBy('notification.time', 'desc')
-                                    .get();
+            .get();
         printDocsCount(snapshot, "retrieveSiteNotifications");
-                            
-        if(snapshot.size > 0){
+
+        if (snapshot.size > 0) {
             return snapshot.docs.map(document => {
                 let data = document.data();
                 return data;
@@ -867,10 +1055,10 @@ const filterDB = async (queries, siteCode, isParent) => {
     // Make separate get requests for each query, since Firestore only allows one 'array-contains' query per request.
     // This isolates a single array-contains query (firstName, lastName, email, phone).
     const updateQueryForArrayContainsConstraints = (queryInput) => {
-        const newQueriesObj = {...queries};
+        const newQueriesObj = { ...queries };
 
-        for(let property in newQueriesObj) {
-            if(queryInput.includes(newQueriesObj[property])) {
+        for (let property in newQueriesObj) {
+            if (queryInput.includes(newQueriesObj[property])) {
                 delete newQueriesObj[property];
             }
         }
@@ -924,7 +1112,7 @@ const filterDB = async (queries, siteCode, isParent) => {
         }
 
         return participantQuery;
-    }   
+    }
 
     // This executes each query and pushes the data to the fetchedResults array.
     const executeQuery = async (query) => {
@@ -975,7 +1163,7 @@ const filterDB = async (queries, siteCode, isParent) => {
     if (queries.firstName) queries.firstName = queries.firstName.toLowerCase();
     if (queries.lastName) queries.lastName = queries.lastName.toLowerCase();
     if (queries.email) queries.email = queries.email.toLowerCase();
-        
+
     try {
         if (queries.firstName && queries.lastName && (queries.email || queries.phone)) {
             const fNameExtractedQuery = updateQueryForArrayContainsConstraints([queries.lastName, queries.phone, queries.email]);
@@ -1004,15 +1192,15 @@ const filterDB = async (queries, siteCode, isParent) => {
 
             return fetchedResults;
         }
-  
+
         removeDuplicateResults();
         removeMismatchedResults();
 
         return fetchedResults;
 
     } catch (error) {
-      console.error(error);
-      return new Error(error);
+        console.error(error);
+        return new Error(error);
     }
 };
 
@@ -1020,7 +1208,7 @@ const validateBiospecimenUser = async (email) => {
     try {
         const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
         printDocsCount(snapshot, "validateBiospecimenUser");
-        if(snapshot.size === 1) {
+        if (snapshot.size === 1) {
             const role = snapshot.docs[0].data().role;
             const siteCode = snapshot.docs[0].data().siteCode;
             const response = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
@@ -1037,13 +1225,13 @@ const validateBiospecimenUser = async (email) => {
 const biospecimenUserList = async (siteCode, email) => {
     try {
         let query = db.collection('biospecimenUsers').where('siteCode', '==', siteCode)
-        if(email) query = query.where('addedBy', '==', email)
+        if (email) query = query.where('addedBy', '==', email)
         const snapshot = await query.orderBy('role').orderBy('email').get();
         printDocsCount(snapshot, "biospecimenUserList");
-        if(snapshot.size !== 0){
+        if (snapshot.size !== 0) {
             return snapshot.docs.map(document => document.data());
         }
-        else{
+        else {
             return [];
         }
     } catch (error) {
@@ -1056,7 +1244,7 @@ const biospecimenUserExists = async (email) => {
     try {
         const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
         printDocsCount(snapshot, "biospecimenUserExists");
-        if(snapshot.size === 0) return false;
+        if (snapshot.size === 0) return false;
         else return true;
     } catch (error) {
         console.error(error);
@@ -1076,10 +1264,10 @@ const addNewBiospecimenUser = async (data) => {
 const removeUser = async (userEmail, siteCode, email, manager) => {
     try {
         let query = db.collection('biospecimenUsers').where('email', '==', userEmail).where('siteCode', '==', siteCode);
-        if(manager) query = query.where('addedBy', '==', email);
+        if (manager) query = query.where('addedBy', '==', email);
         const snapshot = await query.get();
         printDocsCount(snapshot, "removeUser");
-        if(snapshot.size === 1) {
+        if (snapshot.size === 1) {
             console.log('Removing', userEmail);
             const docId = snapshot.docs[0].id;
             await db.collection('biospecimenUsers').doc(docId).delete();
@@ -1147,7 +1335,7 @@ const getUnshippedBoxes = async (siteCode, isBPTL = false) => {
         if (!isBPTL) query = query.where(fieldMapping.loginSite.toString(), '==', siteCode);
         const snapshot = await query.get();
         printDocsCount(snapshot, "getUnshippedBoxes");
-        
+
         return snapshot.docs.map(document => document.data());
     } catch (error) {
         console.error(error);
@@ -1169,7 +1357,7 @@ const getSpecimensByBoxedStatus = async (siteCode, boxedStatusConceptId, isBPTL 
 
         const snapshot = await query.get();
         printDocsCount(snapshot, "getSpecimensByBoxedStatus");
-        
+
         return snapshot.docs.map(document => document.data());
     } catch (error) {
         console.error(error);
@@ -1204,7 +1392,7 @@ const updateBox = async (id, boxAndTubesData, addedTubes, loginSite) => {
         const boxSnapshot = snapshotResponse[0].docs.map(doc => ({ ref: doc.ref, data: doc.data() }));
         const specimenSnapshot = snapshotResponse[1].docs.map(doc => ({ ref: doc.ref, data: doc.data() }));
         printDocsCount(snapshotResponse, "updateBox");
-        
+
         if (boxSnapshot.length !== 1 || specimenSnapshot.length !== 1) {
             throw new Error('Couldn\'t find Matching documents.');
         }
@@ -1218,9 +1406,9 @@ const updateBox = async (id, boxAndTubesData, addedTubes, loginSite) => {
             [fieldMapping.boxedStatus]: updatedSpecimenData[fieldMapping.boxedStatus],
             [fieldMapping.strayTubesList]: updatedSpecimenData[fieldMapping.strayTubesList],
         }
-        
+
         delete boxAndTubesData['addedTubes'];
-        
+
         const batch = db.batch();
         batch.update(boxDocRef, boxAndTubesData);
         batch.update(specimenDocRef, specimenDataToWrite);
@@ -1240,7 +1428,7 @@ const updateBox = async (id, boxAndTubesData, addedTubes, loginSite) => {
  */
 const removeBag = async (siteCode, requestData) => {
     const { sortBoxOnBagRemoval, manageSpecimenBoxedStatusRemoveBag } = require('./shared');
-    
+
     const boxId = requestData.boxId;
     const bagsToRemove = requestData.bags;
     const bagCollectionIdArray = bagsToRemove.map(bagId => bagId.split(' ')[0]);
@@ -1282,9 +1470,9 @@ const removeBag = async (siteCode, requestData) => {
     }
 
     // Samples within bag = { collectionId: [sampleId1, sampleId2, ...]}
-    const { updatedBoxData, samplesWithinBag } = sortBoxOnBagRemoval(boxData, bagsToRemove, currDate);    
+    const { updatedBoxData, samplesWithinBag } = sortBoxOnBagRemoval(boxData, bagsToRemove, currDate);
     const updatedSpecimenDataArray = manageSpecimenBoxedStatusRemoveBag(specimenDataArray, samplesWithinBag);
-    
+
     try {
         const batch = db.batch();
         // set the new box data
@@ -1304,13 +1492,13 @@ const removeBag = async (siteCode, requestData) => {
     } catch (error) {
         console.error('Error writing document: ', error);
         throw new Error('Error updating the box in the database.');
-    }   
+    }
 }
 
 const reportMissingSpecimen = async (siteAcronym, requestData) => {
 
     let tube = requestData.tubeId;
-    if(tube.split(' ').length < 2){
+    if (tube.split(' ').length < 2) {
         return 'Failure! Could not find tube mentioned';
     }
     let masterSpecimenId = tube.split(' ')[0];
@@ -1340,10 +1528,10 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
 
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).where('siteAcronym', '==', siteAcronym).get();
     printDocsCount(snapshot, "reportMissingSpecimen");
-    if(snapshot.size === 1 && conceptTube != undefined){
+    if (snapshot.size === 1 && conceptTube != undefined) {
         const docId = snapshot.docs[0].id;
         let currDoc = snapshot.docs[0].data();
-        if(currDoc.hasOwnProperty(conceptTube)){
+        if (currDoc.hasOwnProperty(conceptTube)) {
             let currObj = currDoc[conceptTube];
             currObj['258745303'] = '353358909';
             //let toUpdate = {conceptTube: currObj};
@@ -1352,7 +1540,7 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
             await db.collection('biospecimen').doc(docId).update(toUpdate);
         }
     }
-    else{
+    else {
         return 'Failure! Could not find tube mentioned';
     }
 
@@ -1400,10 +1588,10 @@ const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
         if (allSitesFlag) return snapshot.docs[0].data();
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
-        const participantSiteCode = response.docs[0].data()['827220437']; 
+        const participantSiteCode = response.docs[0].data()['827220437'];
         if (participantSiteCode === siteCode) return snapshot.docs[0].data();
     }
-    
+
     return {};
 }
 
@@ -1415,11 +1603,11 @@ const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
 const getSiteLocationBox = async (requestedSite, boxId) => {
     try {
         const snapshot = await db.collection('boxes')
-                                .where(fieldMapping.loginSite.toString(), "==", requestedSite)
-                                .where(fieldMapping.shippingBoxId.toString(), "==", boxId).get();
+            .where(fieldMapping.loginSite.toString(), "==", requestedSite)
+            .where(fieldMapping.shippingBoxId.toString(), "==", boxId).get();
         printDocsCount(snapshot, "getSiteLocationBox");
         const boxMatch = [];
-        for(let document of snapshot.docs) {
+        for (let document of snapshot.docs) {
             boxMatch.push(document.data());
         }
         return boxMatch;
@@ -1437,7 +1625,7 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
     try {
         const shipBoxMatch = await getSiteLocationBox(requestedSite, boxId);
         if (shipBoxMatch === undefined || shipBoxMatch.length === 0) return [];
-        
+
         const shipBoxObj = shipBoxMatch[0];
         const collectionIdArray = [];
         const bagConceptIdList = Object.values(fieldMapping.bagContainerCids);
@@ -1445,14 +1633,14 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
         for (let key in shipBoxObj) {
             // check if key is in bagConceptIdList array of conceptIds
             if (bagConceptIdList.includes(parseInt(key))) {
-                const bagContainerContent = shipBoxObj[key]; 
+                const bagContainerContent = shipBoxObj[key];
                 const bloodUrineScan = fieldMapping.tubesBagsCids.biohazardBagScan;
                 const mouthwashScan = fieldMapping.tubesBagsCids.biohazardMouthwashBagScan;
                 const orphanScan = fieldMapping.tubesBagsCids.orphanScan;
                 // Loop through the bagContainerContent to find the collectionId
                 for (let key in bagContainerContent) {
-                    if (parseInt(key) === bloodUrineScan || 
-                        parseInt(key) === mouthwashScan || 
+                    if (parseInt(key) === bloodUrineScan ||
+                        parseInt(key) === mouthwashScan ||
                         parseInt(key) === orphanScan) {
                         if (bagContainerContent[key] !== '') {
                             // extract the collectionId and push to collectionIdArray
@@ -1462,14 +1650,14 @@ const getBiospecimenCollectionIdsFromBox = async (requestedSite, boxId) => {
                                 collectionIdArray.push(collectionIdString);
                             }
                             break;
-                        } 
-                    }   
+                        }
+                    }
                 }
-            } 
+            }
         }
         return collectionIdArray;
     } catch (error) {
-        throw new Error("getBiospecimenCollectionIdsFromBox() error.", {cause: error});
+        throw new Error("getBiospecimenCollectionIdsFromBox() error.", { cause: error });
     }
 }
 
@@ -1488,16 +1676,16 @@ const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
 
         const chunkSize = 15;
         const collectionIdArrayChunks = createChunkArray(collectionIdArray, chunkSize);
-        
+
         const chunkedPromises = collectionIdArrayChunks.map(chunk => {
             return db.collection('biospecimen')
-            .where(fieldMapping.healthCareProvider.toString(), "==", requestedSite)
-            .where(fieldMapping.collectionId.toString(), "in", chunk).get();
+                .where(fieldMapping.healthCareProvider.toString(), "==", requestedSite)
+                .where(fieldMapping.collectionId.toString(), "in", chunk).get();
         });
-        
+
         const promiseResults = await Promise.all(chunkedPromises);
         printDocsCount(promiseResults, "searchSpecimenBySiteAndBoxId");
-        
+
         const biospecimenDocs = [];
         promiseResults.forEach(snapshot => {
             if (!snapshot.empty) {
@@ -1507,7 +1695,7 @@ const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
 
         return biospecimenDocs;
     } catch (error) {
-        throw new Error("searchSpecimenBySiteAndBoxId() error.", {cause: error});
+        throw new Error("searchSpecimenBySiteAndBoxId() error.", { cause: error });
     }
 }
 
@@ -1549,25 +1737,25 @@ const searchShipments = async (siteCode) => {
 const specimenExists = async (id) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
     printDocsCount(snapshot, "specimenExists");
-    if(snapshot.size === 1) return true;
+    if (snapshot.size === 1) return true;
     else return false;
 }
 
 const boxExists = async (boxId, loginSite) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
     printDocsCount(snapshot, "boxExists");
-    if(snapshot.size === 1) return true;
+    if (snapshot.size === 1) return true;
     else return false;
 }
 
 const accessionIdExists = async (accessionId, accessionIdType, siteCode) => {
     const snapshot = await db.collection('biospecimen').where(accessionIdType, '==', accessionId).get();
     printDocsCount(snapshot, "accessionIdExists");
-    if(snapshot.size === 1) {
+    if (snapshot.size === 1) {
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
         const participantSiteCode = response.docs[0].data()['827220437'];
-        if(participantSiteCode === siteCode) return snapshot.docs[0].data();
+        if (participantSiteCode === siteCode) return snapshot.docs[0].data();
         else return false;
     }
     else return false;
@@ -1575,13 +1763,13 @@ const accessionIdExists = async (accessionId, accessionIdType, siteCode) => {
 
 const updateTempCheckDate = async (institute) => {
     let currDate = new Date();
-    let randomStart = Math.floor(Math.random()*5)+15 - currDate.getDay();
+    let randomStart = Math.floor(Math.random() * 5) + 15 - currDate.getDay();
     currDate.setDate(currDate.getDate() + randomStart);
-    const snapshot = await db.collection('SiteLocations').where('Site', '==',institute).get();
+    const snapshot = await db.collection('SiteLocations').where('Site', '==', institute).get();
     printDocsCount(snapshot, "updateTempCheckDate");
-    if(snapshot.size === 1) {
+    if (snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
-        await db.collection('SiteLocations').doc(docId).update({'nextTempMonitor':currDate.toString()});
+        await db.collection('SiteLocations').doc(docId).update({ 'nextTempMonitor': currDate.toString() });
     }
 }
 
@@ -1660,7 +1848,7 @@ const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
     try {
         await db.runTransaction(async (transaction) => {
             const boxes = await getBoxesByBoxId(boxIdArray, siteCode, transaction);
-    
+
             for (const box of boxes) {
                 const boxData = box.data;
                 const shipmentData = boxIdToShipmentData[boxData[fieldMapping.shippingBoxId]];
@@ -1680,9 +1868,9 @@ const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
 };
 
 const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
-    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
+    const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', siteCode).get();
     printDocsCount(snapshot, "shipBox");
-    if(snapshot.size === 1) {
+    if (snapshot.size === 1) {
         let currDate = new Date().toISOString();
         shippingData['656548982'] = currDate;
         shippingData['145971562'] = 353358909;
@@ -1691,7 +1879,7 @@ const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
         await db.collection('boxes').doc(docId).update(shippingData);
         return true;
     }
-    else{
+    else {
         return false;
     }
 }
@@ -1700,10 +1888,10 @@ const getLocations = async (institute) => {
     const snapshot = await db.collection('SiteLocations').where('siteAcronym', '==', institute).get();
     printDocsCount(snapshot, "getLocations");
     console.log(institute)
-    if(snapshot.size !== 0) {
+    if (snapshot.size !== 0) {
         return snapshot.docs.map(document => document.data());
     }
-    else{
+    else {
         return [];
     }
 
@@ -1719,14 +1907,14 @@ const searchBoxes = async (institute, flag) => {
             snapshot = await boxesCollection.get();
         } else if (flag === `bptlPackagesInTransit`) {
             snapshot = await boxesCollection
-                            .where(fieldMapping.submitShipmentFlag.toString(), "==", fieldMapping.yes)
-                            .where(fieldMapping.siteShipmentReceived.toString(), "==", fieldMapping.no).get();
+                .where(fieldMapping.submitShipmentFlag.toString(), "==", fieldMapping.yes)
+                .where(fieldMapping.siteShipmentReceived.toString(), "==", fieldMapping.no).get();
         }
-    } else { 
+    } else {
         snapshot = await boxesCollection.where(fieldMapping.loginSite.toString(), '==', institute).get()
     }
 
-    if (snapshot.size !== 0){
+    if (snapshot.size !== 0) {
         printDocsCount(snapshot, "searchBoxes");
         return snapshot.docs.map(document => document.data());
     } else {
@@ -1737,28 +1925,32 @@ const searchBoxes = async (institute, flag) => {
 const searchBoxesByLocation = async (institute, location) => {
     console.log("institute" + institute);
     console.log("location" + location);
-    const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149','==',location).get();
+    const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149', '==', location).get();
     printDocsCount(snapshot, "searchBoxesByLocation");
-    if(snapshot.size !== 0){
+    if (snapshot.size !== 0) {
         let result = snapshot.docs.map(document => document.data());
         // console.log(JSON.stringify(result));
-        let toReturn = result.filter(data => (!data.hasOwnProperty('145971562')||data['145971562']!='353358909'))
+        let toReturn = result.filter(data => (!data.hasOwnProperty('145971562') || data['145971562'] != '353358909'))
         return toReturn;
     }
-    else{
+    else {
         console.log("nothing to return");
         return [];
     }
-    
+
 }
 
 const getSpecimenCollections = async (token, siteCode) => {
-    const snapshot = await db.collection('biospecimen').where('token', '==', token).where('827220437', '==', siteCode).get();
+    let snapshotPromise = db.collection('biospecimen').where('token', '==', token);
+    if (siteCode) {
+        snapshotPromise = snapshotPromise.where('827220437', '==', siteCode);
+    }
+    const snapshot = await snapshotPromise.get();
     printDocsCount(snapshot, "getSpecimenCollections");
-    if(snapshot.size !== 0){
+    if (snapshot.size !== 0) {
         return snapshot.docs.map(document => document.data());
     }
-    
+
     return [];
 }
 
@@ -1799,7 +1991,7 @@ const getBoxesPagination = async (siteCode, body) => {
         printDocsCount(snapshot, `getBoxesPagination; offset: ${currPage * elementsPerPage}`);
         const result = snapshot.docs.map(document => document.data());
         return result;
-    } 
+    }
     catch (error) {
         console.error(error);
         return [];
@@ -1827,7 +2019,7 @@ const getNumBoxesShipped = async (siteCode, body) => {
 const getNotificationSpecifications = async (notificationType, notificationCategory, scheduleAt) => {
     try {
         let snapshot = db.collection('notificationSpecifications').where("notificationType", "array-contains", notificationType);
-        if(notificationCategory) snapshot = snapshot.where('category', '==', notificationCategory);
+        if (notificationCategory) snapshot = snapshot.where('category', '==', notificationCategory);
         snapshot = snapshot.where('scheduleAt', '==', scheduleAt);
         snapshot = await snapshot.get();
         printDocsCount(snapshot, "getNotificationSpecifications");
@@ -1843,18 +2035,18 @@ const getNotificationSpecifications = async (notificationType, notificationCateg
 const sendClientEmail = async (data) => {
 
     const { sendEmail } = require('./notifications');
-    const { v4: uuid }  = require('uuid');
+    const { v4: uuid } = require('uuid');
 
     const reminder = {
         id: uuid(),
         notificationType: data.notificationType,
         email: data.email,
-        notification : {
+        notification: {
             title: data.subject,
             body: data.message,
             time: data.time
         },
-        attempt: data.attempt,            
+        attempt: data.attempt,
         category: data.category,
         token: data.token,
         uid: data.uid,
@@ -1882,14 +2074,14 @@ const storeNotification = async (notificationData) => {
  * @param {string} specId Notification Specifications ID
  */
 const checkIsNotificationSent = async (userToken, specId) => {
-  const snapshot = await db
-    .collection("notifications")
-    .where("token", "==", userToken)
-    .where("notificationSpecificationsID", "==", specId)
-    .count()
-    .get();
+    const snapshot = await db
+        .collection("notifications")
+        .where("token", "==", userToken)
+        .where("notificationSpecificationsID", "==", specId)
+        .count()
+        .get();
 
-  return snapshot.data().count > 0;
+    return snapshot.data().count > 0;
 };
 
 /**
@@ -1897,36 +2089,36 @@ const checkIsNotificationSent = async (userToken, specId) => {
  * @param {object[]} notificationRecordArray Array of notification records to be saved
  */
 const saveNotificationBatch = async (notificationRecordArray) => {
-  const chunkSize = 500; // batched write has a doc limit of 500
-  const chunkArray = createChunkArray(notificationRecordArray, chunkSize);
-  for (const recordChunk of chunkArray) {
-    const batch = db.batch();
-    try {
-        for (const record of recordChunk) {
-        const docRef = db.collection("notifications").doc();
-        batch.set(docRef, record);
-      }
+    const chunkSize = 500; // batched write has a doc limit of 500
+    const chunkArray = createChunkArray(notificationRecordArray, chunkSize);
+    for (const recordChunk of chunkArray) {
+        const batch = db.batch();
+        try {
+            for (const record of recordChunk) {
+                const docRef = db.collection("notifications").doc();
+                batch.set(docRef, record);
+            }
 
-      await batch.commit();
-    } catch (error) {
-      throw new Error("saveNotificationBatch() error.", {cause: error});
+            await batch.commit();
+        } catch (error) {
+            throw new Error("saveNotificationBatch() error.", { cause: error });
+        }
     }
-  }
 };
 
 const markNotificationAsRead = async (id, collection) => {
     const snapshot = await db.collection(collection).where('id', '==', id).get();
     printDocsCount(snapshot, "markNotificationAsRead");
     const docId = snapshot.docs[0].id;
-    await db.collection(collection).doc(docId).update({read: true});
+    await db.collection(collection).doc(docId).update({ read: true });
 }
 
 const storeSSN = async (data) => {
-    try{
+    try {
         const response = await db.collection('ssn').where('uid', '==', data.uid).get();
         printDocsCount(response, "storeSSN");
-        if(response.size === 1) {
-            for(let doc of response.docs){
+        if (response.size === 1) {
+            for (let doc of response.docs) {
                 await db.collection('ssn').doc(doc.id).update(data);
                 return true;
             }
@@ -1935,11 +2127,11 @@ const storeSSN = async (data) => {
             return true;
         }
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error)
     }
-    
+
 }
 
 const getTokenForParticipant = async (uid) => {
@@ -1955,26 +2147,26 @@ const getSiteDetailsWithSignInProvider = async (acronym) => {
 }
 
 const retrieveNotificationSchemaByID = async (id) => {
-  const snapshot = await db.collection("notificationSpecifications").where("id", "==", id).get();
-  printDocsCount(snapshot, "retrieveNotificationSchemaByID");
-  if (snapshot.size === 1) {
-    return snapshot.docs[0].id;
-  }
+    const snapshot = await db.collection("notificationSpecifications").where("id", "==", id).get();
+    printDocsCount(snapshot, "retrieveNotificationSchemaByID");
+    if (snapshot.size === 1) {
+        return snapshot.docs[0].id;
+    }
 
-  return "";
+    return "";
 };
 
 const retrieveNotificationSchemaByCategory = async (category, getDrafts = false, sendType = "scheduled") => {
-  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", sendType);
-  if (category !== "all") {
-    query = query.where("category", "==", category);
-  } else {
-    query = query.orderBy("category");
-  }
+    let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", sendType);
+    if (category !== "all") {
+        query = query.where("category", "==", category);
+    } else {
+        query = query.orderBy("category");
+    }
 
-  const snapshot = await query.orderBy("attempt").get();
-  printDocsCount(snapshot, "retrieveNotificationSchemaByCategory");
-  return snapshot.docs.map((doc) => doc.data());
+    const snapshot = await query.orderBy("attempt").get();
+    printDocsCount(snapshot, "retrieveNotificationSchemaByCategory");
+    return snapshot.docs.map((doc) => doc.data());
 };
 
 const storeNewNotificationSchema = async (data) => {
@@ -1990,16 +2182,16 @@ const updateNotificationSchema = async (docID, data) => {
 const getNotificationHistoryByParticipant = async (token, siteCode, isParent) => {
     const operator = isParent ? 'in' : '==';
     const participantRecord = await db.collection('participants')
-                                        .where('token', '==', token)
-                                        .where('827220437', operator, siteCode)
-                                        .get();
+        .where('token', '==', token)
+        .where('827220437', operator, siteCode)
+        .get();
     printDocsCount(participantRecord, "getNotificationHistoryByParticipant; collection: participants");
 
-    if(participantRecord.size === 1) {
+    if (participantRecord.size === 1) {
         const snapshot = await db.collection('notifications')
-                                    .where('token', '==', token)
-                                    .orderBy('notification.time', 'desc')
-                                    .get();
+            .where('token', '==', token)
+            .orderBy('notification.time', 'desc')
+            .get();
         printDocsCount(snapshot, "getNotificationHistoryByParticipant; collection: notifications");
 
         return snapshot.docs.map(dt => dt.data());
@@ -2013,7 +2205,7 @@ const getNotificationsCategories = async (scheduleAt) => {
     const categories = [];
     snapshot.forEach(dt => {
         const category = dt.data().category;
-        if(!categories.includes(category)) categories.push(category);
+        if (!categories.includes(category)) categories.push(category);
     })
     return categories;
 }
@@ -2024,7 +2216,7 @@ const getEmailNotifications = async (scheduleAt) => {
     const notifications = [];
     snapshot.forEach(dt => {
         const notification = dt.data();
-        if(!notifications.includes(notification.id) && notification.notificationType[0] == 'email') notifications.push(notification);
+        if (!notifications.includes(notification.id) && notification.notificationType[0] == 'email') notifications.push(notification);
     })
     return notifications;
 }
@@ -2035,15 +2227,15 @@ const getEmailNotifications = async (scheduleAt) => {
  * @returns 
  */
 const getNotificationSpecsBySchedule = async (scheduleAt) => {
-  const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
-  printDocsCount(snapshot, "getNotificationSpecsBySchedule");
-  let notificationSpecArray = [];
-  for (const doc of snapshot.docs) {
-    const docData = doc.data();
-    if (!docData.isDraft && docData.id) notificationSpecArray.push(docData);
-  }
+    const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+    printDocsCount(snapshot, "getNotificationSpecsBySchedule");
+    let notificationSpecArray = [];
+    for (const doc of snapshot.docs) {
+        const docData = doc.data();
+        if (!docData.isDraft && docData.id) notificationSpecArray.push(docData);
+    }
 
-  return notificationSpecArray;
+    return notificationSpecArray;
 };
 
 /**
@@ -2052,26 +2244,26 @@ const getNotificationSpecsBySchedule = async (scheduleAt) => {
  * @returns 
  */
 const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
-  const eastTimezone = { timezone: "America/New_York" };
-  const currTime = new Date();
-  const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
-  const currTimeIsoStr = currTime.toISOString();
-  const batch = db.batch();
-  const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
-  printDocsCount(snapshot, "getNotificationSpecsByScheduleOncePerDay");
-  let notificationSpecArray = [];
-  for (const doc of snapshot.docs) {
-    const docData = doc.data();
-    const lastRunTime = docData.lastRunTime || "2020-01-01";
-    const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
-    if (!docData.isDraft && docData.id && currDate !== lastRunDate) {
-      notificationSpecArray.push(docData);
-      batch.update(doc.ref, { lastRunTime: currTimeIsoStr });
+    const eastTimezone = { timezone: "America/New_York" };
+    const currTime = new Date();
+    const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
+    const currTimeIsoStr = currTime.toISOString();
+    const batch = db.batch();
+    const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+    printDocsCount(snapshot, "getNotificationSpecsByScheduleOncePerDay");
+    let notificationSpecArray = [];
+    for (const doc of snapshot.docs) {
+        const docData = doc.data();
+        const lastRunTime = docData.lastRunTime || "2020-01-01";
+        const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
+        if (!docData.isDraft && docData.id && currDate !== lastRunDate) {
+            notificationSpecArray.push(docData);
+            batch.update(doc.ref, { lastRunTime: currTimeIsoStr });
+        }
     }
-  }
 
-  await batch.commit(); // batch limit: 500
-  return notificationSpecArray;
+    await batch.commit(); // batch limit: 500
+    return notificationSpecArray;
 };
 
 const getNotificationSpecById = async (id) => {
@@ -2082,16 +2274,16 @@ const getNotificationSpecById = async (id) => {
 }
 
 const getNotificationSpecByCategoryAndAttempt = async (category = "", attempt = "") => {
-  if (!category || !attempt) return null;
+    if (!category || !attempt) return null;
 
-  const snapshot = await db
-    .collection("notificationSpecifications")
-    .where("category", "==", category)
-    .where("attempt", "==", attempt)
-    .get();
-  printDocsCount(snapshot, "getNotificationSpecByCategoryAndAttempt");
+    const snapshot = await db
+        .collection("notificationSpecifications")
+        .where("category", "==", category)
+        .where("attempt", "==", attempt)
+        .get();
+    printDocsCount(snapshot, "getNotificationSpecByCategoryAndAttempt");
 
-  return snapshot.empty ? null : snapshot.docs[0].data();
+    return snapshot.empty ? null : snapshot.docs[0].data();
 };
 
 const addKitAssemblyData = async (data) => {
@@ -2099,7 +2291,7 @@ const addKitAssemblyData = async (data) => {
         await db.collection('kitAssembly').add(data);
         return true;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -2113,7 +2305,7 @@ const updateKitAssemblyData = async (data) => {
 
         if (snapshot.empty) return false
         const docId = snapshot.docs[0].id;
- 
+
         await db.collection('kitAssembly').doc(docId).update({
             '194252513': data[fieldMapping.returnKitId],
             '259846815': data[fieldMapping.collectionCupId],
@@ -2123,7 +2315,7 @@ const updateKitAssemblyData = async (data) => {
         })
         return true;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -2134,9 +2326,9 @@ const checkCollectionUniqueness = async (supplyId, collectionId, returnKitTracki
         const supplySnapShot = await db.collection('kitAssembly').where('690210658', '==', supplyId).get();
         const collectionSnapShot = await db.collection('kitAssembly').where('259846815', '==', collectionId).get();
         printDocsCount([supplySnapShot, collectionSnapShot], "checkCollectionUniqueness");
-        let returnKitTrackingNumberSnapshot = {docs: []};
-        let supplyKitTrackingNumberSnapshot = {docs: []};
-        if(returnKitTrackingNumber) {
+        let returnKitTrackingNumberSnapshot = { docs: [] };
+        let supplyKitTrackingNumberSnapshot = { docs: [] };
+        if (returnKitTrackingNumber) {
             [returnKitTrackingNumberSnapshot, supplyKitTrackingNumberSnapshot] = await Promise.all([
                 db.collection('kitAssembly').where(fieldMapping.returnKitTrackingNum.toString(), '==', returnKitTrackingNumber).get(),
                 db.collection('kitAssembly').where(fieldMapping.supplyKitTrackingNum.toString(), '==', returnKitTrackingNumber).get()
@@ -2184,11 +2376,11 @@ const participantHomeCollectionKitFields = [
 
 const queryHomeCollectionAddressesToPrint = async () => {
     try {
-        const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
+        const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample,
             collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
         const fiveDaysAgoDateISO = getFiveDaysAgoDateISO();
-        
+
         const snapshot = await db.collection('participants')
             .where(withdrawConsent.toString(), '==', no)
             .where(participantDeceasedNORC.toString(), '==', no)
@@ -2199,13 +2391,13 @@ const queryHomeCollectionAddressesToPrint = async () => {
             .select(...participantHomeCollectionKitFields)
             .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
             .get();
-        
+
         if (snapshot.size === 0) return [];
-        
+
         const mappedResults = snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), true));
         return mappedResults.filter(result => result !== null);
     } catch (error) {
-        throw new Error(`Error querying home collection addresses to print`, {cause: error});
+        throw new Error(`Error querying home collection addresses to print`, { cause: error });
     }
 }
 
@@ -2233,8 +2425,8 @@ const eligibleParticipantsForKitAssignment = async () => {
         const mappedResults = snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), false));
         return mappedResults.filter(result => result !== null);
 
-    } catch(error) {
-        throw new Error('Error getting Eligible Kit Assignment Participants.', {cause: error});
+    } catch (error) {
+        throw new Error('Error getting Eligible Kit Assignment Participants.', { cause: error });
     }
 }
 
@@ -2281,19 +2473,19 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
     const addressLineOne = record?.[address1];
     const poBoxRegex = /\b(?:P\.?O\.?(?:\s*Box|\s+Office\s+Box)|Post\s+Office\s+Box)\b/i;
     const isPOBoxMatch = poBoxRegex.test(addressLineOne);
-    
+
     if (isPOBoxMatch) return null;
 
-    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;    
+    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;
     const processedRecord = {
-    first_name: record[firstName],
-    last_name: record[lastName],
-    address_1: record[address1],
-    address_2: record[address2] || '',
-    city: record[city],
-    state: record[state],
-    zip_code: record[zip], 
-    connect_id: record['Connect_ID'],
+        first_name: record[firstName],
+        last_name: record[lastName],
+        address_1: record[address1],
+        address_2: record[address2] || '',
+        city: record[city],
+        state: record[state],
+        zip_code: record[zip],
+        connect_id: record['Connect_ID'],
     };
 
     return (!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)
@@ -2304,10 +2496,10 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
 const assignKitToParticipant = async (data) => {
     try {
         const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
-            assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
+            assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash,
             kitType, mouthwashKit } = fieldMapping;
 
-        
+
         // Check the supply kit tracking number and see if it matches the return kit tracking number
         // of any kits including this one or the supply kit tracking number of any other kits
 
@@ -2315,7 +2507,7 @@ const assignKitToParticipant = async (data) => {
             .where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
             .get();
 
-        if(kitsWithDuplicateReturnTrackingNumbers.size > 0) {
+        if (kitsWithDuplicateReturnTrackingNumbers.size > 0) {
             return false;
         }
 
@@ -2323,14 +2515,14 @@ const assignKitToParticipant = async (data) => {
             .where(`${supplyKitTrackingNum}`, '==', data[supplyKitTrackingNum])
             .get();
 
-        if(otherKitsUsingSupplyKitTrackingNumber.size > 1) {
-                return false;
+        if (otherKitsUsingSupplyKitTrackingNumber.size > 1) {
+            return false;
         } else if (otherKitsUsingSupplyKitTrackingNumber.size === 1) {
             // check if the kit found is the current kit
             // Doing this instead of including it in the query to avoid creating an unnecessary composite index
             const possibleDuplicate = otherKitsUsingSupplyKitTrackingNumber.docs[0];
             const possibleDuplicateKitId = possibleDuplicate.data()[supplyKitId];
-            if(possibleDuplicateKitId !== data[supplyKitId]) {
+            if (possibleDuplicateKitId !== data[supplyKitId]) {
                 return false;
             }
         }
@@ -2364,7 +2556,7 @@ const assignKitToParticipant = async (data) => {
 
         const participantDoc = participantSnapshot.docs[0];
         const prevParticipantObject = participantDoc.data()?.[collectionDetails]?.[baseline];
-        
+
         const updatedParticipantObject = {
             [collectionDetails]: {
                 [baseline]: {
@@ -2473,7 +2665,7 @@ const storeKitReceipt = async (package) => {
             const kitDoc = kitSnapshot.docs[0];
             const kitData = kitDoc.data();
             const Connect_ID = kitData['Connect_ID'];
-    
+
             const participantSnapshot = await transaction.get(db.collection("participants").where('173836415.266600170.319972665.687158491', '==', kitDoc.data()[687158491]));
             const participantDoc = participantSnapshot.docs[0];
             const participantDocData = participantSnapshot.docs[0].data();
@@ -2489,14 +2681,14 @@ const storeKitReceipt = async (package) => {
             const prevParticipantObject = participantDocData[173836415][266600170][319972665];
             const collectionId = package['259846815']?.split(' ')[0];
             const objectId = package['259846815']?.split(' ')[1];
-            
+
             if (objectId === undefined || collectionId === undefined) {
                 toReturn = { status: 'Check Collection ID' };
                 return;
             }
 
             // check the collection ID from the kitAssembly against the one from package and error if they don't match
-            if(kitData[fieldMapping.collectionCupId] !== package[fieldMapping.collectionCupId]) {
+            if (kitData[fieldMapping.collectionCupId] !== package[fieldMapping.collectionCupId]) {
                 toReturn = { status: 'Collection Cup ID from tracking number does not match provided Collection Cup ID' };
                 return;
             }
@@ -2509,7 +2701,7 @@ const storeKitReceipt = async (package) => {
                 },
                 '260133861': package['260133861'],
                 '678166505': package['678166505'],
-                '820476880':  collectionId,
+                '820476880': collectionId,
                 '827220437': site,
                 'Connect_ID': Connect_ID,
                 'token': token,
@@ -2518,7 +2710,7 @@ const storeKitReceipt = async (package) => {
 
             // Create a reference to a document that doesn't exist yet with the given ID
             const newDocRef = db.collection('biospecimen').doc(uid);
-            
+
             transaction.set(newDocRef, biospecPkg);
 
             transaction.update(kitDoc.ref, {
@@ -2542,24 +2734,24 @@ const storeKitReceipt = async (package) => {
             });
 
             toReturn = {
-              status: true,
-              Connect_ID,
-              token,
-              uid,
-              prefEmail,
-              ptName,
-              surveyStatus,
-              preferredLanguage,
-              [fieldMapping.signInMechanism]: participantDocData[fieldMapping.signInMechanism],
-              [fieldMapping.authenticationPhone]: participantDocData[fieldMapping.authenticationPhone],
-              [fieldMapping.authenticationEmail]: participantDocData[fieldMapping.authenticationEmail],
+                status: true,
+                Connect_ID,
+                token,
+                uid,
+                prefEmail,
+                ptName,
+                surveyStatus,
+                preferredLanguage,
+                [fieldMapping.signInMechanism]: participantDocData[fieldMapping.signInMechanism],
+                [fieldMapping.authenticationPhone]: participantDocData[fieldMapping.authenticationPhone],
+                [fieldMapping.authenticationEmail]: participantDocData[fieldMapping.authenticationEmail],
             };
             return;
         });
 
         return toReturn;
 
-    } 
+    }
     catch (error) {
         console.error(error);
         return new Error(error);
@@ -2569,7 +2761,7 @@ const storeKitReceipt = async (package) => {
 const processPackageConditions = (pkgConditions) => {
     const keys = [950521660, 545319575, 938338155, 205954477, 289239334, 992420392, 541085383, 427719697, 100618603];
     const result = {};
-    
+
     for (const key of keys) {
         result[key] = pkgConditions.includes(String(key)) ? 353358909 : 104430631;
     }
@@ -2581,10 +2773,10 @@ const getKitAssemblyData = async () => {
     try {
         const snapshot = await db.collection("kitAssembly").get();
         printDocsCount(snapshot, "getKitAssemblyData");
-        if(snapshot.size !== 0)  return snapshot.docs.map(doc => doc.data()) 
+        if (snapshot.size !== 0) return snapshot.docs.map(doc => doc.data())
         else return false;
     }
-    catch(error){
+    catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -2603,7 +2795,7 @@ const getCoordinatingCenterEmail = async () => {
     try {
         const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
         printDocsCount(snapshot, "getCoordinatingCenterEmail");
-        if(snapshot.size > 0) return snapshot.docs[0].data().email;
+        if (snapshot.size > 0) return snapshot.docs[0].data().email;
     } catch (error) {
         console.error(error);
         return new Error(error);
@@ -2614,7 +2806,7 @@ const getSiteEmail = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
         printDocsCount(snapshot, "getSiteEmail");
-        if(snapshot.size > 0) return snapshot.docs[0].data().email;
+        if (snapshot.size > 0) return snapshot.docs[0].data().email;
     } catch (error) {
         console.error(error);
         return new Error(error);
@@ -2625,7 +2817,7 @@ const getSiteAcronym = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
         printDocsCount(snapshot, "getSiteAcronym");
-        if(snapshot.size > 0) return snapshot.docs[0].data().acronym;
+        if (snapshot.size > 0) return snapshot.docs[0].data().acronym;
     } catch (error) {
         console.error(error);
         return new Error(error);
@@ -2656,17 +2848,17 @@ const addPrintAddressesParticipants = async (data) => {
         const currentDate = new Date().toISOString();
         const batch = db.batch();
         await data.map(async (i) => {
-           let assignedUUID = uuid();
-           i.id = assignedUUID;
-           i.time_stamp = currentDate;
-           const docRef = await db.collection('participantSelection').doc(assignedUUID);
-           batch.set(docRef, i);
-           await kitStatusCounterVariation('addressPrinted', 'pending');
-         });
+            let assignedUUID = uuid();
+            i.id = assignedUUID;
+            i.time_stamp = currentDate;
+            const docRef = await db.collection('participantSelection').doc(assignedUUID);
+            batch.set(docRef, i);
+            await kitStatusCounterVariation('addressPrinted', 'pending');
+        });
         await batch.commit();
         return true;
     }
-    catch(error){
+    catch (error) {
         return new Error(error);
     }
 }
@@ -2682,27 +2874,27 @@ const getParticipantsByKitStatus = async (statusType) => {
             return await shippedKitStatusParticipants();
         }
         return [];
-    } catch (error){
+    } catch (error) {
         console.error(`Error in getParticipantsByKitStatus:`, error);
         throw new Error("getParticipantsByKitStatus", error);
     }
 }
 
 
-const shippedKitStatusParticipants = async () => { 
+const shippedKitStatusParticipants = async () => {
     try {
-        const { collectionDetails, baseline, bioKitMouthwash, kitStatus, 
-                shipped, healthCareProvider, mouthwashSurveyCompletionStatus, shippedDateTime} = fieldMapping;
-        
+        const { collectionDetails, baseline, bioKitMouthwash, kitStatus,
+            shipped, healthCareProvider, mouthwashSurveyCompletionStatus, shippedDateTime } = fieldMapping;
+
         const snapshot = await db.collection("participants")
-                            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', shipped)
-                            .orderBy(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${shippedDateTime}`, 'asc')
-                            .select('Connect_ID', 
-                                `${healthCareProvider}`, 
-                                `${collectionDetails}`, 
-                                `${mouthwashSurveyCompletionStatus}`)
-                            .get();
-        
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', shipped)
+            .orderBy(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${shippedDateTime}`, 'asc')
+            .select('Connect_ID',
+                `${healthCareProvider}`,
+                `${collectionDetails}`,
+                `${mouthwashSurveyCompletionStatus}`)
+            .get();
+
         if (!snapshot.empty) {
             const participants = [];
             const kitAssemblyPromises = [];
@@ -2711,14 +2903,14 @@ const shippedKitStatusParticipants = async () => {
             for (const docs of snapshot.docs) {
                 const data = docs.data();
                 const participantConnectID = data['Connect_ID'];
-        
+
                 participants.push({
                     "Connect_ID": participantConnectID,
                     [healthCareProvider]: data[healthCareProvider],
                     [shippedDateTime]: data[collectionDetails]?.[baseline]?.[bioKitMouthwash]?.[shippedDateTime] || '',
                     [mouthwashSurveyCompletionStatus]: data[mouthwashSurveyCompletionStatus],
                 });
-                
+
                 kitAssemblyPromises.push(
                     db.collection("kitAssembly")
                         .where('Connect_ID', '==', participantConnectID)
@@ -2731,7 +2923,7 @@ const shippedKitStatusParticipants = async () => {
             printDocsCount(kitAssemblySnapshots, "shippedKitStatusParticipants");
 
             kitAssemblySnapshots.forEach((snapshot, index) => {
-                if(!snapshot.empty) {
+                if (!snapshot.empty) {
                     const kitData = snapshot.docs[0].data();
                     Object.assign(participants[index], kitData);
                 }
@@ -2747,28 +2939,28 @@ const shippedKitStatusParticipants = async () => {
 const shipKits = async (data) => {
     try {
         await db.collection("participantSelection").doc(data.id).update(
-            { 
+            {
                 kit_status: "shipped",
                 pickup_date: data.pickup_date,
                 confirm_pickup: data.confirm_pickup
             })
-            await kitStatusCounterVariation('shipped', 'assigned');
+        await kitStatusCounterVariation('shipped', 'assigned');
         return true;
-        }
-    catch(error){
+    }
+    catch (error) {
         return new Error(error);
     }
 }
 
 const storePackageReceipt = async (data) => {
     try {
-        if (data.scannedBarcode.length === 12 || data.scannedBarcode.length === 34) return await setPackageReceiptFedex(data); 
+        if (data.scannedBarcode.length === 12 || data.scannedBarcode.length === 34) return await setPackageReceiptFedex(data);
         else return await setPackageReceiptUSPS(data);
     } catch (error) {
         console.error(`Error in the package receipt process: ${error.message}`, { cause: error });
         throw error;
     }
-} 
+}
 
 
 const setPackageReceiptUSPS = async (data) => {
@@ -2777,19 +2969,19 @@ const setPackageReceiptUSPS = async (data) => {
         printDocsCount(snapshot, "setPackageReceiptUSPS");
         const docId = snapshot.docs[0].id;
         await db.collection("participantSelection").doc(docId).update(
-        { 
-            baseline: data
-        })
-            return true;
-        }
-    catch(error){
+            {
+                baseline: data
+            })
+        return true;
+    }
+    catch (error) {
         return new Error(error);
     }
 }
 
 const setPackageReceiptFedex = async (boxUpdateData) => {
     try {
-        const { bagConceptIDs, validIso8601Format } = require('./shared');        
+        const { bagConceptIDs, validIso8601Format } = require('./shared');
         let trackingNumber = boxUpdateData.scannedBarcode;
         if (trackingNumber.length === 34) trackingNumber = trackingNumber.slice(12);
 
@@ -2799,10 +2991,10 @@ const setPackageReceiptFedex = async (boxUpdateData) => {
             query = query.where(fieldMapping.submitShipmentTimestamp.toString(), '==', boxUpdateData['shipmentTimestamp']);
             delete boxUpdateData['shipmentTimestamp'];
         }
-        
+
         const snapshot = await query.get();
         printDocsCount(snapshot, "setPackageReceiptFedex");
-        
+
         if (snapshot.empty) {
             console.error('Box not found');
             return { message: 'Box Not Found', data: null };
@@ -2840,7 +3032,7 @@ const setPackageReceiptFedex = async (boxUpdateData) => {
         const bagKeysInBox = Object.keys(boxData).filter(key => bagConceptIDs.includes(key));
         for (const bag of bagKeysInBox) {
             const bagId = boxData[bag][fieldMapping.tubesBagsCids.biohazardBagScan] || boxData[bag][fieldMapping.tubesBagsCids.biohazardMouthwashBagScan] || boxData[bag][fieldMapping.tubesBagsCids.orphanScan];
-            if (bagId){
+            if (bagId) {
                 const collectionId = bagId.split(' ')[0];
                 if (collectionId) {
                     if (!collectionIdHolder[collectionId]) {
@@ -2851,8 +3043,8 @@ const setPackageReceiptFedex = async (boxUpdateData) => {
             }
         }
         await processReceiptData(collectionIdHolder, boxUpdateData, boxDocRef);
-        return ({message: 'Success!', data: null});
-    } catch(error){
+        return ({ message: 'Success!', data: null });
+    } catch (error) {
         throw new Error(`setPackageReceiptFedex error. ${error.message}`, { cause: error });
     }
 }
@@ -2895,7 +3087,7 @@ const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) 
             for (const element of collectionIdHolder[key]) {
                 const tubeId = element.split(' ')[1];
 
-                let tubeConceptId = collectionIdConversion[tubeId]; 
+                let tubeConceptId = collectionIdConversion[tubeId];
                 if (miscTubeIdSet.has(tubeId)) {
                     tubeConceptId = Object.keys(specimenData).find(tubeKey => tubeConceptIds.includes(tubeKey) && specimenData[tubeKey][fieldMapping.objectId] === element);
                 }
@@ -2907,13 +3099,13 @@ const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) 
                     updateObject[conceptIdTubes] = receivedTimestamp;
                 }
             }
-            
+
             batch.update(specimenDocRef, updateObject);
         }
 
         batch.update(boxDocRef, boxUpdateData);
         await batch.commit();
-    } catch(error){
+    } catch (error) {
         console.error('processReceiptData error:', error);
         throw new Error(`processReceiptData error: ${error.message}`, { cause: error });
     }
@@ -2921,13 +3113,13 @@ const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) 
 
 const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
     try {
-        await db.collection("bptlMetrics").doc('--metrics--').update({ 
+        await db.collection("bptlMetrics").doc('--metrics--').update({
             [currentkitStatus]: admin.firestore.FieldValue.increment(1)
         })
-        await db.collection("bptlMetrics").doc('--metrics--').update({ 
+        await db.collection("bptlMetrics").doc('--metrics--').update({
             [prevKitStatus]: admin.firestore.FieldValue.increment(-1)
         })
-            return true;
+        return true;
     }
 
     catch (error) {
@@ -2946,69 +3138,71 @@ const getBptlMetricsForShipped = async () => {
         let response = []
         const snapshot = await db.collection("participantSelection").where('kit_status', '==', 'shipped').get();
         printDocsCount(snapshot, "getBptlMetricsForShipped");
-        let shipedParticipants = snapshot.docs.map(doc =>  doc.data())
+        let shipedParticipants = snapshot.docs.map(doc => doc.data())
         const keys = ['first_name', 'last_name', 'pickup_date', 'participation_status']
-        shipedParticipants.forEach( i => { response.push(pick(i, keys) )});
+        shipedParticipants.forEach(i => { response.push(pick(i, keys)) });
         return response;
-        }
+    }
 
-    catch(error){
+    catch (error) {
         return new Error(error);
     }
 }
 
 const pick = (obj, arr) => {
     return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
-} 
+}
 
 const verifyUsersEmailOrPhone = async (req) => {
     const queries = req.query
-    if(queries.email) {
+    if (queries.email) {
         try {
             const response = await admin.auth().getUserByEmail(queries.email)
             return response ? true : false;
         }
-        catch(error) {
+        catch (error) {
             return false;
         }
-        
+
     }
-    if(queries.phone) {
+    if (queries.phone) {
         try {
             const phoneNumberStr = '+1' + queries.phone.slice(-10)
             const response = await admin.auth().getUserByPhoneNumber(phoneNumberStr)
             return response ? true : false;
         }
-        catch(error) {
+        catch (error) {
             return false;
         }
     }
 }
 
-const updateUsersCurrentLogin = async (req, uid) => {   
+const updateUsersCurrentLogin = async (req, uid) => {
     const queries = req
     if (queries.email) {
         try {
             await admin.auth().updateUser(uid,
-                {       email: queries.email,
+                {
+                    email: queries.email,
                 })
             return true
         }
-        catch(error) {
+        catch (error) {
             return error.errorInfo.code
         }
     }
     if (queries.phone) {
         try {
-            const newPhone = `+1`+queries.phone.toString().trim();
-            await admin.auth().updateUser(uid, 
-            {       phoneNumber: newPhone,
-            })
+            const newPhone = `+1` + queries.phone.toString().trim();
+            await admin.auth().updateUser(uid,
+                {
+                    phoneNumber: newPhone,
+                })
             return true
         }
-        catch(error) {
-                return error.errorInfo.code
-        }  
+        catch (error) {
+            return error.errorInfo.code
+        }
     }
 
 }
@@ -3019,23 +3213,23 @@ const updateUserEmailSigninMethod = async (email, uid) => {
     try {
         await admin.auth().updateUser(uid, {
             providerToLink: {
-            email: newEmail,
-            uid: newEmail,
-            providerId: 'email',
+                email: newEmail,
+                uid: newEmail,
+                providerId: 'email',
             },
             deleteProvider: ['phone']
         })
         return true
     }
-    catch(error) {
+    catch (error) {
         return error.errorInfo.code
-    }    
+    }
 }
 
 const updateUserPhoneSigninMethod = async (phone, uid) => {
     let newPhone = phone
     newPhone = newPhone.toString().trim();
-    newPhone = `+1`+newPhone
+    newPhone = `+1` + newPhone
     try {
         await admin.auth().updateUser(uid, {
             providerToLink: {
@@ -3048,7 +3242,7 @@ const updateUserPhoneSigninMethod = async (phone, uid) => {
         })
         return true
     }
-    catch(error) {
+    catch (error) {
         return error.errorInfo.code
     }
 }
@@ -3082,7 +3276,7 @@ const queryDailyReportParticipants = async (sitecode) => {
             return []
         }
     }
-    catch(error) {
+    catch (error) {
         return error.errorInfo
     }
 };
@@ -3103,12 +3297,12 @@ const processQueryDailyReportParticipants = async (document) => {
                 dailyReport['951355211'] = secondSnapshot.docs[0].data()['951355211'];
                 dailyReport['820476880'] = secondSnapshot.docs[0].data()['820476880'];
                 dailyReport['556788178'] = secondSnapshot.docs[0].data()['556788178'];
-                
+
                 return dailyReport;
             }
         }
     }
-    catch(error) {
+    catch (error) {
         return error.errorInfo
     }
 };
@@ -3221,7 +3415,7 @@ const processSendGridEvent = async (event) => {
 };
 
 const processTwilioEvent = async (event) => {
-    if (!["failed", "delivered", "undelivered"].includes(event.MessageStatus)) return 
+    if (!["failed", "delivered", "undelivered"].includes(event.MessageStatus)) return
     const date = new Date().toISOString();
 
     const snapshot = await db
@@ -3281,7 +3475,7 @@ const updateParticipantCorrection = async (participantData) => {
         printDocsCount(snapshot, "updateParticipantCorrection");
         if (snapshot.empty) return false
         const docId = snapshot.docs[0].id;
-        delete  participantData['token']
+        delete participantData['token']
 
         if (participantData['state.148197146'] === 'NULL') {
             delete participantData['state.148197146']
@@ -3291,11 +3485,11 @@ const updateParticipantCorrection = async (participantData) => {
         }
         if (Object.keys(participantData).length > 0) { // performs an update only if other key/value exists
             await db.collection('participants').doc(docId).update(
-                {...participantData}
+                { ...participantData }
             )
         }
         return true;
-    } catch(error) {
+    } catch (error) {
         console.error(error);
         return new Error(error);
     }
@@ -3320,7 +3514,7 @@ const getAppSettings = async (appName, selectedParamsArray) => {
             .where('appName', '==', appName)
             .select(...selectedParamsArray)
             .get();
-        
+
         if (!snapshot.empty) {
             return snapshot.docs[0].data();
         } else {
@@ -3338,18 +3532,28 @@ const getAppSettings = async (appName, selectedParamsArray) => {
  * @param {Object} data 
  */
 const updateNotifySmsRecord = async (data) => {
-  const snapshot = await db
-    .collection("notifications")
-    .where("phone", "==", data.phone)
-    .where("twilioNotificationSid", "==", data.twilioNotificationSid)
-    .get();
+    const snapshot = await db
+        .collection("notifications")
+        .where("phone", "==", data.phone)
+        .where("twilioNotificationSid", "==", data.twilioNotificationSid)
+        .get();
 
     if (snapshot.size === 1) {
-      await snapshot.docs[0].ref.update(data);
-      return true;
+        await snapshot.docs[0].ref.update(data);
+        return true;
     }
 
     return false;
+};
+
+const deleteDocuments = async (documents) => {
+    // @TODO: Optimize this to have fewer calls
+    if (!documents) return;
+    documents.forEach(async ({ docType, docId }) => {
+        const snapshot = await db.collection(docType)
+            .where('id', '==', docId)
+            .delete();
+    });
 };
 
 module.exports = {
@@ -3375,6 +3579,8 @@ module.exports = {
     deleteFirestoreDocuments,
     getParticipantData,
     updateParticipantData,
+    overwriteParticipantData,
+    resetParticipantHelper,
     storeNotificationTokens,
     notificationTokenExists,
     retrieveUserNotifications,
