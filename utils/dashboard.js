@@ -123,9 +123,10 @@ const dashboard = async (req, res) => {
               return res.status(405).json(getResponseJSON('Missing UID!', 405));
           }
           let uidToReset = body.uid;
+          let saveToDb = body.saveToDb === 'true';
           const { resetParticipantHelper } = require('./firestore');
           try {
-            const {data, deleted} = await resetParticipantHelper(uidToReset, false);
+            const {data, deleted} = await resetParticipantHelper(uidToReset, saveToDb);
             if(!data) {
                 return res.status(404).json(getResponseJSON('Participant not found', 404));
             }
