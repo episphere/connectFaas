@@ -1,6 +1,7 @@
 const admin = require('firebase-admin');
 const { Transaction } = require('firebase-admin/firestore');
-admin.initializeApp();
+const serviceAccount = require('../nih-nci-dceg-connect-dev-4a660d0c674e.json');
+admin.initializeApp({credential: admin.credential.cert(serviceAccount)});
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true }); // Skip keys with undefined values instead of erroring
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
@@ -373,8 +374,6 @@ const resetParticipantHelper = async (uid, saveToDb) => {
                 const query = await transaction.get(docQuery);
                 query.docs.forEach(doc => deletionDocsArray.push(doc));
                 return;
-                // return transaction.get(docQuery);
-                // return transaction.delete(docQuery);
             }));
             // Transactions require all reads happen before writes for some reason, hence this structure
             const participantUpdatePromise = transaction
