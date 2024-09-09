@@ -2298,8 +2298,32 @@ const getNotificationSpecByCategoryAndAttempt = async (category = "", attempt = 
   return snapshot.empty ? null : snapshot.docs[0].data();
 };
 
+const validateKitAssemblyData = (data) => {
+    // Ensure that values are uppercase and that the appropriate values match
+    if(data[fieldMapping.returnKitId]) {
+        data[fieldMapping.returnKitId] = ('' + data[fieldMapping.returnKitId]).toUpperCase();
+    }
+    if(data[fieldMapping.supplyKitId]) {
+        data[fieldMapping.supplyKitId] = ('' + data[fieldMapping.supplyKitId]).toUpperCase();
+    }
+    if(data[fieldMapping.collectionCupId]) {
+        data[fieldMapping.collectionCupId] = ('' + data[fieldMapping.collectionCupId]).toUpperCase();
+    }
+    if(data[fieldMapping.collectionCardId]) {
+        data[fieldMapping.collectionCardId] = ('' + data[fieldMapping.collectionCardId]).toUpperCase();
+    }
+    if(data[fieldMapping.returnKitId] !== data[fieldMapping.supplyKitId]) {
+        throw new Error('Return Kit ID and Supply Kit ID do not match.');
+    }
+    if(data[fieldMapping.collectionCupId] !== data[fieldMapping.collectionCardId]) {
+        throw new Error('Collection Cup ID and Collection Card ID do not match.');
+    }
+    return data;
+}
+
 const addKitAssemblyData = async (data) => {
     try {
+        validateKitAssemblyData(data);
         await db.collection('kitAssembly').add(data);
         return true;
     }
@@ -2312,6 +2336,7 @@ const addKitAssemblyData = async (data) => {
 
 const updateKitAssemblyData = async (data) => {
     try {
+        validateKitAssemblyData(data);
         const snapshot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
         printDocsCount(snapshot, "updateKitAssemblyData");
 
