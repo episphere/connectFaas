@@ -126,17 +126,19 @@ const dashboard = async (req, res) => {
           let saveToDb = body.saveToDb === 'true';
           const { resetParticipantHelper } = require('./firestore');
           try {
-            const {data, deleted} = await resetParticipantHelper(uidToReset, saveToDb);
-            if(!data) {
+            const { data, deleted } = await resetParticipantHelper(uidToReset, saveToDb);
+            if (!data) {
                 return res.status(404).json(getResponseJSON('Participant not found', 404));
             }
             return res.status(200).json({data: {data, deleted}, code: 200});
-          } catch(err) {
+          }
+          catch(err) {
             console.error('error', err);
             return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
           }
           
-        } else {
+        }
+        else {
           return res.status(403).json(getResponseJSON('Operation only permitted on dev environment', 403));
         }
       }
