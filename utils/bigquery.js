@@ -142,8 +142,33 @@ const getStatsFromBQ = async (tableName, siteCode) => {
   return rows;
 };
 
+/**
+ * 
+ * @param {string} fullNumber Phone number in the format +11234567890
+ * @returns {Promise<string[]>} Array of tokens of participant(s) having the phone number
+ */
+const getParticipantTokensByPhoneNumber = async (fullNumber) => {
+  const tenDigitsNumber = fullNumber.slice(-10);
+  const query = `SELECT token FROM \`Connect.participants\` WHERE d_348474836 = @fullNumber OR d_388711124 = @tenDigitsNumber`;
+  const options = {
+    query,
+    location: "US",
+    params: { fullNumber, tenDigitsNumber },
+  };
+  
+  let rows = [];
+  try {
+    [rows] = await bigquery.query(options);
+  } catch (error) {
+    console.error("Error calling getParticipantTokensByPhoneNumber().", error);
+  }
+  
+  return rows.map(row => row.token);
+};
+
 module.exports = {
     getTable,
     getParticipantsForNotificationsBQ,
     getStatsFromBQ,
+    getParticipantTokensByPhoneNumber,
 };

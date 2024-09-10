@@ -5,6 +5,7 @@ const db = admin.firestore();
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
+const {getParticipantTokensByPhoneNumber} = require('./bigquery');
 
 const nciCode = 13;
 const nciConceptId = `517700004`;
@@ -3241,6 +3242,10 @@ const processTwilioEvent = async (event) => {
 
         await db.collection("notifications").doc(doc.id).update(eventRecord);
 
+        if (event.ErrorCode === "21610") {
+            await updateSmsPermission(doc.data().phone, false);
+        }
+
     } else {
         console.error(`Could not find messageSid ${event.MessageSid}. Status ${event.MessageStatus}`)
     }
@@ -3350,6 +3355,31 @@ const updateNotifySmsRecord = async (data) => {
     }
 
     return false;
+};
+
+/**
+ * 
+ * @param {string} phoneNumber Phone number in +1XXXXXXXXXX format
+ * @param {boolean} isSmsPermitted Whether SMS is permitted or not
+ * @returns {Promise<number>} Number of document(s) updated
+ */
+const updateSmsPermission = async (phoneNumber, isSmsPermitted) => {
+  let count = 0;
+  const permissionCid = isSmsPermitted ? fieldMapping.yes : fieldMapping.no;
+  const tokenArray = await getParticipantTokensByPhoneNumber(phoneNumber);
+  if (tokenArray.length > 0) {
+    const batch = db.batch();
+    for (const token of tokenArray) {
+      const snapshot = await db.collection("participants").where("token", "==", token).select().get();
+      if (!snapshot.empty) {
+        batch.update(snapshot.docs[0].ref, { [fieldMapping.canWeText]: permissionCid });
+        count++;
+      }
+    }
+    await batch.commit();
+  }
+
+  return count;
 };
 
 module.exports = {
@@ -3476,4 +3506,5 @@ module.exports = {
     generateSignInWithEmailLink,
     getAppSettings,
     updateNotifySmsRecord,
+    updateSmsPermission,
 }

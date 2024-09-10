@@ -2,7 +2,7 @@ const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const { EventWebhook, EventWebhookHeader } = require("@sendgrid/eventwebhook");
 const { getResponseJSON, delay } = require("./shared");
 const { processTwilioEvent, processSendGridEvent } = require("./firestore");
-const { handleNotifySmsCallback } = require("./notifications");
+const { handleNotifySmsCallback, handleIncomingSms } = require("./notifications");
 
 /* This function will process the webhook data from Twilio */
 const handleReceivedTwilioEvent = async (req, res) => {
@@ -82,6 +82,8 @@ const webhook = async (req, res) => {
         `Tried to update Twilio Notify message statuses to Firestore. Total: ${req.body.DeliveryState.length}; Success: ${successCount}; Failure: ${failureCount}`
       );
       return res.status(200).json(getResponseJSON("OK", 200));
+    } else if (query.api === "incomingSms") {
+      return await handleIncomingSms(req, res);
     } else if (query.api === "twilio-message-status") {
         return await handleReceivedTwilioEvent(req, res);
     } else if (query.api === "sendgrid-email-status") {
