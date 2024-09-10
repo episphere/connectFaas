@@ -214,7 +214,7 @@ const defaultFlags = {
     663265240: 972455046,
     265193023: 972455046,
     220186468: 972455046,
-    320303124: 789467219,
+    320303124: 972455046,
     459098666: 972455046,
     126331570: 972455046,
     311580100: 104430631,
@@ -418,7 +418,7 @@ const kpSSOConfig = {
 }
 
 const norcSSOConfig = {
-    group: 'http://schemas.xmlsoap.org/claims/Group',
+    group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
     email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
     helpDeskUser: 'connect-help-desk-user',
     siteCode: 222222222,
@@ -624,7 +624,7 @@ const isParentEntity = async (siteDetails) => {
     return {...siteDetails, isParent, siteCodes};
 };
 
-const logIPAdddress = (req) => {
+const logIPAddress = (req) => {
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     console.log(ipAddress)
 }
@@ -1544,9 +1544,9 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
 const getTemplateForEmailLink = (
     email,
     continueUrl,
-    preferredLanguage = fieldMapping.english.toString()
+    preferredLanguage = fieldMapping.english
 ) => {
-    return preferredLanguage === fieldMapping.spanish.toString()
+    return preferredLanguage === fieldMapping.spanish
         ? `
     <html>
     <head></head>
@@ -1613,10 +1613,27 @@ const printDocsCount = (snapshot, infoStr = "") => {
 
 const unsubscribeTextObj = {
     english:
-        "<p><i>To unsubscribe from emails about Connect from the National Cancer Institute (NCI), <% click here %> .</i></p>",
+        "<p><i>To unsubscribe from emails about Connect from the National Cancer Institute (NCI), <% click here %>.</i></p>",
     spanish:
-        "<p><i>Si desea darse de baja de Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %> .</i></p>",
+        "<p><i>Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %>.</i></p>",
 };
+
+/**
+ * Returns a date string five days ago in ISO format
+ * @returns {string} - ISO string of the date five days ago
+ * @example "2024-08-05T00:00:00.000Z"
+*/
+const getFiveDaysAgoDateISO = () => { 
+    const currentDate = new Date();
+    return new Date(currentDate.setDate(currentDate.getDate() - 5)).toISOString();
+}
+
+/**
+ * Delay for a specified time, to avoid errors (race conditions, rate limiting, etc.) 
+ * @param {number} ms Delayed time in milliseconds
+ * @returns {Promise<void>}
+ */
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 module.exports = {
     getResponseJSON,
@@ -1638,7 +1655,7 @@ module.exports = {
     defaultStateFlags,
     SSOValidation,
     conceptMappings,
-    logIPAdddress,
+    logIPAddress,
     decodingJWT,
     initializeTimestamps,
     tubeKeytoNum,
@@ -1682,5 +1699,7 @@ module.exports = {
     getSecret,
     cidToLangMapper,
     printDocsCount,
-    unsubscribeTextObj
+    unsubscribeTextObj,
+    getFiveDaysAgoDateISO,
+    delay,
 };

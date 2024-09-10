@@ -1,7 +1,7 @@
-const { setHeaders, getResponseJSON, logIPAdddress, APIAuthorization, isParentEntity, isDateTimeFormat } = require('./shared');
+const { setHeaders, getResponseJSON, logIPAddress, APIAuthorization, isParentEntity, isDateTimeFormat } = require('./shared');
 
 const incentiveCompleted = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -124,7 +124,7 @@ const incentiveCompleted = async (req, res) => {
 }
 
 const eligibleForIncentive = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});

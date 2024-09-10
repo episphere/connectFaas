@@ -1,10 +1,10 @@
 const rules = require("../updateParticipantData.json");
 const submitRules = require("../submitParticipantData.json");
-const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat, refusalWithdrawalConcepts } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAddress, validIso8601Format, validPhoneFormat, validEmailFormat, refusalWithdrawalConcepts } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submitParticipantsData = async (req, res, site) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -176,7 +176,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const { checkForQueryFields, flattenObject, initializeTimestamps, userProfileHistoryKeys } = require('./shared');
     const { checkDerivedVariables } = require('./validation');
 
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
     
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -517,7 +517,7 @@ const updateUserAuthentication = async (req, res, authObj) => {
 }
 
 const participantDataCorrection = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
