@@ -971,10 +971,6 @@ const sendInstantNotification = async (requestData) => {
 };
 
 const handleIncomingSms = async (req, res) => {
-  if (req.method !== "POST") {
-    return res.status(405).json(getResponseJSON("Only POST requests are accepted!", 405));
-  }
-
   if (!isTwilioSetup) {
     await setupTwilio();
   }
@@ -984,7 +980,7 @@ const handleIncomingSms = async (req, res) => {
   }
 
   const { OptOutType: optinOptoutType } = req.body;
-  if (optinOptoutType && ["START", "STOP"].includes(optinOptoutType)) {
+  if (["START", "STOP"].includes(optinOptoutType)) {
     const isSmsPermitted = optinOptoutType === "START";
     try {
       const docCount = await updateSmsPermission(req.body.From, isSmsPermitted);

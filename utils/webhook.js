@@ -65,7 +65,7 @@ const webhook = async (req, res) => {
 
     const query = req.query;
     if (query.api === "twilio-notify-callback" && req.body.IsFinal === "true") {
-      await delay(req.body.DeliveryState.length * 10 + 500); // Make sure message records are already saved in Firestore
+      await delay(req.body.DeliveryState.length + 500); // Make sure message records are already saved in Firestore
       const promiseArray = req.body.DeliveryState.map((item) =>
         handleNotifySmsCallback(JSON.parse(item).sid, req.body.NotificationSid)
       );
@@ -82,7 +82,7 @@ const webhook = async (req, res) => {
         `Tried to update Twilio Notify message statuses to Firestore. Total: ${req.body.DeliveryState.length}; Success: ${successCount}; Failure: ${failureCount}`
       );
       return res.status(200).json(getResponseJSON("OK", 200));
-    } else if (query.api === "incomingSms") {
+    } else if (query.api === "twilio-incoming-sms") {
       return await handleIncomingSms(req, res);
     } else if (query.api === "twilio-message-status") {
         return await handleReceivedTwilioEvent(req, res);
