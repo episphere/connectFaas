@@ -4,7 +4,7 @@ const showdown = require("showdown");
 const twilio = require("twilio");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
-const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule, updateNotifySmsRecord} = require("./firestore");
+const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule, updateNotifySmsRecord, updateSmsPermission} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
 
@@ -51,6 +51,12 @@ const handleNotifySmsCallback = async (msgSid, notificationSid) => {
 
   try {
     const msg = await twilioClient.messages(msgSid).fetch();
+
+    //  If error code is 21610 ("Attempt to send to unsubscribed recipient"), set SMS permission to false
+    if (msg.errorCode === "21610") {
+      await updateSmsPermission(msg.to, false);
+    }
+
     let data = {
       twilioNotificationSid: notificationSid,
       messageSid: msg.sid,
@@ -964,6 +970,28 @@ const sendInstantNotification = async (requestData) => {
   await storeNotification(currEmailRecord);
 };
 
+const handleIncomingSms = async (req, res) => {
+  if (!isTwilioSetup) {
+    await setupTwilio();
+  }
+
+  if (!req.body || req.body.MessagingServiceSid !== messagingServiceSid) {
+    return res.status(400).json(getResponseJSON("Bad request!", 400));
+  }
+
+  const { OptOutType: optinOptoutType } = req.body;
+  if (["START", "STOP"].includes(optinOptoutType)) {
+    const isSmsPermitted = optinOptoutType === "START";
+    try {
+      const docCount = await updateSmsPermission(req.body.From, isSmsPermitted);
+      return res.status(200).json({ message: `Updated ${docCount} docs`, code: 200 });
+    } catch (error) {
+      console.error("Error updating sms permission to 'participants' collection.", error);
+      return res.status(500).json({ message: error.message, code: 500 });
+    }
+  }
+};
+
 module.exports = {
   subscribeToNotification,
   retrieveNotifications,
@@ -978,4 +1006,5 @@ module.exports = {
   sendInstantNotification,
   handleDryRun,
   handleNotifySmsCallback,
+  handleIncomingSms,
 };
