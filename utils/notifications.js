@@ -349,6 +349,13 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   let previousConnectId = 0;
   let hasNext = true;
   let fetchedDataArray = [];
+  let stopTimeStr = "";
+  // Temporarily block MC survey reminders after 45 days
+  if (["Baseline Clinical Menstrual Cycle Survey Reminders", "Baseline Research Menstrual Cycle Survey Reminders"].includes(notificationSpec.category)) {
+    let stopTime = new Date();
+    stopTime.setDate(stopTime.getDate() - 45);
+    stopTimeStr = stopTime.toISOString();
+  }
 
   while (hasNext) {
     try {
@@ -356,6 +363,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
         notificationSpecId: notificationSpec.id,
         conditions,
         cutoffTimeStr,
+        stopTimeStr,
         timeField,
         fieldsToFetch,
         limit,
