@@ -33,6 +33,7 @@ async function getParticipantsForNotificationsBQ({
   notificationSpecId = "",
   conditions = {},
   cutoffTimeStr = "",
+  stopTimeStr = "",
   timeField = "",
   fieldsToFetch = [],
   limit = 100,
@@ -54,9 +55,10 @@ async function getParticipantsForNotificationsBQ({
     bqConditionArray.push(`${bqKey} ${operator} ${typeof value === "number" ? value : `"${value}"`}`);
   }
 
-  if (cutoffTimeStr && timeField) {
+  if (timeField) {
     const bqTimeField = convertToBigqueryKey(timeField);
-    bqConditionArray.push(`${bqTimeField} <= "${cutoffTimeStr}"`);
+    if (cutoffTimeStr) bqConditionArray.push(`${bqTimeField} <= "${cutoffTimeStr}"`);
+    if (stopTimeStr) bqConditionArray.push(`${bqTimeField} >= "${stopTimeStr}"`);
   }
 
   const queryStr = `SELECT ${bqFieldArray.length === 0 ? "token" : bqFieldArray.join(", ")}
