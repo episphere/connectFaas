@@ -15,7 +15,7 @@ const promisBackfill = async (req, res) => {
 
     const uid = req.body.uid;
     try {
-        processPromisResults(uid);
+        await processPromisResults(uid);
 
         return res.status(200).json({code: 200});
     }
