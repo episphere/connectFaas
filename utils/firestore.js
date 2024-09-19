@@ -3354,11 +3354,8 @@ const updateNotifySmsRecord = async (data) => {
     return false;
 };
 
-const promisBackfill = async (req, res) => {
-    setHeadersDomainRestricted(req, res);
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-
+const triggerPromisBackfill = async () => {
     const snapshot = await db.collection('promis_v1').limit(100).get();
 
     snapshot.docs.forEach( doc => {
@@ -3370,8 +3367,6 @@ const promisBackfill = async (req, res) => {
             processPromisResults(uid);
         }
     });
-
-    return res.status(200).json({code: 200});
 }
 
 module.exports = {
@@ -3497,7 +3492,7 @@ module.exports = {
     updateParticipantCorrection,
     // updateSurveyEligibility,
     generateSignInWithEmailLink,
-    promisBackfill,
+    triggerPromisBackfill,
     getAppSettings,
     updateNotifySmsRecord,
 }
