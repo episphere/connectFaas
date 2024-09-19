@@ -5,6 +5,8 @@ const db = admin.firestore();
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
+const { setHeadersDomainRestricted } = require('./shared');
+const { processPromisResults } = require('./promis');
 
 const nciCode = 13;
 const nciConceptId = `517700004`;
@@ -3352,6 +3354,26 @@ const updateNotifySmsRecord = async (data) => {
     return false;
 };
 
+const promisBackfill = async (req, res) => {
+    setHeadersDomainRestricted(req, res);
+
+    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+
+    const snapshot = await db.collection('promis_v1').limit(100).get();
+
+    snapshot.docs.forEach( doc => {
+        const data = doc.data();
+        const uid = data['uid'];
+        
+        if (!data['D_608953994']) {
+            console.log(uid);
+            processPromisResults(uid);
+        }
+    });
+
+    return res.status(200).json({code: 200});
+}
+
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3473,7 +3495,9 @@ module.exports = {
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
     updateParticipantCorrection,
+    updateSurveyEligibility,
     generateSignInWithEmailLink,
+    promisBackfill
     getAppSettings,
     updateNotifySmsRecord,
 }

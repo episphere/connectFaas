@@ -12,6 +12,8 @@ const { participantDataCleanup } = require('./utils/participantDataCleanup');
 const { webhook } = require('./utils/webhook');
 const { heartbeat } = require('./utils/heartbeat');
 
+const { promisBackfill } = require('./utils/firestore');
+
 // API End-Points for Sites
 
 exports.incentiveCompleted = incentiveCompleted;
@@ -70,6 +72,9 @@ exports.participantDataCleanup = participantDataCleanup;
 // End-Points for Event Webhook
 
 exports.webhook = webhook;
+
+// Temporary End-Point
+exports.promis = promisBackfill;
 
 // End-Points for Public Heartbeat
 
