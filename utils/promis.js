@@ -1,4 +1,23 @@
 const CryptoJS = require('crypto-js');
+const { triggerPromisBackfill } = require('./firestore');
+const { logIPAddress, setHeaders } = require('./shared');
+
+const promisBackfill = async (req, res) => {
+    logIPAddress(req);
+    setHeaders(res);
+
+    if(req.method === 'OPTIONS') {
+        return res.status(200).json({code: 200});
+    }
+
+    if(req.method !== 'GET') {
+        return res.status(405).json({ code: 405, data: 'Only GET requests are accepted!'});
+    }
+
+    triggerPromisBackfill();
+
+    return res.status(200).json({code: 200});
+} 
 
 const generatePromisAuthToken = async () => {
 
@@ -386,5 +405,6 @@ const promisConfig = {
 }
 
 module.exports = {
-    processPromisResults
+    processPromisResults,
+    promisBackfill
 }

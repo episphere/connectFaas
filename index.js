@@ -12,7 +12,7 @@ const { participantDataCleanup } = require('./utils/participantDataCleanup');
 const { webhook } = require('./utils/webhook');
 const { heartbeat } = require('./utils/heartbeat');
 
-const { promisBackfill } = require('./utils/firestore');
+const { promisBackfill } = require('./utils/promis');
 
 // API End-Points for Sites
 
