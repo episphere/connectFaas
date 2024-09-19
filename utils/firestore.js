@@ -3495,7 +3495,7 @@ module.exports = {
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
     updateParticipantCorrection,
-    updateSurveyEligibility,
+    // updateSurveyEligibility,
     generateSignInWithEmailLink,
     promisBackfill,
     getAppSettings,
