@@ -3358,15 +3358,7 @@ const updateNotifySmsRecord = async (data) => {
 const triggerPromisBackfill = async () => {
     const snapshot = await db.collection('promis_v1').limit(100).get();
 
-    snapshot.docs.forEach( doc => {
-        const data = doc.data();
-        const uid = data['uid'];
-        
-        if (!data['D_608953994']) {
-            console.log(uid);
-            processPromisResults(uid);
-        }
-    });
+    return snapshot.docs;
 }
 
 module.exports = {
