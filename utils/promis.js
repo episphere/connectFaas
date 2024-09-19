@@ -80,6 +80,7 @@ const processPromisResults = async (uid) => {
     }
 
     Promise.all(scoresPromises).then(async () => {
+        console.log('Scores Payload:', scoresPayload);
         if (Object.keys(scoresPayload).length > 0) {
             await updateSurvey(scoresPayload, collection, doc);
         }
