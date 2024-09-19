@@ -1576,6 +1576,7 @@ const getTemplateForEmailLink = (
 const nihMailbox = 'NCIConnectStudy@mail.nih.gov'
 
 const getSecret = async (key) => {
+    console.log(`Getting secret for key: ${key}`);
     const client = new SecretManagerServiceClient();
     const [version] = await client.accessSecretVersion({
         name: key,
