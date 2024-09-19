@@ -1,5 +1,6 @@
-const fieldMapping = require('./fieldToConceptIdMapping');
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const { QuerySnapshot } = require('firebase-admin/firestore');
+const fieldMapping = require('./fieldToConceptIdMapping');
 
 const getResponseJSON = (message, code) => {
     return { message, code };
@@ -213,7 +214,7 @@ const defaultFlags = {
     663265240: 972455046,
     265193023: 972455046,
     220186468: 972455046,
-    320303124: 789467219,
+    320303124: 972455046,
     459098666: 972455046,
     126331570: 972455046,
     311580100: 104430631,
@@ -623,7 +624,7 @@ const isParentEntity = async (siteDetails) => {
     return {...siteDetails, isParent, siteCodes};
 };
 
-const logIPAdddress = (req) => {
+const logIPAddress = (req) => {
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     console.log(ipAddress)
 }
@@ -1224,6 +1225,11 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
         if (cancerSiteValidationObj.error === true) {
             return cancerSiteValidationObj;
         }
+
+        const diagnosisAwarenessValidationObj = validateDiagnosisAwareness(occurrence[fieldMapping.vitalStatusCategorical], occurrence[fieldMapping.participantDiagnosisAwareness]);
+        if (diagnosisAwarenessValidationObj.error === true) {
+            return diagnosisAwarenessValidationObj;
+        }
     }
 
     // Query existing occurrences for the participant
@@ -1254,7 +1260,7 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
  * If the 'fieldMapping.cancerSites.other' cancer site is selected, the 'fieldMapping.anotherTypeOfCancerText' field is required.
  * Else, the 'anotherTypeOfCancerText' field should not be present.
  * @param {object} cancerSitesObject - property (740819233) in the cancer occurrence object (637153953).
- * @returns {boolean} - Returns true the above requirements are met, false otherwise.
+ * @returns {object} - Returns an object with error (boolean), message (string), and data (array).
  */
 const validateCancerOccurrence = (cancerSitesObject) => {
     if (!cancerSitesObject || Object.keys(cancerSitesObject).length === 0 || !cancerSitesObject[fieldMapping.primaryCancerSiteCategorical]) {
@@ -1273,6 +1279,23 @@ const validateCancerOccurrence = (cancerSitesObject) => {
     const hasError = isOtherCancerSiteSelected ? !isAnotherTypeOfCancerTextValid : isAnotherTypeOfCancerTextValid;
 
     return { error: hasError, message: hasError ? otherCancerSiteErrorMessage : '', data: [] };
+}
+
+/**
+ * Rules: if vitalStatusCategorical is 'alive' at chart review (114227122: 337516613), participant must be aware of diagnosis (844209241: 353358909). Else, block API request.
+ * If vitalStatusCategorical is 'dead' or 'unknown' (114227122: 646675764 or 178420302), participant awareness can be yes, no, or unknown (844209241: 353358909 or 104430631 or 178420302).
+ * @param {number} vitalStatusCategorical - the participant's vital status (conceptID).
+ * @param {number} participantDiagnosisAwareness - the participant's awareness of diagnosis (conceptID).
+ * @returns {object} - Returns an object with error (boolean), message (string), and data (array).
+ */
+const validateDiagnosisAwareness = (vitalStatusCategorical, participantDiagnosisAwareness) => {
+    const isAliveAtChartReview = vitalStatusCategorical === fieldMapping.vitalStatus.alive;
+    const isParticipantAwareOfDiagnosis = participantDiagnosisAwareness === fieldMapping.yes;
+
+    const isAwarenessValid = isAliveAtChartReview ? isParticipantAwareOfDiagnosis : true;
+    const awarenessErrorMessage = "Participant must be aware of diagnosis if alive at chart review. Otherwise, awareness can be 'yes (353358909)', 'no (104430631)', or 'unknown (178420302)'.";
+
+    return { error: !isAwarenessValid, message: !isAwarenessValid ? awarenessErrorMessage : '', data: [] };
 }
 
 /**
@@ -1518,9 +1541,26 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     });
 }
 
-const getTemplateForEmailLink = (email, continueUrl) => {
-    return `
+const getTemplateForEmailLink = (
+    email,
+    continueUrl,
+    preferredLanguage = fieldMapping.english
+) => {
+    return preferredLanguage === fieldMapping.spanish
+        ? `
     <html>
+    <head></head>
+    <body marginheight="0">
+      <p>Hola,</p>
+      <p>Recibimos una solicitud para iniciar sesión en el Estudio Connect para la Prevención del Cáncer usando esta dirección de correo electrónico. Si desea iniciar sesión con su cuenta ${email}, haga clic en este enlace:</p>
+      <p><a href="${continueUrl}" target="_other" rel="nofollow">Iniciar sesión para Estudio Connect para la Prevención del Cáncer:</a></p>
+      <p>Si no solicitó este enlace, puede ignorar este correo electrónico de forma segura.</p>
+      <p>Gracias,</p>
+      <p>Su equipo del Estudio Connect para la Prevención del Cáncer</p>
+    </body>
+    </html>
+  `
+        : ` <html>
     <head></head>
     <body marginheight="0">
       <p>Hello,</p>
@@ -1530,8 +1570,7 @@ const getTemplateForEmailLink = (email, continueUrl) => {
       <p>Thanks,</p>
       <p>Your Connect for Cancer Prevention Study team</p>
     </body>
-    </html>
-  `;
+    </html>`;
 };
 
 const nihMailbox = 'NCIConnectStudy@mail.nih.gov'
@@ -1549,6 +1588,52 @@ const cidToLangMapper = {
     [fieldMapping.english]: "english",
     [fieldMapping.spanish]: "spanish",
 };
+
+/**
+ * @param {QuerySnapshot | QuerySnapshot[]} snapshot A query snapshot or an array of snapshots
+ * @param {string} infoStr Name of the function and other info to be printed
+ * @returns {void}
+ */
+const printDocsCount = (snapshot, infoStr = "") => {
+  let count = 0;
+  if (Array.isArray(snapshot)) {
+    for (const snap of snapshot) {
+      if (snap.constructor.name !== "QuerySnapshot" || snap.empty) continue;
+      count += snap.size;
+    }
+  } else {
+    if (snapshot.constructor.name !== "QuerySnapshot" || snapshot.empty) return;
+    count = snapshot.size;
+  }
+
+  if (count > 0) {
+    console.log(`Docs read from Firestore: ${count}; function: ${infoStr}`);
+  }
+};
+
+const unsubscribeTextObj = {
+    english:
+        "<p><i>To unsubscribe from emails about Connect from the National Cancer Institute (NCI), <% click here %>.</i></p>",
+    spanish:
+        "<p><i>Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %>.</i></p>",
+};
+
+/**
+ * Returns a date string five days ago in ISO format
+ * @returns {string} - ISO string of the date five days ago
+ * @example "2024-08-05T00:00:00.000Z"
+*/
+const getFiveDaysAgoDateISO = () => { 
+    const currentDate = new Date();
+    return new Date(currentDate.setDate(currentDate.getDate() - 5)).toISOString();
+}
+
+/**
+ * Delay for a specified time, to avoid errors (race conditions, rate limiting, etc.) 
+ * @param {number} ms Delayed time in milliseconds
+ * @returns {Promise<void>}
+ */
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 module.exports = {
     getResponseJSON,
@@ -1570,7 +1655,7 @@ module.exports = {
     defaultStateFlags,
     SSOValidation,
     conceptMappings,
-    logIPAdddress,
+    logIPAddress,
     decodingJWT,
     initializeTimestamps,
     tubeKeytoNum,
@@ -1613,4 +1698,8 @@ module.exports = {
     twilioErrorMessages,
     getSecret,
     cidToLangMapper,
+    printDocsCount,
+    unsubscribeTextObj,
+    getFiveDaysAgoDateISO,
+    delay,
 };

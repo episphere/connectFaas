@@ -1,10 +1,10 @@
 const rules = require("../updateParticipantData.json");
 const submitRules = require("../submitParticipantData.json");
-const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat, refusalWithdrawalConcepts } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAddress, validIso8601Format, validPhoneFormat, validEmailFormat, refusalWithdrawalConcepts } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submitParticipantsData = async (req, res, site) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -176,7 +176,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const { checkForQueryFields, flattenObject, initializeTimestamps, userProfileHistoryKeys } = require('./shared');
     const { checkDerivedVariables } = require('./validation');
 
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
     
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -418,7 +418,7 @@ const flatValidationHandler = (newData, existingData, rules, validationFunction)
  * Validate data submitted to the updateParticipantData endpoint.
  * @param {string|number|array|object} value - The value to validate. From a key:value pair submitted in the POST request.
  * @param {string|number|array|object} existingValue - The existing value to validate against. From the existing participant data in the database.
- * @param {string} path - The flattened path to the value in the data object. Example: 'state.123456789' or '637153953[].457270069' <- where [] is an array with any index value.
+ * @param {string} path - The flattened path to the value in the data object. Example: 'state.123456789' or '637153953[].149205077' <- where [] is an array with any index value.
  * @param {object} rule - The validation rule to use from updateParticipantData.json. Example: { "dataType": "string", "maxLength": 100 }
  * @returns null for success, or an error message for failure.
  */
@@ -517,7 +517,7 @@ const updateUserAuthentication = async (req, res, authObj) => {
 }
 
 const participantDataCorrection = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });

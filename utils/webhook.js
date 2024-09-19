@@ -1,7 +1,8 @@
-const { getResponseJSON } = require("./shared");
-const { processTwilioEvent, processSendGridEvent } = require("./firestore");
 const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const { EventWebhook, EventWebhookHeader } = require("@sendgrid/eventwebhook");
+const { getResponseJSON, delay } = require("./shared");
+const { processTwilioEvent, processSendGridEvent } = require("./firestore");
+const { handleNotifySmsCallback } = require("./notifications");
 
 /* This function will process the webhook data from Twilio */
 const handleReceivedTwilioEvent = async (req, res) => {
@@ -63,8 +64,25 @@ const webhook = async (req, res) => {
     }
 
     const query = req.query;
+    if (query.api === "twilio-notify-callback" && req.body.IsFinal === "true") {
+      await delay(req.body.DeliveryState.length * 10 + 500); // Make sure message records are already saved in Firestore
+      const promiseArray = req.body.DeliveryState.map((item) =>
+        handleNotifySmsCallback(JSON.parse(item).sid, req.body.NotificationSid)
+      );
+      const results = await Promise.allSettled(promiseArray);
+      let successCount = 0;
+      let failureCount = 0;
 
-    if (query.api === "twilio-message-status") {
+      for (let result of results) {
+        if (result.value) successCount++;
+        else failureCount++;
+      }
+
+      console.log(
+        `Tried to update Twilio Notify message statuses to Firestore. Total: ${req.body.DeliveryState.length}; Success: ${successCount}; Failure: ${failureCount}`
+      );
+      return res.status(200).json(getResponseJSON("OK", 200));
+    } else if (query.api === "twilio-message-status") {
         return await handleReceivedTwilioEvent(req, res);
     } else if (query.api === "sendgrid-email-status") {
         return await handleReceivedSendGridEvent(req, res);

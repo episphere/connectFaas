@@ -1,15 +1,16 @@
+const {onRequest} = require("firebase-functions/v2/https");
 const { getToken } = require('./utils/validation');
 const { getFilteredParticipants, getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
-const { sendScheduledNotifications } = require('./utils/notifications');
+const { getParticipantNotification, sendScheduledNotifications } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
 const { incentiveCompleted, eligibleForIncentive } = require('./utils/incentive');
 const { dashboard } = require('./utils/dashboard');
-const { getParticipantNotification } = require('./utils/notifications');
 const { importToBigQuery, firestoreExport, exportNotificationsToBucket, importNotificationsToBigquery } = require('./utils/events');
 const { participantDataCleanup } = require('./utils/participantDataCleanup');
 const { webhook } = require('./utils/webhook');
+const { heartbeat } = require('./utils/heartbeat');
 
 const { promisBackfill } = require('./utils/firestore');
 
@@ -51,7 +52,7 @@ exports.biospecimen = biospecimenAPIs;
 
 // End-Point for Scheduled Notifications Handler
 
-exports.sendScheduledNotifications = sendScheduledNotifications;
+exports.sendScheduledNotificationsGen2 = onRequest(sendScheduledNotifications);
 
 
 // End-Points for Exporting Firestore to Big Query
@@ -72,6 +73,9 @@ exports.participantDataCleanup = participantDataCleanup;
 
 exports.webhook = webhook;
 
-
 // Temporary End-Point
 exports.promis = promisBackfill;
+
+// End-Points for Public Heartbeat
+
+exports.heartbeat = heartbeat;
