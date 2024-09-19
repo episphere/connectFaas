@@ -26,11 +26,12 @@ const promisBackfill = async (req, res) => {
 } 
 
 const generatePromisAuthToken = async () => {
-
+    console.log('In Generate Token');
     const { getSecret } = require('./shared');
 
     const uoid = await getSecret(process.env.PROMIS_UOID);
     const token = await getSecret(process.env.PROMIS_TOKEN);
+    console.log('Post Secrets');
 
     const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
     const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
