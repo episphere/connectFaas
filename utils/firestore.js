@@ -3359,12 +3359,16 @@ const promisBackfill = async (req, res) => {
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
-    const snapshot = await db.collection('promis_v1').get();
+    const snapshot = await db.collection('promis_v1').limit(100).get();
 
     snapshot.docs.forEach( doc => {
         const data = doc.data();
         const uid = data['uid'];
-        processPromisResults(uid);
+        
+        if (!data['D_608953994']) {
+            console.log(uid);
+            processPromisResults(uid);
+        }
     });
 
     return res.status(200).json({code: 200});
