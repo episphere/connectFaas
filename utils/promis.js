@@ -14,7 +14,17 @@ const promisBackfill = async (req, res) => {
         return res.status(405).json({ code: 405, data: 'Only GET requests are accepted!'});
     }
 
-    triggerPromisBackfill();
+    const uids = await triggerPromisBackfill();
+
+    uids.forEach( doc => {
+        const data = doc.data();
+        const uid = data['uid'];
+        
+        if (!data['D_608953994']) {
+            console.log(uid);
+            processPromisResults(uid);
+        }
+    });
 
     return res.status(200).json({code: 200});
 } 
