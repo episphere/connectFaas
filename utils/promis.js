@@ -90,11 +90,11 @@ const processPromisResults = async (uid) => {
 }
 
 const getScoringData = async (id, data) => {
-
+    console.log('In Scoring Data');
     const formData = new URLSearchParams();
     const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/${id}.json`;
     const token = await generatePromisAuthToken();
-
+    console.log('Post Token');
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
     });
