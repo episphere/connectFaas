@@ -5,8 +5,6 @@ const db = admin.firestore();
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
-const { setHeadersDomainRestricted } = require('./shared');
-const { processPromisResults } = require('./promis');
 
 const nciCode = 13;
 const nciConceptId = `517700004`;
