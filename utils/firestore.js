@@ -3497,7 +3497,7 @@ module.exports = {
     updateParticipantCorrection,
     updateSurveyEligibility,
     generateSignInWithEmailLink,
-    promisBackfill
+    promisBackfill,
     getAppSettings,
     updateNotifySmsRecord,
 }
