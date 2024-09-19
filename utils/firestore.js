@@ -3352,13 +3352,6 @@ const updateNotifySmsRecord = async (data) => {
     return false;
 };
 
-
-const triggerPromisBackfill = async () => {
-    const snapshot = await db.collection('promis_v1').limit(100).get();
-
-    return snapshot.docs;
-}
-
 module.exports = {
     updateResponse,
     retrieveParticipants,
@@ -3480,9 +3473,7 @@ module.exports = {
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
     updateParticipantCorrection,
-    // updateSurveyEligibility,
     generateSignInWithEmailLink,
-    triggerPromisBackfill,
     getAppSettings,
     updateNotifySmsRecord,
 }

@@ -1,5 +1,4 @@
 const CryptoJS = require('crypto-js');
-const { triggerPromisBackfill } = require('./firestore');
 const { logIPAddress, setHeaders } = require('./shared');
 
 const promisBackfill = async (req, res) => {
@@ -10,23 +9,20 @@ const promisBackfill = async (req, res) => {
         return res.status(200).json({code: 200});
     }
 
-    if(req.method !== 'GET') {
+    if(req.method !== 'POST') {
         return res.status(405).json({ code: 405, data: 'Only GET requests are accepted!'});
     }
 
-    const uids = await triggerPromisBackfill();
+    const uid = req.body.uid;
+    try {
+        await processPromisResults(uid);
 
-    uids.forEach( doc => {
-        const data = doc.data();
-        const uid = data['uid'];
-        
-        if (!data['D_608953994']) {
-            console.log(uid);
-            processPromisResults(uid);
-        }
-    });
-
-    return res.status(200).json({code: 200});
+        return res.status(200).json({code: 200});
+    }
+    catch (error) {
+        console.error('Error in processing PROMIS backfill:', error);
+        return res.status(500).json({ code: 500, data: 'Internal Server Error!'});
+    }
 } 
 
 const generatePromisAuthToken = async () => {
