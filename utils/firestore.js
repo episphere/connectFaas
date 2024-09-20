@@ -2168,8 +2168,8 @@ const retrieveNotificationSchemaByID = async (id) => {
   return "";
 };
 
-const retrieveNotificationSchemaByCategory = async (category, getDrafts = false, sendType = "scheduled") => {
-  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", sendType);
+const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
+  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", "scheduled");
   if (category !== "all") {
     query = query.where("category", "==", category);
   } else {
@@ -2261,14 +2261,18 @@ const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
   const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
   const currTimeIsoStr = currTime.toISOString();
   const batch = db.batch();
-  const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  const snapshot = await db
+    .collection("notificationSpecifications")
+    .where("scheduleAt", "==", scheduleAt)
+    .where("isDraft", "==", false)
+    .get();
   printDocsCount(snapshot, "getNotificationSpecsByScheduleOncePerDay");
   let notificationSpecArray = [];
   for (const doc of snapshot.docs) {
     const docData = doc.data();
     const lastRunTime = docData.lastRunTime || "2020-01-01";
     const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
-    if (!docData.isDraft && docData.id && currDate !== lastRunDate) {
+    if (docData.id && currDate !== lastRunDate) {
       notificationSpecArray.push(docData);
       batch.update(doc.ref, { lastRunTime: currTimeIsoStr });
     }
