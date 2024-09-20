@@ -76,7 +76,7 @@ async function getParticipantsForNotificationsBQ({
     USING (token)
     WHERE ${bqConditionArray.length === 0 ? "1=1" : bqConditionArray.join(" AND ")}
     AND isSent IS NULL AND token > "${previousToken}" ORDER BY token LIMIT ${limit}`;
-    const [rows] = await bigquery.query(queryStr);
+  const [rows] = await bigquery.query(queryStr);
   if (rows.length === 0) return [];
 
   return rows.map(convertToFirestoreData);
