@@ -50,6 +50,8 @@ const processPromisResults = async (uid) => {
     const scoresPayload = {};
     const scoresPromises = [];
 
+    const token = await generatePromisAuthToken();
+
     for (let form of forms) {
         const sourceQuestion = surveyResults[promisConfig[form].source];
 
@@ -70,7 +72,7 @@ const processPromisResults = async (uid) => {
             }
 
             scoresPromises.push(
-                getScoringData(promisConfig[form].id, scoringData).then(scores => {
+                getScoringData(promisConfig[form].id, scoringData, token).then(scores => {
                     if (scores) {
                         scoresPayload[promisConfig[form].score] = parseInt(scores['T-Score']);
                         scoresPayload[promisConfig[form].error] = parseInt(scores['SError']);
@@ -90,12 +92,11 @@ const processPromisResults = async (uid) => {
     });
 }
 
-const getScoringData = async (id, data) => {
+const getScoringData = async (id, data, token) => {
     console.log('In Scoring Data');
     const formData = new URLSearchParams();
     const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/${id}.json`;
-    const token = await generatePromisAuthToken();
-    console.log('Post Token');
+    
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
     });
