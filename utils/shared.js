@@ -1580,7 +1580,6 @@ const getSecret = async (key) => {
     const [version] = await client.accessSecretVersion({
         name: key,
     });
-    
     const payload = version.payload.data.toString();
     return payload;
 };
