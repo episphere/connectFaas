@@ -26,12 +26,10 @@ const promisBackfill = async (req, res) => {
 } 
 
 const generatePromisAuthToken = async () => {
-    console.log('In Generate Token');
     const { getSecret } = require('./shared');
 
     const uoid = await getSecret(process.env.PROMIS_UOID);
     const token = await getSecret(process.env.PROMIS_TOKEN);
-    console.log('Post Secrets');
 
     const encodedWord = CryptoJS.enc.Utf8.parse(uoid + ":" + token);
     const encoded = CryptoJS.enc.Base64.stringify(encodedWord);
@@ -83,7 +81,6 @@ const processPromisResults = async (uid) => {
     }
 
     Promise.all(scoresPromises).then(async () => {
-        console.log('Scores Payload:', scoresPayload);
         if (Object.keys(scoresPayload).length > 0) {
             await updateSurvey(scoresPayload, collection, doc);
         }
@@ -93,16 +90,13 @@ const processPromisResults = async (uid) => {
 }
 
 const getScoringData = async (id, data, token) => {
-    console.log('In Scoring Data');
+
     const formData = new URLSearchParams();
     const url = `https://dcb-promis.cit.nih.gov/2013-01/Scores/${id}.json`;
     
     Object.keys(data).forEach(key => {
         formData.append(key, data[key]);
     });
-
-    console.log(formData);
-    console.log(token);
 
     try {
         const response = await fetch(url, {
