@@ -3,7 +3,7 @@ const sgMail = require("@sendgrid/mail");
 const showdown = require("showdown");
 const twilio = require("twilio");
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
-const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj} = require("./shared");
+const {getResponseJSON, setHeadersDomainRestricted, setHeaders, logIPAddress, redactEmailLoginInfo, redactPhoneLoginInfo, createChunkArray, validEmailFormat, getTemplateForEmailLink, nihMailbox, getSecret, cidToLangMapper, unsubscribeTextObj, getAdjustedTime} = require("./shared");
 const {getNotificationSpecById, getNotificationSpecByCategoryAndAttempt, getNotificationSpecsByScheduleOncePerDay, saveNotificationBatch, generateSignInWithEmailLink, storeNotification, checkIsNotificationSent, getNotificationSpecsBySchedule, updateNotifySmsRecord, updateSmsPermission} = require("./firestore");
 const {getParticipantsForNotificationsBQ} = require("./bigquery");
 const conceptIds = require("./fieldToConceptIdMapping");
@@ -271,36 +271,31 @@ async function sendScheduledNotifications(req, res) {
   }
 }
 
-async function handleNotificationSpec(notificationSpec) {
-  const primaryField = notificationSpec.primaryField;
-  let paramObj = {notificationSpec};
-  let cutoffTime = new Date();
-  cutoffTime.setDate(cutoffTime.getDate() - notificationSpec.time.day);
-  cutoffTime.setHours(cutoffTime.getHours() - notificationSpec.time.hour);
-  cutoffTime.setMinutes(cutoffTime.getMinutes() - notificationSpec.time.minute);
-  
-  // Do nothing if primaryField is a timestamp and time isn't reached. Otherwise, take actions.
+function getTimeParams(notificationSpec) {
+  const { primaryField, time } = notificationSpec;
+
   if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(primaryField)) {
-    const scheduledTime = new Date(primaryField);
-    if (scheduledTime > cutoffTime) return;
-    paramObj = {...paramObj, cutoffTimeStr: "", timeField: ""};
-  } else {
-    paramObj = {...paramObj, cutoffTimeStr: cutoffTime.toISOString(), timeField: primaryField};
+    const startTime = getAdjustedTime(primaryField, time.start.day, time.start.hour, time.start.minute);
+    const stopTime = getAdjustedTime(primaryField, time.stop.day, time.stop.hour, time.stop.minute);
+    const currentTime = new Date();
+    if (startTime > currentTime || currentTime > stopTime) return null;
+    return { startTimeStr: "", stopTimeStr: "", timeField: "" };
   }
 
-  await getParticipantsAndSendNotifications(paramObj);
+  const startTime = getAdjustedTime(new Date(), -time.start.day, -time.start.hour, -time.start.minute);
+  const stopTime = getAdjustedTime(new Date(), -time.stop.day, -time.stop.hour, -time.stop.minute);
+  return {
+    startTimeStr: startTime.toISOString(),
+    stopTimeStr: stopTime.toISOString(),
+    timeField: primaryField,
+  };
 }
 
-/**
- * 
- * @param {Object} paramObj
- * @param {Object} paramObj.notificationSpec Notification specification
- * @param {string} [paramObj.cutoffTimeStr=""] ISO string used to filter out participants whose primaryField is after this time
- * @param {string} [paramObj.timeField=""] Concept ID (eg 914594314) to decide which timestamp field to use for filtering
- */
-async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTimeStr = "", timeField = "" }) {
+async function handleNotificationSpec(notificationSpec) {
+  const timeParams = getTimeParams(notificationSpec);
+  if (!timeParams) return;
+
   const readableSpecString = notificationSpec.category + ", " + notificationSpec.attempt;
-  const conditions = notificationSpec.conditions;
   const emailField = notificationSpec.emailField ?? "";
   const phoneField = notificationSpec.phoneField ?? "";
   const firstNameField = notificationSpec.firstNameField ?? "";
@@ -352,28 +347,25 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
   }
 
   const limit = 1000; // SendGrid has a batch limit of 1000
-  let previousConnectId = 0;
+  let previousToken = "";
   let hasNext = true;
   let fetchedDataArray = [];
-  let stopTimeStr = "";
-  // Temporarily block MC survey reminders after 45 days
-  if (["Baseline Clinical Menstrual Cycle Survey Reminders", "Baseline Research Menstrual Cycle Survey Reminders"].includes(notificationSpec.category)) {
-    let stopTime = new Date();
-    stopTime.setDate(stopTime.getDate() - 45);
-    stopTimeStr = stopTime.toISOString();
+  let conditions = [];
+  if (notificationSpec.conditions) {
+    conditions = JSON.parse(notificationSpec.conditions);
   }
 
   while (hasNext) {
     try {
       fetchedDataArray = await getParticipantsForNotificationsBQ({
         notificationSpecId: notificationSpec.id,
+        startTimeStr: timeParams.startTimeStr,
+        stopTimeStr: timeParams.stopTimeStr,
+        timeField: timeParams.timeField,
         conditions,
-        cutoffTimeStr,
-        stopTimeStr,
-        timeField,
         fieldsToFetch,
         limit,
-        previousConnectId,
+        previousToken,
       });
     } catch (error) {
       console.error(`getParticipantsForNotificationsBQ() error running spec ID ${notificationSpec.id}.`, error);
@@ -384,7 +376,7 @@ async function getParticipantsAndSendNotifications({ notificationSpec, cutoffTim
 
     hasNext = fetchedDataArray.length === limit;
     if (hasNext) {
-      previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
+      previousToken = fetchedDataArray[fetchedDataArray.length - 1].token;
     }
 
     let notificationData = {};
@@ -639,10 +631,10 @@ const retrieveNotificationSchema = async (req, res, authObj) => {
 
   const category = req.query.category;
   const getDrafts = req.query.drafts === "true";
-  const sendType = req.query.sendType || "scheduled";
   const { retrieveNotificationSchemaByCategory } = require("./firestore");
+
   try {
-    const schemaArray = await retrieveNotificationSchemaByCategory(category, getDrafts, sendType);
+    const schemaArray = await retrieveNotificationSchemaByCategory(category, getDrafts);
     if (schemaArray.length === 0)
       return res.status(404).json({ data: [], message: `Notification schema not found for given category - ${category}`, code: 404 });
 
@@ -835,19 +827,8 @@ const dryRunNotificationSchema = async (req, res) => {
 };
 
 async function handleDryRun(spec) {
-  let timeField = spec.primaryField;
-  let cutoffTime = new Date();
-  cutoffTime.setDate(cutoffTime.getDate() - spec.time.day);
-  cutoffTime.setHours(cutoffTime.getHours() - spec.time.hour);
-  cutoffTime.setMinutes(cutoffTime.getMinutes() - spec.time.minute);
-  let cutoffTimeStr = cutoffTime.toISOString();
-
-  if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(spec.primaryField)) {
-    const scheduledTime = new Date(spec.primaryField);
-    if (scheduledTime > cutoffTime) return { data: [], message: "Ok", code: 200 };
-    timeField = "";
-    cutoffTimeStr = "";
-  }
+  const timeParams = getTimeParams(spec);
+  if (!timeParams) return { data: [], message: "Ok", code: 200 };
 
   const emailInSpec = spec.email || {};
   const smsInSpec = spec.sms || {};
@@ -859,10 +840,14 @@ async function handleDryRun(spec) {
   spec.notificationType.includes("sms") && fieldsToFetch.push(conceptIds.canWeText.toString());
 
   const limit = 1000;
-  let previousConnectId = 0;
+  let previousToken = "";
   let hasNext = true;
   let fetchedDataArray = [];
   let countObj = { email: {}, sms: {} };
+  let conditions = [];
+  if (spec.conditions) {
+    conditions = JSON.parse(spec.conditions);
+  }
 
   for (const lang of langArray) {
     countObj.email[lang] = 0;
@@ -873,12 +858,13 @@ async function handleDryRun(spec) {
     try {
       fetchedDataArray = await getParticipantsForNotificationsBQ({
         notificationSpecId: spec.id,
-        conditions: spec.conditions,
-        cutoffTimeStr,
-        timeField,
+        startTimeStr: timeParams.startTimeStr,
+        stopTimeStr: timeParams.stopTimeStr,
+        timeField: timeParams.timeField,
+        conditions,
         fieldsToFetch,
         limit,
-        previousConnectId,
+        previousToken,
       });
     } catch (error) {
       console.error(`Error dry running spec ID ${spec.id}.`, error);
@@ -888,7 +874,7 @@ async function handleDryRun(spec) {
     if (fetchedDataArray.length === 0) break;
     hasNext = fetchedDataArray.length === limit;
     if (hasNext) {
-      previousConnectId = fetchedDataArray[fetchedDataArray.length - 1].Connect_ID;
+      previousToken = fetchedDataArray[fetchedDataArray.length - 1].token;
     }
 
     for (const fetchedData of fetchedDataArray) {

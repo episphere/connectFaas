@@ -1629,6 +1629,23 @@ const getFiveDaysAgoDateISO = () => {
 }
 
 /**
+ * Create a new Date object with adjusted time
+ * @param {number | string | Date } inputTime - Input time to adjust
+ * @param {number} [days = 0] - Number of days to adjust
+ * @param {number} [hours = 0] - Number of hours to adjust
+ * @param {number} [minutes = 0] - Number of minutes to adjust
+ * @returns {Date} Adjusted time
+ */
+const getAdjustedTime = (inputTime, days = 0, hours = 0, minutes = 0) => {
+  let adjustedTime = new Date(inputTime);
+  adjustedTime.setDate(adjustedTime.getDate() + days);
+  adjustedTime.setHours(adjustedTime.getHours() + hours);
+  adjustedTime.setMinutes(adjustedTime.getMinutes() + minutes);
+
+  return adjustedTime;
+};
+
+/**
  * Delay for a specified time, to avoid errors (race conditions, rate limiting, etc.) 
  * @param {number} ms Delayed time in milliseconds
  * @returns {Promise<void>}
@@ -1702,4 +1719,5 @@ module.exports = {
     unsubscribeTextObj,
     getFiveDaysAgoDateISO,
     delay,
+    getAdjustedTime,
 };
