@@ -102,6 +102,7 @@ const getScoringData = async (id, data, token) => {
     });
 
     console.log(formData);
+    console.log(token);
 
     try {
         const response = await fetch(url, {
