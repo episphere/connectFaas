@@ -48,7 +48,7 @@ async function getParticipantsForNotificationsBQ({
 
   for (const condition of conditions) {
     if (typeof condition === "string") {
-      bqConditionArray.push(condition);
+      bqConditionArray.push(`(${condition})`);
     } else if (Array.isArray(condition) && condition.length === 3) {
       const [key, operatorStr, value] = condition;
       const operator = stringToOperatorConvt[operatorStr];
