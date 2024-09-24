@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { Transaction } = require('firebase-admin/firestore');
+const { Transaction, FieldPath } = require('firebase-admin/firestore');
 admin.initializeApp();
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true }); // Skip keys with undefined values instead of erroring
