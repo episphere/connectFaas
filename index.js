@@ -1,5 +1,5 @@
 const {onRequest} = require("firebase-functions/v2/https");
-const { getToken } = require('./utils/validation');
+const { getToken, validateUsersEmailPhone } = require('./utils/validation');
 const { getFilteredParticipants, getParticipants, identifyParticipant } = require('./utils/submission');
 const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
 const { getParticipantNotification, sendScheduledNotifications } = require('./utils/notifications');

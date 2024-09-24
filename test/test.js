@@ -5,9 +5,18 @@ const bearerToken = 'Bearer ';
 const admin = require('firebase-admin');
 const uuid = require('uuid');
 const firestore = require('../utils/firestore');
-const functions = require('../functions/index');
+const validation = require('../utils/validation');
+const functions = require('../index');
+const submission = require('../utils/submission');
 const serviceAccount = require('../nih-nci-dceg-connect-dev-4a660d0c674e'); 
+const sinon = require('sinon');
+const httpMocks = require('node-mocks-http');
+const conceptIds = require('../utils/fieldToConceptIdMapping.js');
 // admin.initializeApp({credential: admin.credential.cert(serviceAccount)}); 
+// admin.auth().createUser() // Create a temporary user
+
+// @TODO: Can I use sinon to mock out validateIDToken with something that will validate my fake  tokens and just skip this?
+// That would just make my life so much easier.
 
 // Set FIREBASE_AUTH_EMULATOR_HOST="127.0.0.1:9099" (or port used) environment variable to connect to running auth emulator
 // Set export FIREBASE_DATABASE_EMULATOR_HOST="127.0.0.1:9000" (or port used) environment variable to connect to running FireStore DB emulator
@@ -15,23 +24,169 @@ const serviceAccount = require('../nih-nci-dceg-connect-dev-4a660d0c674e');
 // Set 
 
 async function getSession() {
-    const url = await firestore.generateSignInWithEmailLink('ablaylock@emmes.com', 'https://localhost:5000');
-    console.log('url', url);
-    return url;
+    // const url = await firestore.generateSignInWithEmailLink('ablaylock@emmes.com', 'https://localhost:5000');
+    // console.log('url', url);
+    // return url;
 }
 
-describe('Log in', () => {
-    it('validateUsersEmailPhone', async () => {
-        firestore.validateUsersEmailPhone({
+describe.skip('heartbeat', async () => {
+    it('Should allow get', async() => {
+        const req = httpMocks.createRequest({
             method: 'GET',
-            query: {}
-        }, {
-            status: () => ({json: () => {}})
-        })
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.heartbeat(req, res);
     });
-    it('Generate email', async () => {
-        const url = await getSession();
+});
+
+describe.skip('validateUsersEmailPhone', () => {
+    it('Should find a user', async () => {
+        const req = httpMocks.createRequest({
+            method: 'GET',
+            query: {
+                email: 'test3@team617106.testinator.com'
+            },
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+        const res = httpMocks.createResponse();
+        await functions.validateUsersEmailPhone(req, res);
+
+        assert.equal(res.statusCode, 200);
+        const {data, code} = res._getJSONData();
+        assert.equal(code, 200);
+        assert.equal(data.accountExists, true); 
     });
+    it('Should NOT find a user', async () => {
+        const req = httpMocks.createRequest({
+            method: 'GET',
+            query: {
+                email: 'nonexistent@team617106.testinator.com'
+            },
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+        const res = httpMocks.createResponse();
+        await functions.validateUsersEmailPhone(req, res);
+
+        assert.equal(res.statusCode, 200);
+        const {data, code} = res._getJSONData();
+        assert.equal(code, 200);
+        assert.equal(data.accountExists, false); 
+    });
+});
+
+describe('getParticipants', () => {
+    it('Parent should find participants for all sites', async () => {
+        const siteCodes = Object.keys(conceptIds.siteLoginMap).map(key => conceptIds.siteLoginMap[key]);
+        const req = httpMocks.createRequest({
+            method: 'GET',
+            query: {
+                type: 'all',
+                siteCodes
+            },
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        const authObj = {
+            isParent: true,
+            siteCodes
+        };
+        await functions.getParticipants(req, res, authObj);
+        assert.equal(res.statusCode, 200);
+        const {data, code, limit, dataSize} = res._getJSONData();
+        assert.equal(code, 200);
+        assert.equal(data.length, dataSize);
+        assert.equal(limit, 100);
+        assert.equal(dataSize > 0, true);
+    });
+    it.only('Non-parent should find participants for NIH site', async () => {
+        const siteCodes = Object.keys(conceptIds.siteLoginMap).map(key => conceptIds.siteLoginMap[key]);
+        const req = httpMocks.createRequest({
+            method: 'GET',
+            query: {
+                type: 'all',
+                siteCode: 13
+            },
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        const authObj = {
+            isParent: false,
+            siteCodes: 13
+        };
+        await functions.getParticipants(req, res, authObj);
+        assert.equal(res.statusCode, 200);
+        const {data, code, limit, dataSize} = res._getJSONData();
+        assert.equal(code, 200);
+        assert.equal(data.length, dataSize);
+        assert.equal(limit, 100);
+        assert.equal(dataSize > 0, true);
+    });
+});
+
+describe.skip('getParticipantToken', async () => {
+    it('Should generate a user', async () => {
+        const uid = uuid.v4();
+        const req = httpMocks.createRequest({
+            method: 'GET',
+            query: {
+                email: 'test3@team617106.testinator.com'
+            },
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        functions.validateUsersEmailPhone(req, res)
+            .then(() => {
+                console.log('statusCode', res.statusCode);
+                assert.equal(res.statusCode, 200);
+                const data = res._getData();
+                console.log('data', data);
+            })
+            .catch(console.error);
+        
+    });
+})
+
+describe.skip('Log in', () => {
+    // const auth = admin.auth();
+    // sinon.replaceGetter(admin, 'auth', () => auth);
+    // sinon.replace(auth, 'verifyIdToken', (idToken) => {
+    //     console.log('Override attempted');
+    //     return {uid: uuid.v4()};
+    // });
+    // it.skip('validateUsersEmailPhone', async () => {
+    //     const uid = uuid.v4();
+    //     const idToken = await auth.createCustomToken(uid);
+    //     await supertest
+    //         .get('validateEmailOrPhone&email=test3@team617106.testinator.com')
+    //         .set('Authorization', bearerToken + idToken)
+    //         .expect(200);
+    // });
+    // it.skip('Generate email', async () => {
+    //     const url = await getSession();
+    // });
 });
 
 describe.skip('generateToken API: -', () => {
