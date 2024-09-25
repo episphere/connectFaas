@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { Transaction } = require('firebase-admin/firestore');
+const { Transaction, FieldPath } = require('firebase-admin/firestore');
 const serviceAccount = require('../nih-nci-dceg-connect-dev-4a660d0c674e'); 
 admin.initializeApp({credential: admin.credential.cert(serviceAccount)}); 
 // admin.initializeApp(functions.config().firebase);
@@ -8,6 +8,7 @@ db.settings({ ignoreUndefinedProperties: true }); // Skip keys with undefined va
 const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
+const {getParticipantTokensByPhoneNumber} = require('./bigquery');
 
 const nciCode = 13;
 const nciConceptId = `517700004`;
@@ -2169,8 +2170,8 @@ const retrieveNotificationSchemaByID = async (id) => {
   return "";
 };
 
-const retrieveNotificationSchemaByCategory = async (category, getDrafts = false, sendType = "scheduled") => {
-  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", sendType);
+const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
+  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", "scheduled");
   if (category !== "all") {
     query = query.where("category", "==", category);
   } else {
@@ -2262,14 +2263,18 @@ const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
   const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
   const currTimeIsoStr = currTime.toISOString();
   const batch = db.batch();
-  const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  const snapshot = await db
+    .collection("notificationSpecifications")
+    .where("scheduleAt", "==", scheduleAt)
+    .where("isDraft", "==", false)
+    .get();
   printDocsCount(snapshot, "getNotificationSpecsByScheduleOncePerDay");
   let notificationSpecArray = [];
   for (const doc of snapshot.docs) {
     const docData = doc.data();
     const lastRunTime = docData.lastRunTime || "2020-01-01";
     const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
-    if (!docData.isDraft && docData.id && currDate !== lastRunDate) {
+    if (docData.id && currDate !== lastRunDate) {
       notificationSpecArray.push(docData);
       batch.update(doc.ref, { lastRunTime: currTimeIsoStr });
     }
@@ -3471,6 +3476,10 @@ const processTwilioEvent = async (event) => {
 
         await db.collection("notifications").doc(doc.id).update(eventRecord);
 
+        if (event.ErrorCode === "21610") {
+            await updateSmsPermission(doc.data().phone, false);
+        }
+
     } else {
         console.error(`Could not find messageSid ${event.MessageSid}. Status ${event.MessageStatus}`)
     }
@@ -3580,6 +3589,31 @@ const updateNotifySmsRecord = async (data) => {
     }
 
     return false;
+};
+
+/**
+ * 
+ * @param {string} phoneNumber Phone number in +1XXXXXXXXXX format
+ * @param {boolean} isSmsPermitted Whether SMS is permitted or not
+ * @returns {Promise<number>} Number of document(s) updated
+ */
+const updateSmsPermission = async (phoneNumber, isSmsPermitted) => {
+  let count = 0;
+  const permissionCid = isSmsPermitted ? fieldMapping.yes : fieldMapping.no;
+  const tokenArray = await getParticipantTokensByPhoneNumber(phoneNumber);
+  if (tokenArray.length > 0) {
+    const batch = db.batch();
+    for (const token of tokenArray) {
+      const snapshot = await db.collection("participants").where("token", "==", token).select().get();
+      if (!snapshot.empty) {
+        batch.update(snapshot.docs[0].ref, { [fieldMapping.canWeText]: permissionCid });
+        count++;
+      }
+    }
+    await batch.commit();
+  }
+
+  return count;
 };
 
 module.exports = {
@@ -3707,4 +3741,5 @@ module.exports = {
     generateSignInWithEmailLink,
     getAppSettings,
     updateNotifySmsRecord,
+    updateSmsPermission,
 }

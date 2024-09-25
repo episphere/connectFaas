@@ -31,32 +31,38 @@ const stringToOperatorConvt = {
  */
 async function getParticipantsForNotificationsBQ({
   notificationSpecId = "",
-  conditions = {},
-  cutoffTimeStr = "",
+  conditions = [],
+  startTimeStr = "",
+  stopTimeStr = "",
   timeField = "",
   fieldsToFetch = [],
   limit = 100,
-  previousConnectId = 0,
+  previousToken = "",
 }) {
-  if (!notificationSpecId || Object.keys(conditions).length === 0) return [];
+  if (!notificationSpecId || !Array.isArray(conditions) || conditions.length === 0) return [];
 
   const bqFieldArray = fieldsToFetch
     .map(convertToBigqueryKey)
     .map((field) => `${field} AS ${field.replace(/\./g, "_DOT_")}`);
   let bqConditionArray = [];
 
-  for (const [key, val] of Object.entries(conditions)) {
-    const [operatorStr, value] = Object.entries(val)[0];
-    const operator = stringToOperatorConvt[operatorStr];
-    if (!operator) continue;
+  for (const condition of conditions) {
+    if (typeof condition === "string") {
+      bqConditionArray.push(`(${condition})`);
+    } else if (Array.isArray(condition) && condition.length === 3) {
+      const [key, operatorStr, value] = condition;
+      const operator = stringToOperatorConvt[operatorStr];
+      if (!operator) continue;
 
-    const bqKey = convertToBigqueryKey(key);
-    bqConditionArray.push(`${bqKey} ${operator} ${typeof value === "number" ? value : `"${value}"`}`);
+      const bqKey = convertToBigqueryKey(key);
+      bqConditionArray.push(`${bqKey} ${operator} ${typeof value === "number" ? value : `"${value}"`}`);
+    }
   }
 
-  if (cutoffTimeStr && timeField) {
+  if (timeField) {
     const bqTimeField = convertToBigqueryKey(timeField);
-    bqConditionArray.push(`${bqTimeField} <= "${cutoffTimeStr}"`);
+    if (startTimeStr) bqConditionArray.push(`${bqTimeField} <= "${startTimeStr}"`);
+    if (stopTimeStr) bqConditionArray.push(`${bqTimeField} >= "${stopTimeStr}"`);
   }
 
   const queryStr = `SELECT ${bqFieldArray.length === 0 ? "token" : bqFieldArray.join(", ")}
@@ -69,8 +75,7 @@ async function getParticipantsForNotificationsBQ({
         notificationSpecificationsID = "${notificationSpecId}")
     USING (token)
     WHERE ${bqConditionArray.length === 0 ? "1=1" : bqConditionArray.join(" AND ")}
-    AND isSent IS NULL AND Connect_ID > ${previousConnectId} ORDER BY Connect_ID LIMIT ${limit}`;
-
+    AND isSent IS NULL AND token > "${previousToken}" ORDER BY token LIMIT ${limit}`;
   const [rows] = await bigquery.query(queryStr);
   if (rows.length === 0) return [];
 
@@ -142,8 +147,33 @@ const getStatsFromBQ = async (tableName, siteCode) => {
   return rows;
 };
 
+/**
+ * 
+ * @param {string} fullNumber Phone number in the format +11234567890
+ * @returns {Promise<string[]>} Array of tokens of participant(s) having the phone number
+ */
+const getParticipantTokensByPhoneNumber = async (fullNumber) => {
+  const tenDigitsNumber = fullNumber.slice(-10);
+  const query = `SELECT token FROM \`Connect.participants\` WHERE d_348474836 = @fullNumber OR d_388711124 = @tenDigitsNumber`;
+  const options = {
+    query,
+    location: "US",
+    params: { fullNumber, tenDigitsNumber },
+  };
+  
+  let rows = [];
+  try {
+    [rows] = await bigquery.query(options);
+  } catch (error) {
+    console.error("Error calling getParticipantTokensByPhoneNumber().", error);
+  }
+  
+  return rows.map(row => row.token);
+};
+
 module.exports = {
     getTable,
     getParticipantsForNotificationsBQ,
     getStatsFromBQ,
+    getParticipantTokensByPhoneNumber,
 };
