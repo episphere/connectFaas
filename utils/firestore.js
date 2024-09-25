@@ -2279,7 +2279,7 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
     const { collectionDetails, baseline, bioKitMouthwash, firstName, lastName, address1, address2, city, state, zip } = fieldMapping;
 
     const addressLineOne = record?.[address1];
-    const poBoxRegex = /^(?:P\.?O\.?\s*(?:Box|B\.?)?|Post\s+Office\s+(?:Box|B)?)\s*(\s*#?\s*\d+)((?:\s+(.+))?$)$/i;
+    const poBoxRegex = /^(?:P\.?O\.?\s*(?:Box|B\.?)?|Post\s+Office\s+(?:Box|B\.?)?)\s*(\s*#?\s*\d+)((?:\s+(.+))?$)$/i;
     const isPOBoxMatch = poBoxRegex.test(addressLineOne);
     
     if (isPOBoxMatch) return null;
