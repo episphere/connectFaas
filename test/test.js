@@ -29,8 +29,25 @@ async function getSession() {
     // return url;
 }
 
-describe.skip('heartbeat', async () => {
-    it('Should allow get', async() => {
+
+
+describe('incentiveCompleted', async () => {
+    it.only('Should return 200 for options', async () => {
+        const req = httpMocks.createRequest({
+            method: 'OPTIONS',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.incentiveCompleted(req, res)
+        assert.equal(res.statusCode, 200);
+        const data = res._getJSONData();
+        assert.equal(data.code, 200);
+    });
+    it.only('Should only accept POST', async () => {
         const req = httpMocks.createRequest({
             method: 'GET',
             headers: {
@@ -40,11 +57,123 @@ describe.skip('heartbeat', async () => {
         });
     
         const res = httpMocks.createResponse();
-        await functions.heartbeat(req, res);
+        await functions.incentiveCompleted(req, res)
+        assert.equal(res.statusCode, 405);
+        const data = res._getJSONData();
+        assert.equal(data.message, 'Only POST requests are accepted!');
+        assert.equal(data.code, 405);
+    });
+});
+
+describe('participantsEligibleForIncentive', async () => {
+    it('Should return 200 for options', async () => {
+        const req = httpMocks.createRequest({
+            method: 'OPTIONS',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.participantsEligibleForIncentive(req, res)
+        assert.equal(res.statusCode, 200);
+        const data = res._getJSONData();
+        assert.equal(data.code, 200);
+    });
+    it('Should only accept GET', async () => {
+        const req = httpMocks.createRequest({
+            method: 'POST',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.incentiveCompleted(req, res)
+        assert.equal(res.statusCode, 405);
+        const data = res._getJSONData();
+        assert.equal(data.message, 'Only GET requests are accepted!');
+        assert.equal(data.code, 405);
+    });
+});
+
+describe.skip('getParticipantToken', async () => {
+    it('Should return 200 for options', async () => {
+        const req = httpMocks.createRequest({
+            method: 'OPTIONS',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.getParticipantToken(req, res)
+        assert.equal(res.statusCode, 200);
+        const data = res._getJSONData();
+        assert.equal(data.code, 200);
+    });
+    it('Should only accept POST', async () => {
+        const req = httpMocks.createRequest({
+            method: 'GET',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.getParticipantToken(req, res)
+        assert.equal(res.statusCode, 405);
+        const data = res._getJSONData();
+        assert.equal(data.message, 'Only POST requests are accepted!');
+        assert.equal(data.code, 405);
+    });
+    it('Should generate a user', async () => {
+        const uid = uuid.v4();
+        const req = httpMocks.createRequest({
+            method: 'GET',
+            query: {
+                email: 'test3@team617106.testinator.com'
+            },
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        functions.getParticipantToken(req, res)
+            .then(() => {
+                console.log('statusCode', res.statusCode);
+                assert.equal(res.statusCode, 200);
+                const data = res._getData();
+                console.log('data', data);
+            })
+            .catch(console.error);
+        
     });
 });
 
 describe.skip('validateUsersEmailPhone', () => {
+    it('Should only accept GET', async () => {
+        const req = httpMocks.createRequest({
+            method: 'POST',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.validateUsersEmailPhone(req, res)
+        assert.equal(res.statusCode, 405);
+        const data = res._getJSONData();
+        assert.equal(data.message, 'Only GET requests are accepted!');
+        assert.equal(data.code, 405);
+    });
     it('Should find a user', async () => {
         const req = httpMocks.createRequest({
             method: 'GET',
@@ -85,7 +214,72 @@ describe.skip('validateUsersEmailPhone', () => {
     });
 });
 
+describe('getFilteredParticipants', async () => {
+    it('Should return 200 for options', async () => {
+        const req = httpMocks.createRequest({
+            method: 'OPTIONS',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.getFilteredParticipants(req, res)
+        assert.equal(res.statusCode, 200);
+        const data = res._getJSONData();
+        assert.equal(data.code, 200);
+    });
+    it('Should only accept GET', async () => {
+        const req = httpMocks.createRequest({
+            method: 'POST',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.getFilteredParticipants(req, res)
+        assert.equal(res.statusCode, 405);
+        const data = res._getJSONData();
+        assert.equal(data.message, 'Only GET requests are accepted!');
+        assert.equal(data.code, 405);
+    });
+});
+
 describe('getParticipants', () => {
+    it('Should return 200 for options', async () => {
+        const req = httpMocks.createRequest({
+            method: 'OPTIONS',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.getParticipants(req, res)
+        assert.equal(res.statusCode, 200);
+        const data = res._getJSONData();
+        assert.equal(data.code, 200);
+    });
+    it('Should only accept GET', async () => {
+        const req = httpMocks.createRequest({
+            method: 'POST',
+            headers: {
+                'x-forwarded-for': 'dummy'
+            },
+            connection: {}
+        });
+    
+        const res = httpMocks.createResponse();
+        await functions.getParticipants(req, res)
+        assert.equal(res.statusCode, 405);
+        const data = res._getJSONData();
+        assert.equal(data.message, 'Only GET requests are accepted!');
+        assert.equal(data.code, 405);
+    });
     it('Parent should find participants for all sites', async () => {
         const siteCodes = Object.keys(conceptIds.siteLoginMap).map(key => conceptIds.siteLoginMap[key]);
         const req = httpMocks.createRequest({
@@ -113,7 +307,7 @@ describe('getParticipants', () => {
         assert.equal(limit, 100);
         assert.equal(dataSize > 0, true);
     });
-    it.only('Non-parent should find participants for NIH site', async () => {
+    it('Non-parent should find participants for NIH site', async () => {
         const siteCodes = Object.keys(conceptIds.siteLoginMap).map(key => conceptIds.siteLoginMap[key]);
         const req = httpMocks.createRequest({
             method: 'GET',
@@ -142,14 +336,66 @@ describe('getParticipants', () => {
     });
 });
 
-describe.skip('getParticipantToken', async () => {
-    it('Should generate a user', async () => {
-        const uid = uuid.v4();
+describe('identifyParticipant', async () => {
+
+});
+
+describe('submitParticipantsData', async () => {
+
+});
+
+describe('updateParticipantData', async () => {
+
+});
+
+describe('getParticipantNotification', async () => {
+
+});
+
+describe('dashboard', async () => {
+
+});
+
+describe('app', async () => {
+
+});
+
+describe('biospecimen', async () => {
+
+});
+
+describe('sendScheduledNotificationsGen2', async () => {
+
+});
+
+describe('importToBigQuery', async () => {
+
+});
+
+describe('scheduleFirestoreDataExport', async () => {
+
+});
+
+describe('exportNotificationsToBucket', async () => {
+
+});
+
+describe('importNotificationsToBigquery', async () => {
+
+});
+
+describe('participantDataCleanup', async () => {
+
+});
+
+describe('webhook', async () => {
+
+});
+
+describe.skip('heartbeat', async () => {
+    it('Should allow get', async() => {
         const req = httpMocks.createRequest({
             method: 'GET',
-            query: {
-                email: 'test3@team617106.testinator.com'
-            },
             headers: {
                 'x-forwarded-for': 'dummy'
             },
@@ -157,17 +403,9 @@ describe.skip('getParticipantToken', async () => {
         });
     
         const res = httpMocks.createResponse();
-        functions.validateUsersEmailPhone(req, res)
-            .then(() => {
-                console.log('statusCode', res.statusCode);
-                assert.equal(res.statusCode, 200);
-                const data = res._getData();
-                console.log('data', data);
-            })
-            .catch(console.error);
-        
+        await functions.heartbeat(req, res);
     });
-})
+});
 
 describe.skip('Log in', () => {
     // const auth = admin.auth();
