@@ -248,7 +248,7 @@ const moduleConceptsToCollections = {
     "D_166676176" :     "ssn",
     "D_390351864" :     "mouthwash_v1",
     "D_601305072" :     "promis_v1",
-    "D_968369696" :     "experience2024"
+    "D_506648060" :     "experience2024"
 }
 
 const moduleStatusConcepts = {
