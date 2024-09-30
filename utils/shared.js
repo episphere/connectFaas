@@ -246,7 +246,8 @@ const moduleConceptsToCollections = {
     "D_826163434" :     "clinicalBioSurvey_v1",
     "D_166676176" :     "ssn",
     "D_390351864" :     "mouthwash_v1",
-    "D_601305072" :     "promis_v1"
+    "D_601305072" :     "promis_v1",
+    "D_506648060" :     "experience2024"
 }
 
 const moduleStatusConcepts = {
@@ -260,7 +261,8 @@ const moduleStatusConcepts = {
     "253883960" :       "clinicalBioSurvey",
     "126331570" :       "ssn",
     "547363263" :       "mouthwash",
-    "320303124" :       "promis"
+    "320303124" :       "promis",
+    "956490759" :       "experience2024"
 }
 
 const listOfCollectionsRelatedToDataDestruction = [
@@ -277,7 +279,8 @@ const listOfCollectionsRelatedToDataDestruction = [
     "notifications",
     "promis_v1",
     "mouthwash_v1",
-    "ssn" 
+    "ssn",
+    "experience2024" 
 ];
 
 const incentiveConcepts = {
@@ -418,7 +421,7 @@ const kpSSOConfig = {
 }
 
 const norcSSOConfig = {
-    group: 'http://schemas.xmlsoap.org/claims/Group',
+    group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
     email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
     helpDeskUser: 'connect-help-desk-user',
     siteCode: 222222222,
@@ -1629,6 +1632,23 @@ const getFiveDaysAgoDateISO = () => {
 }
 
 /**
+ * Create a new Date object with adjusted time
+ * @param {number | string | Date } inputTime - Input time to adjust
+ * @param {number} [days = 0] - Number of days to adjust
+ * @param {number} [hours = 0] - Number of hours to adjust
+ * @param {number} [minutes = 0] - Number of minutes to adjust
+ * @returns {Date} Adjusted time
+ */
+const getAdjustedTime = (inputTime, days = 0, hours = 0, minutes = 0) => {
+  let adjustedTime = new Date(inputTime);
+  adjustedTime.setDate(adjustedTime.getDate() + days);
+  adjustedTime.setHours(adjustedTime.getHours() + hours);
+  adjustedTime.setMinutes(adjustedTime.getMinutes() + minutes);
+
+  return adjustedTime;
+};
+
+/**
  * Delay for a specified time, to avoid errors (race conditions, rate limiting, etc.) 
  * @param {number} ms Delayed time in milliseconds
  * @returns {Promise<void>}
@@ -1702,4 +1722,5 @@ module.exports = {
     unsubscribeTextObj,
     getFiveDaysAgoDateISO,
     delay,
+    getAdjustedTime,
 };
