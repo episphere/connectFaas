@@ -977,12 +977,12 @@ const handleIncomingSms = async (req, res) => {
   if (["START", "STOP"].includes(optinOptoutType)) {
     const isSmsPermitted = optinOptoutType === "START";
     try {
-      const docCount = await updateSmsPermission(req.body.From, isSmsPermitted);
-      return res.status(200).json({ message: `Updated ${docCount} docs`, code: 200 });
+      await updateSmsPermission(req.body.From, isSmsPermitted);
     } catch (error) {
       console.error("Error updating sms permission to 'participants' collection.", error);
-      return res.status(500).json({ message: error.message, code: 500 });
     }
+
+    return res.sendStatus(204);
   }
 };
 
