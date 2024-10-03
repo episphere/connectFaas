@@ -112,7 +112,36 @@ const dashboard = async (req, res) => {
     } else if (api === "dryRunNotificationSchema") {
         const { dryRunNotificationSchema } = require('./notifications');
         return await dryRunNotificationSchema(req, res);
-    }
+    } else if (api === 'resetUser') {
+        if (req.method !== 'POST') {
+          return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        // Only permit for dev apps
+        if (process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-dev') {
+          let body = req.body;
+          if (!body.uid) {
+              return res.status(405).json(getResponseJSON('Missing UID!', 405));
+          }
+          let uidToReset = body.uid;
+          let saveToDb = body.saveToDb === 'true';
+          const { resetParticipantHelper } = require('./firestore');
+          try {
+            const { data, deleted } = await resetParticipantHelper(uidToReset, saveToDb);
+            if (!data) {
+                return res.status(404).json(getResponseJSON('Participant not found', 404));
+            }
+            return res.status(200).json({data: {data, deleted}, code: 200});
+          }
+          catch(err) {
+            console.error('error', err);
+            return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
+          }
+          
+        }
+        else {
+          return res.status(403).json(getResponseJSON('Operation only permitted on dev environment', 403));
+        }
+      }
     else {
         return res.status(404).json(getResponseJSON('API not found!', 404));
     }
