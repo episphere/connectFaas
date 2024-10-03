@@ -270,7 +270,6 @@ module.exports = {
         nonHodgkinsLymphoma: 665036297, // Non-Hodgkin's Lymphoma
         lymphoma: 200837530, // Lymphoma
         skinMelanoma: 990319383, // Melanoma (skin)
-        skinNonMelanoma: 487917585, // Non-melanoma skin (basal or squamous)
         ovarian: 603181162,
         pancreatic: 482225200,
         prostate: 295976386,
