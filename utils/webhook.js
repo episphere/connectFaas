@@ -81,7 +81,7 @@ const webhook = async (req, res) => {
       console.log(
         `Tried to update Twilio Notify message statuses to Firestore. Total: ${req.body.DeliveryState.length}; Success: ${successCount}; Failure: ${failureCount}`
       );
-      return res.status(200).json(getResponseJSON("OK", 200));
+      return res.sendStatus(204);
     } else if (query.api === "twilio-incoming-sms") {
       return await handleIncomingSms(req, res);
     } else if (query.api === "twilio-message-status") {
