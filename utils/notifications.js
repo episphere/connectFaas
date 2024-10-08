@@ -989,9 +989,9 @@ const handleIncomingSms = async (req, res) => {
     } catch (error) {
       console.error("Error updating sms permission to 'participants' collection.", error);
     }
-
-    return res.sendStatus(204);
   }
+  
+  return res.sendStatus(204);
 };
 
 module.exports = {
