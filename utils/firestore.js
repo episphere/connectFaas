@@ -3616,6 +3616,7 @@ const updateSmsPermission = async (phoneNumber, isSmsPermitted) => {
 };
 
 module.exports = {
+    db,
     updateResponse,
     retrieveParticipants,
     verifyIdentity,
