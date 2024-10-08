@@ -901,13 +901,15 @@ async function handleDryRun(spec) {
 
 const sendInstantNotification = async (requestData) => {
   const notificationSpec = await getNotificationSpecByCategoryAndAttempt(requestData.category, requestData.attempt);
+  const errMsg = `Error sending instant notification (${requestData.category}, ${requestData.attempt}) to participant with ID ${requestData.connectId}`;
+
   if (!notificationSpec) {
-    throw new Error(`Notification spec not found for category: "${requestData.category}", attempt: "${requestData.attempt}".`);
+    throw new Error(`${errMsg}. Notification spec not found.`);
   }
 
   const isNotificationSent = await checkIsNotificationSent(requestData.token, notificationSpec.id);
   if (isNotificationSent) {
-    throw new Error(`Notification already sent for participant with ID ${requestData.connectId}.`);
+    throw new Error(`${errMsg}. Notification already sent.`);
   }
 
   const uuidStr = uuid();
@@ -942,7 +944,6 @@ const sendInstantNotification = async (requestData) => {
       },
     },
   };
-  await sgMail.send(emailDataToSg);
 
   const currEmailRecord = {
     id: uuidStr,
@@ -961,7 +962,14 @@ const sendInstantNotification = async (requestData) => {
     uid: requestData.uid,
     read: false,
   };
-  await storeNotification(currEmailRecord);
+
+  try {
+    await sgMail.send(emailDataToSg);
+    await storeNotification(currEmailRecord);
+  } catch (err) {
+    console.error(`Error with data emailDataToSg: ${emailDataToSg}`); // Can be Removed after troubleshooting
+    throw new Error(errMsg, { cause: err });
+  }
 };
 
 const handleIncomingSms = async (req, res) => {
@@ -981,9 +989,9 @@ const handleIncomingSms = async (req, res) => {
     } catch (error) {
       console.error("Error updating sms permission to 'participants' collection.", error);
     }
-
-    return res.sendStatus(204);
   }
+  
+  return res.sendStatus(204);
 };
 
 module.exports = {
