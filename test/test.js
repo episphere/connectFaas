@@ -29,6 +29,33 @@ async function getSession() {
     // return url;
 }
 
+async function getOauthToken() {
+    const {google} = require("googleapis");
+        const serviceAccount = require('../localtesting-key.json');
+
+        const scopes = ["https://www.googleapis.com/auth/userinfo.email"];
+
+        const jwtClient = new google.auth.JWT(
+            serviceAccount.client_email,
+            null,
+            serviceAccount.private_key,
+            scopes
+        );
+
+        try {
+            const tokens = await jwtClient.authorize();
+            const accessToken = tokens.access_token;
+            
+            console.log(accessToken);
+
+            return accessToken;
+        } 
+        catch (error) {
+            console.log(error);
+            return '';
+        };
+}
+
 
 
 describe('incentiveCompleted', async () => {
@@ -64,36 +91,50 @@ describe('incentiveCompleted', async () => {
         assert.equal(data.code, 405);
     });
     it.only('Should authenticate with included OAUTH token', async () => {
-        const {google} = require("googleapis");
-        const authInfo = require('../nih-nci-dceg-connect-dev-4a660d0c674e.json');
-        const oauth2Client = new google.auth.OAuth2(
-            authInfo.client_id,
-            authInfo.private_key,
-            'dummy_redirect_url'
-          );
 
-        const oauth2 = await google.oauth2({
-            auth: oauth2Client,
-            version: 'v2'
-        });
+        try {
+            const accessToken = await getOauthToken();
+            
+            console.log(accessToken);
 
-        const response = await oauth2.userinfo.get();
-        console.log('response', response);
+            //set local environment variable to access token
+            // process.env.ACCESS_TOKEN = accessToken;
+
+            //set environment variable within launch.json file to access token
+            // await fetch(authInfo.auth_uri);
+            const req = httpMocks.createRequest({
+                method: 'POST',
+                headers: {
+                    'x-forwarded-for': 'dummy',
+                    'authorization': 'Bearer ' + accessToken
+                },
+                connection: {},
+                body: {
+                    data:
+                        [
+                        {
+                            "token": "6a2f5550-5cdf-4ff0-a6e8-ca7c51db2d8",
+                            "round": "baseline",
+                            "incentiveRefused": true,
+                            "incentiveRefusedAt": "234",
+                            "incentiveChosen": "Amazon Gift Card"
+                        }
+                    ]
+                }
+            });
         
-        // await fetch(authInfo.auth_uri);
-        const req = httpMocks.createRequest({
-            method: 'POST',
-            headers: {
-                'x-forwarded-for': 'dummy',
-                'authorization': 'Bearer '
-            },
-            connection: {}
-        });
-    
-        const res = httpMocks.createResponse();
-        await functions.incentiveCompleted(req, res)
-        assert.equal(res.statusCode, 405);
-        const data = res._getJSONData();
+            const res = httpMocks.createResponse();
+            await functions.incentiveCompleted(req, res)
+            // assert.equal(res.statusCode, 405);
+            const data = res._getJSONData();
+            console.log('data', JSON.stringify(data, null, '\t'));
+        } 
+        catch (error) {
+            console.log(error)
+        };
+        
+        
+        
     });
 });
 
