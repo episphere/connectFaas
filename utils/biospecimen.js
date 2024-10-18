@@ -207,6 +207,15 @@ const biospecimenAPIs = async (req, res) => {
             }
         }
     }
+    else if (api === 'finalizeSpecimen') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const {finalizeSpecimen} = require('./firestore');
+        const requestData = req.body;
+        await finalizeSpecimen(req.body.biospecimenData, req.body.participantData, req.body.siteTubesList);
+        return res.status(200).json({message: 'Success!', code:200});
+    }
     else if (api === 'checkDerivedVariables') {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
@@ -762,7 +771,22 @@ const biospecimenAPIs = async (req, res) => {
         
         try {
             const { queryHomeCollectionAddressesToPrint } = require('./firestore');
-            const response = await queryHomeCollectionAddressesToPrint();
+            const response = await queryHomeCollectionAddressesToPrint(req.query ? req.query.limit : undefined);
+            return res.status(200).json({data: response, code:200});
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json(getResponseJSON(error.message, 500));
+        }
+    }
+
+    else if(api == 'totalAddressesToPrintCount'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        
+        try {
+            const { queryCountHomeCollectionAddressesToPrint } = require('./firestore');
+            const response = await queryCountHomeCollectionAddressesToPrint();
             return res.status(200).json({data: response, code:200});
         } catch (error) {
             console.error(error);
