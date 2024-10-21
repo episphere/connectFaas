@@ -586,7 +586,7 @@
 		"values": ["01", "02", "06", "07"],
 		"dataType": "string",
 		"mustExist": false,
-		"required": true
+		"required": false
 	},
 	"359309143.768313785": {
 		"dataType": "ISO",
