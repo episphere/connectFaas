@@ -1300,7 +1300,7 @@ const storeSpecimen = async (data) => {
     await db.collection('biospecimen').add(data);
 }
 
-const finalizeSpecimen = async (biospecimenData, participantData, siteTubesList) => {
+const submitSpecimen = async (biospecimenData, participantData, siteTubesList) => {
     // First update the biospecimenData
     // Under current conditions there will only ever be one specimen per call
     try {
@@ -1373,10 +1373,10 @@ const finalizeSpecimen = async (biospecimenData, participantData, siteTubesList)
                 const urineTubes = siteTubesList.filter(tube => tube.tubeType === "Urine");
                 const mouthwashTubes = siteTubesList.filter(tube => tube.tubeType === "Mouthwash");
 
-                let bloodCollected = (data[fieldMapping.dataDestruction.baselineBloodSampleCollected] === fieldMapping.yes);
-                let urineCollected = (data[fieldMapping.dataDestruction.baselineUrineCollected] === fieldMapping.yes);
-                let mouthwashCollected = (data[fieldMapping.dataDestruction.baselineMouthwashCollected] === fieldMapping.yes);
-                let allBaselineCollected = (data[fieldMapping.dataDestruction.allBaselineSamplesCollected] === fieldMapping.yes);
+                let bloodCollected = (participantData[fieldMapping.dataDestruction.baselineBloodSampleCollected] === fieldMapping.yes);
+                let urineCollected = (participantData[fieldMapping.dataDestruction.baselineUrineCollected] === fieldMapping.yes);
+                let mouthwashCollected = (participantData[fieldMapping.dataDestruction.baselineMouthwashCollected] === fieldMapping.yes);
+                let allBaselineCollected = (participantData[fieldMapping.dataDestruction.allBaselineSamplesCollected] === fieldMapping.yes);
 
                 baselineCollections.forEach(collection => {
 
@@ -3891,7 +3891,7 @@ module.exports = {
     addNewBiospecimenUser,
     removeUser,
     storeSpecimen,
-    finalizeSpecimen,
+    submitSpecimen,
     updateSpecimen,
     searchSpecimen,
     searchShipments,

@@ -207,13 +207,13 @@ const biospecimenAPIs = async (req, res) => {
             }
         }
     }
-    else if (api === 'finalizeSpecimen') {
+    else if (api === 'submitSpecimen') {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
-        const {finalizeSpecimen} = require('./firestore');
+        const {submitSpecimen} = require('./firestore');
         const requestData = req.body;
-        await finalizeSpecimen(req.body.biospecimenData, req.body.participantData, req.body.siteTubesList);
+        await submitSpecimen(req.body.biospecimenData, req.body.participantData, req.body.siteTubesList);
         return res.status(200).json({message: 'Success!', code:200});
     }
     else if (api === 'checkDerivedVariables') {
