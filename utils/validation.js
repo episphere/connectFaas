@@ -181,22 +181,7 @@ const getToken = async (req, res) => {
     }
 }
 
-const checkDerivedVariables = async (token, siteCode) => {
-    
-    const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
-
-    const response = await getParticipantData(token, siteCode);
-    const specimenArray = await getSpecimenCollections(token, siteCode);
-    
-    const data = response.data;
-    const doc = response.id;
-
-    const uid = data.state.uid
-
-    if(!uid) return;
-
-    const surveys = await retrieveUserSurveys(uid, ["D_299215535", "D_826163434"]);
-
+const processDerivedVariables = (data, surveys, specimenArray) => {
     let updates = {};
 
     let incentiveEligible = false;
@@ -412,6 +397,70 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...refusalUpdates};
     }
 
+    // @TODO: We appear to have lost the kitStatus: initialized work in here; put that back in and re-test the submit specimen workflow.
+    // We do need to skip PO boxes when we are doing this, and we may need to revert
+    // initialized status if an address changes to a PO box?
+    // Also check if we've already set this to another status and preserve it if so.
+    
+    // Conditions for initialized: baselineMouthwashSample is no, bloodOrUrineCollected is yes, 
+    // kitStatus does not yet have a value, processParticipantHomeMouthwashKitData passes
+    const {processParticipantHomeMouthwashKitData} = require('./firestore');
+    if(
+        data[conceptIds.withdrawConsent] == conceptIds.no &&
+        data[conceptIds.participantDeceasedNORC] == conceptIds.no &&
+        data[conceptIds.activityParticipantRefusal] && data[conceptIds.activityParticipantRefusal][conceptIds.baselineMouthwashSample] == conceptIds.no &&
+        data[conceptIds.collectionDetails] && data[conceptIds.collectionDetails][conceptIds.baseline] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bloodOrUrineCollected] == conceptIds.yes &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bloodOrUrineCollectedTimestamp] >= '2024-04-01T00:00:00.000Z' &&
+        (
+            !data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] ||
+            data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash][conceptIds.kitStatus]
+        )
+    ) {
+        console.log('Preliminary mouthwash kit eligibility conditions met for data', JSON.stringify(data, null, '\t'));
+        const isEligible = !!processParticipantHomeMouthwashKitData(data, true);
+        if(isEligible) {
+            console.log('Data is eligible');
+            updates[`${conceptIds.collectionDetails}.${conceptIds.baseline}.${conceptIds.bioKitMouthwash}.${conceptIds.kitStatus}`] = conceptIds.initialized;
+        }
+    } else if(
+        data[conceptIds.collectionDetails] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] == conceptIds.initialized
+    ) {
+        console.log('Participant already has initialized value in data', JSON.stringify(data, null, '\t'));
+        // Conditions to remove initialized: status is initialized and processParticipantHomeMouthwashKitData fails
+        const isEligible = !!processParticipantHomeMouthwashKitData(data, true);
+        if(!isEligible) {
+            updates[`${conceptIds.collectionDetails}.${conceptIds.baseline}.${conceptIds.bioKitMouthwash}.${conceptIds.kitStatus}`] = undefined;
+        }
+    } else {
+        console.log('Home mouthwash kit eligibility conditions not met for data', JSON.stringify(data, null, '\t'));
+    }
+
+
+    return updates;
+}
+
+const checkDerivedVariables = async (token, siteCode) => {
+    
+    const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
+
+    const response = await getParticipantData(token, siteCode);
+    const specimenArray = await getSpecimenCollections(token, siteCode);
+    
+    const data = response.data;
+    const doc = response.id;
+
+    const uid = data.state.uid
+
+    if(!uid) return;
+
+    const surveys = await retrieveUserSurveys(uid, ["D_299215535", "D_826163434"]);
+
+    const updates = processDerivedVariables(data, surveys, specimenArray);
+
     console.log('Participant data updates:', updates);
 
     if(Object.keys(updates).length > 0) {
@@ -569,6 +618,7 @@ module.exports = {
     generateToken,
     validateToken,
     getToken,
+    processDerivedVariables,
     checkDerivedVariables,
     validateUsersEmailPhone,
     updateParticipantFirebaseAuthentication,
