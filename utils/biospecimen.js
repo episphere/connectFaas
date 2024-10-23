@@ -212,9 +212,8 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         const {submitSpecimen} = require('./firestore');
-        const requestData = req.body;
-        await submitSpecimen(req.body.biospecimenData, req.body.participantData, req.body.siteTubesList);
-        return res.status(200).json({message: 'Success!', code:200});
+        const json = await submitSpecimen(req.body.biospecimenData, req.body.participantData, req.body.siteTubesList);
+        return res.status(json.code).json(json);
     }
     else if (api === 'checkDerivedVariables') {
         if(req.method !== 'POST') {
@@ -705,7 +704,8 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { assignKitToParticipant } = require('./firestore');
             const response = await assignKitToParticipant(requestData);
-            return res.status(200).json({ response, code:200 });
+            const code = response.success ? 200 : 500;
+            return res.status(code).json({ ...response, code });
         }
         catch (error) {
             console.error(error);

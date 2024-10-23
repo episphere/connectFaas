@@ -78,6 +78,33 @@ module.exports = {
     tubeDeviationLeakedSpilled: 757246707,
     tubeDeviationUnexpectedTubeSize: 777486216,
 
+    // Specimen baselines
+    baselineUrineCollected: 167958071,
+    baselineBloodAndUrineIsRefused: 526455436,
+    baselineMouthwashCollected: 684635302,
+    baselineBloodSampleCollected: 878865966,
+    allBaselineSamplesCollected: 254109640,
+
+    // Specimen submission
+    collectionLocation: 951355211,
+    collectionScannedTime: 915838974,
+    bloodCollectionSetting: 592099155,
+    baselineBloodCollectedTime: 561681068,
+    clinicalBloodCollected: 534041351,
+    clinicalBloodCollectedTime: 398645039,
+    urineCollectionSetting: 718172863,
+    baselineUrineCollected: 167958071,
+    baselineUrineCollectedTime: 847159717,
+    clinicalUrineCollected: 210921343,
+    clinicalUrineCollectedTime: 541311218,
+    mouthwashCollectionSetting: 915179629,
+    baselineMouthwashCollected: 684635302,
+    baselineMouthwashCollectedTime: 448660695,
+    anySpecimenCollected: 316824786,
+    // This appears to be identical to bloodOrUrineCollectedTimestamp
+    // but is listed separately for clarity
+    anySpecimenCollectedTime: 740582332,
+
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,
         serumSeparatorTube2: 703954371,

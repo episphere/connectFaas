@@ -1318,7 +1318,7 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
             }
 
             // Get the existing participant data (necessary for data reconciliation purposes)
-            const participantUid = participantData.uid;
+            const participantUid = participantData.state && participantData.state.uid ? participantData.state.uid : participantData.uid;
             if(!participantUid) {
                 throw new Error('Missing participant UID!');
             }
@@ -1355,28 +1355,173 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
             
             const specimenCollectionQuery = db.collection('biospecimen')
                 .where('token', '==', participantToken)
-                .where('827220437', '==', siteCode);
+                .where(fieldMapping.healthCareProvider.toString(), '==', siteCode)
+                .where(fieldMapping.collectionId.toString(), '==', biospecimenData[fieldMapping.collectionId]);
             const specimenCollectionSnapshot = await transaction.get(specimenCollectionQuery);
             const specimenArray = specimenCollectionSnapshot.size > 0 ? 
                 specimenCollectionSnapshot.docs.map(document => document.data()) :
                 [];
 
             let participantUpdates = {};
+            let settings = {};
+            let visit = biospecimenData[fieldMapping.collectionSelectedVisit];
             // Now we potentially need to updateBaselineData
             const baselineVisit = (biospecimenData[fieldMapping.collectionSelectedVisit] === fieldMapping.baseline);
             const clinicalResearchSetting = (biospecimenData[fieldMapping.collectionSetting] === fieldMapping.research || biospecimenData[fieldMapping.collectionSetting] === fieldMapping.clinical);
             if (baselineVisit && clinicalResearchSetting) {
-                // @TODO: Update baseline data
+                // Update baseline data
                 const baselineCollections = specimenArray.filter(specimen => specimen[fieldMapping.collectionSelectedVisit] === fieldMapping.baseline);
 
                 const bloodTubes = siteTubesList.filter(tube => tube.tubeType === "Blood tube");
                 const urineTubes = siteTubesList.filter(tube => tube.tubeType === "Urine");
                 const mouthwashTubes = siteTubesList.filter(tube => tube.tubeType === "Mouthwash");
 
-                let bloodCollected = (participantData[fieldMapping.dataDestruction.baselineBloodSampleCollected] === fieldMapping.yes);
-                let urineCollected = (participantData[fieldMapping.dataDestruction.baselineUrineCollected] === fieldMapping.yes);
-                let mouthwashCollected = (participantData[fieldMapping.dataDestruction.baselineMouthwashCollected] === fieldMapping.yes);
-                let allBaselineCollected = (participantData[fieldMapping.dataDestruction.allBaselineSamplesCollected] === fieldMapping.yes);
+                let bloodCollected = (participantData[fieldMapping.baselineBloodSampleCollected] === fieldMapping.yes);
+                let urineCollected = (participantData[fieldMapping.baselineUrineCollected] === fieldMapping.yes);
+                let mouthwashCollected = (participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes);
+                let allBaselineCollected = (participantData[fieldMapping.allBaselineSamplesCollected] === fieldMapping.yes);
+
+                let bloodTubesLength = 0
+                let urineTubesLength = 0
+                let mouthwashTubesLength = 0
+
+                const collectionSetting = biospecimenData[fieldMapping.collectionSetting];
+                const isResearch = collectionSetting === fieldMapping.research;
+                const isClinical = collectionSetting === fieldMapping.clinical;
+
+                // Build the collection details
+                if (participantData[fieldMapping.collectionDetails]) {
+                    settings = participantData[fieldMapping.collectionDetails];
+                    if (!settings[visit]) settings[visit] = {};
+            
+                } else {
+                    settings = {
+                        [visit]: {}
+                    }
+                }
+
+                // @TODO: Finish conceptIds -> fieldMapping swaps, checking each key for name, path + existence against biospecimen.js
+                // Then confirm that this now matches the full update process used in the previous code
+                // and review entries in Firestore
+            
+                if (!settings[visit][fieldMapping.bloodCollectionSetting]) {
+                    bloodTubes.forEach(tube => {
+                        const tubeIsCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                        if(tubeIsCollected) {
+                            settings[visit][fieldMapping.bloodCollectionSetting] = collectionSetting;
+                            if(isResearch) {
+                                settings[visit][fieldMapping.baselineBloodCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                            }
+                            else if(isClinical) {
+                                settings[visit][fieldMapping.clinicalBloodCollected] = fieldMapping.yes;
+                                settings[visit][fieldMapping.clinicalBloodCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+            
+                                settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.yes;
+            
+                                if(!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                                    settings[visit][fieldMapping.anySpecimenCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+                                }
+                            }
+                            bloodTubesLength += 1
+                        }
+                    });
+                }
+                else if (settings[visit][fieldMapping.baselineBloodCollectedTime] !== '' ||  settings[visit][fieldMapping.clinicalBloodCollectedTime] !== ''){
+                    const participantBloodCollected = participantData[fieldMapping.baselineBloodSampleCollected] === fieldMapping.yes;
+                    const totalBloodTubesAvail = bloodTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+                    if (totalBloodTubesAvail.length === 0 && participantBloodCollected) {
+                        delete settings[visit][fieldMapping.bloodCollectionSetting]; // derived variables & timestamp are updated only if all the blood tubes are unchecked
+                        if (isResearch) {
+                            delete settings[visit][fieldMapping.baselineBloodCollectedTime];
+                        }
+                        else if (isClinical) {
+                            settings[visit][fieldMapping.clinicalBloodCollected] = fieldMapping.no;
+                            delete settings[visit][fieldMapping.clinicalBloodCollectedTime];
+            
+                            if (urineTubesLength === 0 && mouthwashTubesLength === 0) { // anySpecimenCollected variable will only be updated to NO if mouthwash & urine specimens are not present.
+                                settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.no;
+                                if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                                    delete settings[visit][fieldMapping.anySpecimenCollectedTime];
+                                }
+                            }
+                        }
+                        participantUpdates[fieldMapping.baselineBloodSampleCollected] = fieldMapping.no;
+                        bloodTubesLength = totalBloodTubesAvail.length;
+                    }
+                }
+            
+                if (!settings[visit][fieldMapping.urineCollectionSetting]) {
+                    urineTubes.forEach(tube => {
+                        const tubeIsCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                        if (tubeIsCollected) {
+                            settings[visit][fieldMapping.urineCollectionSetting] = collectionSetting;
+                            if (isResearch) {
+                                settings[visit][fieldMapping.baselineUrineCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                            }
+                            else if (isClinical) {
+                                settings[visit][fieldMapping.clinicalUrineCollected] = fieldMapping.yes;
+                                settings[visit][fieldMapping.clinicalUrineCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+            
+                                settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.yes;
+            
+                                if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                                    settings[visit][fieldMapping.anySpecimenCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+                                }
+                            }
+                            urineTubesLength += 1
+                        }
+                    });
+                }
+                else if (settings[visit][fieldMapping.baselineUrineCollectedTime] !== '' ||  settings[visit][fieldMapping.clinicalUrineCollectedTime] !== '') {
+                    const participantUrineCollected = participantData[fieldMapping.baselineUrineCollected] === fieldMapping.yes;
+                    const totalUrineTubesAvail = urineTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+                    if (totalUrineTubesAvail.length === 0 && participantUrineCollected) {
+                        delete settings[visit][fieldMapping.urineCollectionSetting];
+                        if(isResearch) {
+                            delete settings[visit][fieldMapping.baselineUrineCollectedTime];
+                        }
+                        else if (isClinical) {
+                            settings[visit][fieldMapping.clinicalUrineCollected] = fieldMapping.no;
+                            delete settings[visit][fieldMapping.clinicalUrineCollectedTime];
+            
+                            if (bloodTubesLength === 0 && mouthwashTubesLength === 0) { // anySpecimenCollected variable will only be updated to NO if mouthwash & blood specimens are not present.
+                                settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.no;
+                                if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                                    delete settings[visit][fieldMapping.anySpecimenCollectedTime];
+                                }
+                            }
+                        }
+                        derivedVariables[fieldMapping.baselineUrineCollected] = fieldMapping.no;
+                        urineTubesLength = totalUrineTubesAvail.length;
+                    }  
+                }
+            
+                if (!settings[visit][fieldMapping.mouthwashCollectionSetting]) {
+                    mouthwashTubes.forEach(tube => {
+                        const isTubeCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                        if (isTubeCollected) {
+                            settings[visit][fieldMapping.mouthwashCollectionSetting] = collectionSetting;
+                            if (isResearch) {
+                                settings[visit][fieldMapping.baselineMouthwashCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                            }
+                        mouthwashTubesLength += 1
+                        }
+                    });
+                }
+                else if (settings[visit][fieldMapping.baselineMouthwashCollectedTime] !== '' && participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes) {
+                    const isParticipantMouthwashCollected = participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes;
+                    const totalMouthwasTubesAvail = mouthwashTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+                    if (totalMouthwasTubesAvail.length === 0 &&  isParticipantMouthwashCollected) {
+                        delete settings[visit][fieldMapping.mouthwashCollectionSetting]
+                        if (isResearch) {
+                            delete settings[visit][fieldMapping.baselineMouthwashCollectedTime];
+                        }
+                        derivedVariables[fieldMapping.baselineMouthwashCollected] = fieldMapping.no;
+                        mouthwashTubesLength = totalMouthwasTubesAvail.length;
+                    }
+                }
+
+                participantUpdates[fieldMapping.collectionDetails] = settings;
 
                 baselineCollections.forEach(collection => {
 
@@ -1412,19 +1557,16 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
                 }
 
                 participantUpdates = {
-                    [fieldMapping.dataDestruction.baselineBloodSampleCollected]: bloodCollected ? fieldMapping.yes : fieldMapping.no,
-                    [fieldMapping.dataDestruction.baselineUrineCollected]: urineCollected ? fieldMapping.yes : fieldMapping.no,
-                    [fieldMapping.dataDestruction.baselineMouthwashCollected]: mouthwashCollected ? fieldMapping.yes : fieldMapping.no,
-                    [fieldMapping.dataDestruction.allBaselineSamplesCollected]: allBaselineCollected ? fieldMapping.yes : fieldMapping.no,
-                    uid: participantData.state.uid
+                    ...participantUpdates,
+                    [fieldMapping.baselineBloodSampleCollected]: bloodCollected ? fieldMapping.yes : fieldMapping.no,
+                    [fieldMapping.baselineUrineCollected]: urineCollected ? fieldMapping.yes : fieldMapping.no,
+                    [fieldMapping.baselineMouthwashCollected]: mouthwashCollected ? fieldMapping.yes : fieldMapping.no,
+                    [fieldMapping.allBaselineSamplesCollected]: allBaselineCollected ? fieldMapping.yes : fieldMapping.no,
+                    uid: participantUid
                 };
 
             }
 
-            // Now check the derived variables on the participant
-
-            
-            
             // Now get the user surveys
             const { moduleConceptsToCollections } = require('./shared');
             const surveyData = [];
@@ -1436,7 +1578,7 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
                 try {
                     const snapshot = await transaction.get(
                         db.collection(moduleConceptsToCollections[concept])
-                            .where('uid', '==', uid)
+                            .where('uid', '==', participantUid)
                         );
     
                     if (snapshot.size > 0) {
@@ -1446,7 +1588,7 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
                     return null;
                 } catch (error) {
                     console.error(`Error fetching ${concept} survey data: ${error}`);
-                    return null;
+                    throw error; // We do still want this to error if there's a problem
                 }
             });
 
@@ -1459,14 +1601,23 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
                 });
 
             // Now get the derived variable updates
-            const updates = processDerivedVariables(participantSnapshotData, surveyData, specimenArray);
-            participantUpdates = { ...updates, ...participantUpdates};
+            const {processDerivedVariables} = require('./validation');
+            const updates = processDerivedVariables({...participantSnapshotData, ...participantUpdates}, surveyData, specimenArray);
+            participantUpdates = { ...participantData, ...updates, ...participantUpdates};
             // Now run equivalent of updateParticipantData(participantSnapshot.docs[0].id, updates);
             transaction.update(participantSnapshot.docs[0].ref, participantUpdates);
             transaction.update(specimenCollectionSnapshot.docs[0].ref, biospecimenData);
         });
+        return {
+            code: 200,
+            message: 'Success'
+        }
     } catch(err) {
-
+        console.error('error', err);
+        return {
+            code: 500,
+            message: err && err.message ? err.message : (err + '')
+        }
     }
 }
 
@@ -2622,7 +2773,6 @@ const queryCountHomeCollectionAddressesToPrint = async () => {
         const snapshot = await db.collection('participants')
             .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', initialized)
             .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoDateISO)
-            // .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
             .count()
             .get();
 
@@ -2727,133 +2877,153 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
 }
 
 const assignKitToParticipant = async (data) => {
-    let toReturn;
-    try {
-        const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
-            assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
-            kitType, mouthwashKit } = fieldMapping;
+    let kitAssignmentResult;
+    const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
+        assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
+        kitType, mouthwashKit } = fieldMapping;
 
-        await db.runTransaction(async (transaction) => {
-            // Check the supply kit tracking number and see if it matches the return kit tracking number
-            // of any kits including this one or the supply kit tracking number of any other kits
+    await db.runTransaction(async (transaction) => {
+        // Check the supply kit tracking number and see if it matches the return kit tracking number
+        // of any kits including this one or the supply kit tracking number of any other kits
 
-            const kitsWithDuplicateReturnTrackingNumbers = await transaction.get(
-                db.collection("kitAssembly").where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
-            );
+        const kitsWithDuplicateReturnTrackingNumbers = await transaction.get(
+            db.collection("kitAssembly").where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
+        );
 
-            if(kitsWithDuplicateReturnTrackingNumbers.size > 0) {
-                toReturn = false;
-                return;
-            }
-
-            const otherKitsUsingSupplyKitTrackingNumber = await transaction.get(
-                db.collection("kitAssembly")
-                .where(`${supplyKitTrackingNum}`, '==', data[supplyKitTrackingNum])
-            );
-
-            if(otherKitsUsingSupplyKitTrackingNumber.size > 1) {
-                    toReturn = false;
-                    return;
-            } else if (otherKitsUsingSupplyKitTrackingNumber.size === 1) {
-                // check if the kit found is the current kit
-                // Doing this instead of including it in the query to avoid creating an unnecessary composite index
-                const possibleDuplicate = otherKitsUsingSupplyKitTrackingNumber.docs[0];
-                const possibleDuplicateKitId = possibleDuplicate.data()[supplyKitId];
-                if(possibleDuplicateKitId !== data[supplyKitId]) {
-                    toReturn = false;
-                    return;
-                }
-            }
-
-            const kitSnapshot = await transaction.get(
-                db.collection("kitAssembly")
-                    .where(`${supplyKitId}`, '==', data[supplyKitId])
-                    .where(`${kitStatus}`, '==', pending)
-            );
-            printDocsCount(kitSnapshot, "assignKitToParticipant; collection: kitAssembly");
-
-            if (kitSnapshot.size !== 1) {
-                toReturn = false;
-                return;
-            }
-
-            const kitDoc = kitSnapshot.docs[0];
-            data[uniqueKitID] = kitDoc.data()[uniqueKitID];
-            const kitData = {
-                [supplyKitTrackingNum]: data[supplyKitTrackingNum],
-                [kitStatus]: assigned,
-                [collectionRound]: baseline,
-                'Connect_ID': parseInt(data['Connect_ID'])
+        if(kitsWithDuplicateReturnTrackingNumbers.size > 0) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Duplicate return tracking number found",
+                duplicateReturnTrackingNumber: data[supplyKitTrackingNum]
             };
+            return;
+        }
 
+        const otherKitsUsingSupplyKitTrackingNumber = await transaction.get(
+            db.collection("kitAssembly")
+            .where(`${supplyKitTrackingNum}`, '==', data[supplyKitTrackingNum])
+        );
 
-            const participantSnapshot = await transaction.get(
-                db.collection("participants")
-                    .where('Connect_ID', '==', parseInt(data['Connect_ID']))
-            );
-            printDocsCount(participantSnapshot, "assignKitToParticipant; collection: participants");
-
-            // 1109: Check if the participant already has another baseline kit assigned and error if it does.
-            // Note that this will need to be modified in the future to recognize and handle replacement kits
-            // once that functionality is added
-            const kitAssemblyQuery =  db.collection("kitAssembly")
-                .where('Connect_ID', '==', parseInt(data['Connect_ID']))
-                .where(kitStatus, '==', assigned)
-                .where(collectionRound, '==', baseline)
-                .select([supplyKitId]);
-            const kitAssemblySnapshot = await transaction.get(kitAssemblyQuery);
-
-            printDocsCount(participantSnapshot, "assignKitToParticipant; collection: possible duplicate kits");
-
-
-            if(kitAssemblySnapshot.size > 0) {
-                // Check to see if there are any baseline kits which are already assigned but with a different kit ID
-                // If so, error
-                const duplicateKit = kitAssemblySnapshot.docs.find(doc => {
-                    const docData = doc.data();
-                    return docData[supplyKitId] !== data[supplyKitId];
-                });
-                if(duplicateKit) {
-                    // A kit has already been assigned; terminate without updates.
-                    console.error('Duplicate kit %s found when attempting to assign kit %s to user %s', duplicateKit.data()[supplyKitId], data[supplyKitId], data['Connect_ID']);
-                    toReturn = false;
-                    return;
-                }
-            }
-
-            if (participantSnapshot.size !== 1) {
-                toReturn = false;
+        if(otherKitsUsingSupplyKitTrackingNumber.size > 1) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Other kits using supply kit tracking number found",
+                otherKits: otherKitsUsingSupplyKitTrackingNumber.map(rec => rec.data()[supplyKitId]).join(', ')
+            };
+                return;
+        } else if (otherKitsUsingSupplyKitTrackingNumber.size === 1) {
+            // check if the kit found is the current kit
+            // Doing this instead of including it in the query to avoid creating an unnecessary composite index
+            const possibleDuplicate = otherKitsUsingSupplyKitTrackingNumber.docs[0];
+            const possibleDuplicateKitId = possibleDuplicate.data()[supplyKitId];
+            if(possibleDuplicateKitId !== data[supplyKitId]) {
+                kitAssignmentResult = {
+                    success: false,
+                    message: "Other kit using supply kit tracking number found",
+                    otherKits: possibleDuplicateKitId
+                };
                 return;
             }
+        }
 
-            const participantDoc = participantSnapshot.docs[0];
-            const prevParticipantObject = participantDoc.data()?.[collectionDetails]?.[baseline];
-            
-            const updatedParticipantObject = {
-                [collectionDetails]: {
-                    [baseline]: {
-                        ...prevParticipantObject,
-                        [bioKitMouthwash]: {
-                            [kitType]: mouthwashKit,
-                            [kitStatus]: assigned,
-                            [uniqueKitID]: data[uniqueKitID],
-                        }
+        const kitSnapshot = await transaction.get(
+            db.collection("kitAssembly")
+                .where(`${supplyKitId}`, '==', data[supplyKitId])
+                .where(`${kitStatus}`, '==', pending)
+        );
+        printDocsCount(kitSnapshot, "assignKitToParticipant; collection: kitAssembly");
+
+        if (kitSnapshot.size !== 1) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Multiple pending kits found for supply kit ID " + data[supplyKitId]
+            };
+            return;
+        }
+
+        const kitDoc = kitSnapshot.docs[0];
+        data[uniqueKitID] = kitDoc.data()[uniqueKitID];
+        const kitData = {
+            [supplyKitTrackingNum]: data[supplyKitTrackingNum],
+            [kitStatus]: assigned,
+            [collectionRound]: baseline,
+            'Connect_ID': parseInt(data['Connect_ID'])
+        };
+
+
+        const participantSnapshot = await transaction.get(
+            db.collection("participants")
+                .where('Connect_ID', '==', parseInt(data['Connect_ID']))
+        );
+        printDocsCount(participantSnapshot, "assignKitToParticipant; collection: participants");
+
+        // 1109: Check if the participant already has another baseline kit assigned and error if it does.
+        // Note that this will need to be modified in the future to recognize and handle replacement kits
+        // once that functionality is added
+        const kitAssemblyQuery =  db.collection("kitAssembly")
+            .where('Connect_ID', '==', parseInt(data['Connect_ID']))
+            .where(kitStatus, '==', assigned)
+            .where(collectionRound, '==', baseline)
+            .select([supplyKitId]);
+        const kitAssemblySnapshot = await transaction.get(kitAssemblyQuery);
+
+        printDocsCount(participantSnapshot, "assignKitToParticipant; collection: possible duplicate kits");
+
+
+        if(kitAssemblySnapshot.size > 0) {
+            // Check to see if there are any baseline kits which are already assigned but with a different kit ID
+            // If so, error
+            const duplicateKit = kitAssemblySnapshot.docs.find(doc => {
+                const docData = doc.data();
+                return docData[supplyKitId] !== data[supplyKitId];
+            });
+            if(duplicateKit) {
+                // A kit has already been assigned; terminate without updates.
+                let errorMsg = `Duplicate kit ${duplicateKit.data()[supplyKitId]} found when attempting to assign kit ${data[supplyKitId]} to user ${data['Connect_ID']}`;
+                console.error(errorMsg);
+                kitAssignmentResult = {
+                    success: false,
+                    message: errorMsg
+                };
+                return;
+            }
+        }
+
+        if (participantSnapshot.size !== 1) {
+            kitAssignmentResult = {
+                success: false,
+                message: (participantSnapshot.size > 1 ? 'Multiple' : 'No') + ' participants found for connect ID ' + data['Connect_ID']
+            };
+            return;
+        }
+
+        const participantDoc = participantSnapshot.docs[0];
+        const prevParticipantObject = participantDoc.data()?.[collectionDetails]?.[baseline];
+        
+        const updatedParticipantObject = {
+            [collectionDetails]: {
+                [baseline]: {
+                    ...prevParticipantObject,
+                    [bioKitMouthwash]: {
+                        [kitType]: mouthwashKit,
+                        [kitStatus]: assigned,
+                        [uniqueKitID]: data[uniqueKitID],
                     }
                 }
-            };
+            }
+        };
 
-            transaction.update(kitDoc.ref, kitData);
-            transaction.update(participantDoc.ref, updatedParticipantObject);
+        transaction.update(kitDoc.ref, kitData);
+        transaction.update(participantDoc.ref, updatedParticipantObject);
 
-            toReturn = true;
-            return true;
-        });
-        
-        return toReturn;
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
+        kitAssignmentResult = {
+            success: true,
+            message: 'Success'
+        };
+        return true;
+    });
+    
+    return kitAssignmentResult;
 };
 
 const processVerifyScannedCode = async (id) => {
@@ -3890,6 +4060,7 @@ module.exports = {
     biospecimenUserExists,
     addNewBiospecimenUser,
     removeUser,
+    processParticipantHomeMouthwashKitData,
     storeSpecimen,
     submitSpecimen,
     updateSpecimen,
