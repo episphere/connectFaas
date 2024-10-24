@@ -181,6 +181,42 @@ const getToken = async (req, res) => {
     }
 }
 
+const processMouthwashEligibility = (data) => {
+    // Conditions for initialized: baselineMouthwashSample is no, bloodOrUrineCollected is yes, 
+    // kitStatus does not yet have a value, processParticipantHomeMouthwashKitData passes
+    const updates = {};
+    const {processParticipantHomeMouthwashKitData} = require('./firestore');
+    if(
+        data[conceptIds.withdrawConsent] == conceptIds.no &&
+        data[conceptIds.participantDeceasedNORC] == conceptIds.no &&
+        data[conceptIds.activityParticipantRefusal] && data[conceptIds.activityParticipantRefusal][conceptIds.baselineMouthwashSample] == conceptIds.no &&
+        data[conceptIds.collectionDetails] && data[conceptIds.collectionDetails][conceptIds.baseline] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bloodOrUrineCollected] == conceptIds.yes &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bloodOrUrineCollectedTimestamp] >= '2024-04-01T00:00:00.000Z' &&
+        (
+            !data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] ||
+            data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash][conceptIds.kitStatus]
+        )
+    ) {
+        const isEligible = !!processParticipantHomeMouthwashKitData(data, true);
+        if(isEligible) {
+            updates[`${conceptIds.collectionDetails}.${conceptIds.baseline}.${conceptIds.bioKitMouthwash}.${conceptIds.kitStatus}`] = conceptIds.initialized;
+        }
+    } else if(
+        data[conceptIds.collectionDetails] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] == conceptIds.initialized
+    ) {
+        // Conditions to remove initialized: status is initialized and processParticipantHomeMouthwashKitData fails
+        const isEligible = !!processParticipantHomeMouthwashKitData(data, true);
+        if(!isEligible) {
+            updates[`${conceptIds.collectionDetails}.${conceptIds.baseline}.${conceptIds.bioKitMouthwash}.${conceptIds.kitStatus}`] = undefined;
+        }
+    }
+    return updates;
+}
+
 const checkDerivedVariables = async (token, siteCode) => {
     
     const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
@@ -412,7 +448,6 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...refusalUpdates};
     }
 
-    console.log('Participant data updates:', updates);
 
     if(Object.keys(updates).length > 0) {
         const { updateParticipantData } = require('./firestore');
@@ -507,71 +542,13 @@ const isIsoDate = (str) => {
     return d instanceof Date && !isNaN(d) && d.toISOString() === str; // valid date 
 }
 
-/**
- * Validate an ISO 8601 timestamp. Use capturing groups to extract year, month, day, hour, minute, and second.
- * Millisecond validation (range 000-999) is handled by the regex.
- * Ensure all values are within the acceptable range for each field.
- * @param {string} timestamp - the ISO 8601 timestamp to validate.
- * @returns {object} - an object with an error flag and message.
- */
-
-const iso8601Regex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
-
-const validateIso8601Timestamp = (timestamp) => {
-    const match = typeof timestamp === 'string' && timestamp.match(iso8601Regex);
-    if (!match) {
-        return { error: true, message: "Invalid ISO 8601 format. ISO 8601 string required. Example: '2023-12-15T12:45:52.123Z'" };
-    }
-
-    const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = match;
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10);
-    const day = parseInt(dayStr, 10);
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-    const second = parseInt(secondStr, 10);
-
-    const currentYear = new Date().getUTCFullYear();
-
-    if (year < 1900 || year > currentYear) {
-        return { error: true, message: `Year must be between 1900 and ${currentYear}` };
-    }
-    if (month < 1 || month > 12) {
-        return { error: true, message: "Month must be between 1 and 12" };
-    }
-
-    const monthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    if (year % 400 === 0 || (year % 100 !== 0 && year % 4 === 0)) {
-        monthLengths[1] = 29;
-    }
-
-    if (day < 1 || day > monthLengths[month - 1]) {
-        return { error: true, message: `Day must be between 1 and ${monthLengths[month - 1]} for ${monthStr}/${yearStr}` };
-    }
-
-    if (hour < 0 || hour > 23) {
-        return { error: true, message: "Hour must be between 0 and 23" };
-    }
-
-    if (minute < 0 || minute > 59) {
-        return { error: true, message: "Minute must be between 0 and 59" };
-    }
-
-    if (second < 0 || second > 59) {
-        return { error: true, message: "Second must be between 0 and 59" };
-    }
-
-    // success case
-    return { error: false, message: "" };
-};
-
 module.exports = {
     generateToken,
     validateToken,
     getToken,
+    processMouthwashEligibility,
     checkDerivedVariables,
     validateUsersEmailPhone,
     updateParticipantFirebaseAuthentication,
-    isIsoDate,
-    validateIso8601Timestamp,
+    isIsoDate
 }
