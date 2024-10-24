@@ -212,8 +212,8 @@ const biospecimenAPIs = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         const {submitSpecimen} = require('./firestore');
-        const json = await submitSpecimen(req.body.biospecimenData, req.body.participantData, req.body.siteTubesList);
-        return res.status(json.code).json(json);
+        const responseJson = await submitSpecimen(req.body.biospecimenData, req.body.participantData, req.body.siteTubesList);
+        return res.status(responseJson.code).json(responseJson);
     }
     else if (api === 'checkDerivedVariables') {
         if(req.method !== 'POST') {
