@@ -3671,6 +3671,10 @@ const getParticipantCancerOccurrences = async (participantToken) => {
     }
 }
 
+/**
+ * Write cancer occurrence object data to Firestore. 
+ * @param {array<object>} cancerOccurrenceArray - Array of cancer occurrence objects.
+ */
 const writeCancerOccurrences = async (cancerOccurrenceArray) => {
     const writeCancerOccurrenceBatch = async () => {
         const batch = db.batch();
