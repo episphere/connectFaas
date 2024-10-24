@@ -704,8 +704,7 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { assignKitToParticipant } = require('./firestore');
             const response = await assignKitToParticipant(requestData);
-            const code = response.success ? 200 : 500;
-            return res.status(code).json({ ...response, code });
+            return res.status(200).json({ response, code:200 });
         }
         catch (error) {
             console.error(error);
@@ -771,22 +770,7 @@ const biospecimenAPIs = async (req, res) => {
         
         try {
             const { queryHomeCollectionAddressesToPrint } = require('./firestore');
-            const response = await queryHomeCollectionAddressesToPrint(req.query ? req.query.limit : undefined);
-            return res.status(200).json({data: response, code:200});
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json(getResponseJSON(error.message, 500));
-        }
-    }
-
-    else if(api == 'totalAddressesToPrintCount'){
-        if(req.method !== 'GET') {
-            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-        }
-        
-        try {
-            const { queryCountHomeCollectionAddressesToPrint } = require('./firestore');
-            const response = await queryCountHomeCollectionAddressesToPrint();
+            const response = await queryHomeCollectionAddressesToPrint();
             return res.status(200).json({data: response, code:200});
         } catch (error) {
             console.error(error);

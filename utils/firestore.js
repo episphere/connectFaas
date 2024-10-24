@@ -3,7 +3,7 @@ const { Transaction, FieldPath } = require('firebase-admin/firestore');
 admin.initializeApp();
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true }); // Skip keys with undefined values instead of erroring
-const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO, conceptMappings } = require('./shared');
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
 const {getParticipantTokensByPhoneNumber} = require('./bigquery');
@@ -2536,28 +2536,29 @@ const participantHomeCollectionKitFields = [
  * Ex. [{first_name: 'John', last_name: 'Doe', address_1: '123 Main St', address_2: '', city: 'Anytown', state: 'NY', zip_code: '12345', connect_id: 123457890}, ...]
  */
 
+// TODO: Suboptimal process. Would benefit from direct query on a {kitStatus: initialized} or {completed: no} variable, which could be assigned on kit creation in Biospecimen.
+// This will get progressively slower and more expensive as participants are added.
 // TODO: A sliding time window would be more efficient in the .where(<timestamp>) query.
 
-const queryHomeCollectionAddressesToPrint = async (limit) => {
+const queryHomeCollectionAddressesToPrint = async () => {
     try {
-        const { bioKitMouthwash, kitStatus, initialized,
-            collectionDetails, baseline, bloodOrUrineCollectedTimestamp } = fieldMapping;
+        const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
+            collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
         const fiveDaysAgoDateISO = getFiveDaysAgoDateISO();
-
-        let query = db.collection('participants')
-            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', initialized)
-            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoDateISO)
-            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc');
-
-        if(limit) {
-            query = query.limit(Math.min(limit, 500));
-        }
         
-        const snapshot = await query.get();
+        const snapshot = await db.collection('participants')
+            .where(withdrawConsent.toString(), '==', no)
+            .where(participantDeceasedNORC.toString(), '==', no)
+            .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoDateISO)
+            .select(...participantHomeCollectionKitFields)
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
+            .get();
         
         if (snapshot.size === 0) return [];
-
         
         const mappedResults = snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), true));
         return mappedResults.filter(result => result !== null);
@@ -2565,27 +2566,6 @@ const queryHomeCollectionAddressesToPrint = async (limit) => {
         throw new Error(`Error querying home collection addresses to print`, {cause: error});
     }
 }
-
-
-
-const queryCountHomeCollectionAddressesToPrint = async () => {
-    try {
-        const { bioKitMouthwash, kitStatus, initialized,
-            collectionDetails, baseline, bloodOrUrineCollectedTimestamp } = fieldMapping;
-        const fiveDaysAgoDateISO = getFiveDaysAgoDateISO();
-        
-        const snapshot = await db.collection('participants')
-            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', initialized)
-            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoDateISO)
-            .count()
-            .get();
-
-        return snapshot.data().count;
-        
-    } catch (error) {
-        throw new Error(`Error querying count of home collection addresses to print`, {cause: error});
-    }
-};
 
 const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
     try {
@@ -2675,24 +2655,24 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
     connect_id: record['Connect_ID'],
     };
 
-    return printLabel || hasMouthwash
+    return (!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)
         ? processedRecord
         : [];
 }
 
 const assignKitToParticipant = async (data) => {
-    let kitAssignmentResult;
-    const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
-        assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
-        kitType, mouthwashKit } = fieldMapping;
+    try {
+        const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
+            assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
+            kitType, mouthwashKit } = fieldMapping;
 
-    await db.runTransaction(async (transaction) => {
+        
         // Check the supply kit tracking number and see if it matches the return kit tracking number
         // of any kits including this one or the supply kit tracking number of any other kits
 
-        const kitsWithDuplicateReturnTrackingNumbers = await transaction.get(
-            db.collection("kitAssembly").where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
-        );
+        const kitsWithDuplicateReturnTrackingNumbers = await db.collection("kitAssembly")
+            .where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
+            .get();
 
         if(kitsWithDuplicateReturnTrackingNumbers.size > 0) {
             kitAssignmentResult = {
@@ -2702,10 +2682,9 @@ const assignKitToParticipant = async (data) => {
             return;
         }
 
-        const otherKitsUsingSupplyKitTrackingNumber = await transaction.get(
-            db.collection("kitAssembly")
+        const otherKitsUsingSupplyKitTrackingNumber = await db.collection("kitAssembly")
             .where(`${supplyKitTrackingNum}`, '==', data[supplyKitTrackingNum])
-        );
+            .get();
 
         if(otherKitsUsingSupplyKitTrackingNumber.size > 1) {
             kitAssignmentResult = {
@@ -2727,19 +2706,13 @@ const assignKitToParticipant = async (data) => {
             }
         }
 
-        const kitSnapshot = await transaction.get(
-            db.collection("kitAssembly")
-                .where(`${supplyKitId}`, '==', data[supplyKitId])
-                .where(`${kitStatus}`, '==', pending)
-        );
+        const kitSnapshot = await db.collection("kitAssembly")
+            .where(`${supplyKitId}`, '==', data[supplyKitId])
+            .where(`${kitStatus}`, '==', pending).get();
         printDocsCount(kitSnapshot, "assignKitToParticipant; collection: kitAssembly");
 
         if (kitSnapshot.size !== 1) {
-            kitAssignmentResult = {
-                success: false,
-                message: "Multiple pending kits found for supply kit ID " + data[supplyKitId]
-            };
-            return;
+            return false;
         }
 
         const kitDoc = kitSnapshot.docs[0];
@@ -2751,51 +2724,13 @@ const assignKitToParticipant = async (data) => {
             'Connect_ID': parseInt(data['Connect_ID'])
         };
 
+        await kitDoc.ref.update(kitData);
 
-        const participantSnapshot = await transaction.get(
-            db.collection("participants")
-                .where('Connect_ID', '==', parseInt(data['Connect_ID']))
-        );
+        const participantSnapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(data['Connect_ID'])).get();
         printDocsCount(participantSnapshot, "assignKitToParticipant; collection: participants");
 
-        // 1109: Check if the participant already has another baseline kit assigned and error if it does.
-        // Note that this will need to be modified in the future to recognize and handle replacement kits
-        // once that functionality is added
-        const kitAssemblyQuery =  db.collection("kitAssembly")
-            .where('Connect_ID', '==', parseInt(data['Connect_ID']))
-            .where(kitStatus, '==', assigned)
-            .where(collectionRound, '==', baseline)
-            .select([supplyKitId]);
-        const kitAssemblySnapshot = await transaction.get(kitAssemblyQuery);
-
-        printDocsCount(participantSnapshot, "assignKitToParticipant; collection: possible duplicate kits");
-
-
-        if(kitAssemblySnapshot.size > 0) {
-            // Check to see if there are any baseline kits which are already assigned but with a different kit ID
-            // If so, error
-            const duplicateKit = kitAssemblySnapshot.docs.find(doc => {
-                const docData = doc.data();
-                return docData[supplyKitId] !== data[supplyKitId];
-            });
-            if(duplicateKit) {
-                // A kit has already been assigned; terminate without updates.
-                let errorMsg = `Duplicate kit ${duplicateKit.data()[supplyKitId]} found when attempting to assign kit ${data[supplyKitId]} to user ${data['Connect_ID']}`;
-                console.error(errorMsg);
-                kitAssignmentResult = {
-                    success: false,
-                    message: errorMsg
-                };
-                return;
-            }
-        }
-
         if (participantSnapshot.size !== 1) {
-            kitAssignmentResult = {
-                success: false,
-                message: (participantSnapshot.size > 1 ? 'Multiple' : 'No') + ' participants found for connect ID ' + data['Connect_ID']
-            };
-            return;
+            return false;
         }
 
         const participantDoc = participantSnapshot.docs[0];
@@ -2814,17 +2749,13 @@ const assignKitToParticipant = async (data) => {
             }
         };
 
-        transaction.update(kitDoc.ref, kitData);
-        transaction.update(participantDoc.ref, updatedParticipantObject);
+        await participantDoc.ref.update(updatedParticipantObject);
 
-        kitAssignmentResult = {
-            success: true,
-            message: 'Success'
-        };
         return true;
-    });
-    
-    return kitAssignmentResult;
+    } catch (error) {
+        console.error(error);
+        return new Error(error);
+    }
 };
 
 const processVerifyScannedCode = async (id) => {
@@ -2843,62 +2774,56 @@ const processVerifyScannedCode = async (id) => {
 
 const confirmShipmentKit = async (shipmentData) => {
     try {
-        return await db.runTransaction(async transaction => {
-            const { collectionDetails, baseline, bioKitMouthwash, uniqueKitID } = fieldMapping;
+        const { collectionDetails, baseline, bioKitMouthwash, uniqueKitID } = fieldMapping;
 
-            const kitAssemblyQuery = db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']);
-            const kitSnapshot = await transaction.get(kitAssemblyQuery);
-            printDocsCount(kitSnapshot, "confirmShipmentKit; collection: kitAssembly");
+        const kitSnapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
+        printDocsCount(kitSnapshot, "confirmShipmentKit; collection: kitAssembly");
 
-            if (kitSnapshot.size === 0) {
-                return false;
-            }
+        if (kitSnapshot.size === 0) {
+            return false;
+        }
 
-            const kitDoc = kitSnapshot.docs[0];
-            const kitData = {
-                '221592017': 277438316,
-                '661940160': shipmentData['661940160']
-            };
+        const kitDoc = kitSnapshot.docs[0];
+        const kitData = {
+            '221592017': 277438316,
+            '661940160': shipmentData['661940160']
+        };
 
-            
-            const participantQuery = db.collection("participants")
-                .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${uniqueKitID}`, '==', shipmentData[uniqueKitID]);
-            const participantSnapshot = await transaction.get(participantQuery);
-            printDocsCount(participantSnapshot, "confirmShipmentKit; collection: participants");
+        await kitDoc.ref.update(kitData);
+        const participantSnapshot = await db.collection("participants")
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${uniqueKitID}`, '==', shipmentData[uniqueKitID]).get();
+        printDocsCount(participantSnapshot, "confirmShipmentKit; collection: participants");
 
-            if (participantSnapshot.size === 0) {
-                return false;
-            }
+        if (participantSnapshot.size === 0) {
+            return false;
+        }
 
-            const participantDoc = participantSnapshot.docs[0];
-            const participantDocData = participantDoc.data();
-            const prevParticipantObject = participantDocData[collectionDetails][baseline][bioKitMouthwash];
-            const baselineParticipantObject = participantDocData[173836415][266600170];
-            const uid = participantDocData['state']['uid'];
-            const Connect_ID = participantDocData['Connect_ID'];
-            const prefEmail = participantDocData['869588347'];
-            const token = participantDocData['token'];
-            const ptName = participantDocData['153211406'] || participantDocData['399159511']
-            const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
+        const participantDoc = participantSnapshot.docs[0];
+        const participantDocData = participantDoc.data();
+        const prevParticipantObject = participantDocData[collectionDetails][baseline][bioKitMouthwash];
+        const baselineParticipantObject = participantDocData[173836415][266600170];
+        const uid = participantDocData['state']['uid'];
+        const Connect_ID = participantDocData['Connect_ID'];
+        const prefEmail = participantDocData['869588347'];
+        const token = participantDocData['token'];
+        const ptName = participantDocData['153211406'] || participantDocData['399159511']
+        const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
 
-            const updatedParticipantObject = {
-                '173836415': {
-                    '266600170': {
-                        ...baselineParticipantObject,
-                        '319972665': {
-                            ...prevParticipantObject,
-                            '221592017': 277438316,
-                            '661940160': shipmentData['661940160']
-                        }
+        const updatedParticipantObject = {
+            '173836415': {
+                '266600170': {
+                    ...baselineParticipantObject,
+                    '319972665': {
+                        ...prevParticipantObject,
+                        '221592017': 277438316,
+                        '661940160': shipmentData['661940160']
                     }
                 }
-            };
+            }
+        };
 
-            transaction.update(kitDoc.ref, kitData);
-            transaction.update(participantDoc.ref, updatedParticipantObject);
-            return { status: true, Connect_ID, token, uid, prefEmail, ptName, preferredLanguage };
-        });
-        
+        await participantDoc.ref.update(updatedParticipantObject);
+        return { status: true, Connect_ID, token, uid, prefEmail, ptName, preferredLanguage };
 
     } catch (error) {
         console.error(error);
@@ -2906,11 +2831,11 @@ const confirmShipmentKit = async (shipmentData) => {
     }
 };
 
-const storeKitReceipt = async (pkg) => {
+const storeKitReceipt = async (package) => {
     try {
         let toReturn;
         await db.runTransaction(async (transaction) => {
-            const kitSnapshot = await transaction.get(db.collection("kitAssembly").where('972453354', '==', pkg['972453354']).where('221592017', '==', 277438316));
+            const kitSnapshot = await transaction.get(db.collection("kitAssembly").where('972453354', '==', package['972453354']).where('221592017', '==', 277438316));
             printDocsCount(kitSnapshot, "storeKitReceipt");
             if (kitSnapshot.size === 0) {
                 toReturn = false;
@@ -2933,8 +2858,8 @@ const storeKitReceipt = async (pkg) => {
             const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
 
             const prevParticipantObject = participantDocData[173836415][266600170][319972665];
-            const collectionId = pkg['259846815']?.split(' ')[0];
-            const objectId = pkg['259846815']?.split(' ')[1];
+            const collectionId = package['259846815']?.split(' ')[0];
+            const objectId = package['259846815']?.split(' ')[1];
             
             if (objectId === undefined || collectionId === undefined) {
                 toReturn = { status: 'Check Collection ID' };
@@ -2942,7 +2867,7 @@ const storeKitReceipt = async (pkg) => {
             }
 
             // check the collection ID from the kitAssembly against the one from package and error if they don't match
-            if(kitData[fieldMapping.collectionCupId] !== pkg[fieldMapping.collectionCupId]) {
+            if(kitData[fieldMapping.collectionCupId] !== package[fieldMapping.collectionCupId]) {
                 toReturn = { status: 'Collection Cup ID from tracking number does not match provided Collection Cup ID' };
                 return;
             }
@@ -2950,11 +2875,11 @@ const storeKitReceipt = async (pkg) => {
             const biospecPkg = {
                 '143615646': {
                     '593843561': 353358909,
-                    '825582494': pkg['259846815'],
-                    '826941471': pkg['826941471']
+                    '825582494': package['259846815'],
+                    '826941471': package['826941471']
                 },
-                '260133861': pkg['260133861'],
-                '678166505': pkg['678166505'],
+                '260133861': package['260133861'],
+                '678166505': package['678166505'],
                 '820476880':  collectionId,
                 '827220437': site,
                 'Connect_ID': Connect_ID,
@@ -2968,22 +2893,22 @@ const storeKitReceipt = async (pkg) => {
             transaction.set(newDocRef, biospecPkg);
 
             transaction.update(kitDoc.ref, {
-                '137401245': pkg['137401245'] === true ? 353358909 : 104430631,
+                '137401245': package['137401245'] === true ? 353358909 : 104430631,
                 '221592017': 375535639,
-                '633640710': processPackageConditions(pkg['633640710']),
-                '755095663': pkg['755095663'],
-                '826941471': pkg['826941471']
+                '633640710': processPackageConditions(package['633640710']),
+                '755095663': package['755095663'],
+                '826941471': package['826941471']
             });
 
             transaction.update(participantDoc.ref, {
                 '684635302': 353358909,
                 '254109640': 353358909,
                 '173836415.266600170.915179629': 103209024,
-                '173836415.266600170.448660695': pkg['678166505'],
+                '173836415.266600170.448660695': package['678166505'],
                 '173836415.266600170.319972665': {
                     ...prevParticipantObject,
                     '221592017': 375535639,
-                    '826941471': pkg['826941471']
+                    '826941471': package['826941471']
                 }
             });
 
@@ -3710,20 +3635,87 @@ const getParticipantCancerOccurrences = async (participantToken) => {
  * Write cancer occurrence object data to Firestore. 
  * @param {array<object>} cancerOccurrenceArray - Array of cancer occurrence objects.
  */
+
 const writeCancerOccurrences = async (cancerOccurrenceArray) => {
-    try {
+    const writeCancerOccurrenceBatch = async () => {
         const batch = db.batch();
         for (const occurrence of cancerOccurrenceArray) {
             const docRef = db.collection('cancerOccurrence').doc();
             batch.set(docRef, occurrence);
         }
         await batch.commit();
+    };
+
+    try {
+        await firestoreWriteWithAutoRetry(writeCancerOccurrenceBatch, 'writeCancerOccurrences');
     } catch (error) {
-        throw new Error("Error writing cancer occurrences.", { cause: error });
+        console.error('Error in writeCancerOccurrences:', error);
+        throw new Error(`Write Cancer Occurrences failed: ${error.message}`);
+    }
+};
+
+/**
+ * Occasionally, birthday card data needs to be updated based on return data from the post office.
+ * Check for duplicate birthday card data before writing to Firestore.
+ * An existing birthday card is one with the same token, mailDate, and cardVersion.
+ * @param {string} participantToken - The participant token.
+ * @param {string} mailingDate - ISO 8601 date string.
+ * @param {string} cardVersion - The version of the birthday card.
+ * @returns {object} - The existing birthday card data and Firestore document ID.
+ */
+const getExistingBirthdayCard = async (participantToken, mailingDate, cardVersion) => {
+    try {
+        const snapshot = await db.collection('birthdayCard')
+            .where('token', '==', participantToken)
+            .where(fieldMapping.birthdayCardData.mailDate.toString(), '==', mailingDate)
+            .where(fieldMapping.birthdayCardData.cardVersion.toString(), '==', cardVersion)
+            .get();
+
+        if (snapshot.empty) {
+            return { existingCardData: null, cardDocId: null };
+        }
+        
+        if (snapshot.size > 1) {
+            console.error(`Duplicate birthday card data found for token ${participantToken} and mailing date ${mailingDate}.`);
+        }
+        
+        return { existingCardData: snapshot.docs[0].data(), cardDocId: snapshot.docs[0].id };
+    } catch (error) {
+        console.error('Error in getExistingBirthdayCard:', error);
+        throw new Error("Error fetching birthday card data.", { cause: error });
     }
 }
 
+/**
+ * Write the NORC birthday card data to Firestore.
+ * @param {object} birthdayCardData - The NORC birthday card data.
+ * @param {object} birthdayCardWriteDetails - Object with .cardWriteType (either 'create' or 'update') and .docId (only provided for update operations) properties.
+ */
 
+const writeBirthdayCard = async (birthdayCardData, birthdayCardWriteDetails) => {
+    try {
+        const writeCard = async () => {
+            const { cardWriteType, cardDocId } = birthdayCardWriteDetails;
+
+            if (cardWriteType === 'create') {
+                await db.collection('birthdayCard').add(birthdayCardData);
+            } else if (cardWriteType === 'update') {
+                if (!cardDocId) {
+                    throw new Error('Document ID is required for update operation.');
+                }
+                await db.collection('birthdayCard').doc(cardDocId).update(birthdayCardData);
+            } else {
+                console.error(`Invalid birthday card write type: ${cardWriteType}, docId: ${cardDocId}`);
+                throw new Error(`Invalid birthday card write type. ${cardWriteType}, docId: ${cardDocId}`);
+            }
+        };
+
+        return await firestoreWriteWithAutoRetry(writeCard, 'writeBirthdayCard');
+    } catch (error) {
+        console.error('Error in writeBirthdayCard:', error);
+        throw new Error(`Write Birthday Card failed: ${error.message}`, { cause: error });
+    }
+};
 
 const updateParticipantCorrection = async (participantData) => {
     try {
@@ -3827,6 +3819,31 @@ const updateSmsPermission = async (phoneNumber, isSmsPermitted) => {
   return count;
 };
 
+/**
+ * Generic function to write to Firestore with automatic retries.
+ * @param {Function} asyncWriteFunction - Firestore write operation to perform.
+ * @param {string} operationName - Name of the Firestore write operation for logging purposes.
+ * @param {number} maxRetries - Maximum number of write retries.
+ * @param {number} delay - Time (milliseconds) to wait between retries.
+ * @returns {Promise} - Promise that resolves with the result of the Firestore write operation.
+ */
+
+const firestoreWriteWithAutoRetry = async (asyncWriteFunction, operationName, maxRetries = 3, delay = 1000) => {
+    let lastError;
+    for (let retries = 0; retries < maxRetries; retries++) {
+        try {
+            return await asyncWriteFunction();
+        } catch (error) {
+            console.error(`${operationName} failed (attempt ${retries + 1}/${maxRetries}):`, error);
+            lastError = error;
+            if (retries < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    throw new Error(`${operationName} failed after ${maxRetries} retries.`, { cause: lastError });
+};
+
 module.exports = {
     db,
     updateResponse,
@@ -3861,9 +3878,7 @@ module.exports = {
     biospecimenUserExists,
     addNewBiospecimenUser,
     removeUser,
-    processParticipantHomeMouthwashKitData,
     storeSpecimen,
-    submitSpecimen,
     updateSpecimen,
     searchSpecimen,
     searchShipments,
@@ -3938,7 +3953,6 @@ module.exports = {
     addKitAssemblyData,
     updateKitAssemblyData,
     queryHomeCollectionAddressesToPrint,
-    queryCountHomeCollectionAddressesToPrint,
     checkCollectionUniqueness,
     processVerifyScannedCode,
     assignKitToParticipant,
@@ -3952,6 +3966,8 @@ module.exports = {
     queryKitsByReceivedDate,
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
+    writeBirthdayCard,
+    getExistingBirthdayCard,
     updateParticipantCorrection,
     generateSignInWithEmailLink,
     getAppSettings,
