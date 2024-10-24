@@ -207,6 +207,14 @@ const biospecimenAPIs = async (req, res) => {
             }
         }
     }
+    else if (api === 'submitSpecimen') {
+        if(req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        const {submitSpecimen} = require('./firestore');
+        const responseJson = await submitSpecimen(req.body.biospecimenData, req.body.participantData, req.body.siteTubesList);
+        return res.status(responseJson.code).json(responseJson);
+    }
     else if (api === 'checkDerivedVariables') {
         if(req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
@@ -696,7 +704,8 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { assignKitToParticipant } = require('./firestore');
             const response = await assignKitToParticipant(requestData);
-            return res.status(200).json({ response, code:200 });
+            const code = response.success ? 200 : 500;
+            return res.status(code).json({ ...response, code });
         }
         catch (error) {
             console.error(error);
@@ -762,7 +771,22 @@ const biospecimenAPIs = async (req, res) => {
         
         try {
             const { queryHomeCollectionAddressesToPrint } = require('./firestore');
-            const response = await queryHomeCollectionAddressesToPrint();
+            const response = await queryHomeCollectionAddressesToPrint(req.query ? req.query.limit : undefined);
+            return res.status(200).json({data: response, code:200});
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json(getResponseJSON(error.message, 500));
+        }
+    }
+
+    else if(api == 'totalAddressesToPrintCount'){
+        if(req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+        
+        try {
+            const { queryCountHomeCollectionAddressesToPrint } = require('./firestore');
+            const response = await queryCountHomeCollectionAddressesToPrint();
             return res.status(200).json({data: response, code:200});
         } catch (error) {
             console.error(error);
