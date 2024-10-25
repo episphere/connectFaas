@@ -181,6 +181,42 @@ const getToken = async (req, res) => {
     }
 }
 
+const processMouthwashEligibility = (data) => {
+    // Conditions for initialized: baselineMouthwashSample is no, bloodOrUrineCollected is yes, 
+    // kitStatus does not yet have a value, processParticipantHomeMouthwashKitData passes
+    const updates = {};
+    const {processParticipantHomeMouthwashKitData} = require('./firestore');
+    if(
+        data[conceptIds.withdrawConsent] == conceptIds.no &&
+        data[conceptIds.participantDeceasedNORC] == conceptIds.no &&
+        data[conceptIds.activityParticipantRefusal] && data[conceptIds.activityParticipantRefusal][conceptIds.baselineMouthwashSample] == conceptIds.no &&
+        data[conceptIds.collectionDetails] && data[conceptIds.collectionDetails][conceptIds.baseline] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bloodOrUrineCollected] == conceptIds.yes &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bloodOrUrineCollectedTimestamp] >= '2024-04-01T00:00:00.000Z' &&
+        (
+            !data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] ||
+            data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash][conceptIds.kitStatus]
+        )
+    ) {
+        const isEligible = !!processParticipantHomeMouthwashKitData(data, true);
+        if(isEligible) {
+            updates[`${conceptIds.collectionDetails}.${conceptIds.baseline}.${conceptIds.bioKitMouthwash}.${conceptIds.kitStatus}`] = conceptIds.initialized;
+        }
+    } else if(
+        data[conceptIds.collectionDetails] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] == conceptIds.initialized
+    ) {
+        // Conditions to remove initialized: status is initialized and processParticipantHomeMouthwashKitData fails
+        const isEligible = !!processParticipantHomeMouthwashKitData(data, true);
+        if(!isEligible) {
+            updates[`${conceptIds.collectionDetails}.${conceptIds.baseline}.${conceptIds.bioKitMouthwash}.${conceptIds.kitStatus}`] = undefined;
+        }
+    }
+    return updates;
+}
+
 const checkDerivedVariables = async (token, siteCode) => {
     
     const { getParticipantData, getSpecimenCollections, retrieveUserSurveys } = require('./firestore');
@@ -412,7 +448,6 @@ const checkDerivedVariables = async (token, siteCode) => {
         updates = { ...updates, ...refusalUpdates};
     }
 
-    console.log('Participant data updates:', updates);
 
     if(Object.keys(updates).length > 0) {
         const { updateParticipantData } = require('./firestore');
@@ -569,6 +604,7 @@ module.exports = {
     generateToken,
     validateToken,
     getToken,
+    processMouthwashEligibility,
     checkDerivedVariables,
     validateUsersEmailPhone,
     updateParticipantFirebaseAuthentication,
