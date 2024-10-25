@@ -1364,10 +1364,17 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
             const { buildStreckPlaceholderData, updateBaselineData } = require('./shared');
             let participantUpdates = updateBaselineData(biospecimenData, participantData, participantUid, specimenArray, siteTubesList);
 
-            participantUpdates = { ...participantData, ...participantUpdates};
+            participantUpdates = { ...participantSnapshotData, ...participantData, ...participantUpdates};
             const {processMouthwashEligibility} = require('./validation');
             const eligibilityUpdates = processMouthwashEligibility(participantUpdates);
-            participantUpdates = {...participantUpdates, ...eligibilityUpdates};
+            if(eligibilityUpdates[`${fieldMapping.collectionDetails}.${fieldMapping.baseline}.${fieldMapping.bioKitMouthwash}.${fieldMapping.kitStatus}`]) {
+                participantUpdates[fieldMapping.collectionDetails] = participantUpdates[fieldMapping.collectionDetails] || {};
+                participantUpdates[fieldMapping.collectionDetails][fieldMapping.baseline] = participantUpdates[fieldMapping.collectionDetails][fieldMapping.baseline] || {};
+                participantUpdates[fieldMapping.collectionDetails][fieldMapping.baseline][fieldMapping.bioKitMouthwash] = participantUpdates[fieldMapping.collectionDetails][fieldMapping.baseline][fieldMapping.bioKitMouthwash] || {};
+                participantUpdates[fieldMapping.collectionDetails][fieldMapping.baseline][fieldMapping.bioKitMouthwash][fieldMapping.kitStatus] =
+                    eligibilityUpdates[`${fieldMapping.collectionDetails}.${fieldMapping.baseline}.${fieldMapping.bioKitMouthwash}.${fieldMapping.kitStatus}`];
+            }
+            // participantUpdates = {...participantUpdates, ...eligibilityUpdates};
             // Now run equivalent of updateParticipantData(participantSnapshot.docs[0].id, updates);
             transaction.update(participantSnapshot.docs[0].ref, participantUpdates);
             transaction.update(specimenCollectionSnapshot.docs[0].ref, biospecimenData);
@@ -2695,11 +2702,10 @@ const assignKitToParticipant = async (data) => {
         const kitSnapshot = await transaction.get(
             db.collection("kitAssembly")
                 .where(`${supplyKitId}`, '==', data[supplyKitId])
-                .where(`${kitStatus}`, '==', pending)
         );
         printDocsCount(kitSnapshot, "assignKitToParticipant; collection: kitAssembly");
 
-        if (kitSnapshot.size !== 1) {
+        if (kitSnapshot.size > 1) {
             kitAssignmentResult = {
                 success: false,
                 message: "Multiple pending kits found for supply kit ID " + data[supplyKitId]
@@ -2728,9 +2734,9 @@ const assignKitToParticipant = async (data) => {
         // once that functionality is added
         const kitAssemblyQuery =  db.collection("kitAssembly")
             .where('Connect_ID', '==', parseInt(data['Connect_ID']))
-            .where(kitStatus, '==', assigned)
-            .where(collectionRound, '==', baseline)
-            .select([supplyKitId]);
+            .where(`${kitStatus}`, '==', assigned)
+            .where(`${collectionRound}`, '==', baseline)
+            // .select([`${supplyKitId}`]);
         const kitAssemblySnapshot = await transaction.get(kitAssemblyQuery);
 
         printDocsCount(participantSnapshot, "assignKitToParticipant; collection: possible duplicate kits");
