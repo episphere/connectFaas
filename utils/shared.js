@@ -927,7 +927,6 @@ const updateBaselineData = (biospecimenData, participantData, participantUid, sp
                         }
                     }
                 }
-                derivedVariables[fieldMapping.baselineUrineCollected] = fieldMapping.no;
                 urineTubesLength = totalUrineTubesAvail.length;
             }  
         }
@@ -952,7 +951,6 @@ const updateBaselineData = (biospecimenData, participantData, participantUid, sp
                 if (isResearch) {
                     delete settings[visit][fieldMapping.baselineMouthwashCollectedTime];
                 }
-                derivedVariables[fieldMapping.baselineMouthwashCollected] = fieldMapping.no;
                 mouthwashTubesLength = totalMouthwasTubesAvail.length;
             }
         }
