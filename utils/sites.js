@@ -333,7 +333,7 @@ const updateParticipantData = async (req, res, authObj) => {
 
         // Handle destroyed data. If destroyData = yes then participation status = destroyData
         if (flatUpdateObj[fieldMapping.participantMap.destroyData] === fieldMapping.yes) {
-            flatUpdateObj[fieldMapping.participationStatus] = fieldMapping.participantMap.destroyData;
+            flatUpdateObj[fieldMapping.participationStatus] = fieldMapping.participantMap.dataDestructionRequested;
         }
 
         // Handle cancer occurrence data. This gets validated and directed to the Firestore cancerOccurrence collection. One occurrence per doc.
