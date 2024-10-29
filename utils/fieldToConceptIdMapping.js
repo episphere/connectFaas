@@ -149,7 +149,8 @@ module.exports = {
         dataHasBeenDestroyed: 861639549,
         dataDestroyedStatus: 884452262,
         signedInFlag:230663853,
-        consentFormSubmitted: 919254129,
+        consentFormSubmitted: 919254129,    
+        dataDestructionRequested: 241236037
     },
      // home collection
      returnKitTrackingNum: 972453354,
