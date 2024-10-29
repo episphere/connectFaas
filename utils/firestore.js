@@ -3498,20 +3498,87 @@ const getParticipantCancerOccurrences = async (participantToken) => {
  * Write cancer occurrence object data to Firestore. 
  * @param {array<object>} cancerOccurrenceArray - Array of cancer occurrence objects.
  */
+
 const writeCancerOccurrences = async (cancerOccurrenceArray) => {
-    try {
+    const writeCancerOccurrenceBatch = async () => {
         const batch = db.batch();
         for (const occurrence of cancerOccurrenceArray) {
             const docRef = db.collection('cancerOccurrence').doc();
             batch.set(docRef, occurrence);
         }
         await batch.commit();
+    };
+
+    try {
+        await firestoreWriteWithAutoRetry(writeCancerOccurrenceBatch, 'writeCancerOccurrences');
     } catch (error) {
-        throw new Error("Error writing cancer occurrences.", { cause: error });
+        console.error('Error in writeCancerOccurrences:', error);
+        throw new Error(`Write Cancer Occurrences failed: ${error.message}`);
+    }
+};
+
+/**
+ * Occasionally, birthday card data needs to be updated based on return data from the post office.
+ * Check for duplicate birthday card data before writing to Firestore.
+ * An existing birthday card is one with the same token, mailDate, and cardVersion.
+ * @param {string} participantToken - The participant token.
+ * @param {string} mailingDate - ISO 8601 date string.
+ * @param {string} cardVersion - The version of the birthday card.
+ * @returns {object} - The existing birthday card data and Firestore document ID.
+ */
+const getExistingBirthdayCard = async (participantToken, mailingDate, cardVersion) => {
+    try {
+        const snapshot = await db.collection('birthdayCard')
+            .where('token', '==', participantToken)
+            .where(fieldMapping.birthdayCardData.mailDate.toString(), '==', mailingDate)
+            .where(fieldMapping.birthdayCardData.cardVersion.toString(), '==', cardVersion)
+            .get();
+
+        if (snapshot.empty) {
+            return { existingCardData: null, cardDocId: null };
+        }
+        
+        if (snapshot.size > 1) {
+            console.error(`Duplicate birthday card data found for token ${participantToken} and mailing date ${mailingDate}.`);
+        }
+        
+        return { existingCardData: snapshot.docs[0].data(), cardDocId: snapshot.docs[0].id };
+    } catch (error) {
+        console.error('Error in getExistingBirthdayCard:', error);
+        throw new Error("Error fetching birthday card data.", { cause: error });
     }
 }
 
+/**
+ * Write the NORC birthday card data to Firestore.
+ * @param {object} birthdayCardData - The NORC birthday card data.
+ * @param {object} birthdayCardWriteDetails - Object with .cardWriteType (either 'create' or 'update') and .docId (only provided for update operations) properties.
+ */
 
+const writeBirthdayCard = async (birthdayCardData, birthdayCardWriteDetails) => {
+    try {
+        const writeCard = async () => {
+            const { cardWriteType, cardDocId } = birthdayCardWriteDetails;
+
+            if (cardWriteType === 'create') {
+                await db.collection('birthdayCard').add(birthdayCardData);
+            } else if (cardWriteType === 'update') {
+                if (!cardDocId) {
+                    throw new Error('Document ID is required for update operation.');
+                }
+                await db.collection('birthdayCard').doc(cardDocId).update(birthdayCardData);
+            } else {
+                console.error(`Invalid birthday card write type: ${cardWriteType}, docId: ${cardDocId}`);
+                throw new Error(`Invalid birthday card write type. ${cardWriteType}, docId: ${cardDocId}`);
+            }
+        };
+
+        return await firestoreWriteWithAutoRetry(writeCard, 'writeBirthdayCard');
+    } catch (error) {
+        console.error('Error in writeBirthdayCard:', error);
+        throw new Error(`Write Birthday Card failed: ${error.message}`, { cause: error });
+    }
+};
 
 const updateParticipantCorrection = async (participantData) => {
     try {
@@ -3615,7 +3682,33 @@ const updateSmsPermission = async (phoneNumber, isSmsPermitted) => {
   return count;
 };
 
+/**
+ * Generic function to write to Firestore with automatic retries.
+ * @param {Function} asyncWriteFunction - Firestore write operation to perform.
+ * @param {string} operationName - Name of the Firestore write operation for logging purposes.
+ * @param {number} maxRetries - Maximum number of write retries.
+ * @param {number} delay - Time (milliseconds) to wait between retries.
+ * @returns {Promise} - Promise that resolves with the result of the Firestore write operation.
+ */
+
+const firestoreWriteWithAutoRetry = async (asyncWriteFunction, operationName, maxRetries = 3, delay = 1000) => {
+    let lastError;
+    for (let retries = 0; retries < maxRetries; retries++) {
+        try {
+            return await asyncWriteFunction();
+        } catch (error) {
+            console.error(`${operationName} failed (attempt ${retries + 1}/${maxRetries}):`, error);
+            lastError = error;
+            if (retries < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    throw new Error(`${operationName} failed after ${maxRetries} retries.`, { cause: lastError });
+};
+
 module.exports = {
+    db,
     updateResponse,
     retrieveParticipants,
     verifyIdentity,
@@ -3736,6 +3829,8 @@ module.exports = {
     queryKitsByReceivedDate,
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
+    writeBirthdayCard,
+    getExistingBirthdayCard,
     updateParticipantCorrection,
     generateSignInWithEmailLink,
     getAppSettings,

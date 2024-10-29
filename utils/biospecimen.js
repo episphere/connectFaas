@@ -972,11 +972,9 @@ const biospecimenAPIs = async (req, res) => {
         try {
           await sendInstantNotification(requestData);
           return res.status(200).json(getResponseJSON("Success!", 200));
-        } catch (error) {
-          console.error(
-            `Error sending instant notification (${requestData.category}, ${requestData.attempt}). ${error.message}`
-          );
-          return res.status(500).json({ message: error.message, code: 500 });
+        } catch (err) {
+          console.error(err);
+          return res.status(500).json({ message: err.message, code: 500 });
         }
     }
 
