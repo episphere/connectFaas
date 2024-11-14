@@ -602,23 +602,23 @@ const getBigQueryData = async (req, res) => {
     logIPAddress(req);
     setHeaders(res);
     
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
+    if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
 
-    if(req.method !== 'GET') {
+    if (req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
     const { APIAuthorization } = require('./shared');
     const authorized = await APIAuthorization(req);
-    if(authorized instanceof Error){
+    if (authorized instanceof Error) {
         return res.status(500).json(getResponseJSON(authorized.message, 500));
     }
 
-    if(!authorized){
+    if (!authorized) {
         return res.status(401).json(getResponseJSON('Authorization failed!', 401));
     }
 
-    if(req.query.table === undefined || !req.query.table) return res.status(400).json(getResponseJSON('Bad request. Table is not defined in query', 400));
-    if(req.query.dataset === undefined || !req.query.dataset) return res.status(400).json(getResponseJSON('Bad request. Dataset is not defined in query', 400));
+    if (req.query.table === undefined || !req.query.table) return res.status(400).json(getResponseJSON('Bad request. Table is not defined in query', 400));
+    if (req.query.dataset === undefined || !req.query.dataset) return res.status(400).json(getResponseJSON('Bad request. Dataset is not defined in query', 400));
 
     //Validate the caller has access to the table and dataset
     const dataset = req.query.dataset;
@@ -644,9 +644,6 @@ const getBigQueryData = async (req, res) => {
     } else if (typeof filters === "string") {
         try {
             filters = [JSON.parse(filters)];
-            if (!filters[0].column || !filters[0].operator) {
-                return res.status(400).json(getResponseJSON('Bad request. Invalid Filter', 400));
-            }
         } catch (e) {
             return res.status(400).json(getResponseJSON('Bad request. Filters is not an array or JSON object', 400));
         }
