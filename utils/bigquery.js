@@ -226,6 +226,9 @@ async function validateFilters (dataset, table, filters) {
     let isValid = true;
     if (Array.isArray(filters)) {
       filters.forEach(filter => {
+        if (!filter.column || !filter.operator) {
+          isValid = false;
+        }
         //If the field is not in the table or view then it is invalid
         let fieldIndex = fields.findIndex((field) => field.column_name === filter.column);
         if (fieldIndex === -1) {

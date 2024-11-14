@@ -633,9 +633,6 @@ const getBigQueryData = async (req, res) => {
         try {
             filters.forEach((filter, index) => {
                 filters[index] = JSON.parse(filter);
-                if (!filters[index].column || !filters[index].operator) {
-                    throw new Error ('Invalid Filter');
-                }
             });
         } catch (e) {
             return res.status(400).json(getResponseJSON('Bad request. '+e.toString(), 400));
