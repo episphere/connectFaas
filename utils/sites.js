@@ -607,16 +607,15 @@ const getBigQueryData = async (req, res) => {
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
     }
-    // const { APIAuthorization } = require('./shared');
-    // const authorized = await APIAuthorization(req);
-    // if(authorized instanceof Error){
-    //     return res.status(500).json(getResponseJSON(authorized.message, 500));
-    // }
+    const { APIAuthorization } = require('./shared');
+    const authorized = await APIAuthorization(req);
+    if(authorized instanceof Error){
+        return res.status(500).json(getResponseJSON(authorized.message, 500));
+    }
 
-    // if(!authorized){
-    //     return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-    // }
-    const authorized = {"siteCode": "NORC"};
+    if(!authorized){
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
 
     if(req.query.table === undefined || !req.query.table) return res.status(400).json(getResponseJSON('Bad request. Table is not defined in query', 400));
     if(req.query.dataset === undefined || !req.query.dataset) return res.status(400).json(getResponseJSON('Bad request. Dataset is not defined in query', 400));
@@ -677,7 +676,7 @@ const getBigQueryData = async (req, res) => {
         console.log(e);
     }
 
-    return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
+    return res.status(error ? 500 : 200).json(error ? getResponseJSON(error, 500) : {code: 200, results: responseArray});
 }
 
 
