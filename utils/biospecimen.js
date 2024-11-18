@@ -696,7 +696,7 @@ const biospecimenAPIs = async (req, res) => {
         try {
             const { assignKitToParticipant } = require('./firestore');
             const response = await assignKitToParticipant(requestData);
-            return res.status(200).json({ response, code:200 });
+            return res.status(200).json({ ...response, code:200 });
         }
         catch (error) {
             console.error(error);

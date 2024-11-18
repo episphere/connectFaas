@@ -2536,46 +2536,72 @@ const processParticipantHomeMouthwashKitData = (record, printLabel) => {
 }
 
 const assignKitToParticipant = async (data) => {
-    try {
-        const { supplyKitId, kitStatus, pending, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
-            assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
-            kitType, mouthwashKit } = fieldMapping;
+    let kitAssignmentResult;
+    const { supplyKitId, kitStatus, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
+        assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
+        kitType, mouthwashKit } = fieldMapping;
 
-        
+    await db.runTransaction(async (transaction) => {
         // Check the supply kit tracking number and see if it matches the return kit tracking number
         // of any kits including this one or the supply kit tracking number of any other kits
 
-        const kitsWithDuplicateReturnTrackingNumbers = await db.collection("kitAssembly")
-            .where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
-            .get();
+        const kitsWithDuplicateReturnTrackingNumbers = await transaction.get(
+            db.collection("kitAssembly").where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
+        );
 
         if(kitsWithDuplicateReturnTrackingNumbers.size > 0) {
-            return false;
+            kitAssignmentResult = {
+                success: false,
+                message: "Duplicate return tracking number found: " + data[supplyKitTrackingNum]
+            };
+            return;
         }
 
-        const otherKitsUsingSupplyKitTrackingNumber = await db.collection("kitAssembly")
+        const otherKitsUsingSupplyKitTrackingNumber = await transaction.get(
+            db.collection("kitAssembly")
             .where(`${supplyKitTrackingNum}`, '==', data[supplyKitTrackingNum])
-            .get();
+        );
 
         if(otherKitsUsingSupplyKitTrackingNumber.size > 1) {
-                return false;
+            kitAssignmentResult = {
+                success: false,
+                message: "Other kits using supply kit tracking number found: " + otherKitsUsingSupplyKitTrackingNumber.map(rec => rec.data()[supplyKitId]).join(', ')
+            };
+                return;
         } else if (otherKitsUsingSupplyKitTrackingNumber.size === 1) {
             // check if the kit found is the current kit
             // Doing this instead of including it in the query to avoid creating an unnecessary composite index
             const possibleDuplicate = otherKitsUsingSupplyKitTrackingNumber.docs[0];
             const possibleDuplicateKitId = possibleDuplicate.data()[supplyKitId];
             if(possibleDuplicateKitId !== data[supplyKitId]) {
-                return false;
+                kitAssignmentResult = {
+                    success: false,
+                    message: "Other kit using supply kit tracking number found: " + possibleDuplicateKitId
+                };
+                return;
             }
         }
 
-        const kitSnapshot = await db.collection("kitAssembly")
-            .where(`${supplyKitId}`, '==', data[supplyKitId])
-            .where(`${kitStatus}`, '==', pending).get();
+        const kitSnapshot = await transaction.get(
+            db.collection("kitAssembly")
+                .where(`${supplyKitId}`, '==', data[supplyKitId])
+        );
         printDocsCount(kitSnapshot, "assignKitToParticipant; collection: kitAssembly");
 
-        if (kitSnapshot.size !== 1) {
-            return false;
+        if (kitSnapshot.size > 1) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Multiple pending kits found for supply kit ID " + data[supplyKitId]
+            };
+            return;
+        }
+
+        if(kitSnapshot.size === 0) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Kit not found for supply kit ID " + data[supplyKitId]
+            };
+            return;
         }
 
         const kitDoc = kitSnapshot.docs[0];
@@ -2587,13 +2613,51 @@ const assignKitToParticipant = async (data) => {
             'Connect_ID': parseInt(data['Connect_ID'])
         };
 
-        await kitDoc.ref.update(kitData);
 
-        const participantSnapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(data['Connect_ID'])).get();
+        const participantSnapshot = await transaction.get(
+            db.collection("participants")
+                .where('Connect_ID', '==', parseInt(data['Connect_ID']))
+        );
         printDocsCount(participantSnapshot, "assignKitToParticipant; collection: participants");
 
+        // 1109: Check if the participant already has another baseline kit assigned and error if it does.
+        // Note that this will need to be modified in the future to recognize and handle replacement kits
+        // once that functionality is added
+        const kitAssemblyQuery =  db.collection("kitAssembly")
+            .where('Connect_ID', '==', parseInt(data['Connect_ID']))
+            .where(`${kitStatus}`, '==', assigned)
+            .where(`${collectionRound}`, '==', baseline)
+            // .select([`${supplyKitId}`]);
+        const kitAssemblySnapshot = await transaction.get(kitAssemblyQuery);
+
+        printDocsCount(participantSnapshot, "assignKitToParticipant; collection: possible duplicate kits");
+
+
+        if(kitAssemblySnapshot.size > 0) {
+            // Check to see if there are any baseline kits which are already assigned but with a different kit ID
+            // If so, error
+            const duplicateKit = kitAssemblySnapshot.docs.find(doc => {
+                const docData = doc.data();
+                return docData[supplyKitId] !== data[supplyKitId];
+            });
+            if(duplicateKit) {
+                // A kit has already been assigned; terminate without updates.
+                let errorMsg = `Duplicate kit ${duplicateKit.data()[supplyKitId]} found when attempting to assign kit ${data[supplyKitId]} to user ${data['Connect_ID']}`;
+                console.error(errorMsg);
+                kitAssignmentResult = {
+                    success: false,
+                    message: errorMsg
+                };
+                return;
+            }
+        }
+
         if (participantSnapshot.size !== 1) {
-            return false;
+            kitAssignmentResult = {
+                success: false,
+                message: (participantSnapshot.size > 1 ? 'Multiple' : 'No') + ' participants found for connect ID ' + data['Connect_ID']
+            };
+            return;
         }
 
         const participantDoc = participantSnapshot.docs[0];
@@ -2612,14 +2676,20 @@ const assignKitToParticipant = async (data) => {
             }
         };
 
-        await participantDoc.ref.update(updatedParticipantObject);
+        transaction.update(kitDoc.ref, kitData);
+        transaction.update(participantDoc.ref, updatedParticipantObject);
 
+        kitAssignmentResult = {
+            success: true,
+            message: 'Success'
+        };
         return true;
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
+    });
+    
+    return kitAssignmentResult;
 };
+
+
 
 const processVerifyScannedCode = async (id) => {
     try {
