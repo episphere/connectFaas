@@ -154,6 +154,7 @@ const dashboard = async (req, res) => {
         try {
             const { resetParticipantSurvey } = require('./firestore');            
             const data = await resetParticipantSurvey(connectId, survey);
+            // console.log("🚀 ~ dashboard ~ data:", data)
             return res.status(200).json({data: data, code: 200});
         } catch (err) {
             console.error('error', err);

@@ -3557,7 +3557,7 @@ const resetParticipantSurvey = async (connectId, survey) => {
 
         const participantRef = snapshot.docs[0].ref;
         const participantData = snapshot.docs[0].data();
-        console.log("🚀 ~ resetParticipantSurvey ~ participantData:", participantData)
+        // console.log("🚀 ~ resetParticipantSurvey ~ participantData:", participantData)
         // get participant document
 
         // check if survey exists
@@ -3571,17 +3571,17 @@ const resetParticipantSurvey = async (connectId, survey) => {
         ssnPartialGivenTime (598680838) - delete
         */
 
-        const { ssnStatusFlag, ssnSurveyStartTime, ssnSurveyCompletedTime, ssnFullGiven, ssnPartialGiven, 
-            notStarted, ssnFullGivenTime, ssnPartialGivenTime,no } = fieldMapping;
+        const { ssnStatusFlag, ssnSurveyStartTime, ssnSurveyCompletedTime, ssnFullGiven, ssnPartialGiven,
+            notStarted, ssnFullGivenTime, ssnPartialGivenTime, no } = fieldMapping;
 
         // early exit if survey is already in not started status
         if (participantData[ssnStatusFlag] === notStarted)  {
             throw {
                 code: 400,
-                message: 'Survey is already in not started status'
+                message: 'Failed to reset SSN Survey. The participant\'s SSN survey is "Not Started" status!'
             };
         }
-
+        
         // Reset participant data
         if (survey === 'ssn') {
             await participantRef.update({
@@ -3611,7 +3611,7 @@ const resetParticipantSurvey = async (connectId, survey) => {
         };
         
     }
-}
+};
 
 
 const generateSignInWithEmailLink = async (email, continueUrl) => {
