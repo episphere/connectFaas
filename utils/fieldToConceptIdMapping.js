@@ -293,6 +293,8 @@ module.exports = {
     ssnPartialGivenTime: 598680838,
     ssnQcStatus: 605870562,
     ssnNoCheckRan: 875207881,
+    ssnSurveyStartTime: 943232079,
+    ssnSurveyCompletedTime: 315032037,
 
     // Survey Status Variables
     notYetEligible: 789467219,

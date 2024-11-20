@@ -141,7 +141,29 @@ const dashboard = async (req, res) => {
         else {
           return res.status(403).json(getResponseJSON('Operation only permitted on dev environment', 403));
         }
-      }
+    } else if (api === 'resetParticipantSurvey') {
+        if (req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        let body = req.body;
+        const { connectId, survey } = body;
+
+        if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
+        if (!body.survey) return res.status(405).json(getResponseJSON('Missing survey name to be reset!', 405));
+
+        try {
+            const { resetParticipantSurvey } = require('./firestore');            
+            const data = await resetParticipantSurvey(connectId, survey);
+            return res.status(200).json({data: data, code: 200});
+        } catch (err) {
+            console.error('error', err);
+            if (err.code === 400) {
+                return res.status(400).json({ message: err.message, code: 400 });
+            }
+            return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
+        }
+
+    }
     else {
         return res.status(404).json(getResponseJSON('API not found!', 404));
     }

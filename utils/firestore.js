@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { Transaction, FieldPath } = require('firebase-admin/firestore');
+const { Transaction, FieldPath, FieldValue } = require('firebase-admin/firestore');
 admin.initializeApp();
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true }); // Skip keys with undefined values instead of erroring
@@ -3539,6 +3539,81 @@ const updateParticipantCorrection = async (participantData) => {
     }
 }
 
+/**
+ * Reset participant survey status
+ * @param {string} connectId - Connect ID of the participant
+ * @param {string} survey - Survey name to reset
+ * @returns {object} - Updated participant document
+ * For now, only ssn survey is supported
+ */
+const resetParticipantSurvey = async (connectId, survey) => { 
+    try {
+        // get participant data
+        const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
+        // console.log("🚀 ~ resetParticipantSurvey ~ snapshot:", snapshot)
+        if (snapshot.empty) {
+            throw new Error('Participant not found!');
+        }
+
+        const participantRef = snapshot.docs[0].ref;
+        const participantData = snapshot.docs[0].data();
+        console.log("🚀 ~ resetParticipantSurvey ~ participantData:", participantData)
+        // get participant document
+
+        // check if survey exists
+        /*
+        ssnStatusFlag (126331570) - 972455046 (not started num type)
+        ssnSurveyStartTime (943232079) - delete
+        ssnSurveyCompletedTime (315032037) - delete
+        ssnFullGiven (311580100) - no
+        ssnPartialGiven (914639140) - no
+        ssnFullGivenTime (454067894) - delete
+        ssnPartialGivenTime (598680838) - delete
+        */
+
+        const { ssnStatusFlag, ssnSurveyStartTime, ssnSurveyCompletedTime, ssnFullGiven, ssnPartialGiven, 
+            notStarted, ssnFullGivenTime, ssnPartialGivenTime,no } = fieldMapping;
+
+        // early exit if survey is already in not started status
+        if (participantData[ssnStatusFlag] === notStarted)  {
+            throw {
+                code: 400,
+                message: 'Survey is already in not started status'
+            };
+        }
+
+        // Reset participant data
+        if (survey === 'ssn') {
+            await participantRef.update({
+                [ssnStatusFlag]: notStarted,
+                [ssnSurveyStartTime]: FieldValue.delete(),
+                [ssnSurveyCompletedTime]: FieldValue.delete(),
+                [ssnFullGiven]: no,
+                [ssnPartialGiven]: no,
+                [ssnFullGivenTime]: FieldValue.delete(),
+                [ssnPartialGivenTime]: FieldValue.delete(),
+            });
+            const updatedDoc = await participantRef.get();
+            return updatedDoc.data();
+        }
+        // Add more surveys here
+
+    } catch (error) {
+        // throws error if error code exists
+        if (error.code) { 
+            throw error; 
+        }
+        console.error('Error resetting participant survey:', error);
+
+        throw {
+            code: 500,
+            message: `Error resetting participant survey. ${error.message}`
+        };
+        
+    }
+}
+
+
 const generateSignInWithEmailLink = async (email, continueUrl) => {
     return await admin.auth().generateSignInWithEmailLink(email, {
         url: continueUrl,
@@ -3738,6 +3813,7 @@ module.exports = {
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
     updateParticipantCorrection,
+    resetParticipantSurvey,
     generateSignInWithEmailLink,
     getAppSettings,
     updateNotifySmsRecord,
