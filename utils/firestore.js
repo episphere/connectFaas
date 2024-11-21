@@ -1366,12 +1366,7 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
             let participantUpdates = updateBaselineData(biospecimenData, participantData, participantUid, specimenArray, siteTubesList);
 
             participantUpdates = { ...participantData, ...participantUpdates};
-            console.log('Updated participantUpdates', JSON.stringify(participantUpdates, null, '\t'));
-            const eligibilityUpdates = processMouthwashEligibility(participantUpdates);
-            console.log('eligibilityUpdates', JSON.stringify(eligibilityUpdates, null, '\t'));
-            participantUpdates = {...participantUpdates, ...eligibilityUpdates};
             // Now run equivalent of updateParticipantData(participantSnapshot.docs[0].id, updates);
-            console.log('Final participantUpdates', JSON.stringify(participantUpdates, null, '\t'));
             transaction.update(participantSnapshot.docs[0].ref, participantUpdates);
             transaction.update(specimenCollectionSnapshot.docs[0].ref, biospecimenData);
         });
@@ -1386,7 +1381,6 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
             .where('state.uid', '==', participantUid)
             .get();
         const eligibilityUpdates = processMouthwashEligibility(participantSnapshot.docs[0].data());
-        console.log('Outer eligibilityUpdates', JSON.stringify(eligibilityUpdates, null, '\t'));
         
         await participantSnapshot.docs[0].ref.update(eligibilityUpdates);
 

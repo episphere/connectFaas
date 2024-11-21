@@ -93,12 +93,10 @@ module.exports = {
     clinicalBloodCollected: 534041351,
     clinicalBloodCollectedTime: 398645039,
     urineCollectionSetting: 718172863,
-    baselineUrineCollected: 167958071,
     baselineUrineCollectedTime: 847159717,
     clinicalUrineCollected: 210921343,
     clinicalUrineCollectedTime: 541311218,
     mouthwashCollectionSetting: 915179629,
-    baselineMouthwashCollected: 684635302,
     baselineMouthwashCollectedTime: 448660695,
     anySpecimenCollected: 316824786,
     // This appears to be identical to bloodOrUrineCollectedTimestamp
