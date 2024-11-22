@@ -91,6 +91,8 @@ module.exports = {
     researchCollectionSetting: 534621077,
     reasonTubeNotCollected: 883732523,
     participantRefusal: 681745422,
+    norcPaymentEligibility: 222373868,
+    timestampPaymentEligibilityForRound: 787567527,
 
 
 

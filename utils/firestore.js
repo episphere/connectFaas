@@ -3556,7 +3556,6 @@ const resetParticipantSurvey = async (connectId, survey) => {
         const participantRef = snapshot.docs[0].ref;
         const participantData = snapshot.docs[0].data();
 
-        // check if survey exists
         /*
         ssnStatusFlag (126331570) - 972455046 (not started num type)
         ssnSurveyStartTime (943232079) - delete
@@ -3592,7 +3591,12 @@ const resetParticipantSurvey = async (connectId, survey) => {
             const updatedDoc = await participantRef.get();
             return updatedDoc.data();
         }
-        // Add more surveys here
+
+        // Add more surveys here later
+        throw {
+            code: 400,
+            message: `Survey type ${survey} failed to reset.`
+        }
 
     } catch (error) {
         // throws error if error code exists
@@ -3615,7 +3619,7 @@ const resetParticipantSurvey = async (connectId, survey) => {
  * @param {string} connectId - Connect ID of the participant
  * @param {string} paymentRound - Payment round to check eligibility for
 */
-const checkParticipantForEligibleIncentive = async (connectId, paymentRound) => {
+const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRound, dateOfEligibility) => {
     try {
         // code pulled and modified from checkDerivedVariables
         const { healthCareProvider, paymentRound, baseline, eligibleForIncentive, 
@@ -3626,7 +3630,7 @@ const checkParticipantForEligibleIncentive = async (connectId, paymentRound) => 
         const { serumSeparatorTube1, serumSeparatorTube2, heparinTube1, edtaTube1, acdTube1, streckTube } = fieldMapping.tubesBagsCids;
         const { getSpecimenCollections } = require('./firestore');
         const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
-        if (snapshot.empty) throw new Error('Participant not found.');
+        if (snapshot.empty) throw { code: 404, message: 'Participant not found.' };
 
         const participantData = snapshot.docs[0].data();
         const siteCode = participantData[healthCareProvider];
@@ -3635,8 +3639,10 @@ const checkParticipantForEligibleIncentive = async (connectId, paymentRound) => 
 
         let incentiveEligible = false;
 
+        const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
+
         // Add option to handle future payment rounds here later - left paymentRound as a parameter for now
-        if (participantData[paymentRound][baseline][eligibleForIncentive] === no) { 
+        if (participantData[paymentRound][currentPaymentRoundName][eligibleForIncentive] === no) { 
 
             const module1 = (participantData[baselineSurveyStatusModuleBackgroundOverallHealth] === submitted);
             const module2 = (participantData[baselineSurveyStatusModuleMedReproHealth] === submitted);
@@ -3680,6 +3686,67 @@ const checkParticipantForEligibleIncentive = async (connectId, paymentRound) => 
         };
     }
         
+}
+
+
+const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRound, dateOfEligibility) => { 
+    
+    try {
+        const { healthCareProvider, paymentRound, baseline, eligibleForIncentive, 
+            baselineSurveyStatusModuleBackgroundOverallHealth, baselineSurveyStatusModuleMedReproHealth, baselineSurveyStatusModuleLiveAndWork, baselineSurveyStatusModuleSmokeAlcoholSun,
+            collectionDetails, baselineBloodSampleCollected, clinicalSiteBloodCollected, biospecimenVisit, collectionSetting, researchCollectionSetting,
+            submitted,reasonTubeNotCollected, yes, no, participantRefusal, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
+
+        const eligibilityCheck = await checkParticipantForEligibleIncentive(connectId, currentPaymentRound);
+        console.log("🚀 ~ updateParticipantIncentiveEligibility ~ eligibilityCheck:", eligibilityCheck)
+
+        const isEligibleForIncentive = eligibilityCheck.isEligibleForIncentive;
+        if (!isEligibleForIncentive) throw { code: 400, message: 'Participant is not eligible for incentive update.' };
+
+        console.log("🚀 ~ updateParticipantIncentiveEligibility ~ isEligibleForIncentive:", isEligibleForIncentive)
+        const participantData = eligibilityCheck.participantData;
+        const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
+
+        const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
+        if (snapshot.empty) throw { code: 404, message: 'Participant not found.' };
+
+
+
+        const participantRef = snapshot.docs[0].ref;
+
+        // const currentPaymentRoundEligibility = participantData[paymentRound][currentPaymentRoundName][eligibleForIncentive];
+        // console.log("🚀 ~ updateParticipantIncentiveEligibility ~ currentPaymentRoundEligibility:", currentPaymentRoundEligibility)
+
+            // console.log({
+            //     [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
+            //     [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,
+            //     [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibility
+            // });
+            
+        if (participantData[paymentRound][currentPaymentRoundName][eligibleForIncentive] === no) {
+            console.log("🚀 ~ updateParticipantIncentiveEligibility ~ connectId, paymentRound, dateOfEligibility:", connectId, currentPaymentRound, dateOfEligibility)
+            await participantRef.update({
+                [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
+                [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,
+                [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibility
+            });
+            const updatedDoc = await participantRef.get();
+            if (!updatedDoc.exists) throw { code: 500, message: 'Updated document not found.' }
+            return updatedDoc.data();
+        } else {
+            throw {
+                code: 400,
+                message: 'Participant is already eligible for incentive and cannot be updated!'
+            }
+        }
+
+    } catch (error) {
+        console.error('Error updating participant incentive eligibility:', error);
+        throw {
+            code: 500,
+            message: `Error updating participant incentive eligibility. ${error.message}`
+        };
+    }
 }
 
 
@@ -3888,4 +3955,5 @@ module.exports = {
     updateNotifySmsRecord,
     updateSmsPermission,
     checkParticipantForEligibleIncentive,
+    updateParticipantIncentiveEligibility,
 }
