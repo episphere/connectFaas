@@ -164,19 +164,25 @@ const dashboard = async (req, res) => {
             return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
         }
     } else if (api === 'checkParticipantForEligibleIncentive') {
-        if (req.method !== 'POST') {
-            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        if (req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
-        let body = req.body;
-        const { connectId, payment } = body;
+        let query = req.query;
+        console.log("🚀 ~ dashboard ~ query:", query)
+        const connectId = parseInt(query.connectId);
+        console.log("🚀 ~ dashboard ~ connectId:", connectId)
+        const paymentRound = parseInt(query.paymentRound);
+        console.log("🚀 ~ dashboard ~ paymentRound:", paymentRound)
 
         if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
-        if (!body.payment) return res.status(405).json(getResponseJSON('Missing payment round information!', 405));
+        if (!paymentRound) return res.status(405).json(getResponseJSON('Missing payment round information!', 405));
 
         try {
             const { checkParticipantForEligibleIncentive } = require('./firestore');
-            const data = await checkParticipantForEligibleIncentive(connectId, payment);
+            
+            const data = await checkParticipantForEligibleIncentive(connectId, paymentRound);
             console.log("🚀 ~ dashboard ~ data:", data)
+            // return res.status(200).json({data: 'This API is not implemented yet', code: 200});
             // return boolean value and current participant data
             return res.status(200).json({ 
                 data: {

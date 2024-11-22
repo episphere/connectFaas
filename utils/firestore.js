@@ -3611,75 +3611,54 @@ const resetParticipantSurvey = async (connectId, survey) => {
 
 /**
  * Used for NORC Incentive Eligibility tool
+ * Check if participant is eligible for incentive using snippet of code from checkDerivedVariables
+ * @param {string} connectId - Connect ID of the participant
+ * @param {string} paymentRound - Payment round to check eligibility for
 */
 const checkParticipantForEligibleIncentive = async (connectId, paymentRound) => {
     try {
-        // needs a token and site code from the connectId as well as a non stale participant document
-
         // code pulled and modified from checkDerivedVariables
-        const { getParticipantData, getSpecimenCollections } = require('./firestore');
+        const { healthCareProvider, paymentRound, baseline, eligibleForIncentive, 
+            baselineSurveyStatusModuleBackgroundOverallHealth, baselineSurveyStatusModuleMedReproHealth, baselineSurveyStatusModuleLiveAndWork, baselineSurveyStatusModuleSmokeAlcoholSun,
+            collectionDetails, baselineBloodSampleCollected, clinicalSiteBloodCollected, biospecimenVisit, collectionSetting, researchCollectionSetting,
+            submitted,reasonTubeNotCollected, yes, no, participantRefusal } = fieldMapping;
 
-        if (!connectId) throw new Error('Connect ID is required.');
-        if (!paymentRound) throw new Error('Payment round is required.');
-
+        const { serumSeparatorTube1, serumSeparatorTube2, heparinTube1, edtaTube1, acdTube1, streckTube } = fieldMapping.tubesBagsCids;
+        const { getSpecimenCollections } = require('./firestore');
         const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
         if (snapshot.empty) throw new Error('Participant not found.');
 
         const participantData = snapshot.docs[0].data();
-        const siteCode = participantData['827220437'];
+        const siteCode = participantData[healthCareProvider];
         const token = participantData['token'];
-        
-
-        // test this first before proceeding
-        const response = await getParticipantData(token, siteCode);
-        // console.log("🚀 ~ checkParticipantForEligibleIncentive ~ response:", response)
-
-        // return response;
-
         const specimenArray = await getSpecimenCollections(token, siteCode);
-        
-        const data = response.data;
-        // const doc = response.id;
-
-        // const uid = data.state.uid;
-
-        // if(!uid) return; // throw error here??
-
-        // const surveys = await retrieveUserSurveys(uid, ["D_299215535", "D_826163434"]); not needed
 
         let incentiveEligible = false;
-        // let menstrualCycleSurveyEligible = false;
-        // let allBaselineComplete = false;
-        // let bloodUrineNotRefused = false;
-        // let calculateBaselineOrderPlaced = false;
-        // let clinicalSampleDonated = false;
-        // let anyRefusalWithdrawal = false;
 
-        // Add option to handle future payment rounds 
-        // incentiveEligible
-        if(data['130371375']['266600170']['731498909'] === 104430631) { // eligible for payment no
+        // Add option to handle future payment rounds here later - left paymentRound as a parameter for now
+        if (participantData[paymentRound][baseline][eligibleForIncentive] === no) { 
 
-            const module1 = (data['949302066'] === 231311385);
-            const module2 = (data['536735468'] === 231311385);
-            const module3 = (data['976570371'] === 231311385);
-            const module4 = (data['663265240'] === 231311385);
-            const bloodCollected = (data['878865966'] === 353358909) || (data['173836415']?.['266600170']?.['693370086'] === 353358909);    
-        
-            if(module1 && module2 && module3 && module4) {
+            const module1 = (participantData[baselineSurveyStatusModuleBackgroundOverallHealth] === submitted);
+            const module2 = (participantData[baselineSurveyStatusModuleMedReproHealth] === submitted);
+            const module3 = (participantData[baselineSurveyStatusModuleSmokeAlcoholSun] === submitted);
+            const module4 = (participantData[baselineSurveyStatusModuleLiveAndWork] === submitted);
+            const bloodCollected = (participantData[baselineBloodSampleCollected] === yes) || (participantData[collectionDetails]?.[baseline]?.[clinicalSiteBloodCollected] === yes);
+            
+            if (module1 && module2 && module3 && module4) {
                 if(bloodCollected) {
                     incentiveEligible = true;
                 }    
                 else {
                     if (specimenArray.length > 0) {
-                        const baselineResearchCollections = specimenArray.filter(collection => collection['331584571'] === 266600170 && collection['650516960'] === 534621077); // biospecimen visit baseline and collection setting is research
+                        const baselineResearchCollections = specimenArray.filter(collection => collection[biospecimenVisit] === baseline && collection[collectionSetting] === researchCollectionSetting);
                     
-                        if(baselineResearchCollections.length != 0) {
+                        if (baselineResearchCollections.length != 0) {
                             baselineResearchCollections.forEach(collection => {
-                                
-                                const researchBloodTubes = ['299553921', '703954371', '838567176', '454453939', '652357376', '505347689'];
+
+                                const researchBloodTubes = [serumSeparatorTube1, serumSeparatorTube2, heparinTube1, edtaTube1, acdTube1, streckTube];
                                 
                                 researchBloodTubes.forEach(tube => {
-                                    if(collection[tube] && collection[tube][883732523] && collection[tube][883732523] != 681745422) { // select reason tube not collected is not participant refusal
+                                    if (collection[tube] && collection[tube][reasonTubeNotCollected] && collection[tube][reasonTubeNotCollected] != participantRefusal) {
                                         incentiveEligible = true;
                                     }
                                 });
@@ -3689,9 +3668,6 @@ const checkParticipantForEligibleIncentive = async (connectId, paymentRound) => 
                 }
             }
         }
-        console.log("🚀 ~ checkParticipantForEligibleIncentive ~ incentiveEligible:", incentiveEligible)
-        console.log("🚀 ~ checkParticipantForEligibleIncentive ~ participantData:", participantData)
-        // return boolean  and current participant data
         return { 
             isEligibleForIncentive: incentiveEligible, 
             participantData 

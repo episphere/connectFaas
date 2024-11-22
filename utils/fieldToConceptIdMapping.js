@@ -15,6 +15,7 @@ module.exports = {
 
     yes: 353358909,
     no: 104430631,
+    
     healthCareProvider: 827220437,
     loginSite: 789843387,
     reportMissingTube: 258745303,
@@ -77,6 +78,21 @@ module.exports = {
     tubeDeviationLowVolume: 728366619,
     tubeDeviationLeakedSpilled: 757246707,
     tubeDeviationUnexpectedTubeSize: 777486216,
+
+    paymentRound: 130371375,
+    eligibleForIncentive: 731498909,
+    baselineSurveyStatusModuleBackgroundOverallHealth: 949302066,
+    baselineSurveyStatusModuleMedReproHealth: 536735468,
+    baselineSurveyStatusModuleSmokeAlcoholSun: 976570371,
+    baselineSurveyStatusModuleLiveAndWork: 663265240,
+    collectionDetails: 173836415,
+    biospecimenVisit: 331584571,
+    collectionSetting: 650516960,
+    researchCollectionSetting: 534621077,
+    reasonTubeNotCollected: 883732523,
+    participantRefusal: 681745422,
+
+
 
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,
