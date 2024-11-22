@@ -155,6 +155,57 @@ const dashboard = async (req, res) => {
             const { resetParticipantSurvey } = require('./firestore');            
             const data = await resetParticipantSurvey(connectId, survey);
             // console.log("🚀 ~ dashboard ~ data:", data)
+            return res.status(200).json({data: data, message: 'The participantnt\'s survey was sucessfully reset',code: 200});
+        } catch (err) {
+            console.error('error', err);
+            if (err.code === 400) {
+                return res.status(400).json({ message: err.message, code: 400 });
+            }
+            return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
+        }
+    } else if (api === 'checkParticipantForEligibleIncentive') {
+        if (req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        let body = req.body;
+        const { connectId, payment } = body;
+
+        if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
+        if (!body.payment) return res.status(405).json(getResponseJSON('Missing payment round information!', 405));
+
+        try {
+            const { checkParticipantForEligibleIncentive } = require('./firestore');
+            const data = await checkParticipantForEligibleIncentive(connectId, payment);
+            console.log("🚀 ~ dashboard ~ data:", data)
+            // return boolean value and current participant data
+            return res.status(200).json({ 
+                data: {
+                    isEligibleForIncentive: data.isEligibleForIncentive,
+                    participantData: data.participantData
+                }, 
+                code: 200 
+            });
+        } catch (err) {
+            console.error('error', err);
+            if (err.code === 400) {
+                return res.status(400).json({ message: err.message, code: 400 });
+            }
+            return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
+        }
+    } else if (api === `updateParticipantIncentiveEligibility`) {
+        if (req.method !== 'POST') {
+            return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
+        }
+        let body = req.body;
+        const { connectId, payment } = body;
+
+        if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
+        if (!body.payment) return res.status(405).json(getResponseJSON('Missing payment round information!', 405));
+
+        try {
+            const { updateParticipantIncentiveEligibility } = require('./firestore');
+            const data = await updateParticipantIncentiveEligibility(connectId, payment);
+            console.log("🚀 ~ dashboard ~ data:", data)
             return res.status(200).json({data: data, code: 200});
         } catch (err) {
             console.error('error', err);
@@ -164,8 +215,7 @@ const dashboard = async (req, res) => {
             return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
         }
 
-    }
-    else {
+    } else {
         return res.status(404).json(getResponseJSON('API not found!', 404));
     }
 };

@@ -190,6 +190,8 @@ module.exports = {
      baselineMouthwashSample: 277479354,
      bloodOrUrineCollected: 156605577,
      bloodOrUrineCollectedTimestamp: 740582332,
+     clinicalSiteBloodCollected: 693370086,
+     baselineBloodSampleCollected: 878865966,
      collectionRound: 418571751,
      mouthwashKit: 976461859,
      mouthwashSurveyCompletionStatus: 547363263,
@@ -422,3 +424,10 @@ module.exports = {
         anyRefusalOrWithdrawal: 451953807
     }
 };
+
+
+/*
+
+
+*/ 
+
