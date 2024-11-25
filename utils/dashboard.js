@@ -154,7 +154,7 @@ const dashboard = async (req, res) => {
         try {
             const { resetParticipantSurvey } = require('./firestore');            
             const data = await resetParticipantSurvey(connectId, survey);
-            return res.status(200).json({data: data, message: 'The participantnt\'s survey was sucessfully reset',code: 200});
+            return res.status(200).json({data: data, message: 'The participantnt\'s survey was sucessfully reset', code: 200});
         } catch (err) {
             console.error('error', err);
             if (err.code === 400) {
@@ -167,11 +167,9 @@ const dashboard = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         let query = req.query;
-        // console.log("🚀 ~ dashboard ~ query:", query)
+        
         const connectId = parseInt(query.connectId);
-        // console.log("🚀 ~ dashboard ~ connectId:", connectId)
         const currentPaymentRound = parseInt(query.currentPaymentRound);
-        // console.log("🚀 ~ dashboard ~ currentPaymentRound:", currentPaymentRound)
 
         if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
         if (!currentPaymentRound) return res.status(405).json(getResponseJSON('Missing current payment round information!', 405));
@@ -199,22 +197,15 @@ const dashboard = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         let body = req.body;
-        console.log("🚀 ~ dashboard ~ body:", body)
         const { connectId, currentPaymentRound, dateOfEligibility } = body;
-        console.log("🚀 ~ dashboard ~ dateOfEligibility:", dateOfEligibility)
-        console.log("🚀 ~ dashboard ~ payment:", currentPaymentRound)
-        console.log("🚀 ~ dashboard ~ connectId:", connectId)
 
         if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
         if (!currentPaymentRound) return res.status(405).json(getResponseJSON('Missing current payment round information!', 405));
 
         try {
             const { updateParticipantIncentiveEligibility, checkParticipantForEligibleIncentive } = require('./firestore');
-
-            // return res.status(200).json({data: 'This API is disabled for now!', code: 200});
             const data = await updateParticipantIncentiveEligibility(connectId, currentPaymentRound, dateOfEligibility);
-            console.log("🚀 ~ dashboard ~ data:", data)
-            return res.status(200).json({data: data, code: 200});
+            return res.status(200).json({data: data, message:"Participant Eligibility Sucessfully Updated!" ,code: 200});
         } catch (err) {
             console.error('error', err);
             if (err.code === 400) {
@@ -222,7 +213,6 @@ const dashboard = async (req, res) => {
             }
             return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
         }
-
     } else {
         return res.status(404).json(getResponseJSON('API not found!', 404));
     }

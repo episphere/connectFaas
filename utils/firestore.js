@@ -3555,17 +3555,6 @@ const resetParticipantSurvey = async (connectId, survey) => {
 
         const participantRef = snapshot.docs[0].ref;
         const participantData = snapshot.docs[0].data();
-
-        /*
-        ssnStatusFlag (126331570) - 972455046 (not started num type)
-        ssnSurveyStartTime (943232079) - delete
-        ssnSurveyCompletedTime (315032037) - delete
-        ssnFullGiven (311580100) - no
-        ssnPartialGiven (914639140) - no
-        ssnFullGivenTime (454067894) - delete
-        ssnPartialGivenTime (598680838) - delete
-        */
-
         const { ssnStatusFlag, ssnSurveyStartTime, ssnSurveyCompletedTime, ssnFullGiven, ssnPartialGiven,
             notStarted, ssnFullGivenTime, ssnPartialGivenTime, no } = fieldMapping;
 
@@ -3592,14 +3581,13 @@ const resetParticipantSurvey = async (connectId, survey) => {
             return updatedDoc.data();
         }
 
-        // Add more surveys here later
+        // Add future surveys here later
         throw {
             code: 400,
             message: `Survey type ${survey} failed to reset.`
         }
 
     } catch (error) {
-        // throws error if error code exists
         if (error.code) { 
             throw error; 
         }
@@ -3615,7 +3603,7 @@ const resetParticipantSurvey = async (connectId, survey) => {
 
 /**
  * Used for NORC Incentive Eligibility tool
- * Check if participant is eligible for incentive using snippet of code from checkDerivedVariables
+ * Check if participant is eligible for incentive using modified snippet of code from checkDerivedVariables
  * @param {string} connectId - Connect ID of the participant
  * @param {string} paymentRound - Payment round to check eligibility for
 */
@@ -3685,44 +3673,25 @@ const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRou
             message: `Error checking participant for eligible incentive. ${error.message}`
         };
     }
-        
-}
+};
 
 
 const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRound, dateOfEligibility) => { 
-    
     try {
-        const { healthCareProvider, paymentRound, baseline, eligibleForIncentive, 
-            baselineSurveyStatusModuleBackgroundOverallHealth, baselineSurveyStatusModuleMedReproHealth, baselineSurveyStatusModuleLiveAndWork, baselineSurveyStatusModuleSmokeAlcoholSun,
-            collectionDetails, baselineBloodSampleCollected, clinicalSiteBloodCollected, biospecimenVisit, collectionSetting, researchCollectionSetting,
-            submitted,reasonTubeNotCollected, yes, no, participantRefusal, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
+        const { paymentRound, eligibleForIncentive, yes, no, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
 
         const eligibilityCheck = await checkParticipantForEligibleIncentive(connectId, currentPaymentRound);
-        console.log("🚀 ~ updateParticipantIncentiveEligibility ~ eligibilityCheck:", eligibilityCheck)
-
         const isEligibleForIncentive = eligibilityCheck.isEligibleForIncentive;
         if (!isEligibleForIncentive) throw { code: 400, message: 'Participant is not eligible for incentive update.' };
 
-        console.log("🚀 ~ updateParticipantIncentiveEligibility ~ isEligibleForIncentive:", isEligibleForIncentive)
         const participantData = eligibilityCheck.participantData;
         const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
 
         const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
         if (snapshot.empty) throw { code: 404, message: 'Participant not found.' };
 
-
-
         const participantRef = snapshot.docs[0].ref;
 
-        // const currentPaymentRoundEligibility = participantData[paymentRound][currentPaymentRoundName][eligibleForIncentive];
-        // console.log("🚀 ~ updateParticipantIncentiveEligibility ~ currentPaymentRoundEligibility:", currentPaymentRoundEligibility)
-
-            // console.log({
-            //     [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
-            //     [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,
-            //     [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibility
-            // });
-            
         if (participantData[paymentRound][currentPaymentRoundName][eligibleForIncentive] === no) {
             console.log("🚀 ~ updateParticipantIncentiveEligibility ~ connectId, paymentRound, dateOfEligibility:", connectId, currentPaymentRound, dateOfEligibility)
             await participantRef.update({
@@ -3731,7 +3700,7 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
                 [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibility
             });
             const updatedDoc = await participantRef.get();
-            if (!updatedDoc.exists) throw { code: 500, message: 'Updated document not found.' }
+            if (!updatedDoc.exists) throw { code: 404, message: 'Updated document not found.' }
             return updatedDoc.data();
         } else {
             throw {
@@ -3739,15 +3708,18 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
                 message: 'Participant is already eligible for incentive and cannot be updated!'
             }
         }
-
     } catch (error) {
-        console.error('Error updating participant incentive eligibility:', error);
+        if (error.code) { 
+            throw error; 
+        }
+        console.error('Error updating  participant incentive eligibility:', error);
+
         throw {
             code: 500,
-            message: `Error updating participant incentive eligibility. ${error.message}`
+            message: `Error updating  participant incentive eligibility: ${error.message}`
         };
     }
-}
+};
 
 
 const generateSignInWithEmailLink = async (email, continueUrl) => {
