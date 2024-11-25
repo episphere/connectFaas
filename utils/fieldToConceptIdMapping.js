@@ -442,10 +442,3 @@ module.exports = {
         anyRefusalOrWithdrawal: 451953807
     }
 };
-
-
-/*
-
-
-*/ 
-
