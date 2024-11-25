@@ -3605,9 +3605,10 @@ const resetParticipantSurvey = async (connectId, survey) => {
  * Used for NORC Incentive Eligibility tool
  * Check if participant is eligible for incentive using modified snippet of code from checkDerivedVariables
  * @param {string} connectId - Connect ID of the participant
- * @param {string} paymentRound - Payment round to check eligibility for
+ * @param {string} paymentRound - Payment round to check eligibility for participant
+ * @returns {object} - Object with isEligibleForIncentive boolean and participantData object
 */
-const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRound, dateOfEligibility) => {
+const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRound) => {
     try {
         // code pulled and modified from checkDerivedVariables
         const { healthCareProvider, paymentRound, baseline, eligibleForIncentive, 
@@ -3675,7 +3676,13 @@ const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRou
     }
 };
 
-
+/**
+ * Update participant incentive eligibility for NORC Incentive Eligibility tool
+ * @param {string} connectId - Connect ID of the participant
+ * @param {string} currentPaymentRound - Payment round to update eligibility for participant
+ * @param {string} dateOfEligibility - Date of eligibility for incentive ISO 8601 format
+ * @returns {object} - Updated participant document
+*/
 const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRound, dateOfEligibility) => { 
     try {
         const { paymentRound, eligibleForIncentive, yes, no, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
