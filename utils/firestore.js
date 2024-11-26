@@ -3631,7 +3631,7 @@ const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRou
         const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
 
         // Add option to handle future payment rounds here later - left paymentRound as a parameter for now
-        if (participantData[paymentRound][currentPaymentRoundName][eligibleForIncentive] === no) { 
+        if (participantData[paymentRound]?.[currentPaymentRoundName]?.[eligibleForIncentive] === no) { 
 
             const module1 = (participantData[baselineSurveyStatusModuleBackgroundOverallHealth] === submitted);
             const module2 = (participantData[baselineSurveyStatusModuleMedReproHealth] === submitted);
@@ -3647,9 +3647,8 @@ const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRou
                     if (specimenArray.length > 0) {
                         const baselineResearchCollections = specimenArray.filter(collection => collection[biospecimenVisit] === baseline && collection[collectionSetting] === researchCollectionSetting);
                     
-                        if (baselineResearchCollections.length != 0) {
+                        if (baselineResearchCollections.length !== 0) {
                             baselineResearchCollections.forEach(collection => {
-
                                 const researchBloodTubes = [serumSeparatorTube1, serumSeparatorTube2, heparinTube1, edtaTube1, acdTube1, streckTube];
                                 
                                 researchBloodTubes.forEach(tube => {

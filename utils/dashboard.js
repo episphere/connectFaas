@@ -154,7 +154,7 @@ const dashboard = async (req, res) => {
         try {
             const { resetParticipantSurvey } = require('./firestore');            
             const data = await resetParticipantSurvey(connectId, survey);
-            return res.status(200).json({data: data, message: 'The participantnt\'s survey was sucessfully reset', code: 200});
+            return res.status(200).json({data: data, message: 'The participant\'s survey was sucessfully reset', code: 200});
         } catch (err) {
             console.error('error', err);
             if (err.code === 400) {
@@ -167,7 +167,7 @@ const dashboard = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
         }
         let query = req.query;
-        
+
         const connectId = parseInt(query.connectId);
         const currentPaymentRound = parseInt(query.currentPaymentRound);
 
