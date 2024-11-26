@@ -157,10 +157,10 @@ const dashboard = async (req, res) => {
             return res.status(200).json({data: data, message: 'The participant\'s survey was sucessfully reset', code: 200});
         } catch (err) {
             console.error('error', err);
-            if (err.code === 400) {
-                return res.status(400).json({ message: err.message, code: 400 });
+            if (err.code) {
+                return res.status(err.code).json(getResponseJSON(err.message, err.code));
             }
-            return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
+            return res.status(500).getResponsJSON(err.message, code);
         }
     } else if (api === 'checkParticipantForEligibleIncentive') {
         if (req.method !== 'GET') {
@@ -187,10 +187,10 @@ const dashboard = async (req, res) => {
             });
         } catch (err) {
             console.error('error', err);
-            if (err.code === 400) {
-                return res.status(400).json({ message: err.message, code: 400 });
+            if (err.code) {
+                return res.status(err.code).getResponsJSON(err.message, err.code);
             }
-            return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
+            return res.status(500).getResponsJSON(err.message, 500);
         }
     } else if (api === `updateParticipantIncentiveEligibility`) {
         if (req.method !== 'POST') {
@@ -208,10 +208,10 @@ const dashboard = async (req, res) => {
             return res.status(200).json({data: data, message:"Participant Eligibility Sucessfully Updated!" ,code: 200});
         } catch (err) {
             console.error('error', err);
-            if (err.code === 400) {
-                return res.status(400).json({ message: err.message, code: 400 });
+            if (err.code) {
+                return res.status(err.code).getResponsJSON(err.message, err.code);
             }
-            return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
+            return res.status(500).json(getResponseJSON(err.message, 500));
         }
     } else {
         return res.status(404).json(getResponseJSON('API not found!', 404));

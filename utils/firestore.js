@@ -3550,7 +3550,7 @@ const resetParticipantSurvey = async (connectId, survey) => {
     try {
         const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
         if (snapshot.empty) {
-            throw new Error('Participant not found!');
+            throw { message: 'Participant not found.', code: 404 };
         }
 
         const participantRef = snapshot.docs[0].ref;
@@ -3561,8 +3561,8 @@ const resetParticipantSurvey = async (connectId, survey) => {
         // early exit if survey is already in not started status
         if (participantData[ssnStatusFlag] === notStarted)  {
             throw {
-                code: 400,
-                message: 'Failed to reset SSN Survey. The participant\'s SSN survey is "Not Started" status!'
+                message: 'Failed to reset SSN Survey. The participant\'s SSN survey is "Not Started" status!',
+                code: 400
             };
         }
 
@@ -3582,20 +3582,15 @@ const resetParticipantSurvey = async (connectId, survey) => {
         }
 
         // Add future surveys here later
-        throw {
-            code: 400,
-            message: `Survey type ${survey} failed to reset.`
-        }
+        throw { message: `Survey type ${survey} failed to reset.`, code: 400 };
 
     } catch (error) {
-        if (error.code) { 
-            throw error; 
-        }
+        if (error.code) throw error; 
         console.error('Error resetting participant survey:', error);
 
         throw {
+            message: `Error resetting participant survey. ${error.message}`,
             code: 500,
-            message: `Error resetting participant survey. ${error.message}`
         };
         
     }
@@ -3619,7 +3614,7 @@ const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRou
         const { serumSeparatorTube1, serumSeparatorTube2, heparinTube1, edtaTube1, acdTube1, streckTube } = fieldMapping.tubesBagsCids;
         const { getSpecimenCollections } = require('./firestore');
         const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
-        if (snapshot.empty) throw { code: 404, message: 'Participant not found.' };
+        if (snapshot.empty) throw { message: 'Participant not found.', code: 404 };
 
         const participantData = snapshot.docs[0].data();
         const siteCode = participantData[healthCareProvider];
@@ -3669,8 +3664,8 @@ const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRou
     } catch (error) {
         console.error('Error checking participant for eligible incentive:', error);
         throw {
-            code: 500,
-            message: `Error checking participant for eligible incentive. ${error.message}`
+            message: `Error checking participant for eligible incentive. ${error.message}`,
+            code: 500
         };
     }
 };
@@ -3688,13 +3683,13 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
 
         const eligibilityCheck = await checkParticipantForEligibleIncentive(connectId, currentPaymentRound);
         const isEligibleForIncentive = eligibilityCheck.isEligibleForIncentive;
-        if (!isEligibleForIncentive) throw { code: 400, message: 'Participant is not eligible for incentive update.' };
+        if (!isEligibleForIncentive) throw { message: 'Participant is not eligible for incentive update.', code: 400 };
 
         const participantData = eligibilityCheck.participantData;
         const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
 
         const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
-        if (snapshot.empty) throw { code: 404, message: 'Participant not found.' };
+        if (snapshot.empty) throw { message: 'Participant not found.', code: 404 };
 
         const participantRef = snapshot.docs[0].ref;
 
@@ -3706,23 +3701,21 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
                 [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibility
             });
             const updatedDoc = await participantRef.get();
-            if (!updatedDoc.exists) throw { code: 404, message: 'Updated document not found.' }
+            if (!updatedDoc.exists) throw { message: 'Updated document not found.', code: 404 }
             return updatedDoc.data();
         } else {
             throw {
+                message: 'Participant is already eligible for incentive and cannot be updated!',
                 code: 400,
-                message: 'Participant is already eligible for incentive and cannot be updated!'
             }
         }
     } catch (error) {
-        if (error.code) { 
-            throw error; 
-        }
+        if (error.code) throw error; 
         console.error('Error updating  participant incentive eligibility:', error);
 
         throw {
-            code: 500,
-            message: `Error updating  participant incentive eligibility: ${error.message}`
+            message: `Error updating  participant incentive eligibility: ${error.message}`,
+            code: 500
         };
     }
 };
