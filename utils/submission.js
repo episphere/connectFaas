@@ -2,95 +2,99 @@ const { getResponseJSON, setHeaders, logIPAddress } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submit = async (res, data, uid) => {
-    
     // Remove locked attributes.
     const { lockedAttributes } = require('./shared');
     lockedAttributes.forEach(atr => delete data[atr]);
 
-    // generate Connect_ID if Consent form submitted
-    if(data[919254129] !== undefined && data[919254129] === 353358909) {
-        const { generateConnectID } = require('./shared');
-        const { sanityCheckConnectID } = require('./firestore');
-        let boo = false;
-        let Connect_ID;
-        while(boo === false){
-            const ID = generateConnectID();
-            const response = await sanityCheckConnectID(ID);
-            if(response === true) {
-                Connect_ID = ID;
-                boo = true;
-            }
-        }
-        data = {...data, Connect_ID}
-    }
-
-    let keys = Object.keys(data);
-
-    // check if submitting survey
-    if (keys.length === 1) {
-
-        const { moduleConceptsToCollections } = require('./shared');
-
-        let key = keys[0];
-        let collection = moduleConceptsToCollections[key];
-
-        if(collection) {
-            let moduleData = data[key];
-            return await submitSurvey(res, moduleData, collection, uid)
-        }
-    }
-
-    const { cleanSurveyData } = require('./shared');
-    data = cleanSurveyData(data);
-
-    const { updateResponse } = require('./firestore');
-    const response = await updateResponse(data, uid);
-
-    if (response) {
-        let moduleComplete = false;
-        let calculateScores = false;
-
-        keys.forEach(key => {
-            const { moduleStatusConcepts } = require('./shared');
-
-            if (moduleStatusConcepts[key] && data[key] === 231311385) {
-                moduleComplete = true;
-
-                if (key === '320303124') {
-                    calculateScores = true;
+    try {
+        // generate Connect_ID if Consent form submitted
+        if(data[919254129] !== undefined && data[919254129] === 353358909) {
+            const { generateConnectID } = require('./shared');
+            const { sanityCheckConnectID } = require('./firestore');
+            let boo = false;
+            let Connect_ID;
+            while(boo === false){
+                const ID = generateConnectID();
+                const response = await sanityCheckConnectID(ID);
+                if(response === true) {
+                    Connect_ID = ID;
+                    boo = true;
                 }
             }
-        })
+            data = {...data, Connect_ID}
+        }
 
-        if(moduleComplete) {
+        let keys = Object.keys(data);
 
-            const { checkDerivedVariables } = require('./validation');
-            const { getTokenForParticipant, retrieveUserProfile } = require('./firestore');
+        // check if submitting survey
+        if (keys.length === 1) {
 
-            const participant = await retrieveUserProfile(uid);
-            const siteCode = participant['827220437'];
-            const token = await getTokenForParticipant(uid);
+            const { moduleConceptsToCollections } = require('./shared');
 
-            await checkDerivedVariables(token, siteCode);
+            let key = keys[0];
+            let collection = moduleConceptsToCollections[key];
 
-            if (calculateScores) {
+            if(collection) {
+                let moduleData = data[key];
+                return await submitSurvey(res, moduleData, collection, uid)
+            }
+        }
 
-                //remove condition once implemented in dev tier
-                if (process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-stg-5519' || process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-prod-6d04') {
-                    const { processPromisResults } = require('./promis');
-                    processPromisResults(uid);
+        const { cleanSurveyData } = require('./shared');
+        data = cleanSurveyData(data);
+
+        const { updateResponse } = require('./firestore');
+
+        // response is either true or an Error object
+        const response = await updateResponse(data, uid);
+
+        if (response) {
+            let moduleComplete = false;
+            let calculateScores = false;
+
+            keys.forEach(key => {
+                const { moduleStatusConcepts } = require('./shared');
+
+                if (moduleStatusConcepts[key] && data[key] === 231311385) {
+                    moduleComplete = true;
+
+                    if (key === '320303124') {
+                        calculateScores = true;
+                    }
+                }
+            })
+
+            if (moduleComplete) {
+
+                const { checkDerivedVariables } = require('./validation');
+                const { getTokenForParticipant, retrieveUserProfile } = require('./firestore');
+
+                const participant = await retrieveUserProfile(uid);
+                const siteCode = participant['827220437'];
+                const token = await getTokenForParticipant(uid);
+
+                await checkDerivedVariables(token, siteCode);
+
+                if (calculateScores) {
+
+                    //remove condition once implemented in dev tier
+                    if (process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-stg-5519' || process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-prod-6d04') {
+                        const { processPromisResults } = require('./promis');
+                        processPromisResults(uid);
+                    }
                 }
             }
         }
+
+        if (response instanceof Error) {
+            return res.status(500).json(getResponseJSON(response.message, 500));
+        }
+        return res.status(200).json(getResponseJSON('Data stored successfully!', 200));    
+
+    } catch (error) {
+        console.error('Error in submit:', error);
+        return res.status(500).json(getResponseJSON(error.message, 500));
     }
-    
-    if(response instanceof Error){
-        return res.status(500).json(getResponseJSON(response.message, 500));
-    }
-    if(!response) {
-        return res.status(500).json(getResponseJSON("Can't add/update data!", 500));
-    }
-    return res.status(200).json(getResponseJSON('Data stored successfully!', 200));    
 };
 
 const submitSurvey = async (res, data, collection, uid) => {
@@ -127,18 +131,6 @@ const submitSurvey = async (res, data, collection, uid) => {
     }
     
     return res.status(200).json(getResponseJSON('Survey data stored successfully!', 200));
-}
-
-const recruitSubmit = async (req, res, uid) => {
-    if(req.method !== 'POST') {
-        return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
-    }
-
-    const data = req.body;
-    if(Object.keys(data).length <= 0){
-        return res.status(400).json(getResponseJSON('Bad request!', 400));
-    }
-    return await submit(res, data, uid);
 }
 
 const submitSocial = async (req, res, uid) => {
@@ -744,7 +736,6 @@ const getTextAndVersionNumberFromGitHubCommit = async (sha, path, token) => {
 
 module.exports = {
     submit,
-    recruitSubmit,
     submitSocial,
     getFilteredParticipants,
     getParticipants,

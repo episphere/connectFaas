@@ -101,16 +101,19 @@ const updateResponse = async (data, uid) => {
     try{
         const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
         printDocsCount(snapshot, "updateResponse");
-        if(snapshot.size === 1) {
-            for(let doc of snapshot.docs){
-                await db.collection('participants').doc(doc.id).update(data);
-                return true;
-            }
+
+        if (snapshot.size !== 1) {
+            throw new Error(`updateResponse expected 1 document, found ${snapshot.size}. uid: ${uid}`);
         }
+
+        const docId = snapshot.docs[0].id;
+        
+        await db.collection('participants').doc(docId).update(data);
+        return true;
     }
     catch(error){
-        console.error(error);
-        return new Error(error)
+        console.error(`Error in updateResponse: ${error}`);
+        return new Error(`Error in updateResponse: ${error}`);
     }
 }
 
