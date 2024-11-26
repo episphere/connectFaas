@@ -1381,8 +1381,10 @@ const submitSpecimen = async (biospecimenData, participantData, siteTubesList) =
             .where('state.uid', '==', participantUid)
             .get();
         const eligibilityUpdates = processMouthwashEligibility(participantSnapshot.docs[0].data());
-        
-        await participantSnapshot.docs[0].ref.update(eligibilityUpdates);
+
+        if (eligibilityUpdates && Object.keys(eligibilityUpdates).length) {
+            await participantSnapshot.docs[0].ref.update(eligibilityUpdates);
+        }
 
         return {
             code: 200,
