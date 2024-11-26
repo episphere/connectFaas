@@ -294,12 +294,12 @@ async function validateTableAccess (authObj, dataset, table) {
     case "NORC":
       switch (table) {
         case "view_birthday_card":
-          if (["NIH", "NORC"].includes(authObj.siteCode)) {
+          if (["NIH", "NORC"].includes(authObj.acronym)) {
             allowAccess = true;
           }
           break;
         case "view_phone_prompting_details":
-          if (["NIH", "NORC"].includes(authObj.siteCode)) {
+          if (["NIH", "NORC"].includes(authObj.acronym)) {
             allowAccess = true;
           }
           break;
