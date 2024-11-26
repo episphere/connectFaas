@@ -3682,8 +3682,7 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
         const { paymentRound, eligibleForIncentive, yes, no, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
 
         const eligibilityCheck = await checkParticipantForEligibleIncentive(connectId, currentPaymentRound);
-        const isEligibleForIncentive = eligibilityCheck.isEligibleForIncentive;
-        if (!isEligibleForIncentive) throw { message: 'Participant is not eligible for incentive update.', code: 400 };
+        const passedEligibilityRequirements = eligibilityCheck.isEligibleForIncentive; // this can be false if the participant has the incentive eligibility flag set to yes
 
         const participantData = eligibilityCheck.participantData;
         const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
@@ -3693,8 +3692,7 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
 
         const participantRef = snapshot.docs[0].ref;
 
-        if (participantData[paymentRound][currentPaymentRoundName][eligibleForIncentive] === no) {
-            console.log("🚀 ~ updateParticipantIncentiveEligibility ~ connectId, paymentRound, dateOfEligibility:", connectId, currentPaymentRound, dateOfEligibility)
+        if (participantData?.[paymentRound]?.[currentPaymentRoundName]?.[eligibleForIncentive] === no && passedEligibilityRequirements) {
             await participantRef.update({
                 [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
                 [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,

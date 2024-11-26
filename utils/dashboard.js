@@ -160,7 +160,7 @@ const dashboard = async (req, res) => {
             if (err.code) {
                 return res.status(err.code).json(getResponseJSON(err.message, err.code));
             }
-            return res.status(500).getResponsJSON(err.message, code);
+            return res.status(500).getResponseJSON.json(err.message, code);
         }
     } else if (api === 'checkParticipantForEligibleIncentive') {
         if (req.method !== 'GET') {
@@ -188,9 +188,9 @@ const dashboard = async (req, res) => {
         } catch (err) {
             console.error('error', err);
             if (err.code) {
-                return res.status(err.code).getResponsJSON(err.message, err.code);
+                return res.status(err.code).json(getResponseJSON(err.message, err.code));
             }
-            return res.status(500).getResponsJSON(err.message, 500);
+            return res.status(500).json(getResponseJSON(err.message, 500));
         }
     } else if (api === `updateParticipantIncentiveEligibility`) {
         if (req.method !== 'POST') {
@@ -209,7 +209,7 @@ const dashboard = async (req, res) => {
         } catch (err) {
             console.error('error', err);
             if (err.code) {
-                return res.status(err.code).getResponsJSON(err.message, err.code);
+                return res.status(err.code).json(getResponseJSON(err.message, err.code));
             }
             return res.status(500).json(getResponseJSON(err.message, 500));
         }
