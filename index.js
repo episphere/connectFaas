@@ -1,7 +1,7 @@
 const {onRequest} = require("firebase-functions/v2/https");
 const { getToken, validateUsersEmailPhone } = require('./utils/validation');
 const { getFilteredParticipants, getParticipants, identifyParticipant } = require('./utils/submission');
-const { submitParticipantsData, updateParticipantData } = require('./utils/sites');
+const { submitParticipantsData, updateParticipantData, getBigQueryData } = require('./utils/sites');
 const { getParticipantNotification, sendScheduledNotifications } = require('./utils/notifications');
 const { connectApp } = require('./utils/connectApp');
 const { biospecimenAPIs } = require('./utils/biospecimen');
@@ -31,6 +31,8 @@ exports.identifyParticipant = identifyParticipant;
 exports.submitParticipantsData = submitParticipantsData;
 
 exports.updateParticipantData = updateParticipantData;
+
+exports.getBigQueryData = getBigQueryData;
 
 exports.getParticipantNotification = getParticipantNotification;
 
