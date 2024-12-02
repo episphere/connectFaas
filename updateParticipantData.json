@@ -571,5 +571,66 @@
 		"dataType": "string",
 		"mustExist": false,
 		"maxLength": 800
+	},
+	"359309143": {
+		"dataType": "object",
+		"mustExist": false
+	},
+	"359309143.194486780": {
+		"values": ["2023", "2024", "2025"],
+		"dataType": "string",
+		"mustExist": false,
+		"required": true
+	},
+	"359309143.916186376": {
+		"values": ["01", "02", "06", "07"],
+		"dataType": "string",
+		"mustExist": false,
+		"required": false
+	},
+	"359309143.768313785": {
+		"dataType": "ISO",
+		"mustExist": false,
+		"required": true
+	},
+	"359309143.902078073": {
+		"dataType": "ISO",
+		"mustExist": false,
+		"required": false
+	},
+	"359309143.153211406": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.996038075": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.521824358": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.442166669": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.703385619": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.634434746": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 25
+	},
+	"359309143.892050548": {
+		"dataType": "zipCode",
+		"mustExist": false,
+		"maxLength": 5
 	}
 }

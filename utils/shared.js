@@ -792,6 +792,217 @@ const cleanSurveyData = (data) => {
     return data;
 }
 
+/**
+ * Gets baseline data updates for participants when submitting specimens
+ * 
+ * @param {object} biospecimenData The biospecimen data
+ * @param {object} participantData The participant data
+ * @param {array} specimenArray The array of specimens for the participant
+ * @param {array} siteTubesList The array of tubes used for the site
+ * @returns {object}
+ */
+const updateBaselineData = (biospecimenData, participantData, participantUid, specimenArray, siteTubesList) => {
+    let participantUpdates = {};
+    let settings = {};
+    let visit = biospecimenData[fieldMapping.collectionSelectedVisit];
+    // Now we potentially need to updateBaselineData
+    const baselineVisit = (biospecimenData[fieldMapping.collectionSelectedVisit] === fieldMapping.baseline);
+    const clinicalResearchSetting = (biospecimenData[fieldMapping.collectionSetting] === fieldMapping.research || biospecimenData[fieldMapping.collectionSetting] === fieldMapping.clinical);
+    if (baselineVisit && clinicalResearchSetting) {
+        // Update baseline data
+        const baselineCollections = specimenArray.filter(specimen => specimen[fieldMapping.collectionSelectedVisit] === fieldMapping.baseline);
+
+        const bloodTubes = siteTubesList.filter(tube => tube.tubeType === "Blood tube");
+        const urineTubes = siteTubesList.filter(tube => tube.tubeType === "Urine");
+        const mouthwashTubes = siteTubesList.filter(tube => tube.tubeType === "Mouthwash");
+
+        let bloodCollected = (participantData[fieldMapping.baselineBloodSampleCollected] === fieldMapping.yes);
+        let urineCollected = (participantData[fieldMapping.baselineUrineCollected] === fieldMapping.yes);
+        let mouthwashCollected = (participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes);
+        let allBaselineCollected = (participantData[fieldMapping.allBaselineSamplesCollected] === fieldMapping.yes);
+
+        let bloodTubesLength = 0
+        let urineTubesLength = 0
+        let mouthwashTubesLength = 0
+
+        const collectionSetting = biospecimenData[fieldMapping.collectionSetting];
+        const isResearch = collectionSetting === fieldMapping.research;
+        const isClinical = collectionSetting === fieldMapping.clinical;
+
+        // Build the collection details
+        if (participantData[fieldMapping.collectionDetails]) {
+            settings = participantData[fieldMapping.collectionDetails];
+            if (!settings[visit]) settings[visit] = {};
+
+        } else {
+            settings = {
+                [visit]: {}
+            }
+        }
+
+        if (!settings[visit][fieldMapping.bloodCollectionSetting]) {
+            bloodTubes.forEach(tube => {
+                const tubeIsCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if(tubeIsCollected) {
+                    settings[visit][fieldMapping.bloodCollectionSetting] = collectionSetting;
+                    if(isResearch) {
+                        settings[visit][fieldMapping.baselineBloodCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                    else if(isClinical) {
+                        settings[visit][fieldMapping.clinicalBloodCollected] = fieldMapping.yes;
+                        settings[visit][fieldMapping.clinicalBloodCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.yes;
+
+                        if(!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            settings[visit][fieldMapping.anySpecimenCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+                        }
+                    }
+                    bloodTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineBloodCollectedTime] !== '' ||  settings[visit][fieldMapping.clinicalBloodCollectedTime] !== ''){
+            const participantBloodCollected = participantData[fieldMapping.baselineBloodSampleCollected] === fieldMapping.yes;
+            const totalBloodTubesAvail = bloodTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalBloodTubesAvail.length === 0 && participantBloodCollected) {
+                delete settings[visit][fieldMapping.bloodCollectionSetting]; // derived variables & timestamp are updated only if all the blood tubes are unchecked
+                if (isResearch) {
+                    delete settings[visit][fieldMapping.baselineBloodCollectedTime];
+                }
+                else if (isClinical) {
+                    settings[visit][fieldMapping.clinicalBloodCollected] = fieldMapping.no;
+                    delete settings[visit][fieldMapping.clinicalBloodCollectedTime];
+
+                    if (urineTubesLength === 0 && mouthwashTubesLength === 0) { // anySpecimenCollected variable will only be updated to NO if mouthwash & urine specimens are not present.
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.no;
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            delete settings[visit][fieldMapping.anySpecimenCollectedTime];
+                        }
+                    }
+                }
+                participantUpdates[fieldMapping.baselineBloodSampleCollected] = fieldMapping.no;
+                bloodTubesLength = totalBloodTubesAvail.length;
+            }
+        }
+
+        if (!settings[visit][fieldMapping.urineCollectionSetting]) {
+            urineTubes.forEach(tube => {
+                const tubeIsCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if (tubeIsCollected) {
+                    settings[visit][fieldMapping.urineCollectionSetting] = collectionSetting;
+                    if (isResearch) {
+                        settings[visit][fieldMapping.baselineUrineCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                    else if (isClinical) {
+                        settings[visit][fieldMapping.clinicalUrineCollected] = fieldMapping.yes;
+                        settings[visit][fieldMapping.clinicalUrineCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.yes;
+
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            settings[visit][fieldMapping.anySpecimenCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+                        }
+                    }
+                    urineTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineUrineCollectedTime] !== '' ||  settings[visit][fieldMapping.clinicalUrineCollectedTime] !== '') {
+            const participantUrineCollected = participantData[fieldMapping.baselineUrineCollected] === fieldMapping.yes;
+            const totalUrineTubesAvail = urineTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalUrineTubesAvail.length === 0 && participantUrineCollected) {
+                delete settings[visit][fieldMapping.urineCollectionSetting];
+                if(isResearch) {
+                    delete settings[visit][fieldMapping.baselineUrineCollectedTime];
+                }
+                else if (isClinical) {
+                    settings[visit][fieldMapping.clinicalUrineCollected] = fieldMapping.no;
+                    delete settings[visit][fieldMapping.clinicalUrineCollectedTime];
+
+                    if (bloodTubesLength === 0 && mouthwashTubesLength === 0) { // anySpecimenCollected variable will only be updated to NO if mouthwash & blood specimens are not present.
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.no;
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            delete settings[visit][fieldMapping.anySpecimenCollectedTime];
+                        }
+                    }
+                }
+                urineTubesLength = totalUrineTubesAvail.length;
+            }  
+        }
+
+        if (!settings[visit][fieldMapping.mouthwashCollectionSetting]) {
+            mouthwashTubes.forEach(tube => {
+                const isTubeCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if (isTubeCollected) {
+                    settings[visit][fieldMapping.mouthwashCollectionSetting] = collectionSetting;
+                    if (isResearch) {
+                        settings[visit][fieldMapping.baselineMouthwashCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                mouthwashTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineMouthwashCollectedTime] !== '' && participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes) {
+            const isParticipantMouthwashCollected = participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes;
+            const totalMouthwasTubesAvail = mouthwashTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalMouthwasTubesAvail.length === 0 &&  isParticipantMouthwashCollected) {
+                delete settings[visit][fieldMapping.mouthwashCollectionSetting]
+                if (isResearch) {
+                    delete settings[visit][fieldMapping.baselineMouthwashCollectedTime];
+                }
+                mouthwashTubesLength = totalMouthwasTubesAvail.length;
+            }
+        }
+
+        participantUpdates[fieldMapping.collectionDetails] = settings;
+
+        baselineCollections.forEach(collection => {
+
+            if (!bloodCollected) {
+                bloodTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        bloodCollected = true;
+                    }
+                });
+            } 
+            if (!urineCollected) {
+                urineTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        urineCollected = true;
+                    }
+                });
+            }
+            if (!mouthwashCollected) {
+                mouthwashTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        mouthwashCollected = true;
+                    }
+                });
+            }
+
+        });
+
+        if (baselineCollections.length > 0 && baselineCollections[0][fieldMapping.collectionSetting] === fieldMapping.research) {
+            allBaselineCollected = bloodCollected && urineCollected && mouthwashCollected;
+        }
+        else if (baselineCollections.length > 0 && baselineCollections[0][fieldMapping.collectionSetting] === fieldMapping.clinical) {
+            allBaselineCollected = bloodCollected && urineCollected;
+        }
+
+        participantUpdates = {
+            ...participantUpdates,
+            [fieldMapping.baselineBloodSampleCollected]: bloodCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.baselineUrineCollected]: urineCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.baselineMouthwashCollected]: mouthwashCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.allBaselineSamplesCollected]: allBaselineCollected ? fieldMapping.yes : fieldMapping.no,
+            uid: participantUid
+        };
+
+    }
+    return participantUpdates
+}
+
 const convertSiteLoginToNumber = (siteLogin) => {
     const siteLoginNumber = parseInt(siteLogin);
     if (siteLoginNumber === NaN) return undefined;
@@ -1365,7 +1576,152 @@ const finalizeCancerOccurrenceData = (occurrenceData, participantToken, particip
     }
 
     return finalizedOccurrenceData;
+}
 
+const birthdayCardParticipantFields = [
+    fieldMapping.preferredName,
+    fieldMapping.lastName,
+    fieldMapping.address1,
+    fieldMapping.address2,
+    fieldMapping.city,
+    fieldMapping.state,
+    fieldMapping.zip,
+];
+
+/**
+ * Handle the incoming NORC birthday card data:
+ *  - Determine the write action needed for the birthday card data.
+ *  - Handle (optional) updates to the participant profile.
+ * Default to creating a new card document, but other cases need to be handled.
+ * If the card exists and is identical, no write action is needed. We still need to update the participant profile if that data is included.
+ * If the card exists and has different data, we need to update the existing card. We also need to update the participant profile if that data is included.
+ */
+
+const handleNorcBirthdayCard = async (incomingBirthdayCardData, requiredBirthdayCardRules, participantToken, participantConnectId, participantProfileHistory) => {
+    // Validate the incoming birthday card data.
+    const birthdayCardValidationObj = validateBirthdayCardData(incomingBirthdayCardData, requiredBirthdayCardRules);
+    if (birthdayCardValidationObj.error) {
+        return birthdayCardValidationObj;
+    }
+
+    // Check for an existing card (where token, mailDate, & cardVersion match) in the birthdayCard collection.
+    const { getExistingBirthdayCard } = require('./firestore');
+    const mailDate = incomingBirthdayCardData[fieldMapping.birthdayCardData.mailDate];
+    const cardVersion = incomingBirthdayCardData[fieldMapping.birthdayCardData.cardVersion];
+    const { existingCardData, cardDocId } = await getExistingBirthdayCard(participantToken, mailDate, cardVersion);
+
+    // Set up the finalized data objects and determine the write action needed.
+    let cardWriteType = '';
+    let finalizedBirthdayCardData = {};
+
+    if (existingCardData) {
+        // Skip the birthdayCard write operation for identical cards. Otherwise, update the existing card.
+        const isBirthdayCardIdenticalResponse = isBirthdayCardIdentical(existingCardData, incomingBirthdayCardData);
+        if (!isBirthdayCardIdenticalResponse) {
+            cardWriteType = 'update';
+        }
+    } else {
+        // Create a new card document. Add token & Connect_ID.
+        cardWriteType = 'create';
+        finalizedBirthdayCardData['token'] = participantToken;
+        finalizedBirthdayCardData['Connect_ID'] = participantConnectId;
+    }
+
+    // Build the finalized birthday card data object.
+    if (cardWriteType && ['create', 'update'].includes(cardWriteType)) {
+        Object.values(fieldMapping.birthdayCardData).forEach(field => {
+            if (incomingBirthdayCardData[field] !== undefined) {
+                finalizedBirthdayCardData[field] = incomingBirthdayCardData[field];
+            }
+        });
+    }
+
+    // Build the participantUpdateData Obj depending on the result of the timestamp check. This data won't always be present.
+    let norcParticipantUpdateData = {};
+    const shouldUpdateProfileHistory = checkProfileHistoryTimestamps(participantProfileHistory, mailDate);
+    if (shouldUpdateProfileHistory) {
+        for (const field of birthdayCardParticipantFields) {
+            if (incomingBirthdayCardData[field] !== undefined) {
+                norcParticipantUpdateData[field] = incomingBirthdayCardData[field];
+            }
+        }
+    }
+
+    const birthdayCardWriteDetails = { cardWriteType, cardDocId };
+
+    return { error: false, message: 'Success!', data: [finalizedBirthdayCardData, norcParticipantUpdateData, birthdayCardWriteDetails] };
+}
+
+/**
+ * Ensure the incoming NORC birthday card data is valid and contains the required fields.
+ * @param {object} incomingBirthdayCardData - The incoming birthday card data.
+ * @param {object} requiredBirthdayCardRules - The required fields for the birthday card data (from updateParticipantData.json).
+ * @returns {object} - Returns an object with an error flag, message, and data array. 
+ */
+const validateBirthdayCardData = (incomingBirthdayCardData, requiredBirthdayCardRules) => {
+    if (!incomingBirthdayCardData || Object.keys(incomingBirthdayCardData).length === 0) {
+        const birthdayCardKeys = birthdayCardCollectionFields.join(', ');
+        return { error: true, message: `Missing birthday card data. Related keys: ${birthdayCardKeys}`, data: [null, null, null] };
+    }
+
+    // Ensure required keys are present.
+    for (const rule of requiredBirthdayCardRules) {
+        const [, propertyKey] = rule.split('.');
+
+        if (!incomingBirthdayCardData || !incomingBirthdayCardData[propertyKey]) {
+            return { error: true, message: `Missing required field: ${propertyKey} in birthday card data`, data: [null, null, null] };
+        }
+    }
+
+    // If return date is provided, ensure the mail date is not after the return date.
+    const mailDate = incomingBirthdayCardData[fieldMapping.birthdayCardData.mailDate];
+    const returnDate = incomingBirthdayCardData[fieldMapping.birthdayCardData.returnDate];
+    if (returnDate && mailDate > returnDate) {
+        return { error: true, message: `Return date cannot be before mail date. Provided data: Mail date: ${mailDate}. Return date ${returnDate}`, data: [null, null, null] };
+    }
+
+    return { error: false, message: 'Success!', data: [null, null, null] };
+}
+
+/**
+ * 
+ * @param {object} existingCard - The existing birthday card data.
+ * @param {object} incomingBirthdayCardData - The incoming birthday card data.
+ * @returns {boolean} - Returns true if the incoming birthday card data is identical to the existing card.
+ */
+const isBirthdayCardIdentical = (existingCard, incomingBirthdayCardData) => {
+    for (let field of Object.values(fieldMapping.birthdayCardData)) {
+        if (incomingBirthdayCardData[field] !== existingCard[field]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Test whether this update is the more recent than the last user profile update. Initial usage: NORC birthday card updates (mailDate).
+ * Compare the timestamp of the most recent user profile update to the timestamp of the incoming update. If the incoming update is more recent, return true.
+ * @param {array | null} userProfileHistory - The user profile history array, or null if no updates have been made to the user's name or address fields.
+ * @param {string} timestampToTest - The timestamp of the incoming update.
+ * @returns {boolean} - Returns true if the incoming update is more recent than the last user profile update.
+ */
+const checkProfileHistoryTimestamps = (userProfileHistory, timestampToTest) => {
+    let mostRecentProfileUpdateTimestamp;
+
+    // If no history exists, the change is more recent than the participant's signup date since the participant must be signed up to receive a birthday card.
+    if (!userProfileHistory || !Array.isArray(userProfileHistory) || userProfileHistory.length === 0) {
+        return true;
+    }
+
+    // The most recent profile update timestamp should always be the last element in the array, but this is a safety check.
+    for (const profileUpdate of userProfileHistory) {
+        const profileUpdateTimestamp = profileUpdate[fieldMapping.userProfileHistoryTimestamp];
+        if (profileUpdateTimestamp && (!mostRecentProfileUpdateTimestamp || profileUpdateTimestamp > mostRecentProfileUpdateTimestamp)) {
+            mostRecentProfileUpdateTimestamp = profileUpdateTimestamp;
+        }
+    }
+
+    return !mostRecentProfileUpdateTimestamp || timestampToTest > mostRecentProfileUpdateTimestamp;
 }
 
 /**
@@ -1398,6 +1754,7 @@ const buildStreckPlaceholderData = (collectionId, streckTubeData) => {
     console.error(`Issue found in updateSpecimen() (ConnectFaas): Streck Tube not found in biospecimenData for collection Id ${collectionId}. Building placeholder data.`);
 }
 
+// Note: prefer validateIso8601Timestamp function for more robust timestamp validation.
 const validIso8601Format = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const validEmailFormat = /^[a-zA-Z0-9.!#$%&'*+"\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,63}$/;
 const validPhoneFormat = /^\d{10}$/;
@@ -1535,6 +1892,8 @@ const updateUserProfileHistory = (dataObj, existingDocData, siteCodes) => {
  * @param {array<string>} selectedFieldsArray - the array of concept ID fields to return. Top-level (non-nested) fields only.
  * @returns {array<object>} - the filtered array of data objects.
  */
+
+// Note: Prefer using Firestore's new .select() method to select the necessary fields instead of filtering fields in the response.
 const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     
     const handleNestedData = (obj, path) => {
@@ -1692,6 +2051,7 @@ module.exports = {
     sites, 
     bagConceptIDs,
     cleanSurveyData,
+    updateBaselineData,
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
@@ -1732,4 +2092,5 @@ module.exports = {
     getFiveDaysAgoDateISO,
     delay,
     getAdjustedTime,
+    handleNorcBirthdayCard,
 };
