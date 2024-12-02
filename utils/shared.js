@@ -784,7 +784,7 @@ const cleanSurveyData = (data) => {
     const admin = require('firebase-admin');
     
     Object.keys(data).forEach(key => {
-        if(data[key] === null) {
+        if (data[key] === null || data[key] === undefined) {
             data[key] = admin.firestore.FieldValue.delete();
         }
     });
