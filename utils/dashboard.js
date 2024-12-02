@@ -201,6 +201,7 @@ const dashboard = async (req, res) => {
 
         if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
         if (!currentPaymentRound) return res.status(405).json(getResponseJSON('Missing current payment round information!', 405));
+        if (!dateOfEligibility) return res.status(405).json(getResponseJSON('Missing date of eligibility!', 405));
 
         try {
             const { updateParticipantIncentiveEligibility, checkParticipantForEligibleIncentive } = require('./firestore');
