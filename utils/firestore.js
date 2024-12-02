@@ -3859,80 +3859,6 @@ const resetParticipantSurvey = async (connectId, survey) => {
 };
 
 /**
- * Used for NORC Incentive Eligibility tool
- * Check if participant is eligible for incentive using modified snippet of code from checkDerivedVariables
- * @param {string} connectId - Connect ID of the participant
- * @param {string} paymentRound - Payment round to check eligibility for participant
- * @returns {object} - Object with isEligibleForIncentive boolean and participantData object
-*/
-const checkParticipantForEligibleIncentive = async (connectId, currentPaymentRound) => {
-    try {
-        // code pulled and modified from checkDerivedVariables
-        const { healthCareProvider, paymentRound, baseline, eligibleForIncentive, 
-            baselineSurveyStatusModuleBackgroundOverallHealth, baselineSurveyStatusModuleMedReproHealth, baselineSurveyStatusModuleLiveAndWork, baselineSurveyStatusModuleSmokeAlcoholSun,
-            collectionDetails, baselineBloodSampleCollected, clinicalSiteBloodCollected, biospecimenVisit, collectionSetting, researchCollectionSetting,
-            submitted,reasonTubeNotCollected, yes, no, participantRefusal } = fieldMapping;
-
-        const { serumSeparatorTube1, serumSeparatorTube2, heparinTube1, edtaTube1, acdTube1, streckTube } = fieldMapping.tubesBagsCids;
-        const { getSpecimenCollections } = require('./firestore');
-        const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
-        if (snapshot.empty) throw { message: 'Participant not found.', code: 404 };
-
-        const participantData = snapshot.docs[0].data();
-        const siteCode = participantData[healthCareProvider];
-        const token = participantData['token'];
-        const specimenArray = await getSpecimenCollections(token, siteCode);
-
-        let incentiveEligible = false;
-
-        const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
-
-        // Add option to handle future payment rounds here later - left paymentRound as a parameter for now
-        if (participantData[paymentRound]?.[currentPaymentRoundName]?.[eligibleForIncentive] === no) { 
-
-            const module1 = (participantData[baselineSurveyStatusModuleBackgroundOverallHealth] === submitted);
-            const module2 = (participantData[baselineSurveyStatusModuleMedReproHealth] === submitted);
-            const module3 = (participantData[baselineSurveyStatusModuleSmokeAlcoholSun] === submitted);
-            const module4 = (participantData[baselineSurveyStatusModuleLiveAndWork] === submitted);
-            const bloodCollected = (participantData[baselineBloodSampleCollected] === yes) || (participantData[collectionDetails]?.[baseline]?.[clinicalSiteBloodCollected] === yes);
-            
-            if (module1 && module2 && module3 && module4) {
-                if(bloodCollected) {
-                    incentiveEligible = true;
-                }    
-                else {
-                    if (specimenArray.length > 0) {
-                        const baselineResearchCollections = specimenArray.filter(collection => collection[biospecimenVisit] === baseline && collection[collectionSetting] === researchCollectionSetting);
-                    
-                        if (baselineResearchCollections.length !== 0) {
-                            baselineResearchCollections.forEach(collection => {
-                                const researchBloodTubes = [serumSeparatorTube1, serumSeparatorTube2, heparinTube1, edtaTube1, acdTube1, streckTube];
-                                
-                                researchBloodTubes.forEach(tube => {
-                                    if (collection[tube] && collection[tube][reasonTubeNotCollected] && collection[tube][reasonTubeNotCollected] != participantRefusal) {
-                                        incentiveEligible = true;
-                                    }
-                                });
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        return { 
-            isEligibleForIncentive: incentiveEligible, 
-            participantData 
-        };
-    } catch (error) {
-        console.error('Error checking participant for eligible incentive:', error);
-        throw {
-            message: `Error checking participant for eligible incentive. ${error.message}`,
-            code: 500
-        };
-    }
-};
-
-/**
  * Update participant incentive eligibility for NORC Incentive Eligibility tool
  * @param {string} connectId - Connect ID of the participant
  * @param {string} currentPaymentRound - Payment round to update eligibility for participant
@@ -3943,18 +3869,17 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
     try {
         const { paymentRound, eligibleForIncentive, yes, no, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
 
-        const eligibilityCheck = await checkParticipantForEligibleIncentive(connectId, currentPaymentRound);
-        const passedEligibilityRequirements = eligibilityCheck.isEligibleForIncentive; // this can be false if the participant has the incentive eligibility flag set to yes
-
-        const participantData = eligibilityCheck.participantData;
-        const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
-
         const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
         if (snapshot.empty) throw { message: 'Participant not found.', code: 404 };
-
         const participantRef = snapshot.docs[0].ref;
+        const participantData = snapshot.docs[0].data();
+        const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
 
-        if (participantData?.[paymentRound]?.[currentPaymentRoundName]?.[eligibleForIncentive] === no && passedEligibilityRequirements) {
+        const isNORCPaymentEligible = participantData?.[paymentRound]?.[currentPaymentRound]?.[norcPaymentEligibility] === no;
+        const isIncentiveEligible = participantData?.[paymentRound]?.[currentPaymentRound]?.[eligibleForIncentive] === no;
+        const isEligibleForIncentiveUpdate = isNORCPaymentEligible || isIncentiveEligible;
+
+        if (isEligibleForIncentiveUpdate) {
             await participantRef.update({
                 [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
                 [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,
@@ -4215,6 +4140,5 @@ module.exports = {
     getAppSettings,
     updateNotifySmsRecord,
     updateSmsPermission,
-    checkParticipantForEligibleIncentive,
     updateParticipantIncentiveEligibility,
 }

@@ -162,36 +162,6 @@ const dashboard = async (req, res) => {
             }
             return res.status(500).getResponseJSON.json(err.message, code);
         }
-    } else if (api === 'checkParticipantForEligibleIncentive') {
-        if (req.method !== 'GET') {
-            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-        }
-        let query = req.query;
-
-        const connectId = parseInt(query.connectId);
-        const currentPaymentRound = parseInt(query.currentPaymentRound);
-
-        if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
-        if (!currentPaymentRound) return res.status(405).json(getResponseJSON('Missing current payment round information!', 405));
-
-        try {
-            const { checkParticipantForEligibleIncentive } = require('./firestore');
-            
-            const data = await checkParticipantForEligibleIncentive(connectId, currentPaymentRound);
-            return res.status(200).json({ 
-                data: {
-                    isEligibleForIncentive: data.isEligibleForIncentive,
-                    participantData: data.participantData
-                }, 
-                code: 200 
-            });
-        } catch (err) {
-            console.error('error', err);
-            if (err.code) {
-                return res.status(err.code).json(getResponseJSON(err.message, err.code));
-            }
-            return res.status(500).json(getResponseJSON(err.message, 500));
-        }
     } else if (api === `updateParticipantIncentiveEligibility`) {
         if (req.method !== 'POST') {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
@@ -204,7 +174,7 @@ const dashboard = async (req, res) => {
         if (!dateOfEligibility) return res.status(405).json(getResponseJSON('Missing date of eligibility!', 405));
 
         try {
-            const { updateParticipantIncentiveEligibility, checkParticipantForEligibleIncentive } = require('./firestore');
+            const { updateParticipantIncentiveEligibility } = require('./firestore');
             const data = await updateParticipantIncentiveEligibility(connectId, currentPaymentRound, dateOfEligibility);
             return res.status(200).json({data: data, message:"Participant Eligibility Sucessfully Updated!" ,code: 200});
         } catch (err) {
