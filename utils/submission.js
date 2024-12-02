@@ -1,9 +1,9 @@
-const { getResponseJSON, setHeaders, logIPAddress } = require('./shared');
+const { cleanSurveyData, getResponseJSON, lockedAttributes, setHeaders, logIPAddress, moduleConceptsToCollections, moduleStatusConcepts } = require('./shared');
+const { updateResponse } = require('./firestore');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submit = async (res, data, uid) => {
     // Remove locked attributes.
-    const { lockedAttributes } = require('./shared');
     lockedAttributes.forEach(atr => delete data[atr]);
 
     try {
@@ -28,9 +28,6 @@ const submit = async (res, data, uid) => {
 
         // check if submitting survey
         if (keys.length === 1) {
-
-            const { moduleConceptsToCollections } = require('./shared');
-
             let key = keys[0];
             let collection = moduleConceptsToCollections[key];
 
@@ -40,21 +37,15 @@ const submit = async (res, data, uid) => {
             }
         }
 
-        const { cleanSurveyData } = require('./shared');
         data = cleanSurveyData(data);
-
-        const { updateResponse } = require('./firestore');
 
         // response is either true or an Error object
         const response = await updateResponse(data, uid);
-
         if (response) {
             let moduleComplete = false;
             let calculateScores = false;
 
             keys.forEach(key => {
-                const { moduleStatusConcepts } = require('./shared');
-
                 if (moduleStatusConcepts[key] && data[key] === 231311385) {
                     moduleComplete = true;
 
@@ -65,7 +56,6 @@ const submit = async (res, data, uid) => {
             })
 
             if (moduleComplete) {
-
                 const { checkDerivedVariables } = require('./validation');
                 const { getTokenForParticipant, retrieveUserProfile } = require('./firestore');
 

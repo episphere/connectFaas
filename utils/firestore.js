@@ -106,9 +106,7 @@ const updateResponse = async (data, uid) => {
             throw new Error(`updateResponse expected 1 document, found ${snapshot.size}. uid: ${uid}`);
         }
 
-        const docId = snapshot.docs[0].id;
-        
-        await db.collection('participants').doc(docId).update(data);
+        await snapshot.docs[0].ref.update(data);
         return true;
     }
     catch(error){
