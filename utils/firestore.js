@@ -3877,9 +3877,8 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
 
         const isNORCPaymentEligible = participantData?.[paymentRound]?.[currentPaymentRound]?.[norcPaymentEligibility] === no;
         const isIncentiveEligible = participantData?.[paymentRound]?.[currentPaymentRound]?.[eligibleForIncentive] === no;
-        const isEligibleForIncentiveUpdate = isNORCPaymentEligible || isIncentiveEligible;
 
-        if (isEligibleForIncentiveUpdate) {
+        if (isNORCPaymentEligible && isIncentiveEligible) {
             await participantRef.update({
                 [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
                 [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,
