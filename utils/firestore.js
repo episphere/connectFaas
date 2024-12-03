@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { Transaction, FieldPath } = require('firebase-admin/firestore');
+const { Transaction, FieldPath, FieldValue } = require('firebase-admin/firestore');
 admin.initializeApp();
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true }); // Skip keys with undefined values instead of erroring
@@ -3802,6 +3802,111 @@ const updateParticipantCorrection = async (participantData) => {
     }
 }
 
+/**
+ * Reset participant survey status
+ * @param {string} connectId - Connect ID of the participant
+ * @param {string} survey - Survey name to reset
+ * @returns {object} - Updated participant document
+ * For now, only ssn survey is supported
+ */
+const resetParticipantSurvey = async (connectId, survey) => { 
+    try {
+        const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
+        if (snapshot.empty) {
+            throw { message: 'Participant not found.', code: 404 };
+        }
+
+        const participantRef = snapshot.docs[0].ref;
+        const participantData = snapshot.docs[0].data();
+        const { ssnStatusFlag, ssnSurveyStartTime, ssnSurveyCompletedTime, ssnFullGiven, ssnPartialGiven,
+            notStarted, ssnFullGivenTime, ssnPartialGivenTime, no } = fieldMapping;
+
+        // early exit if survey is already in not started status
+        if (participantData[ssnStatusFlag] === notStarted)  {
+            throw {
+                message: 'Failed to reset SSN Survey. The participant\'s SSN survey is "Not Started" status!',
+                code: 400
+            };
+        }
+
+        // Reset participant data
+        if (survey === 'ssn') { // change this to a concept ID
+            await participantRef.update({
+                [ssnStatusFlag]: notStarted,
+                [ssnSurveyStartTime]: FieldValue.delete(),
+                [ssnSurveyCompletedTime]: FieldValue.delete(),
+                [ssnFullGiven]: no,
+                [ssnPartialGiven]: no,
+                [ssnFullGivenTime]: FieldValue.delete(),
+                [ssnPartialGivenTime]: FieldValue.delete(),
+            });
+            const updatedDoc = await participantRef.get();
+            return updatedDoc.data();
+        }
+
+        // Add future surveys here later
+        throw { message: `Survey type ${survey} failed to reset.`, code: 400 };
+
+    } catch (error) {
+        if (error.code) throw error; 
+        console.error('Error resetting participant survey:', error);
+
+        throw {
+            message: `Error resetting participant survey. ${error.message}`,
+            code: 500,
+        };
+        
+    }
+};
+
+/**
+ * Update participant incentive eligibility for NORC Incentive Eligibility tool
+ * @param {string} connectId - Connect ID of the participant
+ * @param {string} currentPaymentRound - Payment round to update eligibility for participant
+ * @param {string} dateOfEligibility - Date of eligibility for incentive ISO 8601 format
+ * @returns {object} - Updated participant document
+*/
+const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRound, dateOfEligibility) => { 
+    try {
+        const { paymentRound, eligibleForIncentive, yes, no, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
+
+        const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
+        if (snapshot.empty) throw { message: 'Participant not found.', code: 404 };
+        const participantRef = snapshot.docs[0].ref;
+        const participantData = snapshot.docs[0].data();
+        const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
+
+        const isNORCPaymentEligible = participantData?.[paymentRound]?.[currentPaymentRound]?.[norcPaymentEligibility] === no;
+        const isIncentiveEligible = participantData?.[paymentRound]?.[currentPaymentRound]?.[eligibleForIncentive] === no;
+        const isEligibleForIncentiveUpdate = isNORCPaymentEligible && isIncentiveEligible;
+
+        if (isEligibleForIncentiveUpdate) {
+            await participantRef.update({
+                [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
+                [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,
+                [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibility
+            });
+            const updatedDoc = await participantRef.get();
+            if (!updatedDoc.exists) throw { message: 'Updated document not found.', code: 404 }
+            return updatedDoc.data();
+        } else {
+            throw {
+                message: 'Participant is already eligible for incentive and cannot be updated!',
+                code: 400,
+            }
+        }
+    } catch (error) {
+        if (error.code) throw error; 
+        console.error('Error updating  participant incentive eligibility:', error);
+
+        throw {
+            message: `Error updating  participant incentive eligibility: ${error.message}`,
+            code: 500
+        };
+    }
+};
+
+
 const generateSignInWithEmailLink = async (email, continueUrl) => {
     return await admin.auth().generateSignInWithEmailLink(email, {
         url: continueUrl,
@@ -4031,8 +4136,10 @@ module.exports = {
     writeBirthdayCard,
     getExistingBirthdayCard,
     updateParticipantCorrection,
+    resetParticipantSurvey,
     generateSignInWithEmailLink,
     getAppSettings,
     updateNotifySmsRecord,
     updateSmsPermission,
+    updateParticipantIncentiveEligibility,
 }

@@ -15,6 +15,7 @@ module.exports = {
 
     yes: 353358909,
     no: 104430631,
+    
     healthCareProvider: 827220437,
     loginSite: 789843387,
     reportMissingTube: 258745303,
@@ -77,6 +78,22 @@ module.exports = {
     tubeDeviationLowVolume: 728366619,
     tubeDeviationLeakedSpilled: 757246707,
     tubeDeviationUnexpectedTubeSize: 777486216,
+
+    paymentRound: 130371375,
+    eligibleForIncentive: 731498909,
+    baselineSurveyStatusModuleBackgroundOverallHealth: 949302066,
+    baselineSurveyStatusModuleMedReproHealth: 536735468,
+    baselineSurveyStatusModuleSmokeAlcoholSun: 976570371,
+    baselineSurveyStatusModuleLiveAndWork: 663265240,
+    collectionDetails: 173836415,
+    biospecimenVisit: 331584571,
+    collectionSetting: 650516960,
+    researchCollectionSetting: 534621077,
+    reasonTubeNotCollected: 883732523,
+    participantRefusal: 681745422,
+    norcPaymentEligibility: 222373868,
+    timestampPaymentEligibilityForRound: 787567527,
+
 
     // Specimen baselines
     baselineUrineCollected: 167958071,
@@ -221,6 +238,8 @@ module.exports = {
      baselineMouthwashSample: 277479354,
      bloodOrUrineCollected: 156605577,
      bloodOrUrineCollectedTimestamp: 740582332,
+     clinicalSiteBloodCollected: 693370086,
+     baselineBloodSampleCollected: 878865966,
      collectionRound: 418571751,
      mouthwashKit: 976461859,
      mouthwashSurveyCompletionStatus: 547363263,
@@ -324,6 +343,8 @@ module.exports = {
     ssnPartialGivenTime: 598680838,
     ssnQcStatus: 605870562,
     ssnNoCheckRan: 875207881,
+    ssnSurveyStartTime: 943232079,
+    ssnSurveyCompletedTime: 315032037,
 
     // Survey Status Variables
     notYetEligible: 789467219,
