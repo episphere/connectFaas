@@ -1,7 +1,7 @@
 const { getResponseJSON, setHeadersDomainRestricted, getUserProfile } = require('./shared');
 const { submit, submitSocial, getUserSurveys, getUserCollections } = require('./submission');
 const { retrieveNotifications, sendEmailLink } = require('./notifications');
-const { validateToken, generateToken, updateParticipantFirebaseAuthentication, validateUsersEmailPhone } = require('./validation');
+const { validateToken, generateToken, updateParticipantFirebaseAuthentication, validateUsersEmailPhone, emailAddressValidation } = require('./validation');
 
 const connectApp = async (req, res) => {
     setHeadersDomainRestricted(req, res);
@@ -70,6 +70,8 @@ const connectApp = async (req, res) => {
     else if (api === 'updateParticipantFirebaseAuthentication') return await updateParticipantFirebaseAuthentication(req, res);
 
     else if (api === 'validateEmailOrPhone') return validateUsersEmailPhone(req, res);
+
+    else if (api === 'emailAddressValidation') return await emailAddressValidation(req, res);
 
     else if (api === 'getModuleSHA') {
       if (req.method !== 'GET') {
