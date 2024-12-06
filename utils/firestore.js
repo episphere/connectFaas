@@ -3811,13 +3811,16 @@ const updateParticipantCorrection = async (participantData) => {
  */
 const resetParticipantSurvey = async (connectId, survey) => { 
     try {
-        const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
-        if (snapshot.empty) {
+        const batch = db.batch();
+        const batchOperationsLog = []; // check batch operations before commit
+
+        const participantSnapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
+        if (participantSnapshot.empty) {
             throw { message: 'Participant not found.', code: 404 };
         }
 
-        const participantRef = snapshot.docs[0].ref;
-        const participantData = snapshot.docs[0].data();
+        const participantRef = participantSnapshot.docs[0].ref;
+        const participantData = participantSnapshot.docs[0].data();
         const { ssnStatusFlag, ssnSurveyStartTime, ssnSurveyCompletedTime, ssnFullGiven, ssnPartialGiven,
             notStarted, ssnFullGivenTime, ssnPartialGivenTime, no } = fieldMapping;
 
@@ -3829,9 +3832,17 @@ const resetParticipantSurvey = async (connectId, survey) => {
             };
         }
 
+        const ssnSnaphot = await db.collection('ssn').where('token', '==', participantData['token']).get();
+        if (ssnSnaphot.empty) throw { message: 'SSN document not found.', code: 404 };
+        console.log("ssnSnaphot", ssnSnaphot);
+        const ssnData = ssnSnaphot.docs[0].data();
+        console.log("ssnData", ssnData);
+        const ssnDocRef = ssnSnaphot.docs[0].ref;
+        console.log("🚀 ~ resetParticipantSurvey ~ ssnDocRef:", ssnDocRef)
+
         // Reset participant data
         if (survey === 'ssn') { // change this to a concept ID
-            await participantRef.update({
+            batch.update(participantRef, {
                 [ssnStatusFlag]: notStarted,
                 [ssnSurveyStartTime]: FieldValue.delete(),
                 [ssnSurveyCompletedTime]: FieldValue.delete(),
@@ -3840,6 +3851,23 @@ const resetParticipantSurvey = async (connectId, survey) => {
                 [ssnFullGivenTime]: FieldValue.delete(),
                 [ssnPartialGivenTime]: FieldValue.delete(),
             });
+
+            batchOperationsLog.push({
+                operation: "update",
+                ref: participantRef.path,
+                fields: { ssnStatusFlag: notStarted, ssnSurveyStartTime: "deleted" },
+            });
+
+            // delete ssn document
+            batch.delete(ssnDocRef);
+            batchOperationsLog.push({
+                operation: "delete",
+                ref: ssnDocRef.path,
+            });
+
+            console.log("Queued Batch Operations:", JSON.stringify(batchOperationsLog, null, 2));
+
+            batch.commit(); // commit batch operations
             const updatedDoc = await participantRef.get();
             return updatedDoc.data();
         }
