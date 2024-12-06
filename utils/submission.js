@@ -696,7 +696,7 @@ const getSHAFromGitHubCommitData = async (surveyStartTimestamp, path) => {
  * @param {string} sha - The SHA of the raw file commit to fetch.
  * @param {string} path - The path to the file in the questionnaire repository.
  * @param {string} token - The GitHub API token.
- * @returns {Object} - The survey's module text and version number.
+ * @returns {Promise<{moduleText: string, surveyVersion: string}>} - The survey's module text and version number.
  */
 const getQuestSurveyFromGitHub = async (sha, path) => {
     try {
@@ -715,7 +715,7 @@ const getQuestSurveyFromGitHub = async (sha, path) => {
  * @param {string} sha - The SHA of the raw file commit to fetch.
  * @param {string} path - The path to the file in the questionnaire repository.
  * @param {string} token - The GitHub API token.
- * @returns {string} - The version number of the module or '1.0' if not versioned.
+ * @returns {Promise<{moduleText: string, surveyVersion: string}>} - The survey's module text and version number.
  */
 const getTextAndVersionNumberFromGitHubCommit = async (sha, path, token) => {
     try {
