@@ -3834,7 +3834,7 @@ const resetParticipantSurvey = async (connectId, survey) => {
         let ssnDocRef;
 
         // Reset participant data
-        if (Number(survey) === ssnStatusFlag) { // change this to a concept ID
+        if (Number(survey) === ssnStatusFlag) {
             const ssnSnaphot = await db.collection('ssn').where('token', '==', participantData['token']).get();
 
             if (!ssnSnaphot.empty) { 
