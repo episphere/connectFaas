@@ -41,41 +41,6 @@ const encryptAsymmetric = async (data) => {
     return ciphertext;
 }
 
-// const decryptAsymmetric = async () => {
-//     try {
-//         const versionName = client.cryptoKeyVersionPath(
-//             projectId,
-//             locationId,
-//             keyRingId,
-//             keyId,
-//             versionId
-//         );
-//         const cipherTextBuffer = Buffer.from(await encryptAsymmetric(),'base64');
-//         const crc32c = require('fast-crc32c');
-//         const ciphertextCrc32c = crc32c.calculate(cipherTextBuffer);
-//         const [decryptResponse] = await client.asymmetricDecrypt({
-//             name: versionName,
-//             ciphertext: cipherTextBuffer,
-//             ciphertextCrc32c: {
-//                 value: ciphertextCrc32c,
-//             }
-//         });
-//         if (!decryptResponse.verifiedCiphertextCrc32c) {
-//             throw new Error('AsymmetricDecrypt: request corrupted in-transit');
-//         }
-//         if (crc32c.calculate(decryptResponse.plaintext) !== Number(decryptResponse.plaintextCrc32c.value)) {
-//             throw new Error('AsymmetricDecrypt: response corrupted in-transit');
-//         }
-        
-//         const plaintext = decryptResponse.plaintext.toString('utf8');
-        
-//         return plaintext;
-//     }
-//     catch (error) {
-//         console.error(error)
-//     }
-// }
-
 module.exports = {
     encryptAsymmetric
 }
