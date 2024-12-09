@@ -3831,15 +3831,18 @@ const resetParticipantSurvey = async (connectId, survey) => {
             };
         }
 
-        const ssnSnaphot = await db.collection('ssn').where('token', '==', participantData['token']).get();
-        if (ssnSnaphot.empty) {
-            throw { message: 'SSN document not found.', code: 404 };
-        }
-
-        const ssnDocRef = ssnSnaphot.docs[0].ref;
+        let ssnDocRef;
 
         // Reset participant data
         if (survey === 'ssn') { // change this to a concept ID
+            const ssnSnaphot = await db.collection('ssn').where('token', '==', participantData['token']).get();
+            
+            if (!ssnSnaphot.empty) { 
+                ssnDocRef = ssnSnaphot.docs[0].ref;
+                // delete ssn document
+                batch.delete(ssnDocRef);
+            }
+
             // update participant document
             batch.update(participantRef, {
                 [ssnStatusFlag]: notStarted,
@@ -3850,10 +3853,7 @@ const resetParticipantSurvey = async (connectId, survey) => {
                 [ssnFullGivenTime]: FieldValue.delete(),
                 [ssnPartialGivenTime]: FieldValue.delete(),
             });
-            // delete ssn document
-            batch.delete(ssnDocRef);
             await batch.commit();
-
             const updatedDoc = await participantRef.get();
             return updatedDoc.data();
         }
