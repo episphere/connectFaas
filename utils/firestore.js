@@ -3805,7 +3805,7 @@ const updateParticipantCorrection = async (participantData) => {
 /**
  * Reset participant survey status
  * @param {string} connectId - Connect ID of the participant
- * @param {string} survey - Survey concept to be reset, Ex. ssnStatusFlag (ssnStatusFlag)
+ * @param {string} survey - Survey concept to be reset, Ex. concept Id reference for ssnStatusFlag (126331570)
  * @returns {object} - Updated participant document
  * For now, only ssn survey is supported
  */
