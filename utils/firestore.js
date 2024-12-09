@@ -3805,7 +3805,7 @@ const updateParticipantCorrection = async (participantData) => {
 /**
  * Reset participant survey status
  * @param {string} connectId - Connect ID of the participant
- * @param {string} survey - Survey name to reset
+ * @param {string} survey - Survey concept to be reset, Ex. ssnStatusFlag (ssnStatusFlag)
  * @returns {object} - Updated participant document
  * For now, only ssn survey is supported
  */
@@ -3834,9 +3834,9 @@ const resetParticipantSurvey = async (connectId, survey) => {
         let ssnDocRef;
 
         // Reset participant data
-        if (survey === 'ssn') { // change this to a concept ID
+        if (Number(survey) === ssnStatusFlag) { // change this to a concept ID
             const ssnSnaphot = await db.collection('ssn').where('token', '==', participantData['token']).get();
-            
+
             if (!ssnSnaphot.empty) { 
                 ssnDocRef = ssnSnaphot.docs[0].ref;
                 // delete ssn document
