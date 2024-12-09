@@ -15,6 +15,7 @@ module.exports = {
 
     yes: 353358909,
     no: 104430631,
+    
     healthCareProvider: 827220437,
     loginSite: 789843387,
     reportMissingTube: 258745303,
@@ -77,6 +78,47 @@ module.exports = {
     tubeDeviationLowVolume: 728366619,
     tubeDeviationLeakedSpilled: 757246707,
     tubeDeviationUnexpectedTubeSize: 777486216,
+
+    paymentRound: 130371375,
+    eligibleForIncentive: 731498909,
+    baselineSurveyStatusModuleBackgroundOverallHealth: 949302066,
+    baselineSurveyStatusModuleMedReproHealth: 536735468,
+    baselineSurveyStatusModuleSmokeAlcoholSun: 976570371,
+    baselineSurveyStatusModuleLiveAndWork: 663265240,
+    collectionDetails: 173836415,
+    biospecimenVisit: 331584571,
+    collectionSetting: 650516960,
+    researchCollectionSetting: 534621077,
+    reasonTubeNotCollected: 883732523,
+    participantRefusal: 681745422,
+    norcPaymentEligibility: 222373868,
+    timestampPaymentEligibilityForRound: 787567527,
+
+
+    // Specimen baselines
+    baselineUrineCollected: 167958071,
+    baselineBloodAndUrineIsRefused: 526455436,
+    baselineMouthwashCollected: 684635302,
+    baselineBloodSampleCollected: 878865966,
+    allBaselineSamplesCollected: 254109640,
+
+    // Specimen submission
+    collectionLocation: 951355211,
+    collectionScannedTime: 915838974,
+    bloodCollectionSetting: 592099155,
+    baselineBloodCollectedTime: 561681068,
+    clinicalBloodCollected: 534041351,
+    clinicalBloodCollectedTime: 398645039,
+    urineCollectionSetting: 718172863,
+    baselineUrineCollectedTime: 847159717,
+    clinicalUrineCollected: 210921343,
+    clinicalUrineCollectedTime: 541311218,
+    mouthwashCollectionSetting: 915179629,
+    baselineMouthwashCollectedTime: 448660695,
+    anySpecimenCollected: 316824786,
+    // This appears to be identical to bloodOrUrineCollectedTimestamp
+    // but is listed separately for clarity
+    anySpecimenCollectedTime: 740582332,
 
     tubesBagsCids: {
         serumSeparatorTube1: 299553921,
@@ -163,6 +205,7 @@ module.exports = {
      kitType: 379252329,
      kitStatus: 221592017,
      pending: 517216441,
+     initialized: 728267588,
      addressPrinted: 849527480,
      assigned: 241974920,
      shipped: 277438316,
@@ -184,6 +227,10 @@ module.exports = {
      collectionCardFlag: 137401245,
      collectionAddtnlNotes: 260133861,
      collectionDetails: 173836415,
+     collectionSelectedVisit: 331584571,
+     collectionSetting: 650516960,
+     research: 534621077,
+     clinical: 664882224,
      baseline: 266600170,
      bioKitMouthwash: 319972665,
      withdrawConsent: 747006172,
@@ -191,6 +238,8 @@ module.exports = {
      baselineMouthwashSample: 277479354,
      bloodOrUrineCollected: 156605577,
      bloodOrUrineCollectedTimestamp: 740582332,
+     clinicalSiteBloodCollected: 693370086,
+     baselineBloodSampleCollected: 878865966,
      collectionRound: 418571751,
      mouthwashKit: 976461859,
      mouthwashSurveyCompletionStatus: 547363263,
@@ -294,6 +343,8 @@ module.exports = {
     ssnPartialGivenTime: 598680838,
     ssnQcStatus: 605870562,
     ssnNoCheckRan: 875207881,
+    ssnSurveyStartTime: 943232079,
+    ssnSurveyCompletedTime: 315032037,
 
     // Survey Status Variables
     notYetEligible: 789467219,
@@ -413,6 +464,7 @@ module.exports = {
         baselineBloodAndUrineIsRefused: 526455436,
         baselineMouthwashCollected: 684635302,
         baselineBloodSampleCollected: 878865966,
+        allBaselineSamplesCollected: 254109640,
         bioSpmVisitV1r0: 331584571,
         allBaselineSurveysCompleted: 100767870,
         firebaseAuthenticationEmail: 421823980,
