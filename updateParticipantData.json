@@ -1,6 +1,11 @@
 {
 	"state.934298480": {
-		"values": [124276120, 450985724, 363147933, 636706443, 771230670],
+		"values": [713781738, 631272782, 124276120, 450985724, 363147933, 636706443, 771230670, 722846087],
+		"dataType": "number",
+		"mustExist": true
+    },
+	"state.811353546": {
+		"values": [711757828, 943427992, 648219696,	798915634, 896010519],
 		"dataType": "number",
 		"mustExist": true
     },
@@ -29,6 +34,11 @@
 		"dataType": "number",
 		"mustExist": true
 	},
+    "state.253532712": {
+        "values": [723775357, 153444133, 572474909, 308427446, 211228524, 277568192, 611398522, 181769837, 178420302],
+        "dataType": "number",
+        "mustExist": true
+    },
 	"state.706256705": {
 		"values": [536341288, 654207589, 830573274, 178420302],
 		"dataType": "number",
@@ -49,7 +59,7 @@
 		"mustExist": true
 	},
 	"state.667474224": {
-		"values": [926338735, 348281054, 324692899, 351257378, 647148178, 834544960, 682916147, 153365143, 663706936, 181769837, 398561594],
+		"values": [926338735, 348281054, 324692899, 351257378, 647148178, 834544960, 682916147, 153365143, 663706936, 208952854, 181769837, 398561594, 296312382],
 		"dataType": "number",
 		"mustExist": true
 	},
@@ -394,5 +404,233 @@
 		"values": [104430631, 353358909],
 		"dataType": "number",
 		"mustExist": false
+	},
+	"173836415.266600170.543608829": {
+		"dataType": "array",
+		"mustExist": false,
+		"innerElementType": "string"
+	},
+	"173836415.266600170.110349197": {
+		"dataType": "array",
+		"mustExist": false,
+		"innerElementType": "string"
+	},
+	"857217152": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "772354119": {
+        "dataType": "ISO",
+        "mustExist": false
+    },
+	"388711124": {
+        "dataType": "phone",
+        "mustExist": false
+    },
+    "438643922": {
+        "dataType": "phone",
+        "mustExist": false
+    },
+    "793072415": {
+        "dataType": "phone",
+        "mustExist": false
+    },
+    "271757434": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "187894482": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "983278853": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "646873644": {
+        "dataType": "number",
+        "mustExist": false,
+        "values": [104430631, 353358909]
+    },
+    "869588347": {
+        "dataType": "email",
+        "mustExist": false
+    },
+    "849786503": {
+        "dataType": "email",
+        "mustExist": false
+    },
+    "635101039": {
+        "dataType": "email",
+        "mustExist": false
+    },
+    "399159511": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "153211406": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "231676651": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "996038075": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "506826178": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 5
+    },
+    "521824358": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "442166669": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "703385619": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 100
+    },
+    "634434746": {
+        "dataType": "string",
+        "mustExist": false,
+        "maxLength": 25
+    },
+    "892050548": {
+        "dataType": "zipCode",
+        "mustExist": false,
+        "maxLength": 5
+    },
+	"637153953": {
+		"dataType": "array",
+		"mustExist": false
+	}, 
+	"637153953[]": {
+		"dataType": "object",
+		"mustExist": false
+	}, 
+	"637153953[].345545422": {
+		"dataType": "ISO",
+		"mustExist": false,
+		"required": true
+	},
+	"637153953[].525972260": {
+		"values": [104430631, 353358909],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233": {
+		"dataType": "object",
+		"mustExist": false
+	},
+	"637153953[].844209241": {
+		"values": [104430631, 353358909, 178420302],
+		"dataType": "number",
+		"mustExist": false,
+		"required": true
+	},
+	"637153953[].114227122": {
+		"values": [337516613, 646675764, 178420302],
+		"dataType": "number",
+		"mustExist": false,
+		"required": true
+	},
+	"637153953[].421730068": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 800
+	},
+	"637153953[].740819233.149205077": {
+		"values": [
+			939782495, 135725957, 518416174, 847945207, 283025574, 942970912, 596122041,
+			489400183, 863246236, 607793249, 532172400, 754745617, 665036297, 200837530,
+			990319383, 603181162, 482225200, 295976386, 764891959, 248374037, 139822395,
+			723614811, 807835037, 178420302
+		],
+		"dataType": "number",
+		"mustExist": false
+	},
+	"637153953[].740819233.868006655": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 800
+	},
+	"359309143": {
+		"dataType": "object",
+		"mustExist": false
+	},
+	"359309143.194486780": {
+		"values": ["2023", "2024", "2025"],
+		"dataType": "string",
+		"mustExist": false,
+		"required": true
+	},
+	"359309143.916186376": {
+		"values": ["01", "02", "06", "07"],
+		"dataType": "string",
+		"mustExist": false,
+		"required": false
+	},
+	"359309143.768313785": {
+		"dataType": "ISO",
+		"mustExist": false,
+		"required": true
+	},
+	"359309143.902078073": {
+		"dataType": "ISO",
+		"mustExist": false,
+		"required": false
+	},
+	"359309143.153211406": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.996038075": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.521824358": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.442166669": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.703385619": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 100
+	},
+	"359309143.634434746": {
+		"dataType": "string",
+		"mustExist": false,
+		"maxLength": 25
+	},
+	"359309143.892050548": {
+		"dataType": "zipCode",
+		"mustExist": false,
+		"maxLength": 5
 	}
 }
