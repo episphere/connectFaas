@@ -3812,7 +3812,6 @@ const updateParticipantCorrection = async (participantData) => {
 const resetParticipantSurvey = async (connectId, survey) => { 
     try {
         const batch = db.batch();
-        const batchOperationsLog = []; // check batch operations before commit
 
         const participantSnapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
         if (participantSnapshot.empty) {
@@ -3833,15 +3832,15 @@ const resetParticipantSurvey = async (connectId, survey) => {
         }
 
         const ssnSnaphot = await db.collection('ssn').where('token', '==', participantData['token']).get();
-        if (ssnSnaphot.empty) throw { message: 'SSN document not found.', code: 404 };
-        console.log("ssnSnaphot", ssnSnaphot);
-        const ssnData = ssnSnaphot.docs[0].data();
-        console.log("ssnData", ssnData);
+        if (ssnSnaphot.empty) {
+            throw { message: 'SSN document not found.', code: 404 };
+        }
+
         const ssnDocRef = ssnSnaphot.docs[0].ref;
-        console.log("🚀 ~ resetParticipantSurvey ~ ssnDocRef:", ssnDocRef)
 
         // Reset participant data
         if (survey === 'ssn') { // change this to a concept ID
+            // update participant document
             batch.update(participantRef, {
                 [ssnStatusFlag]: notStarted,
                 [ssnSurveyStartTime]: FieldValue.delete(),
@@ -3851,23 +3850,10 @@ const resetParticipantSurvey = async (connectId, survey) => {
                 [ssnFullGivenTime]: FieldValue.delete(),
                 [ssnPartialGivenTime]: FieldValue.delete(),
             });
-
-            batchOperationsLog.push({
-                operation: "update",
-                ref: participantRef.path,
-                fields: { ssnStatusFlag: notStarted, ssnSurveyStartTime: "deleted" },
-            });
-
             // delete ssn document
             batch.delete(ssnDocRef);
-            batchOperationsLog.push({
-                operation: "delete",
-                ref: ssnDocRef.path,
-            });
+            await batch.commit();
 
-            console.log("Queued Batch Operations:", JSON.stringify(batchOperationsLog, null, 2));
-
-            batch.commit(); // commit batch operations
             const updatedDoc = await participantRef.get();
             return updatedDoc.data();
         }
@@ -3891,10 +3877,10 @@ const resetParticipantSurvey = async (connectId, survey) => {
  * Update participant incentive eligibility for NORC Incentive Eligibility tool
  * @param {string} connectId - Connect ID of the participant
  * @param {string} currentPaymentRound - Payment round to update eligibility for participant
- * @param {string} dateOfEligibility - Date of eligibility for incentive ISO 8601 format
+ * @param {string} dateOfEligibilityInput - Date of eligibility for incentive ISO 8601 format
  * @returns {object} - Updated participant document
 */
-const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRound, dateOfEligibility) => { 
+const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRound, dateOfEligibilityInput) => { 
     try {
         const { paymentRound, eligibleForIncentive, yes, no, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
 
@@ -3912,7 +3898,7 @@ const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRo
             await participantRef.update({
                 [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
                 [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,
-                [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibility
+                [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibilityInput
             });
             const updatedDoc = await participantRef.get();
             if (!updatedDoc.exists) throw { message: 'Updated document not found.', code: 404 }
