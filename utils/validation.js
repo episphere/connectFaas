@@ -1,5 +1,6 @@
 const { getResponseJSON, setHeaders, logIPAddress, getSecret } = require('./shared');
-const conceptIds = require('./fieldToConceptIdMapping')
+const conceptIds = require('./fieldToConceptIdMapping');
+
 
 const generateToken = async (req, res, uid) => {
 
@@ -471,7 +472,6 @@ const checkSamplesDonated = (data) => {
 }
 
 const checkRefusalWithdrawals = (data) => {
-
     const anyRefusalWithdrawal = (
         data['685002411']['194410742'] === 353358909 ||
         data['685002411']['217367618'] === 353358909 ||
@@ -484,6 +484,7 @@ const checkRefusalWithdrawals = (data) => {
         data['685002411']['525277409'] === 353358909 ||
         data['685002411']['936015433'] === 353358909 ||
         data['685002411']['688142378'] === 353358909 ||
+        data['685002411']['671903816'] === 353358909 ||
         data['726389747'] === 353358909 ||
         data['747006172'] === 353358909 ||
         data['773707518'] === 353358909 ||
@@ -493,7 +494,7 @@ const checkRefusalWithdrawals = (data) => {
     ); 
 
     return anyRefusalWithdrawal;
-}
+};
 
 const validateUsersEmailPhone = async (req, res) => {
     logIPAddress(req);
