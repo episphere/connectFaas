@@ -1,10 +1,11 @@
 const rules = require("../updateParticipantData.json");
 const submitRules = require("../submitParticipantData.json");
-const { getResponseJSON, setHeaders, logIPAdddress, validIso8601Format, validPhoneFormat, validEmailFormat } = require('./shared');
+const { getResponseJSON, setHeaders, logIPAddress, validPhoneFormat, validEmailFormat, refusalWithdrawalConcepts } = require('./shared');
+const { validateIso8601Timestamp } = require('./validation');
 const fieldMapping = require('./fieldToConceptIdMapping');
 
 const submitParticipantsData = async (req, res, site) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -172,11 +173,11 @@ const siteNotificationsHandler = async (Connect_ID, concept, siteCode, obj) => {
 }
 
 const updateParticipantData = async (req, res, authObj) => {
-    const { getParticipantData, updateParticipantData, writeCancerOccurrences } = require('./firestore');
+    const { getParticipantData, updateParticipantData: updateParticipantDataFirestore, writeBirthdayCard, writeCancerOccurrences } = require('./firestore');
     const { checkForQueryFields, flattenObject, initializeTimestamps, userProfileHistoryKeys } = require('./shared');
     const { checkDerivedVariables } = require('./validation');
 
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
     
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
@@ -185,8 +186,11 @@ const updateParticipantData = async (req, res, authObj) => {
         return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
     }
     let obj = {};
-    if (authObj) obj = authObj;
-    else {
+    let internalCall = false;
+    if (authObj) {
+        obj = authObj;
+        internalCall = true;
+    } else {
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
         if(authorized instanceof Error){
@@ -211,6 +215,7 @@ const updateParticipantData = async (req, res, authObj) => {
     const dataArray = req.body.data;
     let responseArray = [];
     let error = false;
+    let docCount = 0;
 
     for(let dataObj of dataArray) {
         if(dataObj.token === undefined) {
@@ -236,6 +241,16 @@ const updateParticipantData = async (req, res, authObj) => {
         if (docData[dataHasBeenDestroyed] === fieldMapping.yes) {
             error = true;
             responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Data Destroyed'}});
+            continue;
+        }
+
+        // Refect if the participant has withdrawn consent unless the update is
+        // for data distruction or hippa withdrawal 
+        const withdrawConsent = refusalWithdrawalConcepts.withdrewConsent.toString();
+        const revokeHIPAA = refusalWithdrawalConcepts.revokeHIPAA.toString();
+        if (!internalCall && docData[withdrawConsent] === fieldMapping.yes && docData[revokeHIPAA] === fieldMapping.yes) {       
+            error = true;
+            responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': 'Particpant Withdrawn'}});
             continue;
         }
 
@@ -316,6 +331,11 @@ const updateParticipantData = async (req, res, authObj) => {
             delete flatUpdateObj[fieldMapping.participantDeceasedTimestamp];
         }
 
+        // Handle destroyed data. If destroyData = yes then participation status = destroyData
+        if (flatUpdateObj[fieldMapping.participantMap.destroyData] === fieldMapping.yes) {
+            flatUpdateObj[fieldMapping.participationStatus] = fieldMapping.participantMap.dataDestructionRequested;
+        }
+
         // Handle cancer occurrence data. This gets validated and directed to the Firestore cancerOccurrence collection. One occurrence per doc.
         const incomingCancerOccurrenceArray = dataObj[fieldMapping.cancerOccurrence] || [];
         let finalizedCancerOccurrenceArray = [];
@@ -337,6 +357,34 @@ const updateParticipantData = async (req, res, authObj) => {
             finalizedCancerOccurrenceArray = occurrenceResult.data;
         }
 
+        // Handle NORC Birthday Card data: birthday card data + optional participant update from birthday card return data. 
+        let finalizedBirthdayCardData = {};
+        let norcParticipantUpdateData = {};
+        let birthdayCardWriteDetails = {};
+        const norcBirthdayCardData = dataObj[fieldMapping.norcBirthdayCard];
+        if (norcBirthdayCardData && Object.keys(norcBirthdayCardData).length > 0) {
+            Object.keys(flatUpdateObj)
+                .filter(key => key.startsWith(fieldMapping.norcBirthdayCard.toString()))
+                .forEach(key => delete flatUpdateObj[key]);
+            
+            const { handleNorcBirthdayCard } = require('./shared');
+            const requiredNorcBirthdayCardRules = Object.keys(rules).filter(key => rules[key].required && key.startsWith(fieldMapping.norcBirthdayCard.toString()));
+            const participantConnectId = docData['Connect_ID'];
+            const participantProfileHistory = docData[fieldMapping.userProfileHistory];
+            const birthdayCardResult = await handleNorcBirthdayCard(norcBirthdayCardData, requiredNorcBirthdayCardRules, participantToken, participantConnectId, participantProfileHistory);
+
+            if (birthdayCardResult.error) {
+                error = true;
+                responseArray.push({'Invalid Request': {'Token': participantToken, 'Errors': birthdayCardResult.message}});
+            } else {
+                [finalizedBirthdayCardData, norcParticipantUpdateData, birthdayCardWriteDetails] = birthdayCardResult.data;                
+                if (Object.keys(norcParticipantUpdateData).length > 0) {
+                    Object.assign(dataObj, norcParticipantUpdateData); // query field check
+                    Object.assign(flatUpdateObj, norcParticipantUpdateData); // profile history check
+                }
+            }
+        }
+
         // Handle updates to query.firstName, query.lastName, query.allPhoneNo, and query.allEmails arrays (these are used for participant search). Derive and add the updated query array to flatDataObj.
         const shouldUpdateQueryFields = checkForQueryFields(dataObj);
         if (shouldUpdateQueryFields) {
@@ -353,13 +401,18 @@ const updateParticipantData = async (req, res, authObj) => {
         }
         
         try {
-            const promises = [];
-            if (Object.keys(flatUpdateObj).length > 0) promises.push(updateParticipantData(docID, flatUpdateObj));
-            if (finalizedCancerOccurrenceArray.length > 0) promises.push(writeCancerOccurrences(finalizedCancerOccurrenceArray));
-            await Promise.all(promises);
-            await checkDerivedVariables(participantToken, docData['827220437']);
+            if (!error) {
+                const promises = [];
+                if (Object.keys(flatUpdateObj).length > 0) promises.push(updateParticipantDataFirestore(docID, flatUpdateObj));
+                if (finalizedCancerOccurrenceArray.length > 0) promises.push(writeCancerOccurrences(finalizedCancerOccurrenceArray));
+                if (Object.keys(finalizedBirthdayCardData).length > 0) promises.push(writeBirthdayCard(finalizedBirthdayCardData, birthdayCardWriteDetails));
+                await Promise.all(promises);
+                await checkDerivedVariables(participantToken, docData['827220437']);
+                
+                responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
             
-            responseArray.push({'Success': {'Token': participantToken, 'Errors': 'None'}});
+                docCount++;
+            }
         } catch (e) {
             // Alert the user about the error for this participant but continue to process the rest of the participants.
             console.error(`Server error updating participant at updateParticipantData & checkDerivedVariables. ${e}`);
@@ -369,6 +422,7 @@ const updateParticipantData = async (req, res, authObj) => {
         }
     }
 
+    console.log(`Updated ${docCount} participant records.`);
     return res.status(error ? 206 : 200).json({code: error ? 206 : 200, results: responseArray});
 }
 
@@ -402,7 +456,7 @@ const flatValidationHandler = (newData, existingData, rules, validationFunction)
  * Validate data submitted to the updateParticipantData endpoint.
  * @param {string|number|array|object} value - The value to validate. From a key:value pair submitted in the POST request.
  * @param {string|number|array|object} existingValue - The existing value to validate against. From the existing participant data in the database.
- * @param {string} path - The flattened path to the value in the data object. Example: 'state.123456789' or '637153953[].457270069' <- where [] is an array with any index value.
+ * @param {string} path - The flattened path to the value in the data object. Example: 'state.123456789' or '637153953[].149205077' <- where [] is an array with any index value.
  * @param {object} rule - The validation rule to use from updateParticipantData.json. Example: { "dataType": "string", "maxLength": 100 }
  * @returns null for success, or an error message for failure.
  */
@@ -418,7 +472,12 @@ const validateUpdateParticipantData = (value, existingValue, path, rule) => {
             } else if (rule.maxLength && value.length > rule.maxLength) {
                 return `Data mismatch: ${path} must be less than ${rule.maxLength} characters. It is currently ${value.length} characters.`;
             }
+
+            if (rule.values && !rule.values.includes(value)) {
+                return `Data mismatch: ${path} must be one of the following values: ${rule.values.join(', ')}.`;
+            }
             break;
+
         case 'number':
             if (typeof value !== 'number') {
                 return `Data mismatch: ${path} must be a number.`;
@@ -427,26 +486,33 @@ const validateUpdateParticipantData = (value, existingValue, path, rule) => {
                 return `Data mismatch: ${path} must be one of the following values: ${rule.values.join(', ')}.`;
             }
             break;
+
         case 'ISO':
-            if (typeof value !== 'string' || !(validIso8601Format.test(value))) {
-                return `Data mismatch: ${path} must be ISO 8601 string. Example: '2023-12-15T12:45:52.123Z'`;
+            const validationResponse = validateIso8601Timestamp(value);
+            if (validationResponse.error === true) {
+                return `Data mismatch: ${path} ${validationResponse.message}`;
             }
+
             break;
+
         case 'phone':
             if (typeof value !== 'string' || !validPhoneFormat.test(value)) {
                 return `Data mismatch: ${path} must be a valid phone number. 10 character string, no spaces, no dashes. Example: '1234567890'`;
             }
             break;
+
         case 'email':
             if (typeof value !== 'string' || !validEmailFormat.test(value)) {
                 return `Data mismatch: ${path} must be a valid email address. Example: abc@xyz.com`;
             }
             break;
+
         case 'zipCode':
             if (typeof value !== 'string' || value.length !== 5) {
                 return `Data mismatch: ${path} zip code must be a 5 character string.`;
             }
             break;
+
         case 'array':
             if (!Array.isArray(value)) {
                 return `Data mismatch: ${path} must be an array.`;
@@ -459,17 +525,20 @@ const validateUpdateParticipantData = (value, existingValue, path, rule) => {
                 }
             }
             break;
+
         case 'object':
             if (typeof value !== 'object' || Array.isArray(value)) {
                 return `Data mismatch: ${path} must be an object.`;
             }
             break;
+
         default:
             if (typeof value !== rule.dataType) {
                 return `Data mismatch: ${path} must be a ${rule.dataType}.`;
             }
             break;
     }
+
     return null;
 }
 
@@ -501,7 +570,7 @@ const updateUserAuthentication = async (req, res, authObj) => {
 }
 
 const participantDataCorrection = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
 
     if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
@@ -527,8 +596,86 @@ const participantDataCorrection = async (req, res) => {
     }
 };
 
+const getBigQueryData = async (req, res) => {
+    const { validateTableAccess, validateFilters, validateFields, getBigQueryData } = require('./bigquery');
+
+    logIPAddress(req);
+    setHeaders(res);
+    
+    if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
+
+    if (req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+    const { APIAuthorization } = require('./shared');
+    const authorized = await APIAuthorization(req);
+    if (authorized instanceof Error) {
+        return res.status(500).json(getResponseJSON(authorized.message, 500));
+    }
+
+    if (!authorized) {
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    if (req.query.table === undefined || !req.query.table) return res.status(400).json(getResponseJSON('Bad request. Table is not defined in query', 400));
+    if (req.query.dataset === undefined || !req.query.dataset) return res.status(400).json(getResponseJSON('Bad request. Dataset is not defined in query', 400));
+
+    //Validate the caller has access to the table and dataset
+    const dataset = req.query.dataset;
+    const table = req.query.table;
+    let allowAccess = await validateTableAccess(authorized, dataset, table)
+    if (!allowAccess) {
+        return res.status(401).json(getResponseJSON('Forbidden', 403));
+    }
+
+    let filters = req.query.filters;
+    if (Array.isArray(filters)) {
+        try {
+            filters.forEach((filter, index) => {
+                filters[index] = JSON.parse(filter);
+            });
+        } catch (e) {
+            return res.status(400).json(getResponseJSON('Bad request. '+e.toString(), 400));
+        }   
+
+    } else if (typeof filters === "string") {
+        try {
+            filters = [JSON.parse(filters)];
+        } catch (e) {
+            return res.status(400).json(getResponseJSON('Bad request. Filters is not an array or JSON object', 400));
+        }
+    }
+
+    if (Array.isArray(filters)) {
+        let validFilters = await validateFilters(dataset, table, filters);
+        if (!validFilters) {
+            return res.status(400).json(getResponseJSON('Bad request. Filters are invalid', 400));
+        }
+    }
+
+    let fields = req.query.fields;
+    if (Array.isArray(fields) && fields.length > 0) {
+        let validFields = await validateFields(dataset, table, fields);
+        if (!validFields) {
+            return res.status(400).json(getResponseJSON('Bad request. Fields are invalid', 400));
+        }
+    }
+
+    let error;
+    let responseArray = [];
+    try {
+        responseArray = await getBigQueryData(dataset, table, filters, fields);
+    } catch (e) {
+        error = e.toString();
+        console.log(e);
+    }
+
+    return res.status(error ? 500 : 200).json(error ? getResponseJSON(error, 500) : {code: 200, results: responseArray});
+}
+
 
 module.exports = {
+    getBigQueryData,
     submitParticipantsData,
     updateParticipantData,
     updateUserAuthentication,

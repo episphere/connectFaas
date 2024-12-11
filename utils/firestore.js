@@ -1,12 +1,12 @@
-const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-admin.initializeApp(functions.config().firebase);
+const { Transaction, FieldPath, FieldValue } = require('firebase-admin/firestore');
+admin.initializeApp();
 const db = admin.firestore();
-const increment = admin.firestore.FieldValue.increment(1);
-const decrement = admin.firestore.FieldValue.increment(-1);
-const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages } = require('./shared');
+db.settings({ ignoreUndefinedProperties: true }); // Skip keys with undefined values instead of erroring
+const { tubeConceptIds, collectionIdConversion, swapObjKeysAndValues, batchLimit, listOfCollectionsRelatedToDataDestruction, createChunkArray, twilioErrorMessages, cidToLangMapper, printDocsCount, getFiveDaysAgoDateISO, conceptMappings } = require('./shared');
 const fieldMapping = require('./fieldToConceptIdMapping');
 const { isIsoDate } = require('./validation');
+const {getParticipantTokensByPhoneNumber} = require('./bigquery');
 
 const nciCode = 13;
 const nciConceptId = `517700004`;
@@ -24,6 +24,7 @@ const verifyTokenOrPin = async ({ token = null, pin = null }) => {
   }
 
   const snapshot = await query.get();
+  printDocsCount(snapshot, "verifyTokenOrPin");
   if (snapshot.size === 1) {
     const participantData = snapshot.docs[0].data();
     if (
@@ -81,8 +82,9 @@ const linkParticipanttoFirebaseUID = async (docID, uID) => {
 
 const participantExists = async (uid) => {
     try{
-        const response = await db.collection('participants').where('state.uid', '==', uid).get();
-        if(response.size === 0){
+        const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
+        printDocsCount(snapshot, "participantExists");
+        if(snapshot.size === 0){
             return false;
         }
         else{
@@ -97,32 +99,20 @@ const participantExists = async (uid) => {
 
 const updateResponse = async (data, uid) => {
     try{
-        const response = await db.collection('participants').where('state.uid', '==', uid).get();
-        if(response.size === 1) {
-            for(let doc of response.docs){
-                await db.collection('participants').doc(doc.id).update(data);
-                return true;
-            }
+        const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
+        printDocsCount(snapshot, "updateResponse");
+
+        if (snapshot.size !== 1) {
+            throw new Error(`updateResponse expected 1 document, found ${snapshot.size}. uid: ${uid}`);
         }
+
+        await snapshot.docs[0].ref.update(data);
+        return true;
     }
     catch(error){
-        console.error(error);
-        return new Error(error)
+        console.error(`Error in updateResponse: ${error}`);
+        return new Error(`Error in updateResponse: ${error}`);
     }
-}
-
-const incrementCounter = async (field, siteCode) => {
-    const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
-    let obj = {}
-    obj[field] = increment;
-    await db.collection('stats').doc(snapShot.docs[0].id).update(obj);
-}
-
-const decrementCounter = async (field, siteCode) => {
-    const snapShot = await db.collection('stats').where('siteCode', '==', siteCode).get();
-    let obj = {}
-    obj[field] = decrement;
-    await db.collection('stats').doc(snapShot.docs[0].id).update(obj);
 }
 
 const createRecord = async (data) => {
@@ -138,13 +128,13 @@ const createRecord = async (data) => {
 
 const recordExists = async (studyId, siteCode) => {
     try{
-        const snapShot = await db.collection('participants').where('state.studyId', '==', studyId).where('827220437', '==', siteCode).get();
-        if(snapShot.size === 1){
-            return snapShot.docs[0].data();
+        const snapshot = await db.collection('participants').where('state.studyId', '==', studyId).where('827220437', '==', siteCode).get();
+        printDocsCount(snapshot, "recordExists");
+        if (snapshot.size === 1) {
+            return snapshot.docs[0].data();
         }
-        else {
-            return false;
-        }
+
+        return false;
     }
     catch(error){
         console.error(error);
@@ -154,15 +144,15 @@ const recordExists = async (studyId, siteCode) => {
 
 const validateSiteSAEmail = async (saEmail) => {
     try{
-        const snapShot = await db.collection('siteDetails')
+        const snapshot = await db.collection('siteDetails')
                                 .where('saEmail', '==', saEmail)
                                 .get();
-        if(snapShot.size === 1) {
-            return snapShot.docs[0].data();
+        printDocsCount(snapshot, "validateSiteSAEmail");
+        if(snapshot.size === 1) {
+            return snapshot.docs[0].data();
         }
-        else{
-            return false;
-        };
+
+        return false;
     }
     catch(error){
         console.error(error);
@@ -173,16 +163,16 @@ const validateSiteSAEmail = async (saEmail) => {
 const getParticipantData = async (token, siteCode, isParent) => {
     try{
         const operator = isParent ? 'in' : '==';
-        const snapShot = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('token', '==', token)
                                 .where('827220437', operator, siteCode)
                                 .get();
-        if(snapShot.size === 1) {
-            return {id: snapShot.docs[0].id, data: snapShot.docs[0].data()};
+        printDocsCount(snapshot, "getParticipantData");
+        if (snapshot.size === 1) {
+            return {id: snapshot.docs[0].id, data: snapshot.docs[0].data()};
         }
-        else{
-            return false;
-        };
+
+        return false;
     }
     catch(error){
         console.error(error);
@@ -197,10 +187,213 @@ const updateParticipantData = async (id, data) => {
             .update(data);
 }
 
+const resetParticipantHelper = async (uid, saveToDb) => {
+    // Get information for user + reset to a pre-survey and specimen point for testing
+    const toDelete = {};
+    let obj = {};
+    await db.runTransaction(async (transaction) => {
+        const participantQuery = db.collection('participants').where('state.uid', '==', uid);
+        const snapshot = await transaction.get(participantQuery);
+        if (snapshot.size === 0) {
+            // No matching document found, stop the update
+            return false;
+        }
+
+
+
+        const { defaultFlags, defaultStateFlags, moduleConceptsToCollections } = require('./shared');
+
+        const userId = snapshot.docs[0].id;
+        const prevUserData = snapshot.docs[0].data();
+        // These keys are the keys generated in the course of a participant registering
+        // and then passing through the consent forms and submitting their profile
+        // then the account being verified.
+        // Basically, this resets the user to exactly once they've completed all that, before
+        // any surveys have been answered or specimens submitted.
+        let keysToPreserve = [
+            fieldMapping.iDoNotHaveAPIN,
+            fieldMapping.healthCareProvider,
+            fieldMapping.heardAboutStudyFrom,
+            fieldMapping.dataDestruction.consentFirstName,
+            fieldMapping.dataDestruction.consentMiddleName,
+            fieldMapping.dataDestruction.consentLastName,
+            fieldMapping.dataDestruction.consentSuffixName,
+            fieldMapping.dataDestruction.userProfileNameFirstName,
+            fieldMapping.dataDestruction.userProfileNameMiddleName,
+            fieldMapping.dataDestruction.userProfileNameLastName,
+            fieldMapping.dataDestruction.userProfileNameSuffixName,
+            'query',
+            fieldMapping.autogeneratedConsentDate,
+            fieldMapping.participantMap.consentFormSubmitted,
+            fieldMapping.dataDestruction.informedConsentDateSigned,
+            fieldMapping.dataDestruction.informedConsentVersion,
+            fieldMapping.dataDestruction.hipaaAuthorizationDateSigned,
+            fieldMapping.dataDestruction.hipaaAuthorizationFlag,
+            fieldMapping.dataDestruction.hipaaAuthorizationVersion,
+            fieldMapping.dataDestruction.firebaseAuthenticationEmail,
+            fieldMapping.firebaseAuthenticationFirstAndLastName,
+            fieldMapping.authenticationPhone,
+            fieldMapping.signInMechanism,
+            fieldMapping.preferredLanguage,
+            fieldMapping.preferredName,
+            fieldMapping.dataDestruction.birthMonth,
+            fieldMapping.dataDestruction.birthDay,
+            fieldMapping.dataDestruction.birthYear,
+            fieldMapping.dataDestruction.dateOfBirth,
+            fieldMapping.cellPhone,
+            fieldMapping.homePhone,
+            fieldMapping.otherPhone,
+            fieldMapping.prefEmail,
+            fieldMapping.additionalEmail1,
+            fieldMapping.additionalEmail2,
+            fieldMapping.additionalEmail3,
+            fieldMapping.address1,
+            fieldMapping.address2,
+            fieldMapping.city,
+            fieldMapping.state,
+            fieldMapping.zip,
+            fieldMapping.canWeVoicemailMobile,
+            fieldMapping.canWeVoicemailHome,
+            fieldMapping.canWeVoicemailOther,
+            fieldMapping.canWeText,
+            fieldMapping.prefContactMethod,
+            fieldMapping.haveYouEverBeenDiagnosedWithCancer,
+            fieldMapping.whatYearWereYouDiagnosed,
+            fieldMapping.whatTypeOfCancer,
+            fieldMapping.anyCommentsAboutYourCancerDiagnosis,
+            fieldMapping.derivedAge,
+            fieldMapping.dataDestruction.userProfileSubmittedFlag,
+            fieldMapping.autogeneratedProfileSubmittedTime,
+            fieldMapping.participantMap.consentFormSubmitted,
+            fieldMapping.verificationStatus,
+            fieldMapping.autogeneratedSignedInTime,
+            fieldMapping.autogeneratedVerificationStatusUpdatedTime,
+            // These are deprecated but left in to ensure data consistency
+            983784715, 
+            700668490,
+            430184574,
+            507120821,
+            383945929
+        ];
+        // Pulling these out specifically instead of putting them in the above array
+        // because they're used in subsequent logic
+        const { token, Connect_ID } = prevUserData;
+        obj = {
+            state: {
+                uid,
+                ...defaultStateFlags
+            },
+            [fieldMapping.participantMap.signedInFlag]: fieldMapping.yes,
+            token,
+            Connect_ID,
+            [fieldMapping.autogeneratedRecruitmentType]: fieldMapping.passive, // defaulting it as passive
+            [fieldMapping.autogeneratedRecruitmentTypeTime]: (new Date()).toISOString(),
+            ...defaultFlags
+        }
+        keysToPreserve.forEach(key => {
+            if(typeof prevUserData[key] !== undefined) {
+                obj[key] = prevUserData[key];
+            }
+        });
+
+        // Get other documents created by this user which should be removed
+
+        const userSurveyPromises = Object.keys(moduleConceptsToCollections).map((concept) => {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const docQuery = db.collection(moduleConceptsToCollections[concept]).where('uid', '==', uid);
+                    const docSnapshot = await transaction.get(docQuery);
+        
+                    if (docSnapshot.size > 0) {
+                        toDelete[moduleConceptsToCollections[concept]] = docSnapshot.docs.map(doc => doc.id);
+                    }
+                    return resolve();
+                } catch(err) {
+                    reject(err);
+                }
+            });
+        });
+
+        const userNotificationsPromise = new Promise(async (resolve, reject) => {
+            try {
+                const notifQuery = db.collection("notifications").where("uid", "==", uid);
+                const notifSnapshot = await transaction.get(notifQuery);
+                toDelete.notifications = notifSnapshot.docs.map(doc => doc.id);
+                return resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        const userBiospecimenPromise = new Promise(async (resolve, reject) => {
+            try {
+                const biospecimenQuery = db.collection('biospecimen').where('token', '==', token);
+                const biospecimenSnapshot = await transaction.get(biospecimenQuery);
+                toDelete.biospecimen = biospecimenSnapshot.docs.map(doc => doc.id);
+                biospecimensToDelete = biospecimenSnapshot.docs.map(doc => doc.data());
+                return resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        const userCancerOccurrencesPromise = new Promise(async (resolve, reject) => {
+            try {
+                const cancerOccurrencesQuery = db.collection('cancerOccurrence').where('token', '==', token);
+                const cancerOccurrencesSnapshot = await transaction.get(cancerOccurrencesQuery);
+                toDelete.cancerOccurrence = cancerOccurrencesSnapshot.docs.map(doc => doc.id);
+                return resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        const kitAssemblyPromise = new Promise(async (resolve, reject) => {
+            try {
+                const kitAssemblyQuery = db.collection('kitAssembly').where('Connect_ID', '==', Connect_ID);
+                const kitAssemblySnapshot = await transaction.get(kitAssemblyQuery);
+                toDelete.kitAssembly = kitAssemblySnapshot.docs.map(doc => doc.id);
+                return resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        await Promise.all([Promise.all(userSurveyPromises), userNotificationsPromise, userBiospecimenPromise, userCancerOccurrencesPromise, kitAssemblyPromise]);
+
+        if (saveToDb) {
+            const participantDoc = db.collection('participants').doc(userId);
+            // These aren't going to ever have enough records to require delete batching
+            const deletionDocsArray = [];
+            await Promise.all(Object.keys(toDelete).map(async (docType) => {
+                let ids = toDelete[docType] || [];
+                if (!ids.length) {
+                    return;
+                }
+                const docQuery = db.collection(docType)
+                    .where(FieldPath.documentId(), 'in', ids);
+                const query = await transaction.get(docQuery);
+                query.docs.forEach(doc => deletionDocsArray.push(doc));
+                return;
+            }));
+            // Transactions require all reads happen before writes for some reason, hence this structure
+            const participantUpdatePromise = transaction
+                .set(participantDoc, obj, {
+                    merge: false
+                });
+            const deletePromises = deletionDocsArray.map(doc => doc && doc.ref ? transaction.delete(doc.ref) : Promise.resolve());
+            await Promise.all([participantUpdatePromise, Promise.all(deletePromises)]);
+        }
+        return;
+    });
+    return { data: obj, deleted: toDelete };
+}
+
+// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const retrieveParticipants = async (siteCode, decider, isParent, limit, page, site, from, to) => {
     try{
         const operator = isParent ? 'in' : '==';
-        let participants = {};
+        let snapshot;
         const offset = (page-1)*limit;
         if(decider === 'verified') {
             let query = db.collection('participants')
@@ -211,7 +404,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                             .offset(offset)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'notyetverified') {
             let query = db.collection('participants')
@@ -222,7 +415,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'cannotbeverified') {
             let query = db.collection('participants')
@@ -233,7 +426,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'profileNotSubmitted') {
             let query = db.collection('participants')
@@ -244,7 +437,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'consentNotSubmitted') {
             let query = db.collection('participants')
@@ -256,7 +449,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'notSignedIn') {
             let query = db.collection('participants')
@@ -268,7 +461,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
                                     .limit(limit)
             if(site) query = query.where('827220437', '==', site) // Get for a specific site
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent                       
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'all') {
             let query = db.collection('participants')
@@ -281,7 +474,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent   
             if(from) query = query.where('914594314', '>=', from)
             if(to) query = query.where('914594314', '<=', to)
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'active') {
             let query = db.collection('participants')
@@ -295,7 +488,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
             if(from) query = query.where('914594314', '>=', from)
             if(to) query = query.where('914594314', '<=', to)
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'notactive') {
             let query = db.collection('participants')
@@ -309,7 +502,7 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
             if(from) query = query.where('914594314', '>=', from)
             if(to) query = query.where('914594314', '<=', to)
-            participants = await query.get();
+            snapshot = await query.get();
         }
         if(decider === 'passive') {
             let query = db.collection('participants')
@@ -323,12 +516,11 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
             else query = query.where('827220437', operator, siteCode) // Get for all site if parent
             if(from) query = query.where('914594314', '>=', from)
             if(to) query = query.where('914594314', '<=', to)
-            participants = await query.get();
+            snapshot = await query.get();
         }
-        return participants.docs.map(document => {
-            let data = document.data();
-            return data;
-        });
+
+        printDocsCount(snapshot, `retrieveParticipants; offset: ${offset}`);
+        return snapshot.docs.map(doc => doc.data());
     }
     catch(error){
         console.error(error);
@@ -336,28 +528,29 @@ const retrieveParticipants = async (siteCode, decider, isParent, limit, page, si
     }
 }
 
+// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const retrieveRefusalWithdrawalParticipants = async (siteCode, isParent, concept, limit, page) => {
     try {
         const operator = isParent ? 'in' : '==';
         const offset = (page - 1) * limit;
         
-        let participants = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('827220437', operator, siteCode)
                                 .where(concept, '==', 353358909)
                                 .orderBy('Connect_ID', 'asc')
                                 .offset(offset)
                                 .limit(limit)
                                 .get();                 
+        printDocsCount(snapshot, `retrieveRefusalWithdrawalParticipants; offset: ${offset}`);
 
-        return participants.docs.map(document => {
-            return document.data();
-        });
+        return snapshot.docs.map(doc => doc.data());
     } catch (error) {
         console.error(error);
         return new Error(error)
     }
 }
 
+// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, isParent, limit, page) => {
     try {
 
@@ -367,7 +560,7 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
         const { incentiveConcepts } = require('./shared');
         const object = incentiveConcepts[roundType]
         
-        let participants = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('827220437', operator, siteCode)
                                 .where('821247024', '==', 197316935)
                                 .where(`${object}.222373868`, "==", 353358909)
@@ -377,8 +570,9 @@ const retrieveParticipantsEligibleForIncentives = async (siteCode, roundType, is
                                 .offset(offset)
                                 .limit(limit)
                                 .get();
-                        
-        return participants.docs.map(document => {
+        printDocsCount(snapshot, `retrieveParticipantsEligibleForIncentives; offset: ${offset}`);
+
+        return snapshot.docs.map(document => {
             let data = document.data();
             return {firstName: data['399159511'], email: data['869588347'], token: data['token'], site: data['827220437']}
         });
@@ -392,13 +586,14 @@ const removeDocumentFromCollection = async (connectID, token) => {
     try {
         for (const collection of listOfCollectionsRelatedToDataDestruction) {
             const query = db.collection(collection)
-            const data =
+            const snapshot =
                 collection === "notifications" || collection === "ssn"
                     ? await query.where("token", "==", token).get()
                     : await query.where("Connect_ID", "==", connectID).get();
-            
-            if (data.size !== 0) {
-                for (const dt of data.docs) {
+            printDocsCount(snapshot, "removeDocumentFromCollection");
+
+            if (snapshot.size !== 0) {
+                for (const dt of snapshot.docs) {
                     await db.collection(collection).doc(dt.id).delete();
                 }
             }
@@ -446,12 +641,13 @@ const removeParticipantsDataDestruction = async () => {
             .where(destroyDataCId, "==", fieldMapping.yes)
             .where(dataHasBeenDestroyed, "!=", fieldMapping.yes)
             .get();
+        printDocsCount(currSnapshot, "removeParticipantsDataDestruction");
 
         // Check each participant if they are already registered or more than 60 days from the date of their request
         // then the system will delete their data except the stub records and update the dataHasBeenDestroyed flag to yes.
         for (const doc of currSnapshot.docs) {
-            const batch = db.batch();
             const participant = doc.data();
+            const participantId = doc.id;
             const timeDiff = isIsoDate(participant[dateRequestedDataDestroyCId])
                 ? new Date().getTime() -
                   new Date(participant[dateRequestedDataDestroyCId]).getTime()
@@ -462,42 +658,35 @@ const removeParticipantsDataDestruction = async () => {
                     requestedAndSignCId ||
                 timeDiff > millisecondsWait
             ) {
+                const updatedData = {};
                 let hasRemovedField = false;
                 const fieldKeys = Object.keys(participant);
-                const participantRef = doc.ref;
                 fieldKeys.forEach((key) => {
                     if (!stubFieldArray.includes(key)) {
-                        batch.update(participantRef, {
-                            [key]: admin.firestore.FieldValue.delete(),
-                        });
+                        updatedData[key] = admin.firestore.FieldValue.delete();
                         hasRemovedField = true;
                     } else {
                         if (key === "query" || key === "state") {
                             const subFieldKeys = Object.keys(participant[key]);
                             subFieldKeys.forEach((subKey) => {
                                 if (!subStubFieldArray.includes(subKey)) {
-                                    batch.update(participantRef, {
-                                        [`${key}.${subKey}`]:
-                                            admin.firestore.FieldValue.delete(),
-                                    });
+                                    updatedData[`${key}.${subKey}`] = admin.firestore.FieldValue.delete();
                                 }
                             });
                         }
                     }
                 });
                 if (hasRemovedField) {
-                    batch.update(participantRef, {
-                        [dataHasBeenDestroyed]: fieldMapping.yes,
-                        [fieldMapping.participationStatus]: fieldMapping.participantMap.dataDestroyedStatus,
-                    });
+                    updatedData[dataHasBeenDestroyed] = fieldMapping.yes;
+                    updatedData[fieldMapping.participationStatus] = fieldMapping.participantMap.dataDestroyedStatus;
                     count++;
                 }
+                await db.collection('participants').doc(participantId).update(updatedData);
+                await removeDocumentFromCollection(
+                    participant["Connect_ID"],
+                    participant["token"]
+                );
             }
-            await batch.commit();
-            await removeDocumentFromCollection(
-                participant["Connect_ID"],
-                participant["token"]
-            );
         }
 
         console.log(
@@ -515,15 +704,16 @@ const removeUninvitedParticipants = async () => {
         const uninvitedRecruitsCId = fieldMapping.participantMap.uninvitedRecruits.toString();
 
         while (willContinue) {
-            const currSnapshot = await db
-            .collection('participants')
-            .where(uninvitedRecruitsCId, '==', fieldMapping.yes)
-            .limit(batchLimit)
-            .get();
+            const snapshot = await db
+              .collection("participants")
+              .where(uninvitedRecruitsCId, "==", fieldMapping.yes)
+              .limit(batchLimit)
+              .get();
+            printDocsCount(snapshot, "removeUninvitedParticipants");
 
-            willContinue = currSnapshot.docs.length === batchLimit;
+            willContinue = snapshot.docs.length === batchLimit;
             const batch = db.batch();
-            for (const doc of currSnapshot.docs) {
+            for (const doc of snapshot.docs) {
                 batch.delete(doc.ref);
                 count++
             }
@@ -533,7 +723,6 @@ const removeUninvitedParticipants = async () => {
 
         console.log(`Successfully deleted ${count} uninvited participants`)
     } catch (error) {
-        willContinue = false;
         console.error(`Error occurred when deleting documents: ${error}`);
     }
 }
@@ -544,13 +733,15 @@ const removeUninvitedParticipants = async () => {
  */
 const getChildren = async (id) => {
     try{
-        const snapShot = await db.collection('siteDetails')
+        const snapshot = await db.collection('siteDetails')
                                 .where('state.parentID', 'array-contains', id)
                                 .get();
-        if(snapShot.size > 0) {
+        printDocsCount(snapshot, "getChildren");
+
+        if(snapshot.size > 0) {
             /** @type {number[]} */
             const siteCodes = [];
-            snapShot.docs.forEach(document => {
+            snapshot.docs.forEach(document => {
                 if(document.data().siteCode){
                     siteCodes.push(document.data().siteCode);
                 }
@@ -566,48 +757,54 @@ const getChildren = async (id) => {
 }
 
 const verifyIdentity = async (type, token, siteCode) => {
-    try{
-        const snapShot = await db.collection('participants')
-                                .where('token', '==', token)
-                                .where('827220437', '==', siteCode)
-                                .get();
-        if(snapShot.size > 0){
-            const docId = snapShot.docs[0].id;
-            const docData = snapShot.docs[0].data();
-            const existingVerificationStatus = docData[821247024];
-            const { conceptMappings } = require('./shared');
-            const concept = conceptMappings[type];
-            if([875007964, 160161595].indexOf(existingVerificationStatus) === -1) {
-                console.log(`Verification status cannot be changed from ${existingVerificationStatus} to ${concept}`);
-                return new Error(`Verification status cannot be changed from ${existingVerificationStatus} to ${concept}`);
-            }
+  const verificationStatus = fieldMapping.verificationStatus.toString();
+  try {
+    const snapshot = await db
+      .collection("participants")
+      .where("token", "==", token)
+      .where("827220437", "==", siteCode)
+      .select(verificationStatus)
+      .get();
+    printDocsCount(snapshot, "verifyIdentity");
 
-            let data = {};
+    if (snapshot.size > 0) {
+      const doc = snapshot.docs[0];
+      const existingValue = doc.data()[verificationStatus];
+      const { conceptMappings } = require("./shared");
+      const newValue = conceptMappings[type];
+      if ([fieldMapping.notVerified, fieldMapping.outreachTimeOut].indexOf(existingValue) === -1) {
+        return new Error(`Verification status cannot be changed from ${existingValue} to ${newValue}`);
+      }
 
-            data['821247024'] = concept;
-            data['914594314'] = new Date().toISOString();
-            
-            await db.collection('participants').doc(docId).update(data);
-            return true;
-        }
-        else {
-            return new Error('Invalid token!');
-        }
+      let data = {
+        [verificationStatus]: newValue,
+        [fieldMapping.autogeneratedVerificationStatusUpdatedTime]: new Date().toISOString(),
+      };
+
+      if (existingValue === fieldMapping.notVerified && type === "verified") {
+        data[fieldMapping.cancerScreeningHistorySurveyStatus] = fieldMapping.notStarted;
+      }
+
+      await doc.ref.update(data);
+      return true;
+    } else {
+      return new Error("Invalid token!");
     }
-    catch(error){
-        console.error(error);
-        return new Error(error);
-    }
-}
+  } catch (error) {
+    console.error(error);
+    return new Error(error);
+  }
+};
 
 const retrieveUserProfile = async (uid) => {
     try{
-        const snapShot = await db.collection('participants')
+        const snapshot = await db.collection('participants')
                                 .where('state.uid', '==', uid)
                                 .get();
+        printDocsCount(snapshot, "retrieveUserProfile");
 
-        if(snapShot.size > 0) {
-            let data = snapShot.docs[0].data();
+        if(snapshot.size > 0) {
+            let data = snapshot.docs[0].data();
             delete data.state;
 
             return data;
@@ -627,6 +824,8 @@ const retrieveConnectID = async (uid) => {
         const snapshot = await db.collection('participants')
                                 .where('state.uid', '==', uid)
                                 .get();
+        printDocsCount(snapshot, "retrieveConnectID");
+
         if(snapshot.size === 1){
             if(snapshot.docs[0].data()['Connect_ID']) {
                 return snapshot.docs[0].data()['Connect_ID'];
@@ -665,6 +864,7 @@ const retrieveUserSurveys = async (uid, concepts) => {
                 const snapshot = await db.collection(moduleConceptsToCollections[concept])
                     .where('uid', '==', uid)
                     .get();
+                printDocsCount(snapshot, "retrieveUserSurveys");
 
                 if (snapshot.size > 0) {
                     return { concept, data: snapshot.docs[0].data() };
@@ -693,6 +893,8 @@ const retrieveUserSurveys = async (uid, concepts) => {
 
 const surveyExists = async (collection, uid) => {
     const snapshot = await db.collection(collection).where('uid', '==', uid).get();
+    printDocsCount(snapshot, "surveyExists");
+
     if (snapshot.size > 0) {
         return snapshot.docs[0];
     }
@@ -727,8 +929,9 @@ const updateSurvey = async (data, collection, doc) => {
 const sanityCheckConnectID = async (ID) => {
     try{
         const snapshot = await db.collection('participants').where('Connect_ID', '==', ID).get();
-        if(snapshot.size === 0) return true;
-        else return false;
+        printDocsCount(snapshot, "sanityCheckConnectID");
+
+        return snapshot.size === 0;
     }
     catch(error){
         console.error(error);
@@ -739,8 +942,9 @@ const sanityCheckConnectID = async (ID) => {
 const sanityCheckPIN = async (pin) => {
     try{
         const snapshot = await db.collection('participants').where('pin', '==', pin).get();
-        if(snapshot.size === 0) return true;
-        else return false;
+        printDocsCount(snapshot, "sanityCheckPIN");
+        
+        return snapshot.size === 0;
     }
     catch(error){
         console.error(error);
@@ -752,6 +956,7 @@ const individualParticipant = async (key, value, siteCode, isParent) => {
     try {
         const operator = isParent ? 'in' : '==';
         const snapshot = await db.collection('participants').where(key, '==', value).where('827220437', operator, siteCode).get();
+        printDocsCount(snapshot, "individualParticipant");
         if(snapshot.size > 0) {
             return snapshot.docs.map(document => {
                 let data = document.data();
@@ -770,6 +975,7 @@ const updateParticipantRecord = async (key, value, siteCode, isParent, obj) => {
     try {
         const operator = isParent ? 'in' : '==';
         const snapshot = await db.collection('participants').where(key, '==', value).where('827220437', operator, siteCode).get();
+        printDocsCount(snapshot, "updateParticipantRecord");
         const docId = snapshot.docs[0].id;
         await db.collection('participants').doc(docId).update(obj);
     }
@@ -781,9 +987,11 @@ const updateParticipantRecord = async (key, value, siteCode, isParent, obj) => {
 
 const deleteFirestoreDocuments = async (siteCode) => {
     try{
-        const data = await db.collection('participants').where('827220437', '==', siteCode).get();
-        if(data.size !== 0){
-            data.docs.forEach(async dt =>{ 
+        const snapshot = await db.collection('participants').where('827220437', '==', siteCode).get();
+        printDocsCount(snapshot, "deleteFirestoreDocuments");
+
+        if(snapshot.size !== 0){
+            snapshot.docs.forEach(async dt =>{ 
                 await db.collection('participants').doc(dt.id).delete()
             })
         }
@@ -800,11 +1008,13 @@ const storeNotificationTokens = (data) => {
 }
 
 const notificationTokenExists = async (token) => {
-    const snapShot = await db.collection('notificationRegistration')
+    const snapshot = await db.collection('notificationRegistration')
                             .where('notificationToken', '==', token)
                             .get();
-    if(snapShot.size === 1){
-        return snapShot.docs[0].data().uid;
+    printDocsCount(snapshot, "notificationTokenExists");
+
+    if(snapshot.size === 1){
+        return snapshot.docs[0].data().uid;
     }
     else {
         return false;
@@ -821,6 +1031,7 @@ const retrieveUserNotifications = async (uid) => {
     .where("uid", "==", uid)
     .orderBy("notification.time", "desc")
     .get();
+  printDocsCount(snapshot, "retrieveUserNotifications");
 
   return snapshot.docs.map((doc) => doc.data());
 };
@@ -829,11 +1040,12 @@ const retrieveSiteNotifications = async (siteId, isParent) => {
     try {
         let query = db.collection('siteNotifications');
         if(!isParent) query = query.where('siteId', '==', siteId);
-        const snapShot = await query.orderBy('notification.time', 'desc')
-                                    .get(); 
+        const snapshot = await query.orderBy('notification.time', 'desc')
+                                    .get();
+        printDocsCount(snapshot, "retrieveSiteNotifications");
                             
-        if(snapShot.size > 0){
-            return snapShot.docs.map(document => {
+        if(snapshot.size > 0){
+            return snapshot.docs.map(document => {
                 let data = document.data();
                 return data;
             });
@@ -925,6 +1137,7 @@ const filterDB = async (queries, siteCode, isParent) => {
     const executeQuery = async (query) => {
         const operator = isParent ? 'in' : '==';
         const snapshot = await (queries['allSiteSearch'] === 'true' ? query.get() : query.where('827220437', operator, siteCode).get());
+        printDocsCount(snapshot, "executeQuery");
         if (snapshot.size !== 0) {
             snapshot.docs.forEach(doc => {
                 fetchedResults.push(doc.data());
@@ -1013,6 +1226,7 @@ const filterDB = async (queries, siteCode, isParent) => {
 const validateBiospecimenUser = async (email) => {
     try {
         const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
+        printDocsCount(snapshot, "validateBiospecimenUser");
         if(snapshot.size === 1) {
             const role = snapshot.docs[0].data().role;
             const siteCode = snapshot.docs[0].data().siteCode;
@@ -1031,9 +1245,10 @@ const biospecimenUserList = async (siteCode, email) => {
     try {
         let query = db.collection('biospecimenUsers').where('siteCode', '==', siteCode)
         if(email) query = query.where('addedBy', '==', email)
-        const snapShot = await query.orderBy('role').orderBy('email').get();
-        if(snapShot.size !== 0){
-            return snapShot.docs.map(document => document.data());
+        const snapshot = await query.orderBy('role').orderBy('email').get();
+        printDocsCount(snapshot, "biospecimenUserList");
+        if(snapshot.size !== 0){
+            return snapshot.docs.map(document => document.data());
         }
         else{
             return [];
@@ -1047,6 +1262,7 @@ const biospecimenUserList = async (siteCode, email) => {
 const biospecimenUserExists = async (email) => {
     try {
         const snapshot = await db.collection('biospecimenUsers').where('email', '==', email).get();
+        printDocsCount(snapshot, "biospecimenUserExists");
         if(snapshot.size === 0) return false;
         else return true;
     } catch (error) {
@@ -1069,6 +1285,7 @@ const removeUser = async (userEmail, siteCode, email, manager) => {
         let query = db.collection('biospecimenUsers').where('email', '==', userEmail).where('siteCode', '==', siteCode);
         if(manager) query = query.where('addedBy', '==', email);
         const snapshot = await query.get();
+        printDocsCount(snapshot, "removeUser");
         if(snapshot.size === 1) {
             console.log('Removing', userEmail);
             const docId = snapshot.docs[0].id;
@@ -1086,8 +1303,108 @@ const storeSpecimen = async (data) => {
     await db.collection('biospecimen').add(data);
 }
 
+const submitSpecimen = async (biospecimenData, participantData, siteTubesList) => {
+    // First update the biospecimenData
+    // Under current conditions there will only ever be one specimen per call
+    try {
+        let participantToken, siteCode;
+        // Get the existing participant data (necessary for data reconciliation purposes)
+        const participantUid = participantData.state.uid;
+        if(!participantUid) {
+            throw new Error('Missing participant UID!');
+        }
+        const {processMouthwashEligibility} = require('./validation');
+
+        await db.runTransaction(async transaction => {
+            // @TODO: Honestly we could go through a lot of the helper methods with code overlap
+            // and set them up to allow transactions as a parameter
+            // in order to be called within a transaction without redundant code
+
+            // Specimen ID is stored in key 820476880 (collectionId)
+
+            // If necessary, update the biospecimenData to have the correct Streck placeholder data
+            if (!biospecimenData[fieldMapping.tubesBagsCids.streckTube]) { // Check for streck data due to intermittent null streck values in Firestore (11/2023).
+                const { buildStreckPlaceholderData } = require('./shared');
+                buildStreckPlaceholderData(biospecimenData[fieldMapping.collectionId], biospecimenData[fieldMapping.tubesBagsCids.streckTube] = {});
+            }
+
+            // Basically do equivalent of
+            //  const participant = await retrieveUserProfile(uid);
+            // const siteCode = participant['827220437'];
+
+            const participantQuery = db.collection('participants')
+                .where('state.uid', '==', participantUid);
+            const participantSnapshot = await transaction.get(participantQuery);
+
+            if(participantSnapshot.size === 0) {
+                throw new Error('Participant with uid ' + participantUid + 'not found.');
+            }
+
+            const participantSnapshotData = participantSnapshot.docs[0].data();
+            siteCode = participantSnapshotData[fieldMapping.healthCareProvider];
+            participantToken = participantSnapshotData['token'];
+
+
+            // Extremely similar to submit function in submission.js
+
+            // Remove locked attributes.
+            const { lockedAttributes } = require('./shared');
+            lockedAttributes.forEach(atr => delete participantData[atr]);
+
+            // We should not need to cover the consent form or survey submission  cases here
+
+            // We need to get the token and use it to get the specimen collections and user surveys
+            // Get the token via the equivalent of const token = await getTokenForParticipant(uid); but within a transaction
+
+            const specimenCollectionQuery = db.collection('biospecimen')
+                .where('token', '==', participantToken)
+                .where(fieldMapping.healthCareProvider.toString(), '==', siteCode)
+                .where(fieldMapping.collectionId.toString(), '==', biospecimenData[fieldMapping.collectionId]);
+            const specimenCollectionSnapshot = await transaction.get(specimenCollectionQuery);
+            const specimenArray = specimenCollectionSnapshot.size > 0 ? 
+                specimenCollectionSnapshot.docs.map(document => document.data()) :
+                [];
+
+            const { buildStreckPlaceholderData, updateBaselineData } = require('./shared');
+            let participantUpdates = updateBaselineData(biospecimenData, participantData, participantUid, specimenArray, siteTubesList);
+
+            participantUpdates = { ...participantData, ...participantUpdates};
+            // Now run equivalent of updateParticipantData(participantSnapshot.docs[0].id, updates);
+            transaction.update(participantSnapshot.docs[0].ref, participantUpdates);
+            transaction.update(specimenCollectionSnapshot.docs[0].ref, biospecimenData);
+        });
+        // After discussion, we have elected to leave checkDerivedVariables as separate logic
+        // outside of the transaction for legacy purposes
+        const {checkDerivedVariables} = require('./validation');
+        await checkDerivedVariables(participantToken, siteCode);
+        // Now process mouthwash eligibility
+        // This needs the above to run and so is outside of the transaction
+        // First get the updated participant data
+        const participantSnapshot = await db.collection('participants')
+            .where('state.uid', '==', participantUid)
+            .get();
+        const eligibilityUpdates = processMouthwashEligibility(participantSnapshot.docs[0].data());
+
+        if (eligibilityUpdates && Object.keys(eligibilityUpdates).length) {
+            await participantSnapshot.docs[0].ref.update(eligibilityUpdates);
+        }
+
+        return {
+            code: 200,
+            message: 'Success'
+        }
+    } catch(err) {
+        console.error('error', err);
+        return {
+            code: 500,
+            message: err && err.message ? err.message : (err + '')
+        }
+    }
+}
+
 const updateSpecimen = async (id, data) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
+    printDocsCount(snapshot, "updateSpecimen");
     const docId = snapshot.docs[0].id;
 
     if (!data[fieldMapping.tubesBagsCids.streckTube]) { // Check for streck data due to intermittent null streck values in Firestore (11/2023).
@@ -1135,6 +1452,7 @@ const getUnshippedBoxes = async (siteCode, isBPTL = false) => {
         let query = db.collection('boxes').where(fieldMapping.submitShipmentFlag.toString(), '==', fieldMapping.no);
         if (!isBPTL) query = query.where(fieldMapping.loginSite.toString(), '==', siteCode);
         const snapshot = await query.get();
+        printDocsCount(snapshot, "getUnshippedBoxes");
         
         return snapshot.docs.map(document => document.data());
     } catch (error) {
@@ -1156,6 +1474,7 @@ const getSpecimensByBoxedStatus = async (siteCode, boxedStatusConceptId, isBPTL 
         if (!isBPTL) query = query.where(fieldMapping.healthCareProvider.toString(), '==', siteCode);
 
         const snapshot = await query.get();
+        printDocsCount(snapshot, "getSpecimensByBoxedStatus");
         
         return snapshot.docs.map(document => document.data());
     } catch (error) {
@@ -1190,6 +1509,7 @@ const updateBox = async (id, boxAndTubesData, addedTubes, loginSite) => {
 
         const boxSnapshot = snapshotResponse[0].docs.map(doc => ({ ref: doc.ref, data: doc.data() }));
         const specimenSnapshot = snapshotResponse[1].docs.map(doc => ({ ref: doc.ref, data: doc.data() }));
+        printDocsCount(snapshotResponse, "updateBox");
         
         if (boxSnapshot.length !== 1 || specimenSnapshot.length !== 1) {
             throw new Error('Couldn\'t find Matching documents.');
@@ -1251,6 +1571,7 @@ const removeBag = async (siteCode, requestData) => {
     }
 
     const [boxSnapshot, ...specimenSnapshots] = await Promise.all([boxQuery, ...chunkedSpecimenQueries]);
+    printDocsCount([boxSnapshot, ...specimenSnapshots], "removeBag");
 
     if (boxSnapshot.size !== 1 || specimenSnapshots.some(snapshot => snapshot.empty)) {
         throw new Error('Couldn\'t find Matching documents.');
@@ -1324,6 +1645,7 @@ const reportMissingSpecimen = async (siteAcronym, requestData) => {
     let conceptTube = conversion[tubeId];
 
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).where('siteAcronym', '==', siteAcronym).get();
+    printDocsCount(snapshot, "reportMissingSpecimen");
     if(snapshot.size === 1 && conceptTube != undefined){
         const docId = snapshot.docs[0].id;
         let currDoc = snapshot.docs[0].data();
@@ -1354,15 +1676,17 @@ const getSpecimenAndParticipant = async (collectionId, siteCode, isBPTL) => {
         // Fetch the specimen
         let query = db.collection('biospecimen').where(fieldMapping.collectionId.toString(), '==', collectionId);
         if (!isBPTL) query = query.where(fieldMapping.healthCareProvider.toString(), '==', siteCode);
-        const specimenSnapshot = await query.get();
+        const snapshot = await query.get();
+        printDocsCount(snapshot, "getSpecimenAndParticipant; collection: biospecimen");
 
-        if (specimenSnapshot.size !== 1) {
+        if (snapshot.size !== 1) {
             throw new Error('Couldn\'t find matching specimen document.');
         }
-        const specimenData = specimenSnapshot.docs[0].data();
+        const specimenData = snapshot.docs[0].data();
 
         // Use the Connect_ID in the specimen doc to fetch the participant
         const participantSnapshot = await db.collection('participants').where('Connect_ID', '==', specimenData['Connect_ID']).get();
+        printDocsCount(participantSnapshot, "getSpecimenAndParticipant; collection: participants");
 
         if (participantSnapshot.size !== 1) {
             throw new Error('Couldn\'t find matching participant document.');
@@ -1377,6 +1701,7 @@ const getSpecimenAndParticipant = async (collectionId, siteCode, isBPTL) => {
 
 const searchSpecimen = async (masterSpecimenId, siteCode, allSitesFlag) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', masterSpecimenId).get();
+    printDocsCount(snapshot, "searchSpecimen");
     if (snapshot.size === 1) {
         if (allSitesFlag) return snapshot.docs[0].data();
         const token = snapshot.docs[0].data().token;
@@ -1398,6 +1723,7 @@ const getSiteLocationBox = async (requestedSite, boxId) => {
         const snapshot = await db.collection('boxes')
                                 .where(fieldMapping.loginSite.toString(), "==", requestedSite)
                                 .where(fieldMapping.shippingBoxId.toString(), "==", boxId).get();
+        printDocsCount(snapshot, "getSiteLocationBox");
         const boxMatch = [];
         for(let document of snapshot.docs) {
             boxMatch.push(document.data());
@@ -1476,6 +1802,7 @@ const searchSpecimenBySiteAndBoxId = async (requestedSite, boxId) => {
         });
         
         const promiseResults = await Promise.all(chunkedPromises);
+        printDocsCount(promiseResults, "searchSpecimenBySiteAndBoxId");
         
         const biospecimenDocs = [];
         promiseResults.forEach(snapshot => {
@@ -1496,6 +1823,7 @@ const searchShipments = async (siteCode) => {
     const tubesBagsCidKeys = swapObjKeysAndValues(tubesBagsCids);
     const snapshot = await db.collection('biospecimen').where(healthCareProvider, '==', siteCode).get();
     let shipmentData = [];
+    printDocsCount(snapshot, "searchShipments");
 
     if (snapshot.size !== 0) {
         for (let document of snapshot.docs) {
@@ -1526,18 +1854,21 @@ const searchShipments = async (siteCode) => {
 
 const specimenExists = async (id) => {
     const snapshot = await db.collection('biospecimen').where('820476880', '==', id).get();
+    printDocsCount(snapshot, "specimenExists");
     if(snapshot.size === 1) return true;
     else return false;
 }
 
 const boxExists = async (boxId, loginSite) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==', loginSite).get();
+    printDocsCount(snapshot, "boxExists");
     if(snapshot.size === 1) return true;
     else return false;
 }
 
 const accessionIdExists = async (accessionId, accessionIdType, siteCode) => {
     const snapshot = await db.collection('biospecimen').where(accessionIdType, '==', accessionId).get();
+    printDocsCount(snapshot, "accessionIdExists");
     if(snapshot.size === 1) {
         const token = snapshot.docs[0].data().token;
         const response = await db.collection('participants').where('token', '==', token).get();
@@ -1553,18 +1884,18 @@ const updateTempCheckDate = async (institute) => {
     let randomStart = Math.floor(Math.random()*5)+15 - currDate.getDay();
     currDate.setDate(currDate.getDate() + randomStart);
     const snapshot = await db.collection('SiteLocations').where('Site', '==',institute).get();
+    printDocsCount(snapshot, "updateTempCheckDate");
     if(snapshot.size === 1) {
         const docId = snapshot.docs[0].id;
         await db.collection('SiteLocations').doc(docId).update({'nextTempMonitor':currDate.toString()});
-        //console.log(currDate.toString());
     }
 }
 
 /**
  * 
- * @param {Array<string>} boxIdArray - array of box ids to fetch 
+ * @param {Array<string>} boxIdArray - array of box ids to fetch
  * @param {string} siteCode - site code of the user (number)
- * @param {transaction} transaction - firestore transation object
+ * @param {Transaction} transaction - firestore transation object
  * @returns boxes object with data and docRef
  * If boxIdArray.length > 15, chunk the array into multiple queries to support the use of 'in' operator.
  */
@@ -1597,6 +1928,7 @@ const getBoxesByBoxId = async (boxIdArray, siteCode, transaction = null) => {
 
             const chunkPromises = chunksToSend.map(chunk => getSnapshot(chunk));
             const snapshots = await Promise.all(chunkPromises);
+            printDocsCount(snapshots, "getBoxesByBoxId");
 
             snapshots.forEach(snapshot => {
                 const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
@@ -1606,6 +1938,7 @@ const getBoxesByBoxId = async (boxIdArray, siteCode, transaction = null) => {
         } else {
             const snapshot = await getSnapshot(boxIdArray);
             resultsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
+            printDocsCount(snapshot, "getBoxesByBoxId");
         }
 
         return resultsArray;
@@ -1654,6 +1987,7 @@ const shipBatchBoxes = async (boxIdAndShipmentDataArray, siteCode) => {
 
 const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
     const snapshot = await db.collection('boxes').where('132929440', '==', boxId).where('789843387', '==',siteCode).get();
+    printDocsCount(snapshot, "shipBox");
     if(snapshot.size === 1) {
         let currDate = new Date().toISOString();
         shippingData['656548982'] = currDate;
@@ -1670,6 +2004,7 @@ const shipBox = async (boxId, siteCode, shippingData, trackingNumbers) => {
 
 const getLocations = async (institute) => {
     const snapshot = await db.collection('SiteLocations').where('siteAcronym', '==', institute).get();
+    printDocsCount(snapshot, "getLocations");
     console.log(institute)
     if(snapshot.size !== 0) {
         return snapshot.docs.map(document => document.data());
@@ -1698,6 +2033,7 @@ const searchBoxes = async (institute, flag) => {
     }
 
     if (snapshot.size !== 0){
+        printDocsCount(snapshot, "searchBoxes");
         return snapshot.docs.map(document => document.data());
     } else {
         return [];
@@ -1708,7 +2044,7 @@ const searchBoxesByLocation = async (institute, location) => {
     console.log("institute" + institute);
     console.log("location" + location);
     const snapshot = await db.collection('boxes').where('789843387', '==', institute).where('560975149','==',location).get();
-    console.log(snapshot);
+    printDocsCount(snapshot, "searchBoxesByLocation");
     if(snapshot.size !== 0){
         let result = snapshot.docs.map(document => document.data());
         // console.log(JSON.stringify(result));
@@ -1724,6 +2060,7 @@ const searchBoxesByLocation = async (institute, location) => {
 
 const getSpecimenCollections = async (token, siteCode) => {
     const snapshot = await db.collection('biospecimen').where('token', '==', token).where('827220437', '==', siteCode).get();
+    printDocsCount(snapshot, "getSpecimenCollections");
     if(snapshot.size !== 0){
         return snapshot.docs.map(document => document.data());
     }
@@ -1750,6 +2087,7 @@ const buildQueryWithFilters = (query, trackingId, endDate, startDate, source, si
     return query
 }
 
+// TODO: Avoid using `offset` for pagination, because offset documents are still read and charged.
 const getBoxesPagination = async (siteCode, body) => {
     const currPage = body.pageNumber;
     const orderByField = body.orderBy;
@@ -1764,6 +2102,7 @@ const getBoxesPagination = async (siteCode, body) => {
         query = preQueryBuilder(filters, query, trackingId, endDate, startDate, source, siteCode);
         query = query.orderBy(orderByField, 'desc').limit(elementsPerPage).offset(currPage * elementsPerPage);
         const snapshot = await query.get();
+        printDocsCount(snapshot, `getBoxesPagination; offset: ${currPage * elementsPerPage}`);
         const result = snapshot.docs.map(document => document.data());
         return result;
     } 
@@ -1797,93 +2136,12 @@ const getNotificationSpecifications = async (notificationType, notificationCateg
         if(notificationCategory) snapshot = snapshot.where('category', '==', notificationCategory);
         snapshot = snapshot.where('scheduleAt', '==', scheduleAt);
         snapshot = await snapshot.get();
+        printDocsCount(snapshot, "getNotificationSpecifications");
         return snapshot.docs.map(document => {
             return document.data();
         });
     } catch (error) {
         console.error(error);
-        return new Error(error);
-    }
-}
-
-const retrieveParticipantsByStatus = async (conditions, limit, offset) => {
-    try {
-        let query = db.collection('participants')
-                                .limit(limit)
-                                .offset(offset);
-        
-        for(let obj in conditions) {
-            let operator = '';
-            let values = '';
-            if(conditions[obj]['equals']) {
-                if(typeof conditions[obj]['equals'] == 'string') {
-                    values = conditions[obj]['equals'];
-                }
-                else if(typeof conditions[obj]['equals'] == 'number') {
-                    values = parseInt(conditions[obj]['equals']);
-                }
-                operator = '==';
-            }
-            if(conditions[obj]['notequals']) {
-                if(typeof conditions[obj]['notequals'] == 'string') {
-                    values = conditions[obj]['notequals'];
-                }
-                else if(typeof conditions[obj]['notequals'] == 'number') {
-                    values = parseInt(conditions[obj]['notequals']);
-                }
-                operator = '!=';
-            }
-            if(conditions[obj]['greater']) {
-                if(typeof conditions[obj]['greater'] == 'string') {
-                    values = conditions[obj]['greater'];
-                }
-                else if(typeof conditions[obj]['greater'] == 'number') {
-                    values = parseInt(conditions[obj]['greater']);
-                }
-                operator = '>';
-            }
-            if(conditions[obj]['greaterequals']) {
-                if(typeof conditions[obj]['greaterequals'] == 'string') {
-                    values = conditions[obj]['greaterequals'];
-                }
-                else if(typeof conditions[obj]['greaterequals'] == 'number') {
-                    values = parseInt(conditions[obj]['greaterequals']);
-                }
-                operator = '>=';
-            }
-            if(conditions[obj]['less']) {
-                if(typeof conditions[obj]['less'] == 'string') {
-                    values = conditions[obj]['less'];
-                }
-                else if(typeof conditions[obj]['less'] == 'number') {
-                    values = parseInt(conditions[obj]['less']);
-                }
-                operator = '<';
-            }
-            if(conditions[obj]['lessequals']) {
-                if(typeof conditions[obj]['lessequals'] == 'string') {
-                    values = conditions[obj]['lessequals'];
-                }
-                else if(typeof conditions[obj]['lessequals'] == 'number') {
-                    values = parseInt(conditions[obj]['lessequals']);
-                }
-                operator = '<=';
-            }
-            query = query.where(obj, operator, values);
-        }
-        const participants = await query.get();
-        return participants.docs.map(doc => doc.data());
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
-}
-
-const notificationAlreadySent = async (token, notificationSpecificationsID) => {
-    try {
-        const snapshot = await db.collection('notifications').where('token', '==', token).where('notificationSpecificationsID', '==', notificationSpecificationsID).get();
-        return snapshot.size !== 0;
-    } catch (error) {
         return new Error(error);
     }
 }
@@ -1909,20 +2167,36 @@ const sendClientEmail = async (data) => {
         read: data.read
     }
 
-    await storeNotifications(reminder);
+    await storeNotification(reminder);
 
     sendEmail(data.email, data.subject, data.message);
     return true;
 };
 
-const storeNotifications = async payload => {
+const storeNotification = async (notificationData) => {
     try {
-        await db.collection('notifications').add(payload);
+        await db.collection('notifications').add(notificationData);
     } catch (error) {
         console.error(error);
         return new Error(error);
     }
 }
+
+/**
+ * 
+ * @param {string} userToken User token
+ * @param {string} specId Notification Specifications ID
+ */
+const checkIsNotificationSent = async (userToken, specId) => {
+  const snapshot = await db
+    .collection("notifications")
+    .where("token", "==", userToken)
+    .where("notificationSpecificationsID", "==", specId)
+    .count()
+    .get();
+
+  return snapshot.data().count > 0;
+};
 
 /**
  * Save notification records to `notifications` collection.
@@ -1948,6 +2222,7 @@ const saveNotificationBatch = async (notificationRecordArray) => {
 
 const markNotificationAsRead = async (id, collection) => {
     const snapshot = await db.collection(collection).where('id', '==', id).get();
+    printDocsCount(snapshot, "markNotificationAsRead");
     const docId = snapshot.docs[0].id;
     await db.collection(collection).doc(docId).update({read: true});
 }
@@ -1955,6 +2230,7 @@ const markNotificationAsRead = async (id, collection) => {
 const storeSSN = async (data) => {
     try{
         const response = await db.collection('ssn').where('uid', '==', data.uid).get();
+        printDocsCount(response, "storeSSN");
         if(response.size === 1) {
             for(let doc of response.docs){
                 await db.collection('ssn').doc(doc.id).update(data);
@@ -1974,16 +2250,19 @@ const storeSSN = async (data) => {
 
 const getTokenForParticipant = async (uid) => {
     const snapshot = await db.collection('participants').where('state.uid', '==', uid).get();
+    printDocsCount(snapshot, "getTokenForParticipant");
     return snapshot.docs[0].data()['token'];
 }
 
 const getSiteDetailsWithSignInProvider = async (acronym) => {
     const snapshot = await db.collection('siteDetails').where('acronym', '==', acronym).get();
+    printDocsCount(snapshot, "getSiteDetailsWithSignInProvider");
     return snapshot.docs[0].data();
 }
 
 const retrieveNotificationSchemaByID = async (id) => {
   const snapshot = await db.collection("notificationSpecifications").where("id", "==", id).get();
+  printDocsCount(snapshot, "retrieveNotificationSchemaByID");
   if (snapshot.size === 1) {
     return snapshot.docs[0].id;
   }
@@ -1992,7 +2271,7 @@ const retrieveNotificationSchemaByID = async (id) => {
 };
 
 const retrieveNotificationSchemaByCategory = async (category, getDrafts = false) => {
-  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts);
+  let query = db.collection("notificationSpecifications").where("isDraft", "==", getDrafts).where("sendType", "==", "scheduled");
   if (category !== "all") {
     query = query.where("category", "==", category);
   } else {
@@ -2000,6 +2279,7 @@ const retrieveNotificationSchemaByCategory = async (category, getDrafts = false)
   }
 
   const snapshot = await query.orderBy("attempt").get();
+  printDocsCount(snapshot, "retrieveNotificationSchemaByCategory");
   return snapshot.docs.map((doc) => doc.data());
 };
 
@@ -2019,11 +2299,15 @@ const getNotificationHistoryByParticipant = async (token, siteCode, isParent) =>
                                         .where('token', '==', token)
                                         .where('827220437', operator, siteCode)
                                         .get();
+    printDocsCount(participantRecord, "getNotificationHistoryByParticipant; collection: participants");
+
     if(participantRecord.size === 1) {
         const snapshot = await db.collection('notifications')
                                     .where('token', '==', token)
                                     .orderBy('notification.time', 'desc')
                                     .get();
+        printDocsCount(snapshot, "getNotificationHistoryByParticipant; collection: notifications");
+
         return snapshot.docs.map(dt => dt.data());
     }
     else return false;
@@ -2031,6 +2315,7 @@ const getNotificationHistoryByParticipant = async (token, siteCode, isParent) =>
 
 const getNotificationsCategories = async (scheduleAt) => {
     const snapshot = await db.collection('notificationSpecifications').where('scheduleAt', '==', scheduleAt).get();
+    printDocsCount(snapshot, "getNotificationsCategories");
     const categories = [];
     snapshot.forEach(dt => {
         const category = dt.data().category;
@@ -2041,6 +2326,7 @@ const getNotificationsCategories = async (scheduleAt) => {
 
 const getEmailNotifications = async (scheduleAt) => {
     const snapshot = await db.collection('notificationSpecifications').where('scheduleAt', '==', scheduleAt).get();
+    printDocsCount(snapshot, "getEmailNotifications");
     const notifications = [];
     snapshot.forEach(dt => {
         const notification = dt.data();
@@ -2050,12 +2336,13 @@ const getEmailNotifications = async (scheduleAt) => {
 }
 
 /**
- * Get all notification specifications that are not drafts and match the scheduleAt time.
+ * Get all notification specifications that are not drafts and match the scheduleAt time. This function can be run multiple times per day, for testing.
  * @param {string} scheduleAt Time of day to send notifications, eg. '15:00'
  * @returns 
  */
-const getScheduledNotifications = async (scheduleAt) => {
+const getNotificationSpecsBySchedule = async (scheduleAt) => {
   const snapshot = await db.collection("notificationSpecifications").where("scheduleAt", "==", scheduleAt).get();
+  printDocsCount(snapshot, "getNotificationSpecsBySchedule");
   let notificationSpecArray = [];
   for (const doc of snapshot.docs) {
     const docData = doc.data();
@@ -2065,14 +2352,84 @@ const getScheduledNotifications = async (scheduleAt) => {
   return notificationSpecArray;
 };
 
-const getNotification = async (id) => {
-    const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
+/**
+ * Get all notification specifications that are not drafts and match the scheduleAt time. This function is run once per day, for production use.
+ * @param {string} scheduleAt Time of day to send notifications, eg. '15:00'
+ * @returns 
+ */
+const getNotificationSpecsByScheduleOncePerDay = async (scheduleAt) => {
+  const eastTimezone = { timezone: "America/New_York" };
+  const currTime = new Date();
+  const currDate = currTime.toLocaleDateString("en-US", eastTimezone);
+  const currTimeIsoStr = currTime.toISOString();
+  const batch = db.batch();
+  const snapshot = await db
+    .collection("notificationSpecifications")
+    .where("scheduleAt", "==", scheduleAt)
+    .where("isDraft", "==", false)
+    .get();
+  printDocsCount(snapshot, "getNotificationSpecsByScheduleOncePerDay");
+  let notificationSpecArray = [];
+  for (const doc of snapshot.docs) {
+    const docData = doc.data();
+    const lastRunTime = docData.lastRunTime || "2020-01-01";
+    const lastRunDate = new Date(lastRunTime).toLocaleDateString("en-US", eastTimezone);
+    if (docData.id && currDate !== lastRunDate) {
+      notificationSpecArray.push(docData);
+      batch.update(doc.ref, { lastRunTime: currTimeIsoStr });
+    }
+  }
 
-    return snapshot.docs[0].data();
+  await batch.commit(); // batch limit: 500
+  return notificationSpecArray;
+};
+
+const getNotificationSpecById = async (id) => {
+    const snapshot = await db.collection('notificationSpecifications').where('id', '==', id).get();
+    printDocsCount(snapshot, "getNotificationSpecById");
+
+    return snapshot.empty ? null : snapshot.docs[0].data();
+}
+
+const getNotificationSpecByCategoryAndAttempt = async (category = "", attempt = "") => {
+  if (!category || !attempt) return null;
+
+  const snapshot = await db
+    .collection("notificationSpecifications")
+    .where("category", "==", category)
+    .where("attempt", "==", attempt)
+    .get();
+  printDocsCount(snapshot, "getNotificationSpecByCategoryAndAttempt");
+
+  return snapshot.empty ? null : snapshot.docs[0].data();
+};
+
+const validateKitAssemblyData = (data) => {
+    // Ensure that values are uppercase and that the appropriate values match
+    if(data[fieldMapping.returnKitId]) {
+        data[fieldMapping.returnKitId] = ('' + data[fieldMapping.returnKitId]).toUpperCase();
+    }
+    if(data[fieldMapping.supplyKitId]) {
+        data[fieldMapping.supplyKitId] = ('' + data[fieldMapping.supplyKitId]).toUpperCase();
+    }
+    if(data[fieldMapping.collectionCupId]) {
+        data[fieldMapping.collectionCupId] = ('' + data[fieldMapping.collectionCupId]).toUpperCase();
+    }
+    if(data[fieldMapping.collectionCardId]) {
+        data[fieldMapping.collectionCardId] = ('' + data[fieldMapping.collectionCardId]).toUpperCase();
+    }
+    if(data[fieldMapping.returnKitId] !== data[fieldMapping.supplyKitId]) {
+        throw new Error('Return Kit ID and Supply Kit ID do not match.');
+    }
+    if(data[fieldMapping.collectionCupId] !== data[fieldMapping.collectionCardId]) {
+        throw new Error('Collection Cup ID and Collection Card ID do not match.');
+    }
+    return data;
 }
 
 const addKitAssemblyData = async (data) => {
     try {
+        validateKitAssemblyData(data);
         await db.collection('kitAssembly').add(data);
         return true;
     }
@@ -2085,10 +2442,12 @@ const addKitAssemblyData = async (data) => {
 
 const updateKitAssemblyData = async (data) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
+        validateKitAssemblyData(data);
+        const snapshot = await db.collection('kitAssembly').where('687158491', '==', data['687158491']).get();
+        printDocsCount(snapshot, "updateKitAssemblyData");
 
-        if (snapShot.empty) return false
-        const docId = snapShot.docs[0].id;
+        if (snapshot.empty) return false
+        const docId = snapshot.docs[0].id;
  
         await db.collection('kitAssembly').doc(docId).update({
             '194252513': data[fieldMapping.returnKitId],
@@ -2105,21 +2464,47 @@ const updateKitAssemblyData = async (data) => {
     }
 }
 
-const checkCollectionUniqueness = async (supplyId, collectionId) => {
+const checkCollectionUniqueness = async (supplyId, collectionId, returnKitTrackingNumber) => {
     try {
         const supplySnapShot = await db.collection('kitAssembly').where('690210658', '==', supplyId).get();
         const collectionSnapShot = await db.collection('kitAssembly').where('259846815', '==', collectionId).get();
-        if (supplySnapShot.docs.length === 0 && collectionSnapShot.docs.length === 0) {
+        printDocsCount([supplySnapShot, collectionSnapShot], "checkCollectionUniqueness");
+        let returnKitTrackingNumberSnapshot = {docs: []};
+        let supplyKitTrackingNumberSnapshot = {docs: []};
+        if(returnKitTrackingNumber) {
+            [returnKitTrackingNumberSnapshot, supplyKitTrackingNumberSnapshot] = await Promise.all([
+                db.collection('kitAssembly').where(fieldMapping.returnKitTrackingNum.toString(), '==', returnKitTrackingNumber).get(),
+                db.collection('kitAssembly').where(fieldMapping.supplyKitTrackingNum.toString(), '==', returnKitTrackingNumber).get()
+            ]);
+        }
+        if (supplySnapShot.docs.length === 0 && collectionSnapShot.docs.length === 0
+            && returnKitTrackingNumberSnapshot.docs.length === 0 && supplyKitTrackingNumberSnapshot.docs.length === 0) {
             return true;
         } else if (supplySnapShot.docs.length !== 0) {
             return 'duplicate supplykit id';
         } else if (collectionSnapShot.docs.length !== 0) {
             return 'duplicate collection id';
+        } else if (returnKitTrackingNumberSnapshot.docs.length !== 0) {
+            return 'duplicate return kit tracking number';
+        } else if (supplyKitTrackingNumberSnapshot.docs.length !== 0) {
+            return 'return kit tracking number is for supply kit';
         }
     } catch (error) {
         return new Error(error);
     }
 };
+
+const participantHomeCollectionKitFields = [
+    fieldMapping.collectionDetails.toString(),
+    fieldMapping.firstName.toString(),
+    fieldMapping.lastName.toString(),
+    fieldMapping.address1.toString(),
+    fieldMapping.address2.toString(),
+    fieldMapping.city.toString(),
+    fieldMapping.state.toString(),
+    fieldMapping.zip.toString(),
+    'Connect_ID',
+];
 
 /**
  * Creates new array based on query below.
@@ -2127,25 +2512,56 @@ const checkCollectionUniqueness = async (supplyId, collectionId) => {
  * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData function.
  * Ex. [{first_name: 'John', last_name: 'Doe', address_1: '123 Main St', address_2: '', city: 'Anytown', state: 'NY', zip_code: '12345', connect_id: 123457890}, ...]
  */
-const queryTotalAddressesToPrint = async () => {
-    try {
-        const { withdrawConsent, participantDeceasedNORC, activityParticipantRefusal, baselineMouthwashSample, 
-            collectionDetails, baseline, bloodOrUrineCollected, bloodOrUrineCollectedTimestamp, yes, no } = fieldMapping;
 
-        const snapshot = await db.collection('participants')
-        .where(withdrawConsent.toString(), '==', no)
-        .where(participantDeceasedNORC.toString(), '==', no)
-        .where(`${activityParticipantRefusal}.${baselineMouthwashSample}`, '==', no)
-        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollected}`, '==', yes)
-        .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '>=', '2024-04-01T00:00:00.000Z')
-        .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
-        .get();
-        return snapshot.docs.map(document => processParticipantData(document.data(), true));
+
+// TODO: A sliding time window would be more efficient in the .where(<timestamp>) query.
+
+const queryHomeCollectionAddressesToPrint = async (limit) => {
+    try {
+        const { bioKitMouthwash, kitStatus, initialized,
+            collectionDetails, baseline, bloodOrUrineCollectedTimestamp } = fieldMapping;
+
+        const fiveDaysAgoDateISO = getFiveDaysAgoDateISO();
+
+        let query = db.collection('participants')
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', initialized)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoDateISO)
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc');
+
+        if(limit) {
+            query = query.limit(Math.min(limit, 500));
+        }
+
+        const snapshot = await query.get();
+
+        if (snapshot.size === 0) return [];
+
+
+        const mappedResults = snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), true));
+        return mappedResults.filter(result => result !== null);
     } catch (error) {
-        console.error(error);
-        return new Error(error);
+        throw new Error(`Error querying home collection addresses to print`, {cause: error});
     }
 }
+
+const queryCountHomeCollectionAddressesToPrint = async () => {
+    try {
+        const { bioKitMouthwash, kitStatus, initialized,
+            collectionDetails, baseline, bloodOrUrineCollectedTimestamp } = fieldMapping;
+        const fiveDaysAgoDateISO = getFiveDaysAgoDateISO();
+
+        const snapshot = await db.collection('participants')
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', initialized)
+            .where(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, '<=', fiveDaysAgoDateISO)
+            .count()
+            .get();
+
+        return snapshot.data().count;
+
+    } catch (error) {
+        throw new Error(`Error querying count of home collection addresses to print`, {cause: error});
+    }
+};
 
 const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
     try {
@@ -2158,15 +2574,21 @@ const queryKitsByReceivedDate = async (receivedDateTimestamp) => {
 
 const eligibleParticipantsForKitAssignment = async () => {
     try {
-        const { collectionDetails, baseline, bioKitMouthwash, kitStatus } = fieldMapping;
+        const { addressPrinted, collectionDetails, baseline, bioKitMouthwash, bloodOrUrineCollectedTimestamp, kitStatus } = fieldMapping;
 
-        const snapshot = await db.collection("participants").where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', fieldMapping.addressPrinted).get();
-        if (snapshot.size !== 0) return snapshot.docs.map(doc => processParticipantData(doc.data(), false));
-        else return false;
-    }
-    catch(error){
-        console.error(error);
-        return new Error(error);
+        const snapshot = await db.collection("participants")
+            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', addressPrinted)
+            .select(...participantHomeCollectionKitFields)
+            .orderBy(`${collectionDetails}.${baseline}.${bloodOrUrineCollectedTimestamp}`, 'desc')
+            .get();
+        printDocsCount(snapshot, "eligibleParticipantsForKitAssignment");
+
+        if (snapshot.size === 0) return [];
+        const mappedResults = snapshot.docs.map(doc => processParticipantHomeMouthwashKitData(doc.data(), false));
+        return mappedResults.filter(result => result !== null);
+
+    } catch(error) {
+        throw new Error('Error getting Eligible Kit Assignment Participants.', {cause: error});
     }
 }
 
@@ -2177,6 +2599,7 @@ const addKitStatusToParticipant = async (participantsCID) => {
         // Create an array of promises to update participants in parallel
         const updatePromises = participantsCID.map(async (participantCID) => {
             const snapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(participantCID)).get();
+            printDocsCount(snapshot, "addKitStatusToParticipant");
             if (snapshot.size === 0) {
                 // No matching document found, stop the update
                 return false;
@@ -2205,44 +2628,105 @@ const addKitStatusToParticipant = async (participantsCID) => {
     }
 };
 
-const processParticipantData = (record, printLabel) => {
-    const { collectionDetails, baseline, bioKitMouthwash } = fieldMapping;
+// Note: existing snake_casing follows through to BPTL CSV reporting. Do not update to camelCase without prior communication.
+const processParticipantHomeMouthwashKitData = (record, printLabel) => {
+    const { collectionDetails, baseline, bioKitMouthwash, firstName, lastName, address1, address2, city, state, zip } = fieldMapping;
 
-    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;
+    const addressLineOne = record?.[address1];
+    const poBoxRegex = /^(?:P\.?O\.?\s*(?:Box|B\.?)?|Post\s+Office\s+(?:Box|B\.?)?)\s*(\s*#?\s*\d*)((?:\s+(.+))?$)$/i;
+
+    const isPOBoxMatch = poBoxRegex.test(addressLineOne);
+    
+    if (isPOBoxMatch) return null;
+
+    const hasMouthwash = record[collectionDetails][baseline][bioKitMouthwash] !== undefined;    
     const processedRecord = {
-        first_name: record['399159511'],
-        last_name: record['996038075'],
-        address_1: record['521824358'],
-        address_2: record['442166669'] || '',
-        city: record['703385619'],
-        state: record['634434746'],
-        zip_code: record['892050548'],
-        connect_id: record['Connect_ID'],
+    first_name: record[firstName],
+    last_name: record[lastName],
+    address_1: record[address1],
+    address_2: record[address2] || '',
+    city: record[city],
+    state: record[state],
+    zip_code: record[zip], 
+    connect_id: record['Connect_ID'],
     };
-    if ((!hasMouthwash && printLabel) || (hasMouthwash && !printLabel)) {
-        return processedRecord;
-    }
-    else {
-        return [];
-    }
+
+    return printLabel || hasMouthwash
+        ? processedRecord
+        : [];
 }
 
 const assignKitToParticipant = async (data) => {
-    try {
-        const { supplyKitId, kitStatus, pending, UKID, supplyKitTrackingNum, 
-            assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
-            kitType, mouthwashKit } = fieldMapping;
+    let kitAssignmentResult;
+    const { supplyKitId, kitStatus, uniqueKitID, supplyKitTrackingNum, returnKitTrackingNum,
+        assigned, collectionRound, collectionDetails, baseline, bioKitMouthwash, 
+        kitType, mouthwashKit } = fieldMapping;
 
-        const kitSnapshot = await db.collection("kitAssembly")
-            .where(`${supplyKitId}`, '==', data[supplyKitId])
-            .where(`${kitStatus}`, '==', pending).get();
+    await db.runTransaction(async (transaction) => {
+        // Check the supply kit tracking number and see if it matches the return kit tracking number
+        // of any kits including this one or the supply kit tracking number of any other kits
 
-        if (kitSnapshot.size !== 1) {
-            return false;
+        const kitsWithDuplicateReturnTrackingNumbers = await transaction.get(
+            db.collection("kitAssembly").where(`${returnKitTrackingNum}`, '==', data[supplyKitTrackingNum])
+        );
+
+        if(kitsWithDuplicateReturnTrackingNumbers.size > 0) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Duplicate return tracking number found: " + data[supplyKitTrackingNum]
+            };
+            return;
+        }
+
+        const otherKitsUsingSupplyKitTrackingNumber = await transaction.get(
+            db.collection("kitAssembly")
+            .where(`${supplyKitTrackingNum}`, '==', data[supplyKitTrackingNum])
+        );
+
+        if(otherKitsUsingSupplyKitTrackingNumber.size > 1) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Other kits using supply kit tracking number found: " + otherKitsUsingSupplyKitTrackingNumber.map(rec => rec.data()[supplyKitId]).join(', ')
+            };
+                return;
+        } else if (otherKitsUsingSupplyKitTrackingNumber.size === 1) {
+            // check if the kit found is the current kit
+            // Doing this instead of including it in the query to avoid creating an unnecessary composite index
+            const possibleDuplicate = otherKitsUsingSupplyKitTrackingNumber.docs[0];
+            const possibleDuplicateKitId = possibleDuplicate.data()[supplyKitId];
+            if(possibleDuplicateKitId !== data[supplyKitId]) {
+                kitAssignmentResult = {
+                    success: false,
+                    message: "Other kit using supply kit tracking number found: " + possibleDuplicateKitId
+                };
+                return;
+            }
+        }
+
+        const kitSnapshot = await transaction.get(
+            db.collection("kitAssembly")
+                .where(`${supplyKitId}`, '==', data[supplyKitId])
+        );
+        printDocsCount(kitSnapshot, "assignKitToParticipant; collection: kitAssembly");
+
+        if (kitSnapshot.size > 1) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Multiple pending kits found for supply kit ID " + data[supplyKitId]
+            };
+            return;
+        }
+
+        if(kitSnapshot.size === 0) {
+            kitAssignmentResult = {
+                success: false,
+                message: "Kit not found for supply kit ID " + data[supplyKitId]
+            };
+            return;
         }
 
         const kitDoc = kitSnapshot.docs[0];
-        data[UKID] = kitDoc.data()[UKID];
+        data[uniqueKitID] = kitDoc.data()[uniqueKitID];
         const kitData = {
             [supplyKitTrackingNum]: data[supplyKitTrackingNum],
             [kitStatus]: assigned,
@@ -2250,12 +2734,51 @@ const assignKitToParticipant = async (data) => {
             'Connect_ID': parseInt(data['Connect_ID'])
         };
 
-        await kitDoc.ref.update(kitData);
 
-        const participantSnapshot = await db.collection("participants").where('Connect_ID', '==', parseInt(data['Connect_ID'])).get();
+        const participantSnapshot = await transaction.get(
+            db.collection("participants")
+                .where('Connect_ID', '==', parseInt(data['Connect_ID']))
+        );
+        printDocsCount(participantSnapshot, "assignKitToParticipant; collection: participants");
+
+        // 1109: Check if the participant already has another baseline kit assigned and error if it does.
+        // Note that this will need to be modified in the future to recognize and handle replacement kits
+        // once that functionality is added
+        const kitAssemblyQuery =  db.collection("kitAssembly")
+            .where('Connect_ID', '==', parseInt(data['Connect_ID']))
+            .where(`${kitStatus}`, '==', assigned)
+            .where(`${collectionRound}`, '==', baseline)
+            // .select([`${supplyKitId}`]);
+        const kitAssemblySnapshot = await transaction.get(kitAssemblyQuery);
+
+        printDocsCount(participantSnapshot, "assignKitToParticipant; collection: possible duplicate kits");
+
+
+        if(kitAssemblySnapshot.size > 0) {
+            // Check to see if there are any baseline kits which are already assigned but with a different kit ID
+            // If so, error
+            const duplicateKit = kitAssemblySnapshot.docs.find(doc => {
+                const docData = doc.data();
+                return docData[supplyKitId] !== data[supplyKitId];
+            });
+            if(duplicateKit) {
+                // A kit has already been assigned; terminate without updates.
+                let errorMsg = `Duplicate kit ${duplicateKit.data()[supplyKitId]} found when attempting to assign kit ${data[supplyKitId]} to user ${data['Connect_ID']}`;
+                console.error(errorMsg);
+                kitAssignmentResult = {
+                    success: false,
+                    message: errorMsg
+                };
+                return;
+            }
+        }
 
         if (participantSnapshot.size !== 1) {
-            return false;
+            kitAssignmentResult = {
+                success: false,
+                message: (participantSnapshot.size > 1 ? 'Multiple' : 'No') + ' participants found for connect ID ' + data['Connect_ID']
+            };
+            return;
         }
 
         const participantDoc = participantSnapshot.docs[0];
@@ -2268,26 +2791,34 @@ const assignKitToParticipant = async (data) => {
                     [bioKitMouthwash]: {
                         [kitType]: mouthwashKit,
                         [kitStatus]: assigned,
-                        [UKID]: data[UKID],
+                        [uniqueKitID]: data[uniqueKitID],
                     }
                 }
             }
         };
 
-        await participantDoc.ref.update(updatedParticipantObject);
+        transaction.update(kitDoc.ref, kitData);
+        transaction.update(participantDoc.ref, updatedParticipantObject);
 
+        kitAssignmentResult = {
+            success: true,
+            message: 'Success'
+        };
         return true;
-    } catch (error) {
-        console.error(error);
-        return new Error(error);
-    }
+    });
+    
+    return kitAssignmentResult;
 };
+
+
+
 
 const processVerifyScannedCode = async (id) => {
     try {
-        const snapShot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
-        if (snapShot.docs.length === 1) {
-            return { valid: true, UKID: snapShot.docs[0].data()[687158491] }
+        const snapshot = await db.collection('kitAssembly').where('531858099', '==', id).where('221592017', '==', 241974920).get();
+        printDocsCount(snapshot, "processVerifyScannedCode");
+        if (snapshot.docs.length === 1) {
+            return { valid: true, uniqueKitID: snapshot.docs[0].data()[687158491] }
         }
         else { return false }
     } catch (error) {
@@ -2298,53 +2829,62 @@ const processVerifyScannedCode = async (id) => {
 
 const confirmShipmentKit = async (shipmentData) => {
     try {
-        const { collectionDetails, baseline, bioKitMouthwash, UKID } = fieldMapping;
+        return await db.runTransaction(async transaction => {
+            const { collectionDetails, baseline, bioKitMouthwash, uniqueKitID } = fieldMapping;
 
-        const kitSnapshot = await db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']).get();
+            const kitAssemblyQuery = db.collection("kitAssembly").where('687158491', '==', shipmentData['687158491']);
+            const kitSnapshot = await transaction.get(kitAssemblyQuery);
+            printDocsCount(kitSnapshot, "confirmShipmentKit; collection: kitAssembly");
 
-        if (kitSnapshot.size === 0) {
-            return false;
-        }
+            if (kitSnapshot.size === 0) {
+                return false;
+            }
 
-        const kitDoc = kitSnapshot.docs[0];
-        const kitData = {
-            '221592017': 277438316,
-            '661940160': shipmentData['661940160']
-        };
+            const kitDoc = kitSnapshot.docs[0];
+            const kitData = {
+                '221592017': 277438316,
+                '661940160': shipmentData['661940160']
+            };
 
-        await kitDoc.ref.update(kitData);
-        const participantSnapshot = await db.collection("participants")
-            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${UKID}`, '==', shipmentData[UKID]).get();
+            
+            const participantQuery = db.collection("participants")
+                .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${uniqueKitID}`, '==', shipmentData[uniqueKitID]);
+            const participantSnapshot = await transaction.get(participantQuery);
+            printDocsCount(participantSnapshot, "confirmShipmentKit; collection: participants");
 
-        if (participantSnapshot.size === 0) {
-            return false;
-        }
+            if (participantSnapshot.size === 0) {
+                return false;
+            }
 
-        const participantDoc = participantSnapshot.docs[0];
-        const participantDocData = participantDoc.data();
-        const prevParticipantObject = participantDocData[collectionDetails][baseline][bioKitMouthwash];
-        const baselineParticipantObject = participantDocData[173836415][266600170];
-        const uid = participantDocData['state']['uid'];
-        const Connect_ID = participantDocData['Connect_ID'];
-        const prefEmail = participantDocData['869588347'];
-        const token = participantDocData['token'];
-        const ptName = participantDocData['153211406'] || participantDocData['399159511']
+            const participantDoc = participantSnapshot.docs[0];
+            const participantDocData = participantDoc.data();
+            const prevParticipantObject = participantDocData[collectionDetails][baseline][bioKitMouthwash];
+            const baselineParticipantObject = participantDocData[173836415][266600170];
+            const uid = participantDocData['state']['uid'];
+            const Connect_ID = participantDocData['Connect_ID'];
+            const prefEmail = participantDocData['869588347'];
+            const token = participantDocData['token'];
+            const ptName = participantDocData['153211406'] || participantDocData['399159511']
+            const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
 
-        const updatedParticipantObject = {
-            '173836415': {
-                '266600170': {
-                    ...baselineParticipantObject,
-                    '319972665': {
-                        ...prevParticipantObject,
-                        '221592017': 277438316,
-                        '661940160': shipmentData['661940160']
+            const updatedParticipantObject = {
+                '173836415': {
+                    '266600170': {
+                        ...baselineParticipantObject,
+                        '319972665': {
+                            ...prevParticipantObject,
+                            '221592017': 277438316,
+                            '661940160': shipmentData['661940160']
+                        }
                     }
                 }
-            }
-        };
+            };
 
-        await participantDoc.ref.update(updatedParticipantObject);
-        return { status: true, Connect_ID, token, uid, prefEmail, ptName };
+            transaction.update(kitDoc.ref, kitData);
+            transaction.update(participantDoc.ref, updatedParticipantObject);
+            return { status: true, Connect_ID, token, uid, prefEmail, ptName, preferredLanguage };
+        });
+        
 
     } catch (error) {
         console.error(error);
@@ -2352,79 +2892,111 @@ const confirmShipmentKit = async (shipmentData) => {
     }
 };
 
-const storeKitReceipt = async (package) => {
+const storeKitReceipt = async (pkg) => {
     try {
-        const kitSnapshot = await db.collection("kitAssembly").where('972453354', '==', package['972453354']).where('221592017', '==', 277438316).get();
-        if (kitSnapshot.size === 0) {
-            return false;
-        }
-        const kitDoc = kitSnapshot.docs[0];
-        const Connect_ID = kitDoc.data()['Connect_ID'];
-   
-        const participantSnapshot = await db.collection("participants").where('173836415.266600170.319972665.687158491', '==', kitDoc.data()[687158491]).get();
-        const participantDoc = participantSnapshot.docs[0];
-        const participantDocData = participantSnapshot.docs[0].data();
-
-        const token = participantDocData['token'];
-        const uid = participantDocData['state']['uid'];
-        const site = participantDocData['827220437'];
-        const prefEmail = participantDocData['869588347'];
-        const ptName = participantDocData['153211406'] || participantDocData['399159511']
-        const surveyStatus = participantDocData['547363263']
-
-        const prevParticipantObject = participantDocData[173836415][266600170][319972665];
-        const collectionId = package['259846815']?.split(' ')[0];
-        const objectId = package['259846815']?.split(' ')[1];
-        
-        if (objectId === undefined || collectionId === undefined) {
-            return { status: 'Check Collection ID' }
-        }
-
-        const biospecPkg = {
-            '143615646': {
-                '593843561': 353358909,
-                '825582494': package['259846815'],
-                '826941471': package['826941471']
-            },
-            '260133861': package['260133861'],
-            '678166505': package['678166505'],
-            '820476880':  collectionId,
-            '827220437': site,
-            'Connect_ID': Connect_ID,
-            'token': token,
-            'uid': uid
-        }
-
-        await db.collection('biospecimen').add(biospecPkg);
-
-        await kitDoc.ref.update({
-            '137401245': package['137401245'] === true ? 353358909 : 104430631,
-            '221592017': 375535639,
-            '633640710': processPackageConditions(package['633640710']),
-            '755095663': package['755095663'],
-            '826941471': package['826941471']
-        });
-
-        await participantDoc.ref.update({
-            '684635302': 353358909,
-            '254109640': 353358909,
-            '173836415.266600170.915179629': 103209024,
-            '173836415.266600170.448660695': package['678166505'],
-            '173836415.266600170.319972665': {
-                ...prevParticipantObject,
-                '221592017': 375535639,
-                '826941471': package['826941471']
+        let toReturn;
+        await db.runTransaction(async (transaction) => {
+            const kitSnapshot = await transaction.get(db.collection("kitAssembly").where('972453354', '==', pkg['972453354']).where('221592017', '==', 277438316));
+            printDocsCount(kitSnapshot, "storeKitReceipt");
+            if (kitSnapshot.size === 0) {
+                toReturn = false;
+                return;
             }
+            const kitDoc = kitSnapshot.docs[0];
+            const kitData = kitDoc.data();
+            const Connect_ID = kitData['Connect_ID'];
+    
+            const participantSnapshot = await transaction.get(db.collection("participants").where('173836415.266600170.319972665.687158491', '==', kitDoc.data()[687158491]));
+            const participantDoc = participantSnapshot.docs[0];
+            const participantDocData = participantSnapshot.docs[0].data();
+
+            const token = participantDocData['token'];
+            const uid = participantDocData['state']['uid'];
+            const site = participantDocData['827220437'];
+            const prefEmail = participantDocData['869588347'];
+            const ptName = participantDocData['153211406'] || participantDocData['399159511']
+            const surveyStatus = participantDocData['547363263']
+            const preferredLanguage = cidToLangMapper[participantDocData[fieldMapping.preferredLanguage]] || cidToLangMapper[fieldMapping.english];
+
+            const prevParticipantObject = participantDocData[173836415][266600170][319972665];
+            const collectionId = pkg['259846815']?.split(' ')[0];
+            const objectId = pkg['259846815']?.split(' ')[1];
+            
+            if (objectId === undefined || collectionId === undefined) {
+                toReturn = { status: 'Check Collection ID' };
+                return;
+            }
+
+            // check the collection ID from the kitAssembly against the one from package and error if they don't match
+            if(kitData[fieldMapping.collectionCupId] !== pkg[fieldMapping.collectionCupId]) {
+                toReturn = { status: 'Collection Cup ID from tracking number does not match provided Collection Cup ID' };
+                return;
+            }
+
+            const biospecPkg = {
+                '143615646': {
+                    '593843561': 353358909,
+                    '825582494': pkg['259846815'],
+                    '826941471': pkg['826941471']
+                },
+                '260133861': pkg['260133861'],
+                '678166505': pkg['678166505'],
+                '820476880':  collectionId,
+                '827220437': site,
+                'Connect_ID': Connect_ID,
+                'token': token,
+                'uid': uid
+            }
+
+            // Create a reference to a document that doesn't exist yet with the given ID
+            const newDocRef = db.collection('biospecimen').doc(uid);
+            
+            transaction.set(newDocRef, biospecPkg);
+
+            transaction.update(kitDoc.ref, {
+                '137401245': pkg['137401245'] === true ? 353358909 : 104430631,
+                '221592017': 375535639,
+                '633640710': processPackageConditions(pkg['633640710']),
+                '755095663': pkg['755095663'],
+                '826941471': pkg['826941471']
+            });
+
+            transaction.update(participantDoc.ref, {
+                '684635302': 353358909,
+                '254109640': 353358909,
+                '173836415.266600170.915179629': 103209024,
+                '173836415.266600170.448660695': pkg['678166505'],
+                '173836415.266600170.319972665': {
+                    ...prevParticipantObject,
+                    '221592017': 375535639,
+                    '826941471': pkg['826941471']
+                }
+            });
+
+            toReturn = {
+              status: true,
+              Connect_ID,
+              token,
+              uid,
+              prefEmail,
+              ptName,
+              surveyStatus,
+              preferredLanguage,
+              [fieldMapping.signInMechanism]: participantDocData[fieldMapping.signInMechanism],
+              [fieldMapping.authenticationPhone]: participantDocData[fieldMapping.authenticationPhone],
+              [fieldMapping.authenticationEmail]: participantDocData[fieldMapping.authenticationEmail],
+            };
+            return;
         });
 
-        return { status: true, Connect_ID, token, uid, prefEmail, ptName, surveyStatus };
+        return toReturn;
 
-        } 
-        catch (error) {
-            console.error(error);
-            return new Error(error);
-        }
+    } 
+    catch (error) {
+        console.error(error);
+        return new Error(error);
     }
+}
 
 const processPackageConditions = (pkgConditions) => {
     const keys = [950521660, 545319575, 938338155, 205954477, 289239334, 992420392, 541085383, 427719697, 100618603];
@@ -2440,6 +3012,7 @@ const processPackageConditions = (pkgConditions) => {
 const getKitAssemblyData = async () => {
     try {
         const snapshot = await db.collection("kitAssembly").get();
+        printDocsCount(snapshot, "getKitAssemblyData");
         if(snapshot.size !== 0)  return snapshot.docs.map(doc => doc.data()) 
         else return false;
     }
@@ -2461,6 +3034,7 @@ const storeSiteNotifications = async (reminder) => {
 const getCoordinatingCenterEmail = async () => {
     try {
         const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+        printDocsCount(snapshot, "getCoordinatingCenterEmail");
         if(snapshot.size > 0) return snapshot.docs[0].data().email;
     } catch (error) {
         console.error(error);
@@ -2471,6 +3045,7 @@ const getCoordinatingCenterEmail = async () => {
 const getSiteEmail = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        printDocsCount(snapshot, "getSiteEmail");
         if(snapshot.size > 0) return snapshot.docs[0].data().email;
     } catch (error) {
         console.error(error);
@@ -2481,6 +3056,7 @@ const getSiteEmail = async (siteCode) => {
 const getSiteAcronym = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        printDocsCount(snapshot, "getSiteAcronym");
         if(snapshot.size > 0) return snapshot.docs[0].data().acronym;
     } catch (error) {
         console.error(error);
@@ -2491,6 +3067,7 @@ const getSiteAcronym = async (siteCode) => {
 const getSiteMostRecentBoxId = async (siteCode) => {
     try {
         const snapshot = await db.collection('siteDetails').where('siteCode', '==', siteCode).get();
+        printDocsCount(snapshot, "getSiteMostRecentBoxId");
         if (snapshot.size > 0) {
             const doc = snapshot.docs[0];
             return {
@@ -2526,21 +3103,76 @@ const addPrintAddressesParticipants = async (data) => {
     }
 }
 
-const getParticipantSelection = async (filter) => {
+/**
+ * Returns an array of custom objects based on the participants biomouthwash kit status
+ * @param {string} statusType - concept id of the kit status's type 
+ * @returns {Array} - Array of object(s) and/or array(s) based on processParticipantData statusType.
+*/
+const getParticipantsByKitStatus = async (statusType) => {
     try {
-        if (filter === 'all') {
-            const snapshot = await db.collection("participantSelection").get();
-            return snapshot.docs.map(doc => doc.data())
+        if (statusType === fieldMapping.shipped.toString()) { // For now this will be the only status enabled for this function, more status types to be added later
+            return await shippedKitStatusParticipants();
         }
-        else {
-            const snapshot = await db.collection("participantSelection")
-                                    .where('kit_status', '==', filter)
-                                    .get();
-            return snapshot.docs.map(doc => doc.data())
-        }
+        return [];
+    } catch (error){
+        console.error(`Error in getParticipantsByKitStatus:`, error);
+        throw new Error("getParticipantsByKitStatus", error);
     }
-    catch(error){
-        return new Error(error);
+}
+
+
+const shippedKitStatusParticipants = async () => { 
+    try {
+        const { collectionDetails, baseline, bioKitMouthwash, kitStatus, 
+                shipped, healthCareProvider, mouthwashSurveyCompletionStatus, shippedDateTime} = fieldMapping;
+        
+        const snapshot = await db.collection("participants")
+                            .where(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${kitStatus}`, '==', shipped)
+                            .orderBy(`${collectionDetails}.${baseline}.${bioKitMouthwash}.${shippedDateTime}`, 'asc')
+                            .select('Connect_ID', 
+                                `${healthCareProvider}`, 
+                                `${collectionDetails}`, 
+                                `${mouthwashSurveyCompletionStatus}`)
+                            .get();
+        
+        if (!snapshot.empty) {
+            const participants = [];
+            const kitAssemblyPromises = [];
+            const { supplyKitId, supplyKitTrackingNum, returnKitId, collectionCardId, returnKitTrackingNum } = fieldMapping;
+
+            for (const docs of snapshot.docs) {
+                const data = docs.data();
+                const participantConnectID = data['Connect_ID'];
+        
+                participants.push({
+                    "Connect_ID": participantConnectID,
+                    [healthCareProvider]: data[healthCareProvider],
+                    [shippedDateTime]: data[collectionDetails]?.[baseline]?.[bioKitMouthwash]?.[shippedDateTime] || '',
+                    [mouthwashSurveyCompletionStatus]: data[mouthwashSurveyCompletionStatus],
+                });
+                
+                kitAssemblyPromises.push(
+                    db.collection("kitAssembly")
+                        .where('Connect_ID', '==', participantConnectID)
+                        .select(`${supplyKitId}`, `${supplyKitTrackingNum}`, `${returnKitTrackingNum}`, `${returnKitId}`, `${collectionCardId}`)
+                        .get()
+                );
+            }
+
+            const kitAssemblySnapshots = await Promise.all(kitAssemblyPromises);
+            printDocsCount(kitAssemblySnapshots, "shippedKitStatusParticipants");
+
+            kitAssemblySnapshots.forEach((snapshot, index) => {
+                if(!snapshot.empty) {
+                    const kitData = snapshot.docs[0].data();
+                    Object.assign(participants[index], kitData);
+                }
+            });
+            return participants;
+        }
+    } catch (error) {
+        console.error(error);
+        throw new Error("Error in shippedKitStatusParticipants. ", error);
     }
 }
 
@@ -2574,6 +3206,7 @@ const storePackageReceipt = async (data) => {
 const setPackageReceiptUSPS = async (data) => {
     try {
         const snapshot = await db.collection("participantSelection").where('usps_trackingNum', '==', data.scannedBarcode).get();
+        printDocsCount(snapshot, "setPackageReceiptUSPS");
         const docId = snapshot.docs[0].id;
         await db.collection("participantSelection").doc(docId).update(
         { 
@@ -2599,14 +3232,15 @@ const setPackageReceiptFedex = async (boxUpdateData) => {
             delete boxUpdateData['shipmentTimestamp'];
         }
         
-        const boxSnapshot = await query.get();
+        const snapshot = await query.get();
+        printDocsCount(snapshot, "setPackageReceiptFedex");
         
-        if (boxSnapshot.empty) {
+        if (snapshot.empty) {
             console.error('Box not found');
             return { message: 'Box Not Found', data: null };
         }
 
-        const boxListData = boxSnapshot.docs.map(doc => ({
+        const boxListData = snapshot.docs.map(doc => ({
             boxDocRef: doc.ref,
             boxData: doc.data(),
         }));
@@ -2663,6 +3297,7 @@ const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) 
         });
 
         const specimenQuerySnapshots = await Promise.all(specimenDocsToFetch);
+        printDocsCount(specimenQuerySnapshots, "processReceiptData");
         let specimenDocs = [];
         specimenQuerySnapshots.forEach(snapshot => {
             snapshot.docs.forEach(specimenDoc => {
@@ -2719,10 +3354,10 @@ const processReceiptData = async (collectionIdHolder, boxUpdateData, boxDocRef) 
 const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
     try {
         await db.collection("bptlMetrics").doc('--metrics--').update({ 
-            [currentkitStatus]: increment
+            [currentkitStatus]: admin.firestore.FieldValue.increment(1)
         })
         await db.collection("bptlMetrics").doc('--metrics--').update({ 
-            [prevKitStatus]: decrement
+            [prevKitStatus]: admin.firestore.FieldValue.increment(-1)
         })
             return true;
     }
@@ -2734,6 +3369,7 @@ const kitStatusCounterVariation = async (currentkitStatus, prevKitStatus) => {
 
 const getBptlMetrics = async () => {
     const snapshot = await db.collection("bptlMetrics").get();
+    printDocsCount(snapshot, "getBptlMetrics");
     return snapshot.docs.map(doc => doc.data())
 }
 
@@ -2741,6 +3377,7 @@ const getBptlMetricsForShipped = async () => {
     try {
         let response = []
         const snapshot = await db.collection("participantSelection").where('kit_status', '==', 'shipped').get();
+        printDocsCount(snapshot, "getBptlMetricsForShipped");
         let shipedParticipants = snapshot.docs.map(doc =>  doc.data())
         const keys = ['first_name', 'last_name', 'pickup_date', 'participation_status']
         shipedParticipants.forEach( i => { response.push(pick(i, keys) )});
@@ -2755,27 +3392,6 @@ const getBptlMetricsForShipped = async () => {
 const pick = (obj, arr) => {
     return arr.reduce((acc, record) => (record in obj && (acc[record] = obj[record]), acc), {})
 } 
-
-const processBsiData = async (tubeConceptIds, query) => {
-    return await Promise.all(tubeConceptIds.map( async tubeConceptId => { // using await promise.all waits until all the ele in a map are processed
-        const snapshot = await db.collection("biospecimen").where(`${tubeConceptId}.926457119`, '==', query).get();// perform query on tube level
-        return snapshot.docs.map(doc => {
-            let collectionIdInfo = {}
-            collectionIdInfo['825582494'] = doc.data()[tubeConceptId]['825582494']
-            collectionIdInfo['926457119'] = doc.data()[tubeConceptId]['926457119']
-            collectionIdInfo['678166505'] = doc.data()['678166505']
-            collectionIdInfo['Connect_ID'] = doc.data()['Connect_ID']
-            // collectionIdInfo['789843387'] = i['789843387']
-            collectionIdInfo['827220437'] = doc.data()['827220437']
-            collectionIdInfo['951355211'] = doc.data()['951355211']
-            collectionIdInfo['915838974'] = doc.data()['915838974']
-            collectionIdInfo['650516960'] = doc.data()['650516960']
-            collectionIdInfo['762124027'] = doc.data()[tubeConceptId]['762124027'] === undefined ? ``  : doc.data()[tubeConceptId]['762124027']
-            collectionIdInfo['982885431'] = doc.data()[tubeConceptId]['248868659'] === undefined ? `` : doc.data()[tubeConceptId]['248868659']['982885431']
-            return collectionIdInfo
-        }) // push query results to holdBiospecimenMatches array       
-    }));
-}
 
 const verifyUsersEmailOrPhone = async (req) => {
     const queries = req.query
@@ -2886,6 +3502,7 @@ const queryDailyReportParticipants = async (sitecode) => {
     let query = db.collection('participants');
     try {
         const snapshot = await query.where('331584571.266600170.840048338', '>=', twoDaysAgo).where('827220437', '==', sitecode).get();
+        printDocsCount(snapshot, "queryDailyReportParticipants");
         if (snapshot.size !== 0) {
             const promises = snapshot.docs.map(async (document) => {
                 return processQueryDailyReportParticipants(document);
@@ -2905,6 +3522,7 @@ const queryDailyReportParticipants = async (sitecode) => {
 const processQueryDailyReportParticipants = async (document) => {
     try {
         const secondSnapshot = await db.collection('biospecimen').where('Connect_ID', '==', document.data()['Connect_ID']).get();
+        printDocsCount(secondSnapshot, "processQueryDailyReportParticipants");
         if (secondSnapshot.size !== 0) {
             const dailyReport = {};
             if (secondSnapshot.docs[0].data()['951355211'] !== undefined) {
@@ -2929,6 +3547,7 @@ const processQueryDailyReportParticipants = async (document) => {
 
 const getRestrictedFields = async () => {
     const snapshot = await db.collection('siteDetails').where('coordinatingCenter', '==', true).get();
+    printDocsCount(snapshot, "getRestrictedFields");
     return snapshot.docs[0].data().restrictedFields;
 }
 
@@ -2962,6 +3581,7 @@ const getSpecimensByReceivedDate = async (receivedTimestamp) => {
  */
 const getBoxesByReceivedDate = async (receivedTimestamp) => {
     const snapshot = await db.collection('boxes').where('926457119', '==', receivedTimestamp).get();
+    printDocsCount(snapshot, "getBoxesByReceivedDate");
     return snapshot.docs.map(doc => doc.data());
 }
 
@@ -2993,6 +3613,7 @@ const getSpecimensByCollectionIds = async (collectionIdsArray, siteCode, isBPTL 
 
         const chunkQueries = chunksToSend.map(chunk => getSnapshot(chunk));
         const snapshots = await Promise.all(chunkQueries);
+        printDocsCount(snapshots, "getSpecimensByCollectionIds");
 
         snapshots.forEach(snapshot => {
             const docsArray = snapshot.docs.map(document => ({ data: document.data(), docRef: document.ref }));
@@ -3014,6 +3635,7 @@ const processSendGridEvent = async (event) => {
         .collection("notifications")
         .where("id", "==", event.notification_id)
         .get();
+    printDocsCount(snapshot, "processSendGridEvent");
 
     if (snapshot.size > 0) {
         const doc = snapshot.docs[0];
@@ -3038,6 +3660,7 @@ const processTwilioEvent = async (event) => {
         .collection("notifications")
         .where("messageSid", "==", event.MessageSid)
         .get();
+    printDocsCount(snapshot, "processTwilioEvent");
 
     if (snapshot.size > 0) {
         const doc = snapshot.docs[0];
@@ -3050,6 +3673,10 @@ const processTwilioEvent = async (event) => {
 
         await db.collection("notifications").doc(doc.id).update(eventRecord);
 
+        if (event.ErrorCode === "21610") {
+            await updateSmsPermission(doc.data().phone, false);
+        }
+
     } else {
         console.error(`Could not find messageSid ${event.MessageSid}. Status ${event.MessageStatus}`)
     }
@@ -3058,6 +3685,7 @@ const processTwilioEvent = async (event) => {
 const getParticipantCancerOccurrences = async (participantToken) => {
     try {
         const snapshot = await db.collection('cancerOccurrence').where('token', '==', participantToken).get();
+        printDocsCount(snapshot, "getParticipantCancerOccurrences");
         return snapshot.docs.map(doc => doc.data());
     } catch (error) {
         throw new Error("Error fetching cancer occurrences.", { cause: error });
@@ -3068,24 +3696,92 @@ const getParticipantCancerOccurrences = async (participantToken) => {
  * Write cancer occurrence object data to Firestore. 
  * @param {array<object>} cancerOccurrenceArray - Array of cancer occurrence objects.
  */
+
 const writeCancerOccurrences = async (cancerOccurrenceArray) => {
-    try {
+    const writeCancerOccurrenceBatch = async () => {
         const batch = db.batch();
         for (const occurrence of cancerOccurrenceArray) {
             const docRef = db.collection('cancerOccurrence').doc();
             batch.set(docRef, occurrence);
         }
         await batch.commit();
+    };
+
+    try {
+        await firestoreWriteWithAutoRetry(writeCancerOccurrenceBatch, 'writeCancerOccurrences');
     } catch (error) {
-        throw new Error("Error writing cancer occurrences.", { cause: error });
+        console.error('Error in writeCancerOccurrences:', error);
+        throw new Error(`Write Cancer Occurrences failed: ${error.message}`);
+    }
+};
+
+/**
+ * Occasionally, birthday card data needs to be updated based on return data from the post office.
+ * Check for duplicate birthday card data before writing to Firestore.
+ * An existing birthday card is one with the same token, mailDate, and cardVersion.
+ * @param {string} participantToken - The participant token.
+ * @param {string} mailingDate - ISO 8601 date string.
+ * @param {string} cardVersion - The version of the birthday card.
+ * @returns {object} - The existing birthday card data and Firestore document ID.
+ */
+const getExistingBirthdayCard = async (participantToken, mailingDate, cardVersion) => {
+    try {
+        const snapshot = await db.collection('birthdayCard')
+            .where('token', '==', participantToken)
+            .where(fieldMapping.birthdayCardData.mailDate.toString(), '==', mailingDate)
+            .where(fieldMapping.birthdayCardData.cardVersion.toString(), '==', cardVersion)
+            .get();
+
+        if (snapshot.empty) {
+            return { existingCardData: null, cardDocId: null };
+        }
+        
+        if (snapshot.size > 1) {
+            console.error(`Duplicate birthday card data found for token ${participantToken} and mailing date ${mailingDate}.`);
+        }
+        
+        return { existingCardData: snapshot.docs[0].data(), cardDocId: snapshot.docs[0].id };
+    } catch (error) {
+        console.error('Error in getExistingBirthdayCard:', error);
+        throw new Error("Error fetching birthday card data.", { cause: error });
     }
 }
 
+/**
+ * Write the NORC birthday card data to Firestore.
+ * @param {object} birthdayCardData - The NORC birthday card data.
+ * @param {object} birthdayCardWriteDetails - Object with .cardWriteType (either 'create' or 'update') and .docId (only provided for update operations) properties.
+ */
 
+const writeBirthdayCard = async (birthdayCardData, birthdayCardWriteDetails) => {
+    try {
+        const writeCard = async () => {
+            const { cardWriteType, cardDocId } = birthdayCardWriteDetails;
+
+            if (cardWriteType === 'create') {
+                await db.collection('birthdayCard').add(birthdayCardData);
+            } else if (cardWriteType === 'update') {
+                if (!cardDocId) {
+                    throw new Error('Document ID is required for update operation.');
+                }
+                await db.collection('birthdayCard').doc(cardDocId).update(birthdayCardData);
+            } else {
+                console.error(`Invalid birthday card write type: ${cardWriteType}, docId: ${cardDocId}`);
+                throw new Error(`Invalid birthday card write type. ${cardWriteType}, docId: ${cardDocId}`);
+            }
+        };
+
+        return await firestoreWriteWithAutoRetry(writeCard, 'writeBirthdayCard');
+    } catch (error) {
+        console.error('Error in writeBirthdayCard:', error);
+        throw new Error(`Write Birthday Card failed: ${error.message}`, { cause: error });
+    }
+};
 
 const updateParticipantCorrection = async (participantData) => {
     try {
         const snapshot = await db.collection('participants').where('token', '==', participantData['token']).get();
+        printDocsCount(snapshot, "updateParticipantCorrection");
         if (snapshot.empty) return false
         const docId = snapshot.docs[0].id;
         delete  participantData['token']
@@ -3108,25 +3804,109 @@ const updateParticipantCorrection = async (participantData) => {
     }
 }
 
-const updateSurveyEligibility = async (token, survey) => {
-
+/**
+ * Reset participant survey status
+ * @param {string} connectId - Connect ID of the participant
+ * @param {string} survey - Survey name to reset
+ * @returns {object} - Updated participant document
+ * For now, only ssn survey is supported
+ */
+const resetParticipantSurvey = async (connectId, survey) => { 
     try {
-        const snapshot = await db.collection('participants').where('token', '==', token).get();
-        
-        if (snapshot.empty) return;
+        const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
+        if (snapshot.empty) {
+            throw { message: 'Participant not found.', code: 404 };
+        }
 
-        const data = snapshot.docs[0].data()
+        const participantRef = snapshot.docs[0].ref;
+        const participantData = snapshot.docs[0].data();
+        const { ssnStatusFlag, ssnSurveyStartTime, ssnSurveyCompletedTime, ssnFullGiven, ssnPartialGiven,
+            notStarted, ssnFullGivenTime, ssnPartialGivenTime, no } = fieldMapping;
 
-        if (data[survey] === fieldMapping.notYetEligible) {
-            const docId = snapshot.docs[0].id;
-            const updates = {[survey]: fieldMapping.notStarted}
+        // early exit if survey is already in not started status
+        if (participantData[ssnStatusFlag] === notStarted)  {
+            throw {
+                message: 'Failed to reset SSN Survey. The participant\'s SSN survey is "Not Started" status!',
+                code: 400
+            };
+        }
+
+        // Reset participant data
+        if (survey === 'ssn') { // change this to a concept ID
+            await participantRef.update({
+                [ssnStatusFlag]: notStarted,
+                [ssnSurveyStartTime]: FieldValue.delete(),
+                [ssnSurveyCompletedTime]: FieldValue.delete(),
+                [ssnFullGiven]: no,
+                [ssnPartialGiven]: no,
+                [ssnFullGivenTime]: FieldValue.delete(),
+                [ssnPartialGivenTime]: FieldValue.delete(),
+            });
+            const updatedDoc = await participantRef.get();
+            return updatedDoc.data();
+        }
+
+        // Add future surveys here later
+        throw { message: `Survey type ${survey} failed to reset.`, code: 400 };
+
+    } catch (error) {
+        if (error.code) throw error; 
+        console.error('Error resetting participant survey:', error);
+
+        throw {
+            message: `Error resetting participant survey. ${error.message}`,
+            code: 500,
+        };
         
-            await db.collection('participants').doc(docId).update(updates);
+    }
+};
+
+/**
+ * Update participant incentive eligibility for NORC Incentive Eligibility tool
+ * @param {string} connectId - Connect ID of the participant
+ * @param {string} currentPaymentRound - Payment round to update eligibility for participant
+ * @param {string} dateOfEligibility - Date of eligibility for incentive ISO 8601 format
+ * @returns {object} - Updated participant document
+*/
+const updateParticipantIncentiveEligibility = async (connectId, currentPaymentRound, dateOfEligibility) => { 
+    try {
+        const { paymentRound, eligibleForIncentive, yes, no, norcPaymentEligibility, timestampPaymentEligibilityForRound } = fieldMapping;
+
+        const snapshot = await db.collection('participants').where('Connect_ID', '==', connectId).get();
+        if (snapshot.empty) throw { message: 'Participant not found.', code: 404 };
+        const participantRef = snapshot.docs[0].ref;
+        const participantData = snapshot.docs[0].data();
+        const currentPaymentRoundName = currentPaymentRound; // baseline or future payment rounds
+
+        const isNORCPaymentEligible = participantData?.[paymentRound]?.[currentPaymentRound]?.[norcPaymentEligibility] === no;
+        const isIncentiveEligible = participantData?.[paymentRound]?.[currentPaymentRound]?.[eligibleForIncentive] === no;
+        const isEligibleForIncentiveUpdate = isNORCPaymentEligible && isIncentiveEligible;
+
+        if (isEligibleForIncentiveUpdate) {
+            await participantRef.update({
+                [`${paymentRound}.${currentPaymentRoundName}.${eligibleForIncentive}`]: yes,
+                [`${paymentRound}.${currentPaymentRoundName}.${norcPaymentEligibility}`]: yes,
+                [`${paymentRound}.${currentPaymentRoundName}.${timestampPaymentEligibilityForRound}`]: dateOfEligibility
+            });
+            const updatedDoc = await participantRef.get();
+            if (!updatedDoc.exists) throw { message: 'Updated document not found.', code: 404 }
+            return updatedDoc.data();
+        } else {
+            throw {
+                message: 'Participant is already eligible for incentive and cannot be updated!',
+                code: 400,
+            }
         }
     } catch (error) {
-        throw new Error("Error updating survey eligibility.", { cause: error });
+        if (error.code) throw error; 
+        console.error('Error updating  participant incentive eligibility:', error);
+
+        throw {
+            message: `Error updating  participant incentive eligibility: ${error.message}`,
+            code: 500
+        };
     }
-}
+};
 
 
 const generateSignInWithEmailLink = async (email, continueUrl) => {
@@ -3136,7 +3916,102 @@ const generateSignInWithEmailLink = async (email, continueUrl) => {
     });
 };
 
+/**
+ * Get the app settings from Firestore.
+ * @param {String} appName  - Name of the app (e.g. 'connectApp', 'biospecimen', 'smdb')
+ * @param {Array<string>} selectedParamsArray - Array of parameters to retrieve from the document.
+ * @returns {Object} - App settings object.
+ */
+const getAppSettings = async (appName, selectedParamsArray) => {
+    try {
+        const snapshot = await db.collection('appSettings')
+            .where('appName', '==', appName)
+            .select(...selectedParamsArray)
+            .get();
+        
+        if (!snapshot.empty) {
+            return snapshot.docs[0].data();
+        } else {
+            console.error(`No app settings found for ${appName}. Parameters requested: ${selectedParamsArray.join(', ')}`);
+            return {};
+        }
+    } catch (error) {
+        console.error(`Error fetching app settings for ${appName}.`, error);
+        throw new Error("Error fetching app settings.", { cause: error });
+    }
+}
+
+/**
+ * Update Notify message delivery status to Firestore.
+ * @param {Object} data 
+ */
+const updateNotifySmsRecord = async (data) => {
+  const snapshot = await db
+    .collection("notifications")
+    .where("phone", "==", data.phone)
+    .where("twilioNotificationSid", "==", data.twilioNotificationSid)
+    .get();
+
+    if (snapshot.size === 1) {
+      await snapshot.docs[0].ref.update(data);
+      return true;
+    }
+
+    return false;
+};
+
+/**
+ * 
+ * @param {string} phoneNumber Phone number in +1XXXXXXXXXX format
+ * @param {boolean} isSmsPermitted Whether SMS is permitted or not
+ * @returns {Promise<number>} Number of document(s) updated
+ */
+const updateSmsPermission = async (phoneNumber, isSmsPermitted) => {
+  let count = 0;
+  const permissionCid = isSmsPermitted ? fieldMapping.yes : fieldMapping.no;
+  const tokenArray = await getParticipantTokensByPhoneNumber(phoneNumber);
+  if (tokenArray.length > 0) {
+    const batch = db.batch();
+    for (const token of tokenArray) {
+      const snapshot = await db.collection("participants").where("token", "==", token).select().get();
+      if (!snapshot.empty) {
+        batch.update(snapshot.docs[0].ref, { [fieldMapping.canWeText]: permissionCid });
+        count++;
+      }
+    }
+    await batch.commit();
+  }
+
+  return count;
+};
+
+/**
+ * Generic function to write to Firestore with automatic retries.
+ * @param {Function} asyncWriteFunction - Firestore write operation to perform.
+ * @param {string} operationName - Name of the Firestore write operation for logging purposes.
+ * @param {number} maxRetries - Maximum number of write retries.
+ * @param {number} delay - Time (milliseconds) to wait between retries.
+ * @returns {Promise} - Promise that resolves with the result of the Firestore write operation.
+ */
+
+const firestoreWriteWithAutoRetry = async (asyncWriteFunction, operationName, maxRetries = 3, delay = 1000) => {
+    let lastError;
+    for (let retries = 0; retries < maxRetries; retries++) {
+        try {
+            return await asyncWriteFunction();
+        } catch (error) {
+            console.error(`${operationName} failed (attempt ${retries + 1}/${maxRetries}):`, error);
+            lastError = error;
+            if (retries < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    throw new Error(`${operationName} failed after ${maxRetries} retries.`, { cause: lastError });
+};
+
 module.exports = {
+    db,
     updateResponse,
     retrieveParticipants,
     verifyIdentity,
@@ -3159,6 +4034,7 @@ module.exports = {
     deleteFirestoreDocuments,
     getParticipantData,
     updateParticipantData,
+    resetParticipantHelper,
     storeNotificationTokens,
     notificationTokenExists,
     retrieveUserNotifications,
@@ -3168,7 +4044,9 @@ module.exports = {
     biospecimenUserExists,
     addNewBiospecimenUser,
     removeUser,
+    processParticipantHomeMouthwashKitData,
     storeSpecimen,
+    submitSpecimen,
     updateSpecimen,
     searchSpecimen,
     searchShipments,
@@ -3188,16 +4066,13 @@ module.exports = {
     getSpecimenCollections,
     getBoxesPagination,
     getNumBoxesShipped,
-    incrementCounter,
-    decrementCounter,
     updateParticipantRecord,
     retrieveParticipantsEligibleForIncentives,
     removeParticipantsDataDestruction,
     removeUninvitedParticipants,
     getNotificationSpecifications,
-    retrieveParticipantsByStatus,
-    notificationAlreadySent,
-    storeNotifications,
+    storeNotification,
+    checkIsNotificationSent,
     validateSiteSAEmail,
     validateMultiTenantIDToken,
     markNotificationAsRead,
@@ -3210,9 +4085,11 @@ module.exports = {
     updateNotificationSchema,
     getNotificationHistoryByParticipant,
     getNotificationsCategories,
-    getNotification,
+    getNotificationSpecById,
+    getNotificationSpecByCategoryAndAttempt,
     getEmailNotifications,
-    getScheduledNotifications,
+    getNotificationSpecsBySchedule,
+    getNotificationSpecsByScheduleOncePerDay,
     getKitAssemblyData,
     storeSiteNotifications,
     getCoordinatingCenterEmail,
@@ -3221,7 +4098,7 @@ module.exports = {
     getSiteMostRecentBoxId,
     retrieveSiteNotifications,
     addPrintAddressesParticipants,
-    getParticipantSelection,
+    getParticipantsByKitStatus,
     shipKits,
     storePackageReceipt,
     getBptlMetrics,
@@ -3243,7 +4120,8 @@ module.exports = {
     getSpecimensByBoxedStatus,
     addKitAssemblyData,
     updateKitAssemblyData,
-    queryTotalAddressesToPrint,
+    queryHomeCollectionAddressesToPrint,
+    queryCountHomeCollectionAddressesToPrint,
     checkCollectionUniqueness,
     processVerifyScannedCode,
     assignKitToParticipant,
@@ -3257,7 +4135,13 @@ module.exports = {
     queryKitsByReceivedDate,
     getParticipantCancerOccurrences,
     writeCancerOccurrences,
+    writeBirthdayCard,
+    getExistingBirthdayCard,
     updateParticipantCorrection,
-    updateSurveyEligibility,
-    generateSignInWithEmailLink
+    resetParticipantSurvey,
+    generateSignInWithEmailLink,
+    getAppSettings,
+    updateNotifySmsRecord,
+    updateSmsPermission,
+    updateParticipantIncentiveEligibility,
 }

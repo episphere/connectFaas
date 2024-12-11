@@ -1,5 +1,6 @@
-const fieldMapping = require('./fieldToConceptIdMapping');
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const { QuerySnapshot } = require('firebase-admin/firestore');
+const fieldMapping = require('./fieldToConceptIdMapping');
 
 const getResponseJSON = (message, code) => {
     return { message, code };
@@ -60,13 +61,6 @@ const lockedAttributes = [
                         "113579866",
                         
                     ] // Read only access after initialization
-
-const filterData = async (queries, siteCodes, isParent) => {
-    console.log(queries);
-    const { filterDB } = require('./firestore');
-    const result = await filterDB(queries, siteCodes, isParent);
-    return result;
-}
 
 const incentiveFlags = {
     130371375 : { // Payment Round
@@ -146,8 +140,12 @@ const withdrawalConcepts = {
         217367618: 104430631,
         867203506: 104430631,
         352996056: 104430631,
+        941963821: 104430631,
         936015433: 104430631,
         688142378: 104430631,
+        101763809: 104430631,
+        525277409: 104430631,
+        671903816: 104430631,
     },
     906417725: 104430631,
     773707518: 104430631,
@@ -157,6 +155,7 @@ const withdrawalConcepts = {
     359404406: 104430631,
     987563196: 104430631,
     861639549: 104430631,
+    451953807: 104430631,
     123868967: '',
     113579866: '',
     659990606: '',
@@ -220,7 +219,7 @@ const defaultFlags = {
     663265240: 972455046,
     265193023: 972455046,
     220186468: 972455046,
-    320303124: 789467219,
+    320303124: 972455046,
     459098666: 972455046,
     126331570: 972455046,
     311580100: 104430631,
@@ -252,8 +251,10 @@ const moduleConceptsToCollections = {
     "D_826163434" :     "clinicalBioSurvey_v1",
     "D_166676176" :     "ssn",
     "D_390351864" :     "mouthwash_v1",
-    "D_601305072" :     "promis_v1"
-}
+    "D_601305072" :     "promis_v1",
+    "D_506648060" :     "experience2024",
+    "D_369168474":      "cancerScreeningHistorySurvey",
+};
 
 const moduleStatusConcepts = {
     "949302066" :       "module1",
@@ -266,8 +267,10 @@ const moduleStatusConcepts = {
     "253883960" :       "clinicalBioSurvey",
     "126331570" :       "ssn",
     "547363263" :       "mouthwash",
-    "320303124" :       "promis"
-}
+    "320303124" :       "promis",
+    "956490759" :       "experience2024",
+    "176068627":       "cancerScreeningHistorySurvey"
+};
 
 const listOfCollectionsRelatedToDataDestruction = [
     "bioSurvey_v1",
@@ -283,7 +286,9 @@ const listOfCollectionsRelatedToDataDestruction = [
     "notifications",
     "promis_v1",
     "mouthwash_v1",
-    "ssn" 
+    "ssn",
+    "experience2024",
+    "cancerScreeningHistorySurvey"
 ];
 
 const incentiveConcepts = {
@@ -306,21 +311,6 @@ const conceptMappings = {
     'outreachtimedout': 160161595
 };
 
-const retentionConcepts = [
-    'token',
-    'pin',
-    'Connect_ID',
-    'state.uid',
-    'state.studyId',
-    '399159511', // user profile first name
-    '996038075', // user profile last name
-    '371067537', // DOB
-    '388711124', // Mobile no.
-    '869588347', // Preferred email
-    '454205108', // Consent version
-    '454445267', // consent datetime
-]
-
 const refusalWithdrawalConcepts = {
     "refusedBaselineBlood": "685002411.194410742",
     "refusedBaselineSpecimenSurvey": "685002411.217367618",
@@ -329,6 +319,12 @@ const refusalWithdrawalConcepts = {
     "refusedFutureSurveys": "685002411.867203506",
     "refusedBaselineUrine": "685002411.949501163",
     "refusedBaselineSurveys": "685002411.994064239",
+    "refusedFollowUpBloodCollection": "685002411.941963821",
+    "refused2024ConnectExperienceSurveys": "685002411.101763809",
+    "refusedAllFutureConnectExperienceSurveys": "685002411.525277409",
+    "refusedQOL3moSurveys": "685002411.936015433",
+    "refusedAllFutureQOLSurveys": "685002411.688142378",
+    "refusedCanScreeningHistorySurvey": "685002411.671903816",
 
     "suspendedContact": "726389747",
     "withdrewConsent": "747006172",
@@ -424,7 +420,7 @@ const kpSSOConfig = {
 }
 
 const norcSSOConfig = {
-    group: 'http://schemas.xmlsoap.org/claims/Group',
+    group: 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups',
     email: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
     helpDeskUser: 'connect-help-desk-user',
     siteCode: 222222222,
@@ -450,6 +446,17 @@ const ucmSSOConfig = {
     biospecimenUser: 'uc:org:bsd:applications:connect:connect-biospecimen-user:authorized',
     siteCode: 809703864,
     acronym: 'UCM'
+}
+
+const bswhSSOConfig = {
+    siteCode: 472940358,
+    acronym: 'BSWH',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    email: 'Email Address',
+    group: 'Groups',
+    siteManagerUser: 'Research_Connect_FC',
+    biospecimenUser: 'Research_Connect_FC'
 }
 
 const SSOConfig = {
@@ -483,7 +490,11 @@ const SSOConfig = {
 
     'UCM-SSO-tovai': ucmSSOConfig,
     'UCM-SSO-lrjsp': ucmSSOConfig,
-    'UCM-SSO-p4f5m': ucmSSOConfig
+    'UCM-SSO-p4f5m': ucmSSOConfig,
+
+    'BSWH-SSO-y2jj3': bswhSSOConfig,
+    'BSWH-SSO-k4cat': bswhSSOConfig,
+    'BSWH-SSO-dcoos': bswhSSOConfig,
 }
 
 // https://www.twilio.com/docs/messaging/guides/debugging-tools#error-codes
@@ -615,7 +626,7 @@ const isParentEntity = async (siteDetails) => {
     return {...siteDetails, isParent, siteCodes};
 };
 
-const logIPAdddress = (req) => {
+const logIPAddress = (req) => {
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     console.log(ipAddress)
 }
@@ -763,12 +774,223 @@ const cleanSurveyData = (data) => {
     const admin = require('firebase-admin');
     
     Object.keys(data).forEach(key => {
-        if(data[key] === null) {
+        if (data[key] === null || data[key] === undefined) {
             data[key] = admin.firestore.FieldValue.delete();
         }
     });
 
     return data;
+}
+
+/**
+ * Gets baseline data updates for participants when submitting specimens
+ * 
+ * @param {object} biospecimenData The biospecimen data
+ * @param {object} participantData The participant data
+ * @param {array} specimenArray The array of specimens for the participant
+ * @param {array} siteTubesList The array of tubes used for the site
+ * @returns {object}
+ */
+const updateBaselineData = (biospecimenData, participantData, participantUid, specimenArray, siteTubesList) => {
+    let participantUpdates = {};
+    let settings = {};
+    let visit = biospecimenData[fieldMapping.collectionSelectedVisit];
+    // Now we potentially need to updateBaselineData
+    const baselineVisit = (biospecimenData[fieldMapping.collectionSelectedVisit] === fieldMapping.baseline);
+    const clinicalResearchSetting = (biospecimenData[fieldMapping.collectionSetting] === fieldMapping.research || biospecimenData[fieldMapping.collectionSetting] === fieldMapping.clinical);
+    if (baselineVisit && clinicalResearchSetting) {
+        // Update baseline data
+        const baselineCollections = specimenArray.filter(specimen => specimen[fieldMapping.collectionSelectedVisit] === fieldMapping.baseline);
+
+        const bloodTubes = siteTubesList.filter(tube => tube.tubeType === "Blood tube");
+        const urineTubes = siteTubesList.filter(tube => tube.tubeType === "Urine");
+        const mouthwashTubes = siteTubesList.filter(tube => tube.tubeType === "Mouthwash");
+
+        let bloodCollected = (participantData[fieldMapping.baselineBloodSampleCollected] === fieldMapping.yes);
+        let urineCollected = (participantData[fieldMapping.baselineUrineCollected] === fieldMapping.yes);
+        let mouthwashCollected = (participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes);
+        let allBaselineCollected = (participantData[fieldMapping.allBaselineSamplesCollected] === fieldMapping.yes);
+
+        let bloodTubesLength = 0
+        let urineTubesLength = 0
+        let mouthwashTubesLength = 0
+
+        const collectionSetting = biospecimenData[fieldMapping.collectionSetting];
+        const isResearch = collectionSetting === fieldMapping.research;
+        const isClinical = collectionSetting === fieldMapping.clinical;
+
+        // Build the collection details
+        if (participantData[fieldMapping.collectionDetails]) {
+            settings = participantData[fieldMapping.collectionDetails];
+            if (!settings[visit]) settings[visit] = {};
+
+        } else {
+            settings = {
+                [visit]: {}
+            }
+        }
+
+        if (!settings[visit][fieldMapping.bloodCollectionSetting]) {
+            bloodTubes.forEach(tube => {
+                const tubeIsCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if(tubeIsCollected) {
+                    settings[visit][fieldMapping.bloodCollectionSetting] = collectionSetting;
+                    if(isResearch) {
+                        settings[visit][fieldMapping.baselineBloodCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                    else if(isClinical) {
+                        settings[visit][fieldMapping.clinicalBloodCollected] = fieldMapping.yes;
+                        settings[visit][fieldMapping.clinicalBloodCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.yes;
+
+                        if(!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            settings[visit][fieldMapping.anySpecimenCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+                        }
+                    }
+                    bloodTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineBloodCollectedTime] !== '' ||  settings[visit][fieldMapping.clinicalBloodCollectedTime] !== ''){
+            const participantBloodCollected = participantData[fieldMapping.baselineBloodSampleCollected] === fieldMapping.yes;
+            const totalBloodTubesAvail = bloodTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalBloodTubesAvail.length === 0 && participantBloodCollected) {
+                delete settings[visit][fieldMapping.bloodCollectionSetting]; // derived variables & timestamp are updated only if all the blood tubes are unchecked
+                if (isResearch) {
+                    delete settings[visit][fieldMapping.baselineBloodCollectedTime];
+                }
+                else if (isClinical) {
+                    settings[visit][fieldMapping.clinicalBloodCollected] = fieldMapping.no;
+                    delete settings[visit][fieldMapping.clinicalBloodCollectedTime];
+
+                    if (urineTubesLength === 0 && mouthwashTubesLength === 0) { // anySpecimenCollected variable will only be updated to NO if mouthwash & urine specimens are not present.
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.no;
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            delete settings[visit][fieldMapping.anySpecimenCollectedTime];
+                        }
+                    }
+                }
+                participantUpdates[fieldMapping.baselineBloodSampleCollected] = fieldMapping.no;
+                bloodTubesLength = totalBloodTubesAvail.length;
+            }
+        }
+
+        if (!settings[visit][fieldMapping.urineCollectionSetting]) {
+            urineTubes.forEach(tube => {
+                const tubeIsCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if (tubeIsCollected) {
+                    settings[visit][fieldMapping.urineCollectionSetting] = collectionSetting;
+                    if (isResearch) {
+                        settings[visit][fieldMapping.baselineUrineCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                    else if (isClinical) {
+                        settings[visit][fieldMapping.clinicalUrineCollected] = fieldMapping.yes;
+                        settings[visit][fieldMapping.clinicalUrineCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.yes;
+
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            settings[visit][fieldMapping.anySpecimenCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+                        }
+                    }
+                    urineTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineUrineCollectedTime] !== '' ||  settings[visit][fieldMapping.clinicalUrineCollectedTime] !== '') {
+            const participantUrineCollected = participantData[fieldMapping.baselineUrineCollected] === fieldMapping.yes;
+            const totalUrineTubesAvail = urineTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalUrineTubesAvail.length === 0 && participantUrineCollected) {
+                delete settings[visit][fieldMapping.urineCollectionSetting];
+                if(isResearch) {
+                    delete settings[visit][fieldMapping.baselineUrineCollectedTime];
+                }
+                else if (isClinical) {
+                    settings[visit][fieldMapping.clinicalUrineCollected] = fieldMapping.no;
+                    delete settings[visit][fieldMapping.clinicalUrineCollectedTime];
+
+                    if (bloodTubesLength === 0 && mouthwashTubesLength === 0) { // anySpecimenCollected variable will only be updated to NO if mouthwash & blood specimens are not present.
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.no;
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            delete settings[visit][fieldMapping.anySpecimenCollectedTime];
+                        }
+                    }
+                }
+                urineTubesLength = totalUrineTubesAvail.length;
+            }  
+        }
+
+        if (!settings[visit][fieldMapping.mouthwashCollectionSetting]) {
+            mouthwashTubes.forEach(tube => {
+                const isTubeCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if (isTubeCollected) {
+                    settings[visit][fieldMapping.mouthwashCollectionSetting] = collectionSetting;
+                    if (isResearch) {
+                        settings[visit][fieldMapping.baselineMouthwashCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                mouthwashTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineMouthwashCollectedTime] !== '' && participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes) {
+            const isParticipantMouthwashCollected = participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes;
+            const totalMouthwasTubesAvail = mouthwashTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalMouthwasTubesAvail.length === 0 &&  isParticipantMouthwashCollected) {
+                delete settings[visit][fieldMapping.mouthwashCollectionSetting]
+                if (isResearch) {
+                    delete settings[visit][fieldMapping.baselineMouthwashCollectedTime];
+                }
+                mouthwashTubesLength = totalMouthwasTubesAvail.length;
+            }
+        }
+
+        participantUpdates[fieldMapping.collectionDetails] = settings;
+
+        baselineCollections.forEach(collection => {
+
+            if (!bloodCollected) {
+                bloodTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        bloodCollected = true;
+                    }
+                });
+            } 
+            if (!urineCollected) {
+                urineTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        urineCollected = true;
+                    }
+                });
+            }
+            if (!mouthwashCollected) {
+                mouthwashTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        mouthwashCollected = true;
+                    }
+                });
+            }
+
+        });
+
+        if (baselineCollections.length > 0 && baselineCollections[0][fieldMapping.collectionSetting] === fieldMapping.research) {
+            allBaselineCollected = bloodCollected && urineCollected && mouthwashCollected;
+        }
+        else if (baselineCollections.length > 0 && baselineCollections[0][fieldMapping.collectionSetting] === fieldMapping.clinical) {
+            allBaselineCollected = bloodCollected && urineCollected;
+        }
+
+        participantUpdates = {
+            ...participantUpdates,
+            [fieldMapping.baselineBloodSampleCollected]: bloodCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.baselineUrineCollected]: urineCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.baselineMouthwashCollected]: mouthwashCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.allBaselineSamplesCollected]: allBaselineCollected ? fieldMapping.yes : fieldMapping.no,
+            uid: participantUid
+        };
+
+    }
+    return participantUpdates
 }
 
 const convertSiteLoginToNumber = (siteLogin) => {
@@ -1216,6 +1438,11 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
         if (cancerSiteValidationObj.error === true) {
             return cancerSiteValidationObj;
         }
+
+        const diagnosisAwarenessValidationObj = validateDiagnosisAwareness(occurrence[fieldMapping.vitalStatusCategorical], occurrence[fieldMapping.participantDiagnosisAwareness]);
+        if (diagnosisAwarenessValidationObj.error === true) {
+            return diagnosisAwarenessValidationObj;
+        }
     }
 
     // Query existing occurrences for the participant
@@ -1246,7 +1473,7 @@ const handleCancerOccurrences = async (incomingCancerOccurrenceArray, requiredOc
  * If the 'fieldMapping.cancerSites.other' cancer site is selected, the 'fieldMapping.anotherTypeOfCancerText' field is required.
  * Else, the 'anotherTypeOfCancerText' field should not be present.
  * @param {object} cancerSitesObject - property (740819233) in the cancer occurrence object (637153953).
- * @returns {boolean} - Returns true the above requirements are met, false otherwise.
+ * @returns {object} - Returns an object with error (boolean), message (string), and data (array).
  */
 const validateCancerOccurrence = (cancerSitesObject) => {
     if (!cancerSitesObject || Object.keys(cancerSitesObject).length === 0 || !cancerSitesObject[fieldMapping.primaryCancerSiteCategorical]) {
@@ -1265,6 +1492,23 @@ const validateCancerOccurrence = (cancerSitesObject) => {
     const hasError = isOtherCancerSiteSelected ? !isAnotherTypeOfCancerTextValid : isAnotherTypeOfCancerTextValid;
 
     return { error: hasError, message: hasError ? otherCancerSiteErrorMessage : '', data: [] };
+}
+
+/**
+ * Rules: if vitalStatusCategorical is 'alive' at chart review (114227122: 337516613), participant must be aware of diagnosis (844209241: 353358909). Else, block API request.
+ * If vitalStatusCategorical is 'dead' or 'unknown' (114227122: 646675764 or 178420302), participant awareness can be yes, no, or unknown (844209241: 353358909 or 104430631 or 178420302).
+ * @param {number} vitalStatusCategorical - the participant's vital status (conceptID).
+ * @param {number} participantDiagnosisAwareness - the participant's awareness of diagnosis (conceptID).
+ * @returns {object} - Returns an object with error (boolean), message (string), and data (array).
+ */
+const validateDiagnosisAwareness = (vitalStatusCategorical, participantDiagnosisAwareness) => {
+    const isAliveAtChartReview = vitalStatusCategorical === fieldMapping.vitalStatus.alive;
+    const isParticipantAwareOfDiagnosis = participantDiagnosisAwareness === fieldMapping.yes;
+
+    const isAwarenessValid = isAliveAtChartReview ? isParticipantAwareOfDiagnosis : true;
+    const awarenessErrorMessage = "Participant must be aware of diagnosis if alive at chart review. Otherwise, awareness can be 'yes (353358909)', 'no (104430631)', or 'unknown (178420302)'.";
+
+    return { error: !isAwarenessValid, message: !isAwarenessValid ? awarenessErrorMessage : '', data: [] };
 }
 
 /**
@@ -1322,7 +1566,152 @@ const finalizeCancerOccurrenceData = (occurrenceData, participantToken, particip
     }
 
     return finalizedOccurrenceData;
+}
 
+const birthdayCardParticipantFields = [
+    fieldMapping.preferredName,
+    fieldMapping.lastName,
+    fieldMapping.address1,
+    fieldMapping.address2,
+    fieldMapping.city,
+    fieldMapping.state,
+    fieldMapping.zip,
+];
+
+/**
+ * Handle the incoming NORC birthday card data:
+ *  - Determine the write action needed for the birthday card data.
+ *  - Handle (optional) updates to the participant profile.
+ * Default to creating a new card document, but other cases need to be handled.
+ * If the card exists and is identical, no write action is needed. We still need to update the participant profile if that data is included.
+ * If the card exists and has different data, we need to update the existing card. We also need to update the participant profile if that data is included.
+ */
+
+const handleNorcBirthdayCard = async (incomingBirthdayCardData, requiredBirthdayCardRules, participantToken, participantConnectId, participantProfileHistory) => {
+    // Validate the incoming birthday card data.
+    const birthdayCardValidationObj = validateBirthdayCardData(incomingBirthdayCardData, requiredBirthdayCardRules);
+    if (birthdayCardValidationObj.error) {
+        return birthdayCardValidationObj;
+    }
+
+    // Check for an existing card (where token, mailDate, & cardVersion match) in the birthdayCard collection.
+    const { getExistingBirthdayCard } = require('./firestore');
+    const mailDate = incomingBirthdayCardData[fieldMapping.birthdayCardData.mailDate];
+    const cardVersion = incomingBirthdayCardData[fieldMapping.birthdayCardData.cardVersion];
+    const { existingCardData, cardDocId } = await getExistingBirthdayCard(participantToken, mailDate, cardVersion);
+
+    // Set up the finalized data objects and determine the write action needed.
+    let cardWriteType = '';
+    let finalizedBirthdayCardData = {};
+
+    if (existingCardData) {
+        // Skip the birthdayCard write operation for identical cards. Otherwise, update the existing card.
+        const isBirthdayCardIdenticalResponse = isBirthdayCardIdentical(existingCardData, incomingBirthdayCardData);
+        if (!isBirthdayCardIdenticalResponse) {
+            cardWriteType = 'update';
+        }
+    } else {
+        // Create a new card document. Add token & Connect_ID.
+        cardWriteType = 'create';
+        finalizedBirthdayCardData['token'] = participantToken;
+        finalizedBirthdayCardData['Connect_ID'] = participantConnectId;
+    }
+
+    // Build the finalized birthday card data object.
+    if (cardWriteType && ['create', 'update'].includes(cardWriteType)) {
+        Object.values(fieldMapping.birthdayCardData).forEach(field => {
+            if (incomingBirthdayCardData[field] !== undefined) {
+                finalizedBirthdayCardData[field] = incomingBirthdayCardData[field];
+            }
+        });
+    }
+
+    // Build the participantUpdateData Obj depending on the result of the timestamp check. This data won't always be present.
+    let norcParticipantUpdateData = {};
+    const shouldUpdateProfileHistory = checkProfileHistoryTimestamps(participantProfileHistory, mailDate);
+    if (shouldUpdateProfileHistory) {
+        for (const field of birthdayCardParticipantFields) {
+            if (incomingBirthdayCardData[field] !== undefined) {
+                norcParticipantUpdateData[field] = incomingBirthdayCardData[field];
+            }
+        }
+    }
+
+    const birthdayCardWriteDetails = { cardWriteType, cardDocId };
+
+    return { error: false, message: 'Success!', data: [finalizedBirthdayCardData, norcParticipantUpdateData, birthdayCardWriteDetails] };
+}
+
+/**
+ * Ensure the incoming NORC birthday card data is valid and contains the required fields.
+ * @param {object} incomingBirthdayCardData - The incoming birthday card data.
+ * @param {object} requiredBirthdayCardRules - The required fields for the birthday card data (from updateParticipantData.json).
+ * @returns {object} - Returns an object with an error flag, message, and data array. 
+ */
+const validateBirthdayCardData = (incomingBirthdayCardData, requiredBirthdayCardRules) => {
+    if (!incomingBirthdayCardData || Object.keys(incomingBirthdayCardData).length === 0) {
+        const birthdayCardKeys = birthdayCardCollectionFields.join(', ');
+        return { error: true, message: `Missing birthday card data. Related keys: ${birthdayCardKeys}`, data: [null, null, null] };
+    }
+
+    // Ensure required keys are present.
+    for (const rule of requiredBirthdayCardRules) {
+        const [, propertyKey] = rule.split('.');
+
+        if (!incomingBirthdayCardData || !incomingBirthdayCardData[propertyKey]) {
+            return { error: true, message: `Missing required field: ${propertyKey} in birthday card data`, data: [null, null, null] };
+        }
+    }
+
+    // If return date is provided, ensure the mail date is not after the return date.
+    const mailDate = incomingBirthdayCardData[fieldMapping.birthdayCardData.mailDate];
+    const returnDate = incomingBirthdayCardData[fieldMapping.birthdayCardData.returnDate];
+    if (returnDate && mailDate > returnDate) {
+        return { error: true, message: `Return date cannot be before mail date. Provided data: Mail date: ${mailDate}. Return date ${returnDate}`, data: [null, null, null] };
+    }
+
+    return { error: false, message: 'Success!', data: [null, null, null] };
+}
+
+/**
+ * 
+ * @param {object} existingCard - The existing birthday card data.
+ * @param {object} incomingBirthdayCardData - The incoming birthday card data.
+ * @returns {boolean} - Returns true if the incoming birthday card data is identical to the existing card.
+ */
+const isBirthdayCardIdentical = (existingCard, incomingBirthdayCardData) => {
+    for (let field of Object.values(fieldMapping.birthdayCardData)) {
+        if (incomingBirthdayCardData[field] !== existingCard[field]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Test whether this update is the more recent than the last user profile update. Initial usage: NORC birthday card updates (mailDate).
+ * Compare the timestamp of the most recent user profile update to the timestamp of the incoming update. If the incoming update is more recent, return true.
+ * @param {array | null} userProfileHistory - The user profile history array, or null if no updates have been made to the user's name or address fields.
+ * @param {string} timestampToTest - The timestamp of the incoming update.
+ * @returns {boolean} - Returns true if the incoming update is more recent than the last user profile update.
+ */
+const checkProfileHistoryTimestamps = (userProfileHistory, timestampToTest) => {
+    let mostRecentProfileUpdateTimestamp;
+
+    // If no history exists, the change is more recent than the participant's signup date since the participant must be signed up to receive a birthday card.
+    if (!userProfileHistory || !Array.isArray(userProfileHistory) || userProfileHistory.length === 0) {
+        return true;
+    }
+
+    // The most recent profile update timestamp should always be the last element in the array, but this is a safety check.
+    for (const profileUpdate of userProfileHistory) {
+        const profileUpdateTimestamp = profileUpdate[fieldMapping.userProfileHistoryTimestamp];
+        if (profileUpdateTimestamp && (!mostRecentProfileUpdateTimestamp || profileUpdateTimestamp > mostRecentProfileUpdateTimestamp)) {
+            mostRecentProfileUpdateTimestamp = profileUpdateTimestamp;
+        }
+    }
+
+    return !mostRecentProfileUpdateTimestamp || timestampToTest > mostRecentProfileUpdateTimestamp;
 }
 
 /**
@@ -1355,6 +1744,7 @@ const buildStreckPlaceholderData = (collectionId, streckTubeData) => {
     console.error(`Issue found in updateSpecimen() (ConnectFaas): Streck Tube not found in biospecimenData for collection Id ${collectionId}. Building placeholder data.`);
 }
 
+// Note: prefer validateIso8601Timestamp function for more robust timestamp validation.
 const validIso8601Format = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const validEmailFormat = /^[a-zA-Z0-9.!#$%&'*+"\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,63}$/;
 const validPhoneFormat = /^\d{10}$/;
@@ -1492,6 +1882,8 @@ const updateUserProfileHistory = (dataObj, existingDocData, siteCodes) => {
  * @param {array<string>} selectedFieldsArray - the array of concept ID fields to return. Top-level (non-nested) fields only.
  * @returns {array<object>} - the filtered array of data objects.
  */
+
+// Note: Prefer using Firestore's new .select() method to select the necessary fields instead of filtering fields in the response.
 const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     
     const handleNestedData = (obj, path) => {
@@ -1510,9 +1902,26 @@ const filterSelectedFields = (dataObjArray, selectedFieldsArray) => {
     });
 }
 
-const getTemplateForEmailLink = (email, continueUrl) => {
-    return `
+const getTemplateForEmailLink = (
+    email,
+    continueUrl,
+    preferredLanguage = fieldMapping.english
+) => {
+    return preferredLanguage === fieldMapping.spanish
+        ? `
     <html>
+    <head></head>
+    <body marginheight="0">
+      <p>Hola,</p>
+      <p>Recibimos una solicitud para iniciar sesión en el Estudio Connect para la Prevención del Cáncer usando esta dirección de correo electrónico. Si desea iniciar sesión con su cuenta ${email}, haga clic en este enlace:</p>
+      <p><a href="${continueUrl}" target="_other" rel="nofollow">Iniciar sesión para Estudio Connect para la Prevención del Cáncer:</a></p>
+      <p>Si no solicitó este enlace, puede ignorar este correo electrónico de forma segura.</p>
+      <p>Gracias,</p>
+      <p>Su equipo del Estudio Connect para la Prevención del Cáncer</p>
+    </body>
+    </html>
+  `
+        : ` <html>
     <head></head>
     <body marginheight="0">
       <p>Hello,</p>
@@ -1522,8 +1931,7 @@ const getTemplateForEmailLink = (email, continueUrl) => {
       <p>Thanks,</p>
       <p>Your Connect for Cancer Prevention Study team</p>
     </body>
-    </html>
-  `;
+    </html>`;
 };
 
 const nihMailbox = 'NCIConnectStudy@mail.nih.gov'
@@ -1535,7 +1943,75 @@ const getSecret = async (key) => {
     });
     const payload = version.payload.data.toString();
     return payload;
+};
+
+const cidToLangMapper = {
+    [fieldMapping.english]: "english",
+    [fieldMapping.spanish]: "spanish",
+};
+
+/**
+ * @param {QuerySnapshot | QuerySnapshot[]} snapshot A query snapshot or an array of snapshots
+ * @param {string} infoStr Name of the function and other info to be printed
+ * @returns {void}
+ */
+const printDocsCount = (snapshot, infoStr = "") => {
+  let count = 0;
+  if (Array.isArray(snapshot)) {
+    for (const snap of snapshot) {
+      if (snap.constructor.name !== "QuerySnapshot" || snap.empty) continue;
+      count += snap.size;
+    }
+  } else {
+    if (snapshot.constructor.name !== "QuerySnapshot" || snapshot.empty) return;
+    count = snapshot.size;
+  }
+
+  if (count > 0) {
+    console.log(`Docs read from Firestore: ${count}; function: ${infoStr}`);
+  }
+};
+
+const unsubscribeTextObj = {
+    english:
+        "<p><i>To unsubscribe from emails about Connect from the National Cancer Institute (NCI), <% click here %>.</i></p>",
+    spanish:
+        "<p><i>Para cancelar la suscripción a los correos electrónicos sobre Connect del Instituto Nacional del Cáncer (NCI), <% haga clic aquí %>.</i></p>",
+};
+
+/**
+ * Returns a date string five days ago in ISO format
+ * @returns {string} - ISO string of the date five days ago
+ * @example "2024-08-05T00:00:00.000Z"
+*/
+const getFiveDaysAgoDateISO = () => { 
+    const currentDate = new Date();
+    return new Date(currentDate.setDate(currentDate.getDate() - 5)).toISOString();
 }
+
+/**
+ * Create a new Date object with adjusted time
+ * @param {number | string | Date } inputTime - Input time to adjust
+ * @param {number} [days = 0] - Number of days to adjust
+ * @param {number} [hours = 0] - Number of hours to adjust
+ * @param {number} [minutes = 0] - Number of minutes to adjust
+ * @returns {Date} Adjusted time
+ */
+const getAdjustedTime = (inputTime, days = 0, hours = 0, minutes = 0) => {
+  let adjustedTime = new Date(inputTime);
+  adjustedTime.setDate(adjustedTime.getDate() + days);
+  adjustedTime.setHours(adjustedTime.getHours() + hours);
+  adjustedTime.setMinutes(adjustedTime.getMinutes() + minutes);
+
+  return adjustedTime;
+};
+
+/**
+ * Delay for a specified time, to avoid errors (race conditions, rate limiting, etc.) 
+ * @param {number} ms Delayed time in milliseconds
+ * @returns {Promise<void>}
+ */
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 module.exports = {
     getResponseJSON,
@@ -1545,7 +2021,6 @@ module.exports = {
     randomString,
     deleteDocuments,
     setHeadersDomainRestricted,
-    filterData,
     incentiveFlags,
     lockedAttributes,
     moduleConceptsToCollections,
@@ -1558,7 +2033,7 @@ module.exports = {
     defaultStateFlags,
     SSOValidation,
     conceptMappings,
-    logIPAdddress,
+    logIPAddress,
     decodingJWT,
     initializeTimestamps,
     tubeKeytoNum,
@@ -1566,6 +2041,7 @@ module.exports = {
     sites, 
     bagConceptIDs,
     cleanSurveyData,
+    updateBaselineData,
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
@@ -1599,5 +2075,12 @@ module.exports = {
     getTemplateForEmailLink,
     nihMailbox,
     twilioErrorMessages,
-    getSecret
+    getSecret,
+    cidToLangMapper,
+    printDocsCount,
+    unsubscribeTextObj,
+    getFiveDaysAgoDateISO,
+    delay,
+    getAdjustedTime,
+    handleNorcBirthdayCard,
 };

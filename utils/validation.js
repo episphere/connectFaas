@@ -1,5 +1,6 @@
-const { getResponseJSON, setHeaders, logIPAdddress } = require('./shared');
-const conceptIds = require('./fieldToConceptIdMapping')
+const { getResponseJSON, setHeaders, logIPAddress, getSecret } = require('./shared');
+const conceptIds = require('./fieldToConceptIdMapping');
+
 
 const generateToken = async (req, res, uid) => {
 
@@ -104,7 +105,7 @@ const validateToken = async (req, res, uid) => {
 };
 
 const getToken = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
     if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
 
@@ -179,6 +180,42 @@ const getToken = async (req, res) => {
     else {
         return res.status(400).json(getResponseJSON('Bad request!', 400));
     }
+}
+
+const processMouthwashEligibility = (data) => {
+    // Conditions for initialized: baselineMouthwashSample is no, bloodOrUrineCollected is yes, 
+    // kitStatus does not yet have a value, processParticipantHomeMouthwashKitData passes
+    const updates = {};
+    const {processParticipantHomeMouthwashKitData} = require('./firestore');
+    if(
+        data[conceptIds.withdrawConsent] == conceptIds.no &&
+        data[conceptIds.participantDeceasedNORC] == conceptIds.no &&
+        data[conceptIds.activityParticipantRefusal] && data[conceptIds.activityParticipantRefusal][conceptIds.baselineMouthwashSample] == conceptIds.no &&
+        data[conceptIds.collectionDetails] && data[conceptIds.collectionDetails][conceptIds.baseline] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bloodOrUrineCollected] == conceptIds.yes &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bloodOrUrineCollectedTimestamp] >= '2024-04-01T00:00:00.000Z' &&
+        (
+            !data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] ||
+            data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash][conceptIds.kitStatus] !== conceptIds.initialized
+        )
+    ) {
+        const isEligible = !!processParticipantHomeMouthwashKitData(data, true);
+        if(isEligible) {
+            updates[`${conceptIds.collectionDetails}.${conceptIds.baseline}.${conceptIds.bioKitMouthwash}.${conceptIds.kitStatus}`] = conceptIds.initialized;
+        }
+    } else if(
+        data[conceptIds.collectionDetails] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] &&
+        data[conceptIds.collectionDetails][conceptIds.baseline][conceptIds.bioKitMouthwash] == conceptIds.initialized
+    ) {
+        // Conditions to remove initialized: status is initialized and processParticipantHomeMouthwashKitData fails
+        const isEligible = !!processParticipantHomeMouthwashKitData(data, true);
+        if(!isEligible) {
+            updates[`${conceptIds.collectionDetails}.${conceptIds.baseline}.${conceptIds.bioKitMouthwash}.${conceptIds.kitStatus}`] = undefined;
+        }
+    }
+    return updates;
 }
 
 const checkDerivedVariables = async (token, siteCode) => {
@@ -435,7 +472,6 @@ const checkSamplesDonated = (data) => {
 }
 
 const checkRefusalWithdrawals = (data) => {
-
     const anyRefusalWithdrawal = (
         data['685002411']['194410742'] === 353358909 ||
         data['685002411']['217367618'] === 353358909 ||
@@ -444,6 +480,11 @@ const checkRefusalWithdrawals = (data) => {
         data['685002411']['867203506'] === 353358909 ||
         data['685002411']['949501163'] === 353358909 ||
         data['685002411']['994064239'] === 353358909 ||
+        data['685002411']['101763809'] === 353358909 ||
+        data['685002411']['525277409'] === 353358909 ||
+        data['685002411']['936015433'] === 353358909 ||
+        data['685002411']['688142378'] === 353358909 ||
+        data['685002411']['671903816'] === 353358909 ||
         data['726389747'] === 353358909 ||
         data['747006172'] === 353358909 ||
         data['773707518'] === 353358909 ||
@@ -453,10 +494,10 @@ const checkRefusalWithdrawals = (data) => {
     ); 
 
     return anyRefusalWithdrawal;
-}
+};
 
 const validateUsersEmailPhone = async (req, res) => {
-    logIPAdddress(req);
+    logIPAddress(req);
     setHeaders(res);
     if(req.method !== 'GET') {
         return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
@@ -467,6 +508,55 @@ const validateUsersEmailPhone = async (req, res) => {
     if (result) return res.status(200).json({data: {accountExists: true}, code: 200})
     else return res.status(200).json({data: {accountExists: false}, code: 200})
 }
+
+const emailAddressValidation = async (req, res) => {
+    logIPAddress(req);
+    setHeaders(res);
+
+    if (req.method !== "POST") {
+        return res
+            .status(405)
+            .json(getResponseJSON("Only POST requests are accepted!", 405));
+    }
+
+    if (!req.body) {
+        return res.status(400).json(getResponseJSON("Bad Request", 400));
+    }
+    
+    const secret = await getSecret(process.env.GCLOUD_SENDGRID_EMAIL_VALIDATION_SECRET);
+    const sgClient = require('@sendgrid/client');
+    sgClient.setApiKey(secret);
+
+    const { emails } = JSON.parse(req.body);
+    const result = {};
+    try {
+        // Prepare the list of validation requests
+        const validationPromises = Object.keys(emails).map(async (key) => {
+            const email = emails[key];
+            if (!email) return { key, result: null }; // Skip if email is empty
+
+            const [_, body] = await sgClient.request({
+                url: "/v3/validations/email",
+                method: "POST",
+                body: { email },
+            });
+            return { key, result: body.result };
+        });
+
+        // Await all validation promises
+        const validationResults = await Promise.all(validationPromises);
+
+        // Populate the result object with the outcomes
+        validationResults.forEach(({ key, result: validationResult }) => {
+            if (validationResult) result[key] = validationResult;
+        });
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+};
 
 const updateParticipantFirebaseAuthentication = async (req, res) => {
     if(req.method !== 'POST') {
@@ -503,12 +593,73 @@ const isIsoDate = (str) => {
     return d instanceof Date && !isNaN(d) && d.toISOString() === str; // valid date 
 }
 
+/**
+ * Validate an ISO 8601 timestamp. Use capturing groups to extract year, month, day, hour, minute, and second.
+ * Millisecond validation (range 000-999) is handled by the regex.
+ * Ensure all values are within the acceptable range for each field.
+ * @param {string} timestamp - the ISO 8601 timestamp to validate.
+ * @returns {object} - an object with an error flag and message.
+ */
+
+const iso8601Regex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
+
+const validateIso8601Timestamp = (timestamp) => {
+    const match = typeof timestamp === 'string' && timestamp.match(iso8601Regex);
+    if (!match) {
+        return { error: true, message: "Invalid ISO 8601 format. ISO 8601 string required. Example: '2023-12-15T12:45:52.123Z'" };
+    }
+
+    const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = match;
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
+    const hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr, 10);
+    const second = parseInt(secondStr, 10);
+
+    const currentYear = new Date().getUTCFullYear();
+
+    if (year < 1900 || year > currentYear) {
+        return { error: true, message: `Year must be between 1900 and ${currentYear}` };
+    }
+    if (month < 1 || month > 12) {
+        return { error: true, message: "Month must be between 1 and 12" };
+    }
+
+    const monthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (year % 400 === 0 || (year % 100 !== 0 && year % 4 === 0)) {
+        monthLengths[1] = 29;
+    }
+
+    if (day < 1 || day > monthLengths[month - 1]) {
+        return { error: true, message: `Day must be between 1 and ${monthLengths[month - 1]} for ${monthStr}/${yearStr}` };
+    }
+
+    if (hour < 0 || hour > 23) {
+        return { error: true, message: "Hour must be between 0 and 23" };
+    }
+
+    if (minute < 0 || minute > 59) {
+        return { error: true, message: "Minute must be between 0 and 59" };
+    }
+
+    if (second < 0 || second > 59) {
+        return { error: true, message: "Second must be between 0 and 59" };
+    }
+
+    // success case
+    return { error: false, message: "" };
+};
+
 module.exports = {
     generateToken,
     validateToken,
     getToken,
+    processMouthwashEligibility,
     checkDerivedVariables,
     validateUsersEmailPhone,
+    emailAddressValidation,
     updateParticipantFirebaseAuthentication,
-    isIsoDate
+    isIsoDate,
+    validateIso8601Timestamp,
 }
