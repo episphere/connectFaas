@@ -167,15 +167,15 @@ const dashboard = async (req, res) => {
             return res.status(405).json(getResponseJSON('Only POST requests are accepted!', 405));
         }
         let body = req.body;
-        const { connectId, currentPaymentRound, dateOfEligibility } = body;
+        const { connectId, currentPaymentRound, dateOfEligibilityInput } = body;
 
         if (!connectId) return res.status(405).json(getResponseJSON('Missing participant\'s Connect ID!', 405));
         if (!currentPaymentRound) return res.status(405).json(getResponseJSON('Missing current payment round information!', 405));
-        if (!dateOfEligibility) return res.status(405).json(getResponseJSON('Missing date of eligibility!', 405));
+        if (!dateOfEligibilityInput) return res.status(405).json(getResponseJSON('Missing date of eligibility!', 405));
 
         try {
             const { updateParticipantIncentiveEligibility } = require('./firestore');
-            const data = await updateParticipantIncentiveEligibility(connectId, currentPaymentRound, dateOfEligibility);
+            const data = await updateParticipantIncentiveEligibility(connectId, currentPaymentRound, dateOfEligibilityInput);
             return res.status(200).json({data: data, message:"Participant Eligibility Sucessfully Updated!" ,code: 200});
         } catch (err) {
             console.error('error', err);
