@@ -145,6 +145,7 @@ const withdrawalConcepts = {
         688142378: 104430631,
         101763809: 104430631,
         525277409: 104430631,
+        671903816: 104430631,
     },
     906417725: 104430631,
     773707518: 104430631,
@@ -251,8 +252,9 @@ const moduleConceptsToCollections = {
     "D_166676176" :     "ssn",
     "D_390351864" :     "mouthwash_v1",
     "D_601305072" :     "promis_v1",
-    "D_506648060" :     "experience2024"
-}
+    "D_506648060" :     "experience2024",
+    "D_369168474":      "cancerScreeningHistorySurvey",
+};
 
 const moduleStatusConcepts = {
     "949302066" :       "module1",
@@ -266,8 +268,9 @@ const moduleStatusConcepts = {
     "126331570" :       "ssn",
     "547363263" :       "mouthwash",
     "320303124" :       "promis",
-    "956490759" :       "experience2024"
-}
+    "956490759" :       "experience2024",
+    "176068627":       "cancerScreeningHistorySurvey"
+};
 
 const listOfCollectionsRelatedToDataDestruction = [
     "bioSurvey_v1",
@@ -284,7 +287,8 @@ const listOfCollectionsRelatedToDataDestruction = [
     "promis_v1",
     "mouthwash_v1",
     "ssn",
-    "experience2024" 
+    "experience2024",
+    "cancerScreeningHistorySurvey"
 ];
 
 const incentiveConcepts = {
@@ -307,21 +311,6 @@ const conceptMappings = {
     'outreachtimedout': 160161595
 };
 
-const retentionConcepts = [
-    'token',
-    'pin',
-    'Connect_ID',
-    'state.uid',
-    'state.studyId',
-    '399159511', // user profile first name
-    '996038075', // user profile last name
-    '371067537', // DOB
-    '388711124', // Mobile no.
-    '869588347', // Preferred email
-    '454205108', // Consent version
-    '454445267', // consent datetime
-]
-
 const refusalWithdrawalConcepts = {
     "refusedBaselineBlood": "685002411.194410742",
     "refusedBaselineSpecimenSurvey": "685002411.217367618",
@@ -335,6 +324,7 @@ const refusalWithdrawalConcepts = {
     "refusedAllFutureConnectExperienceSurveys": "685002411.525277409",
     "refusedQOL3moSurveys": "685002411.936015433",
     "refusedAllFutureQOLSurveys": "685002411.688142378",
+    "refusedCanScreeningHistorySurvey": "685002411.671903816",
 
     "suspendedContact": "726389747",
     "withdrewConsent": "747006172",
@@ -784,12 +774,223 @@ const cleanSurveyData = (data) => {
     const admin = require('firebase-admin');
     
     Object.keys(data).forEach(key => {
-        if(data[key] === null) {
+        if (data[key] === null || data[key] === undefined) {
             data[key] = admin.firestore.FieldValue.delete();
         }
     });
 
     return data;
+}
+
+/**
+ * Gets baseline data updates for participants when submitting specimens
+ * 
+ * @param {object} biospecimenData The biospecimen data
+ * @param {object} participantData The participant data
+ * @param {array} specimenArray The array of specimens for the participant
+ * @param {array} siteTubesList The array of tubes used for the site
+ * @returns {object}
+ */
+const updateBaselineData = (biospecimenData, participantData, participantUid, specimenArray, siteTubesList) => {
+    let participantUpdates = {};
+    let settings = {};
+    let visit = biospecimenData[fieldMapping.collectionSelectedVisit];
+    // Now we potentially need to updateBaselineData
+    const baselineVisit = (biospecimenData[fieldMapping.collectionSelectedVisit] === fieldMapping.baseline);
+    const clinicalResearchSetting = (biospecimenData[fieldMapping.collectionSetting] === fieldMapping.research || biospecimenData[fieldMapping.collectionSetting] === fieldMapping.clinical);
+    if (baselineVisit && clinicalResearchSetting) {
+        // Update baseline data
+        const baselineCollections = specimenArray.filter(specimen => specimen[fieldMapping.collectionSelectedVisit] === fieldMapping.baseline);
+
+        const bloodTubes = siteTubesList.filter(tube => tube.tubeType === "Blood tube");
+        const urineTubes = siteTubesList.filter(tube => tube.tubeType === "Urine");
+        const mouthwashTubes = siteTubesList.filter(tube => tube.tubeType === "Mouthwash");
+
+        let bloodCollected = (participantData[fieldMapping.baselineBloodSampleCollected] === fieldMapping.yes);
+        let urineCollected = (participantData[fieldMapping.baselineUrineCollected] === fieldMapping.yes);
+        let mouthwashCollected = (participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes);
+        let allBaselineCollected = (participantData[fieldMapping.allBaselineSamplesCollected] === fieldMapping.yes);
+
+        let bloodTubesLength = 0
+        let urineTubesLength = 0
+        let mouthwashTubesLength = 0
+
+        const collectionSetting = biospecimenData[fieldMapping.collectionSetting];
+        const isResearch = collectionSetting === fieldMapping.research;
+        const isClinical = collectionSetting === fieldMapping.clinical;
+
+        // Build the collection details
+        if (participantData[fieldMapping.collectionDetails]) {
+            settings = participantData[fieldMapping.collectionDetails];
+            if (!settings[visit]) settings[visit] = {};
+
+        } else {
+            settings = {
+                [visit]: {}
+            }
+        }
+
+        if (!settings[visit][fieldMapping.bloodCollectionSetting]) {
+            bloodTubes.forEach(tube => {
+                const tubeIsCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if(tubeIsCollected) {
+                    settings[visit][fieldMapping.bloodCollectionSetting] = collectionSetting;
+                    if(isResearch) {
+                        settings[visit][fieldMapping.baselineBloodCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                    else if(isClinical) {
+                        settings[visit][fieldMapping.clinicalBloodCollected] = fieldMapping.yes;
+                        settings[visit][fieldMapping.clinicalBloodCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.yes;
+
+                        if(!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            settings[visit][fieldMapping.anySpecimenCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+                        }
+                    }
+                    bloodTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineBloodCollectedTime] !== '' ||  settings[visit][fieldMapping.clinicalBloodCollectedTime] !== ''){
+            const participantBloodCollected = participantData[fieldMapping.baselineBloodSampleCollected] === fieldMapping.yes;
+            const totalBloodTubesAvail = bloodTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalBloodTubesAvail.length === 0 && participantBloodCollected) {
+                delete settings[visit][fieldMapping.bloodCollectionSetting]; // derived variables & timestamp are updated only if all the blood tubes are unchecked
+                if (isResearch) {
+                    delete settings[visit][fieldMapping.baselineBloodCollectedTime];
+                }
+                else if (isClinical) {
+                    settings[visit][fieldMapping.clinicalBloodCollected] = fieldMapping.no;
+                    delete settings[visit][fieldMapping.clinicalBloodCollectedTime];
+
+                    if (urineTubesLength === 0 && mouthwashTubesLength === 0) { // anySpecimenCollected variable will only be updated to NO if mouthwash & urine specimens are not present.
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.no;
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            delete settings[visit][fieldMapping.anySpecimenCollectedTime];
+                        }
+                    }
+                }
+                participantUpdates[fieldMapping.baselineBloodSampleCollected] = fieldMapping.no;
+                bloodTubesLength = totalBloodTubesAvail.length;
+            }
+        }
+
+        if (!settings[visit][fieldMapping.urineCollectionSetting]) {
+            urineTubes.forEach(tube => {
+                const tubeIsCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if (tubeIsCollected) {
+                    settings[visit][fieldMapping.urineCollectionSetting] = collectionSetting;
+                    if (isResearch) {
+                        settings[visit][fieldMapping.baselineUrineCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                    else if (isClinical) {
+                        settings[visit][fieldMapping.clinicalUrineCollected] = fieldMapping.yes;
+                        settings[visit][fieldMapping.clinicalUrineCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.yes;
+
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            settings[visit][fieldMapping.anySpecimenCollectedTime] = biospecimenData[fieldMapping.collectionScannedTime];
+                        }
+                    }
+                    urineTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineUrineCollectedTime] !== '' ||  settings[visit][fieldMapping.clinicalUrineCollectedTime] !== '') {
+            const participantUrineCollected = participantData[fieldMapping.baselineUrineCollected] === fieldMapping.yes;
+            const totalUrineTubesAvail = urineTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalUrineTubesAvail.length === 0 && participantUrineCollected) {
+                delete settings[visit][fieldMapping.urineCollectionSetting];
+                if(isResearch) {
+                    delete settings[visit][fieldMapping.baselineUrineCollectedTime];
+                }
+                else if (isClinical) {
+                    settings[visit][fieldMapping.clinicalUrineCollected] = fieldMapping.no;
+                    delete settings[visit][fieldMapping.clinicalUrineCollectedTime];
+
+                    if (bloodTubesLength === 0 && mouthwashTubesLength === 0) { // anySpecimenCollected variable will only be updated to NO if mouthwash & blood specimens are not present.
+                        settings[visit][fieldMapping.anySpecimenCollected] = fieldMapping.no;
+                        if (!(settings[visit][fieldMapping.anySpecimenCollectedTime])) {
+                            delete settings[visit][fieldMapping.anySpecimenCollectedTime];
+                        }
+                    }
+                }
+                urineTubesLength = totalUrineTubesAvail.length;
+            }  
+        }
+
+        if (!settings[visit][fieldMapping.mouthwashCollectionSetting]) {
+            mouthwashTubes.forEach(tube => {
+                const isTubeCollected = biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes;
+                if (isTubeCollected) {
+                    settings[visit][fieldMapping.mouthwashCollectionSetting] = collectionSetting;
+                    if (isResearch) {
+                        settings[visit][fieldMapping.baselineMouthwashCollectedTime] = biospecimenData[fieldMapping.collectionDateTimeStamp];
+                    }
+                mouthwashTubesLength += 1
+                }
+            });
+        }
+        else if (settings[visit][fieldMapping.baselineMouthwashCollectedTime] !== '' && participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes) {
+            const isParticipantMouthwashCollected = participantData[fieldMapping.baselineMouthwashCollected] === fieldMapping.yes;
+            const totalMouthwasTubesAvail = mouthwashTubes.filter((tube) => biospecimenData[tube.concept][fieldMapping.tubeIsCollected] === fieldMapping.yes);
+            if (totalMouthwasTubesAvail.length === 0 &&  isParticipantMouthwashCollected) {
+                delete settings[visit][fieldMapping.mouthwashCollectionSetting]
+                if (isResearch) {
+                    delete settings[visit][fieldMapping.baselineMouthwashCollectedTime];
+                }
+                mouthwashTubesLength = totalMouthwasTubesAvail.length;
+            }
+        }
+
+        participantUpdates[fieldMapping.collectionDetails] = settings;
+
+        baselineCollections.forEach(collection => {
+
+            if (!bloodCollected) {
+                bloodTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        bloodCollected = true;
+                    }
+                });
+            } 
+            if (!urineCollected) {
+                urineTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        urineCollected = true;
+                    }
+                });
+            }
+            if (!mouthwashCollected) {
+                mouthwashTubes.forEach(tube => {
+                    if (collection[tube.concept]?.[fieldMapping.tubeIsCollected] === 353358909) {
+                        mouthwashCollected = true;
+                    }
+                });
+            }
+
+        });
+
+        if (baselineCollections.length > 0 && baselineCollections[0][fieldMapping.collectionSetting] === fieldMapping.research) {
+            allBaselineCollected = bloodCollected && urineCollected && mouthwashCollected;
+        }
+        else if (baselineCollections.length > 0 && baselineCollections[0][fieldMapping.collectionSetting] === fieldMapping.clinical) {
+            allBaselineCollected = bloodCollected && urineCollected;
+        }
+
+        participantUpdates = {
+            ...participantUpdates,
+            [fieldMapping.baselineBloodSampleCollected]: bloodCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.baselineUrineCollected]: urineCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.baselineMouthwashCollected]: mouthwashCollected ? fieldMapping.yes : fieldMapping.no,
+            [fieldMapping.allBaselineSamplesCollected]: allBaselineCollected ? fieldMapping.yes : fieldMapping.no,
+            uid: participantUid
+        };
+
+    }
+    return participantUpdates
 }
 
 const convertSiteLoginToNumber = (siteLogin) => {
@@ -1840,6 +2041,7 @@ module.exports = {
     sites, 
     bagConceptIDs,
     cleanSurveyData,
+    updateBaselineData,
     refusalWithdrawalConcepts,
     convertSiteLoginToNumber,
     swapObjKeysAndValues,
