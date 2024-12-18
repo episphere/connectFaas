@@ -161,6 +161,15 @@ const validateSiteSAEmail = async (saEmail) => {
     }
 }
 
+const getParticipantDataByConnectID = async (connectId) => {
+    const snapshot = await db.collection('participants')
+        .where('Connect_ID', '==', +connectId)
+        .get();
+    if (snapshot.size === 1) {
+        return {id: snapshot.docs[0].id, data: snapshot.docs[0].data()};
+    }
+}
+
 const getParticipantData = async (token, siteCode, isParent) => {
     try{
         const operator = isParent ? 'in' : '==';
@@ -3927,6 +3936,7 @@ module.exports = {
     getChildren,
     deleteFirestoreDocuments,
     getParticipantData,
+    getParticipantDataByConnectID,
     updateParticipantData,
     resetParticipantHelper,
     storeNotificationTokens,

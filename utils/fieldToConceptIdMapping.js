@@ -80,6 +80,8 @@ module.exports = {
 
     // Specimen baselines
     baselineUrineCollected: 167958071,
+    baselineBloodSampleRefused: 194410742,
+    baselineUrineSampleRefused: 949501163,
     baselineBloodAndUrineIsRefused: 526455436,
     baselineMouthwashCollected: 684635302,
     baselineBloodSampleCollected: 878865966,
@@ -221,6 +223,10 @@ module.exports = {
      baselineMouthwashSample: 277479354,
      bloodOrUrineCollected: 156605577,
      bloodOrUrineCollectedTimestamp: 740582332,
+     baselineBloodOrUrineOrderPlaced: 880794013,
+     bloodOrderPlaced: 530173840,
+     urineOrderPlaced: 860477844,
+     clinicalSiteBloodCollected: 693370086,
      collectionRound: 418571751,
      mouthwashKit: 976461859,
      mouthwashSurveyCompletionStatus: 547363263,
@@ -407,6 +413,7 @@ module.exports = {
         participationStatus: 912301837,
         incentive: 130371375,
         incentiveEligible: 731498909,
+        menstrualSurveyEligible: 289750687,
         dateIncentiveEligible: 787567527,
         norcIncentiveEligible: 222373868,
         incentiveIssued: 648936790,

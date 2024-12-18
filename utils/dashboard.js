@@ -141,6 +141,38 @@ const dashboard = async (req, res) => {
         else {
           return res.status(403).json(getResponseJSON('Operation only permitted on dev environment', 403));
         }
+      } else if (api === 'getUserJSON') {
+        if (req.method !== 'GET') {
+            return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+        }
+
+        // Only permit for dev apps
+        if (process.env.GCLOUD_PROJECT === 'nih-nci-dceg-connect-dev') {
+            let body = req.body;
+            if (!body.uid) {
+                return res.status(405).json(getResponseJSON('Missing UID!', 405));
+            }
+            if(!req.query.connect_id) {
+                return res.status(500).json(getResponseJSON('No query parameter connect_id provided', 500));
+            }
+            const { getParticipantDataByConnectID } = require('./firestore');
+            try {
+              const data = await getParticipantDataByConnectID(req.query.connect_id)  ;
+              if (!data) {
+                  return res.status(404).json(getResponseJSON('Participant not found', 404));
+              }
+              return res.status(200).json({data: data, code: 200});
+            }
+            catch(err) {
+              console.error('error', err);
+              return res.status(500).json({data: 'Error: ' + (err && err.toString ? err.toString() : err), code: 500});
+            }
+            
+          }
+          else {
+            return res.status(403).json(getResponseJSON('Operation only permitted on dev environment', 403));
+          }
+
       }
     else {
         return res.status(404).json(getResponseJSON('API not found!', 404));
