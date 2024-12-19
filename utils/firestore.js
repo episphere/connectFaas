@@ -1304,101 +1304,69 @@ const storeSpecimen = async (data) => {
 }
 
 const submitSpecimen = async (biospecimenData, participantData, siteTubesList) => {
-    // First update the biospecimenData
-    // Under current conditions there will only ever be one specimen per call
+    const { checkDerivedVariables, processMouthwashEligibility } = require('./validation');
+    const { buildStreckPlaceholderData, updateBaselineData } = require('./shared');
+
+    // Get the existing participant data (necessary for data reconciliation purposes)
+    const participantUid = participantData.state.uid;
+    if (!participantUid) throw new Error('Missing participant UID!');
+
+    const siteCode = participantData[fieldMapping.healthCareProvider];
+    const participantToken = participantData['token'];
+
+    // Remove locked attributes.
+    const { lockedAttributes } = require('./shared');
+    lockedAttributes.forEach(atr => delete participantData[atr]);
+
     try {
-        let participantToken, siteCode;
-        // Get the existing participant data (necessary for data reconciliation purposes)
-        const participantUid = participantData.state.uid;
-        if(!participantUid) {
-            throw new Error('Missing participant UID!');
-        }
-        const {processMouthwashEligibility} = require('./validation');
-
-        await db.runTransaction(async transaction => {
-            // @TODO: Honestly we could go through a lot of the helper methods with code overlap
-            // and set them up to allow transactions as a parameter
-            // in order to be called within a transaction without redundant code
-
-            // Specimen ID is stored in key 820476880 (collectionId)
-
-            // If necessary, update the biospecimenData to have the correct Streck placeholder data
-            if (!biospecimenData[fieldMapping.tubesBagsCids.streckTube]) { // Check for streck data due to intermittent null streck values in Firestore (11/2023).
-                const { buildStreckPlaceholderData } = require('./shared');
-                buildStreckPlaceholderData(biospecimenData[fieldMapping.collectionId], biospecimenData[fieldMapping.tubesBagsCids.streckTube] = {});
-            }
-
-            // Basically do equivalent of
-            //  const participant = await retrieveUserProfile(uid);
-            // const siteCode = participant['827220437'];
-
-            const participantQuery = db.collection('participants')
-                .where('state.uid', '==', participantUid);
-            const participantSnapshot = await transaction.get(participantQuery);
-
-            if(participantSnapshot.size === 0) {
-                throw new Error('Participant with uid ' + participantUid + 'not found.');
-            }
-
-            const participantSnapshotData = participantSnapshot.docs[0].data();
-            siteCode = participantSnapshotData[fieldMapping.healthCareProvider];
-            participantToken = participantSnapshotData['token'];
-
-
-            // Extremely similar to submit function in submission.js
-
-            // Remove locked attributes.
-            const { lockedAttributes } = require('./shared');
-            lockedAttributes.forEach(atr => delete participantData[atr]);
-
-            // We should not need to cover the consent form or survey submission  cases here
-
-            // We need to get the token and use it to get the specimen collections and user surveys
-            // Get the token via the equivalent of const token = await getTokenForParticipant(uid); but within a transaction
-
-            const specimenCollectionQuery = db.collection('biospecimen')
-                .where('token', '==', participantToken)
+        // Get the Doc Refs for the participant and specimen updates
+        const [participantSnapshot, specimenCollectionSnapshot] = await Promise.all([
+            db.collection('participants').where('state.uid', '==', participantUid).get(),
+            db.collection('biospecimen').where('token', '==', participantToken)
                 .where(fieldMapping.healthCareProvider.toString(), '==', siteCode)
-                .where(fieldMapping.collectionId.toString(), '==', biospecimenData[fieldMapping.collectionId]);
-            const specimenCollectionSnapshot = await transaction.get(specimenCollectionQuery);
-            const specimenArray = specimenCollectionSnapshot.size > 0 ? 
-                specimenCollectionSnapshot.docs.map(document => document.data()) :
-                [];
+                .where(fieldMapping.collectionId.toString(), '==', biospecimenData[fieldMapping.collectionId])
+                .get(),
+        ]);
 
-            const { buildStreckPlaceholderData, updateBaselineData } = require('./shared');
-            let participantUpdates = updateBaselineData(biospecimenData, participantData, participantUid, specimenArray, siteTubesList);
+        // Validate participant
+        if (participantSnapshot.size !== 1 || specimenCollectionSnapshot.size !== 1) {
+            throw new Error(`Expected 1 participant and 1 specimen collection document. Found: Participant: ${participantSnapshot.size}. Specimen Collection: ${specimenCollectionSnapshot.size}.`);
+        }
 
+        const participantDocRef = participantSnapshot.docs[0].ref;
+        const specimenDocRef = specimenCollectionSnapshot.docs[0].ref;
+
+        // If necessary, update the biospecimenData to have the correct Streck placeholder data
+        if (!biospecimenData[fieldMapping.tubesBagsCids.streckTube]) { // Check for streck data due to intermittent null streck values in Firestore (11/2023).
+            const { buildStreckPlaceholderData } = require('./shared');
+            buildStreckPlaceholderData(biospecimenData[fieldMapping.collectionId], biospecimenData[fieldMapping.tubesBagsCids.streckTube] = {});
+        }
+
+        // Run the transaction
+        await db.runTransaction(async transaction => {
+            // Update the participant and biospecimen data
+            let participantUpdates = updateBaselineData(biospecimenData, participantData, siteTubesList);
             participantUpdates = { ...participantData, ...participantUpdates};
-            // Now run equivalent of updateParticipantData(participantSnapshot.docs[0].id, updates);
-            transaction.update(participantSnapshot.docs[0].ref, participantUpdates);
-            transaction.update(specimenCollectionSnapshot.docs[0].ref, biospecimenData);
+            
+            transaction.update(participantDocRef, participantUpdates);
+            transaction.update(specimenDocRef, biospecimenData);
         });
-        // After discussion, we have elected to leave checkDerivedVariables as separate logic
-        // outside of the transaction for legacy purposes
-        const {checkDerivedVariables} = require('./validation');
+
+        // This must run sequentially. checkDerivedVariables is a legacy function, and it must run after the participant update.
+        // Then, need to re-pull the updated participant afterwards.
         await checkDerivedVariables(participantToken, siteCode);
-        // Now process mouthwash eligibility
-        // This needs the above to run and so is outside of the transaction
-        // First get the updated participant data
-        const participantSnapshot = await db.collection('participants')
-            .where('state.uid', '==', participantUid)
-            .get();
-        const eligibilityUpdates = processMouthwashEligibility(participantSnapshot.docs[0].data());
-
+        const participantSnapshotAfterDerivation = await db.collection('participants').where('state.uid', '==', participantUid).get();
+        
+        // Process mouthwash eligibility. This needs the above to run and so is outside of the transaction
+        const eligibilityUpdates = processMouthwashEligibility(participantSnapshotAfterDerivation.docs[0].data());
         if (eligibilityUpdates && Object.keys(eligibilityUpdates).length) {
-            await participantSnapshot.docs[0].ref.update(eligibilityUpdates);
+            await participantDocRef.update(eligibilityUpdates);
         }
 
-        return {
-            code: 200,
-            message: 'Success'
-        }
+        return { code: 200, message: 'Success' }
     } catch(err) {
         console.error('error', err);
-        return {
-            code: 500,
-            message: err && err.message ? err.message : (err + '')
-        }
+        return { code: 500, message: err && err.message ? err.message : (err + '') }
     }
 }
 
