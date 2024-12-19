@@ -1304,9 +1304,8 @@ const storeSpecimen = async (data) => {
 }
 
 const submitSpecimen = async (biospecimenData, participantData, siteTubesList) => {
-    const { processMouthwashEligibility } = require('./validation');
+    const { checkDerivedVariables, processMouthwashEligibility } = require('./validation');
     const { buildStreckPlaceholderData, updateBaselineData } = require('./shared');
-    const { checkDerivedVariables } = require('./validation');
 
     // Get the existing participant data (necessary for data reconciliation purposes)
     const participantUid = participantData.state.uid;
