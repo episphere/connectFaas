@@ -197,25 +197,20 @@ const getParticipants = async (req, res, authObj) => {
     logIPAddress(req);
     setHeaders(res);
 
-    if(req.method === 'OPTIONS') return res.status(200).json({code: 200});
-        
-    if(req.method !== 'GET') {
-        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
-    }
+    if (req.method === 'OPTIONS') return res.status(200).json({code: 200});
+    if (req.method !== 'GET') return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+
     let obj = {};
+
     if(authObj) {
         obj = authObj;
     }
     else {
         const { APIAuthorization } = require('./shared');
         const authorized = await APIAuthorization(req);
-        if(authorized instanceof Error){
-            return res.status(500).json(getResponseJSON(authorized.message, 500));
-        }
-    
-        if(!authorized){
-            return res.status(401).json(getResponseJSON('Authorization failed!', 401));
-        }
+
+        if (authorized instanceof Error) return res.status(500).json(getResponseJSON(authorized.message, 500));
+        if (!authorized) return res.status(401).json(getResponseJSON('Authorization failed!', 401))
     
         const { isParentEntity } = require('./shared');
         obj = await isParentEntity(authorized);
@@ -224,13 +219,12 @@ const getParticipants = async (req, res, authObj) => {
     const isParent = obj.isParent;
     const siteCodes = obj.siteCodes;
 
-    if(!req.query.type) return res.status(404).json(getResponseJSON('Resource not found', 404));
-
-    if(req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
+    if (!req.query.type) return res.status(404).json(getResponseJSON('Resource not found!', 404));
+    if (req.query.limit && parseInt(req.query.limit) > 1000) return res.status(400).json(getResponseJSON('Bad request, the limit cannot exceed more than 1000 records!', 400));
 
     let queryType = '';
     const limit = req.query.limit ? parseInt(req.query.limit) : 100;
-    const page = req.query.page ? parseInt(req.query.page) : 1;
+    const cursor = req.query.cursor ?? null;
 
     const { getRestrictedFields } = require('./firestore')
     const restriectedFields = await getRestrictedFields();
@@ -247,16 +241,19 @@ const getParticipants = async (req, res, authObj) => {
     else if (req.query.type === 'passive') queryType = req.query.type;
     else if (req.query.type === 'individual'){
         if (req.query.token) {
-            queryType = "individual";
+
             const { individualParticipant } = require(`./firestore`);
+
             let response = await individualParticipant('token', req.query.token, siteCodes, isParent);
-            if(!response) return res.status(404).json(getResponseJSON('Resource not found', 404));
+
+            if(!response) return res.status(404).json(getResponseJSON('Resource not found!', 404));
             if(response instanceof Error) res.status(500).json(getResponseJSON(response.message, 500));
+
             if(response.length > 0) response = removeRestrictedFields(response, restriectedFields, isParent);
             if(response) return res.status(200).json({data: response, code: 200})
         }
         else{
-            return res.status(400).json(getResponseJSON('Bad request', 400));
+            return res.status(400).json(getResponseJSON('Bad request!', 400));
         }
     }
     else if(req.query.type === 'filter') {
@@ -284,30 +281,39 @@ const getParticipants = async (req, res, authObj) => {
         }
 
         const { retrieveRefusalWithdrawalParticipants } = require('./firestore');
-        let result = await retrieveRefusalWithdrawalParticipants(siteCodes, isParent, concept, limit, page);
+        let result = await retrieveRefusalWithdrawalParticipants(siteCodes, isParent, concept, limit, cursor);
 
         if(result instanceof Error){
             return res.status(400).json(getResponseJSON(result.message, 400));
         }
 
-        return res.status(200).json({data: result, code: 200, limit, dataSize: result.length});
+        // remove restricted fields
+
+        return res.status(200).json({data: result, code: 200});
     }
     else{
-        return res.status(404).json(getResponseJSON('Resource not found', 404));
+        return res.status(404).json(getResponseJSON('Resource not found!', 404));
     }
+
     const { retrieveParticipants } = require(`./firestore`);
-    const site = isParent && req.query.siteCode && siteCodes.includes(parseInt(req.query.siteCode)) ? parseInt(req.query.siteCode) : null;
-    if(site) console.log(`Retrieving data for siteCode - ${site}`);
+
+    // const site = isParent && req.query.siteCode && siteCodes.includes(parseInt(req.query.siteCode)) ? parseInt(req.query.siteCode) : null;
     const from = req.query.from ? req.query.from : null; 
     const to = req.query.to ? req.query.to : null; 
-    let data = await retrieveParticipants(siteCodes, queryType, isParent, limit, page, site, from, to);
+
+    let data = await retrieveParticipants(siteCodes, queryType, isParent, limit, cursor, site, from, to);
+
     if(data instanceof Error){
         return res.status(500).json(getResponseJSON(data.message, 500));
     }
-    
-    // Remove module data from participant records.
-    if(data.length > 0) data = await removeRestrictedFields(data, restriectedFields, isParent);
-    return res.status(200).json({data, code: 200, limit, dataSize: data.length})
+
+    let docs = data.docs;
+
+    if(docs.length > 0) {
+        docs = await removeRestrictedFields(docs, restriectedFields, isParent);
+    }
+
+    return res.status(200).json({data: docs, code: 200, cursor: data.cursor});
 }
 
 const removeRestrictedFields = (data, restriectedFields, isParent) => {

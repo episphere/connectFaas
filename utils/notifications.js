@@ -14,10 +14,11 @@ let twilioClient, messagingServiceSid, twilioNotifyServiceSid;
 let isTwilioSetup = false;
 let isSendingNotifications = false; // A more robust soluttion is needed when using multiple servers 
 
+/*
 getSecret(process.env.GCLOUD_SENDGRID_SECRET).then((apiKey) => {
   sgMail.setApiKey(apiKey);
 });
-
+*/
 const setupTwilio = async () => {
   const secretsToFetch = {
     accountSid: process.env.TWILIO_ACCOUNT_SID,
