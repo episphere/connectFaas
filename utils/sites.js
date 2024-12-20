@@ -596,8 +596,86 @@ const participantDataCorrection = async (req, res) => {
     }
 };
 
+const getBigQueryData = async (req, res) => {
+    const { validateTableAccess, validateFilters, validateFields, getBigQueryData } = require('./bigquery');
+
+    logIPAddress(req);
+    setHeaders(res);
+    
+    if (req.method === 'OPTIONS') return res.status(200).json({ code: 200 });
+
+    if (req.method !== 'GET') {
+        return res.status(405).json(getResponseJSON('Only GET requests are accepted!', 405));
+    }
+    const { APIAuthorization } = require('./shared');
+    const authorized = await APIAuthorization(req);
+    if (authorized instanceof Error) {
+        return res.status(500).json(getResponseJSON(authorized.message, 500));
+    }
+
+    if (!authorized) {
+        return res.status(401).json(getResponseJSON('Authorization failed!', 401));
+    }
+
+    if (req.query.table === undefined || !req.query.table) return res.status(400).json(getResponseJSON('Bad request. Table is not defined in query', 400));
+    if (req.query.dataset === undefined || !req.query.dataset) return res.status(400).json(getResponseJSON('Bad request. Dataset is not defined in query', 400));
+
+    //Validate the caller has access to the table and dataset
+    const dataset = req.query.dataset;
+    const table = req.query.table;
+    let allowAccess = await validateTableAccess(authorized, dataset, table)
+    if (!allowAccess) {
+        return res.status(401).json(getResponseJSON('Forbidden', 403));
+    }
+
+    let filters = req.query.filters;
+    if (Array.isArray(filters)) {
+        try {
+            filters.forEach((filter, index) => {
+                filters[index] = JSON.parse(filter);
+            });
+        } catch (e) {
+            return res.status(400).json(getResponseJSON('Bad request. '+e.toString(), 400));
+        }   
+
+    } else if (typeof filters === "string") {
+        try {
+            filters = [JSON.parse(filters)];
+        } catch (e) {
+            return res.status(400).json(getResponseJSON('Bad request. Filters is not an array or JSON object', 400));
+        }
+    }
+
+    if (Array.isArray(filters)) {
+        let validFilters = await validateFilters(dataset, table, filters);
+        if (!validFilters) {
+            return res.status(400).json(getResponseJSON('Bad request. Filters are invalid', 400));
+        }
+    }
+
+    let fields = req.query.fields;
+    if (Array.isArray(fields) && fields.length > 0) {
+        let validFields = await validateFields(dataset, table, fields);
+        if (!validFields) {
+            return res.status(400).json(getResponseJSON('Bad request. Fields are invalid', 400));
+        }
+    }
+
+    let error;
+    let responseArray = [];
+    try {
+        responseArray = await getBigQueryData(dataset, table, filters, fields);
+    } catch (e) {
+        error = e.toString();
+        console.log(e);
+    }
+
+    return res.status(error ? 500 : 200).json(error ? getResponseJSON(error, 500) : {code: 200, results: responseArray});
+}
+
 
 module.exports = {
+    getBigQueryData,
     submitParticipantsData,
     updateParticipantData,
     updateUserAuthentication,
